@@ -1,0 +1,361 @@
+# Microsoft Developer Studio Generated Dependency File, included by mtgdi.mak
+
+..\cppsrc\basic.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\bind.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\h\map.h"\
+	"..\src\logmsg.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\buffer.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\char.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\crypt.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\display.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\dolock.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\eval.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\evar.h"\
+	"..\src\h\map.h"\
+	"..\src\logmsg.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\exec.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\execasm.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\file.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\h\msdir.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\fileio.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\h\msdir.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\input.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\h\msdir.h"\
+	"..\src\logmsg.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\isearch.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\line.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\src\logmsg.c : \
+	"..\src\base.h"\
+	"..\src\logmsg.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\main.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\efunc.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\h\map.h"\
+	"..\src\logmsg.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+.\Mainfrm.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	".\Mainfrm.h"\
+	".\Mtgdi.h"\
+	".\Stdafx.h"\
+	
+
+..\cppsrc\malloc.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\map.cpp : \
+	"..\src\base.h"\
+	"..\src\h\map.h"\
+	".\build.h"\
+	
+
+..\cppsrc\mouse.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\msdir.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\base.h"\
+	"..\src\h\msdir.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+.\Mtgdi.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	".\Mainfrm.h"\
+	".\Mtgdi.h"\
+	".\Mtgdidoc.h"\
+	".\Mtgdivw.h"\
+	".\Stdafx.h"\
+	".\Threads.h"\
+	
+
+.\Mtgdi.rc : \
+	".\Res\Mtgdi.ico"\
+	".\Res\Mtgdi.rc2"\
+	
+
+.\Mtgdidoc.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	".\Mtgdi.h"\
+	".\Mtgdidoc.h"\
+	".\Stdafx.h"\
+	
+
+.\Mtgdivw.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\logmsg.h"\
+	".\build.h"\
+	".\estruct.h"\
+	".\keyboard.h"\
+	".\Mtgdi.h"\
+	".\Mtgdidoc.h"\
+	".\Mtgdivw.h"\
+	".\mycolors.h"\
+	".\Stdafx.h"\
+	".\Threads.h"\
+	
+
+..\cppsrc\random.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\re.cpp : \
+	"..\src\base.h"\
+	".\build.h"\
+	
+
+..\cppsrc\region.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\search.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+.\Stdafx.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	".\Stdafx.h"\
+	
+
+.\Threads.cpp : \
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	"..\src\logmsg.h"\
+	".\build.h"\
+	".\estruct.h"\
+	".\Mtgdi.h"\
+	".\mycolors.h"\
+	".\Stdafx.h"\
+	".\Threads.h"\
+	
+
+..\cppsrc\window.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	
+
+..\cppsrc\word.cpp : \
+	"..\src\base.h"\
+	"..\src\edef.h"\
+	"..\src\elang.h"\
+	"..\src\english.h"\
+	"..\src\epredef.h"\
+	"..\src\etype.h"\
+	".\build.h"\
+	".\estruct.h"\
+	

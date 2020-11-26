@@ -1,0 +1,59 @@
+15 store-macro     ; next difference
+    select-buffer diffs
+    search-forward ^[0-9X][0-9X]*
+    !if &gre &len $match 10
+      search-forward [a-z0-9A-Z_.]
+      backward-character
+      search-forward [a-z0-9A-Z_.]*
+      find-file $match
+      set %tbn1 $cbufname
+      set %tfn1 $cfname
+      set %tbn2 $cbufname
+      set %tfn2 $cfname
+      abort-command
+    !endif
+    set %tgt2 $match
+    backward-character
+    search-forward [acd]
+    search-forward [0-9][0-9]*
+    set %tgt1 $match
+    set %tgt2 0
+    select-buffer %tbn1
+    goto-line %tgt1
+    !if &not &seq %tbn2 %tbn1
+      select-buffer %tbn2
+      goto-line %tgt2
+    !endif
+!endm    
+
+bind-to-key  execute-macro-15 FN3
+
+
+17 store-macro     ; diff setup
+   set %tbn1 $cbufname   
+   set %tfn1 $cfname
+   !force next-buffer
+   !if &seq $cbufname "diffs"
+     !force next-buffer
+   !endif
+   set %tbn2 $cbufname   
+   set %tfn2 $cfname
+   !if &not &seq %tbn2 %tbn1
+     set %dcmd &cat &cat &cat &cat "diff " %tfn1 " " %tfn2 " > /tmp/diffs"
+     execute-program %dcmd
+     set %tdi /tmp/diffs
+   !else
+     set %tdi @"Diff File? "
+   !endif
+   select-buffer diffs
+   beginning-of-file
+   set-mark
+   end-of-file
+   kill-region
+   insert-file %tdi
+   beginning-of-file
+   delete-mode CHGD
+!endm
+
+bind-to-key  execute-macro-17 ^X9
+

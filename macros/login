@@ -1,0 +1,23 @@
+# This is an individual user's .login
+alias ls ls -C
+alias p more
+alias e emacs @/u/peter/.emacsrc
+alias h history
+   
+alias fnd "sh -c 'type \!* '"
+alias srch 'emacs @/u/peter/.emacsrc -S\!:1 `grep -l \!*`'
+alias mk  "make \!* |& tee /tmp/cc; emacs /tmp/cc"
+alias ml  'if (X\!* != X) set LM = \!*;mk "$LM"'
+set LM = ""
+alias incls 'cc -E $INCLDIRS \!* | sed -n "2,99999s/# 1.\(.*\)./\1/p"'
+
+alias rr stty sane
+
+setkey 5 ":s\n"
+setkey 6 ":co\n"
+setkey 7 '$c\n'
+setcolor black white
+setcolor -r yellow brown
+
+alias printer0 "/usr/bin/lp -s -ob -dlp0 \!*"
+alias printer1 "/usr/bin/lp -s -ob -dlp1 \!*"

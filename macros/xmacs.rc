@@ -1,0 +1,201 @@
+21 store-macro
+    beginning-of-line
+    !while &or &equ $curchar 32 &equ $curchar 9
+      forward-character
+    !endwhile 
+    set-mark
+    beginning-of-line
+    detab-region
+    goto-mark    
+    !if &equ $lastkey 55		;; 55 on IBMPC
+      insert-string "  "
+    !else
+      !if &les $curcol 1
+        next-line
+        return
+      !endif
+      2 delete-previous-character
+    !endif
+    set-mark
+    beginning-of-line
+    entab-region
+    redraw-display
+!endm
+
+bind-to-key execute-macro-21 FN7
+bind-to-key execute-macro-21 FN8
+
+22 store-macro
+    insert-string ("\n");
+    4 backward-character
+!endm
+
+bind-to-key execute-macro-22 M-FN5
+
+23 store-macro
+    newline-and-indent
+    insert-string "if ()"
+    newline-and-indent
+    insert-string "{ "
+    newline-and-indent
+    insert-string "}"
+    
+    6 backward-character
+!endm
+
+bind-to-key execute-macro-23 A-4
+
+24 store-macro
+    insert-string 'logf(Q_INFO, "", );'
+    newline-and-indent
+    8 backward-character
+!endm
+
+bind-to-key execute-macro-24 A-3
+
+
+25 store-macro     ; search for strings
+    !force search-forward [a-zA-Z0-9_]*
+    set %tag $match
+    set %tag @&cat &cat &cat "string to search for [" %tag "]: "
+    !if &equ 0 &len %tag
+      set %tag $match
+    !endif
+    set %otag %tag
+    set %tag &cat &cat "^" %tag &chr 9
+    !if &seq %fag "ERROR"
+      set %fag "tags"
+    !endif
+    set %sv %fag
+    set %fag @&cat &cat "tag file [" %fag "]:"
+    !if &equ 0 &len %fag
+      set %fag %sv
+    !endif
+    !if &seq "/" &rig %fag 1
+      set %fag &dir %fag %sv
+    !endif
+    find-file %fag
+    !force search-forward %tag
+    !if &not $status
+      beginning-of-file
+      search-forward %tag
+    !endif
+    search-forward &chr 9
+    search-forward [a-zA-Z_.0-9/][a-zA-Z_.0-9/]*	; file name
+    set %tgt &dir %fag $match
+    set %v $curchar
+    !if &not &equ %v 9
+      set %sstr &cat &cat "[^A-Za-z0-9_]" %otag "[^A-Za-z0-9_]"
+    !else
+      !force search-forward "	."
+      !if &equ $curchar 94				; ^
+        forward-character
+      !endif
+      !force search-forward "[^\\$/]*"
+      set %sstr $match
+    !endif
+    !force find-file %tgt
+    beginning-of-file
+    set %scm $cmode
+    !if &equ %v 9
+      set $cmode 8
+    !endif
+    !force search-forward %sstr
+    !force previous-word
+    set $cmode %scm
+!endm
+
+bind-to-key execute-macro-25 M-FN1
+
+26 store-macro ; get next error
+    select-buffer cc
+    set %colons 0
+;   search-forward " error "
+;   search-forward " line "
+;   search-reverse "("
+    !force search-forward "line [0-9][0-9]*:"
+    !if &not $status
+      set %colons 1
+      search-forward ":[0-9][0-9]*:"
+    !endif
+    search-forward "[0-9][0-9]*:"
+    set %lnn $match
+    search-forward ": "
+    search-forward .*
+    set %msge $match
+    beginning-of-line
+    !if %colons
+;     forward-character
+      search-forward [^:]*
+    !else
+      search-forward "......"
+      !if &seq $match "esqlc:"
+        search-forward ["]
+      !endif
+      forward-character
+      search-forward [^"]*
+    !endif
+    set %fnm $match
+    end-of-line
+    find-file %fnm
+    goto-line %lnn
+    write-message %msge
+!endm
+
+bind-to-key execute-macro-26 FN3
+bind-to-key execute-macro-26 M-W
+
+27 store-macro    ; construct a number sequence
+    search-forward NN
+    delete-next-character
+    delete-next-character
+    set %nn &add %nn 1
+    insert-string %nn
+!endm 
+
+bind-to-key execute-macro-27 FN4
+
+28 store-macro	      ; edit list of files
+    select-buffer [lof]
+    search-forward ^[a-z_0-9/.]*
+    find-file $match
+    search-forward %srch
+!endm
+
+bind-to-key execute-macro-28 M-T
+
+29 store-macro	      ; search for strings
+    select-buffer [lof]
+    delete-mode view
+    set %srch @&cat &cat "string to search for [" $match "]:"
+    !if &equ 0 &len %srch
+      set %srch $match
+    !endif
+    set %tgt @"Files to search: "
+    set %cmd &cat &cat &cat "grep -l " %srch " " %tgt
+    filter-buffer %cmd
+    delete-mode chgd
+    add-mode view
+!endm
+
+bind-to-key execute-macro-29 M-^T
+
+30 store-macro	      ; reset FN3
+  bind-to-key execute-macro-26 FN3
+!endm
+
+bind-to-key execute-macro-30 M-I
+bind-to-key execute-macro-30 M-I
+
+31 store-macro     ; page forward searching
+   set %here $curline
+   $pagelen next-line
+   set-mark
+   goto-line %here
+   !force hunt-forward
+   !if &equ $curline %here
+     $pagelen next-line
+   !endif
+!endm
+
+bind-to-key execute-macro-31 FN^V

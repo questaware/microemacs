@@ -1,0 +1,197 @@
+# ---------------------------------------------------------------------------
+!if !$d(BCB)
+BCB = $(MAKEDIR)\..
+!endif
+
+# ---------------------------------------------------------------------------
+# IDE SECTION
+# ---------------------------------------------------------------------------
+# The following section of the project makefile is managed by the BCB IDE.
+# It is recommended to use the IDE to change any of the values in this
+# section.
+# ---------------------------------------------------------------------------
+
+VERSION = BCB.03
+# ---------------------------------------------------------------------------
+PROJECT = emacmain.exe
+OBJFILES = emacmain.obj bemacs.obj window.obj word.obj basic.obj bind.obj buffer.obj \
+  char.obj crypt.obj display.obj dolock.obj eval.obj exec.obj execasm.obj \
+  file.obj fileio.obj input.obj isearch.obj line.obj main.obj malloc.obj map.obj \
+  mouse.obj random.obj re.obj region.obj search.obj msdir.obj sem.obj logmsg.obj
+RESFILES = emacmain.res
+DEFFILE =
+RESDEPEN = $(RESFILES) bemacs.dfm
+LIBFILES =
+LIBRARIES =
+SPARELIBS = VCL35.lib
+PACKAGES = vclx35.bpi VCL35.bpi vcldb35.bpi vcldbx35.bpi bcbsmp35.bpi dclocx35.bpi \
+  Qrpt35.bpi teeui35.bpi VclSmp35.bpi teedb35.bpi tee35.bpi ibsmp35.bpi \
+  NMFast35.bpi inetdb35.bpi inet35.bpi
+# ---------------------------------------------------------------------------
+PATHCPP = .;..\cppsrc;..\src
+PATHASM = .;
+PATHPAS = .;
+PATHRC = .;
+DEBUGLIBPATH = $(BCB)\lib\debug
+RELEASELIBPATH = $(BCB)\lib\release
+# ---------------------------------------------------------------------------
+CFLAG1 = -Og -Ov -Hc -w-par -w-inl -Ve -r- -k -y -v -vi- -c -b- -Vx -tW
+CFLAG2 = -I"..\..\..\program files\borland\cbuilder3\projects";..\cppsrc;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\include\MFC;..\src \
+  -D_RTLDLL;USEPACKAGES -H=$(BCB)\lib\vcl35.csm
+CFLAG3 = -w-rch -w-csu -w-ccc -Tkh30000
+PFLAGS = -U"..\..\..\program files\borland\cbuilder3\projects";..\cppsrc;..\src;$(BCB)\lib\obj;$(BCB)\lib;$(RELEASELIBPATH) \
+  -I"..\..\..\program files\borland\cbuilder3\projects";..\cppsrc;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\include\MFC;..\src \
+  -D_RTLDLL;USEPACKAGES -N2. -N0. -$Y -$W -$O- -v -JPHN -M
+RFLAGS = -i"..\..\..\program files\borland\cbuilder3\projects";..\cppsrc;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\include\MFC;..\src \
+  -D_RTLDLL;USEPACKAGES
+AFLAGS = /i..\cppsrc /i$(BCB)\include /i$(BCB)\include\vcl /i$(BCB)\include\MFC /i..\src \
+  /d_RTLDLL /dUSEPACKAGES /mx /w2 /zi
+LFLAGS = -L"..\..\..\program files\borland\cbuilder3\projects";..\cppsrc;..\src;$(BCB)\lib\obj;$(BCB)\lib;$(RELEASELIBPATH) \
+  -aa -Tpe -x -Gn -v
+IFLAGS =
+# ---------------------------------------------------------------------------
+ALLOBJ = c0w32.obj $(PACKAGES) sysinit.obj $(OBJFILES)
+ALLRES = $(RESFILES)
+ALLLIB = $(LIBFILES) $(LIBRARIES) import32.lib cp32mti.lib
+# ---------------------------------------------------------------------------
+!ifdef IDEOPTIONS
+
+[Version Info]
+IncludeVerInfo=0
+AutoIncBuild=0
+MajorVer=1
+MinorVer=0
+Release=0
+Build=0
+Debug=0
+PreRelease=0
+Special=0
+Private=0
+DLL=0
+Locale=2057
+CodePage=1252
+
+[Version Info Keys]
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
+
+[HistoryLists\hlIncludePath]
+Count=3
+Item0=..\cppsrc;$(BCB)\include;$(BCB)\include\vcl;$(BCB)\include\MFC;..\src
+Item1=$(BCB)\include;$(BCB)\include\vcl;..\src
+Item2=$(BCB)\include;$(BCB)\include\vcl; ..\src
+
+[HistoryLists\hlLibraryPath]
+Count=3
+Item0=..\cppsrc;..\src;$(BCB)\lib\obj;$(BCB)\lib
+Item1=..\src;$(BCB)\lib\obj;$(BCB)\lib
+Item2=$(BCB)\lib\obj;$(BCB)\lib
+
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=$(BCB)\source\vcl
+
+[HistoryLists\hlConditionals]
+Count=1
+Item0=_RTLDLL;USEPACKAGES
+
+[HistoryLists\hlIntOutputDir]
+Count=1
+Item0=.
+
+[HistoryLists\hlRunParameters]
+Count=2
+Item0=/gener/emacs/borland/tt
+Item1=tt
+
+[Debugging]
+DebugSourceDirs=$(BCB)\source\vcl
+
+[Parameters]
+RunParams=/gener/emacs/borland/tt
+HostApplication=
+
+!endif
+
+# ---------------------------------------------------------------------------
+# MAKE SECTION
+# ---------------------------------------------------------------------------
+# This section of the project file is not used by the BCB IDE.  It is for
+# the benefit of building from the command-line using the MAKE utility.
+# ---------------------------------------------------------------------------
+
+.autodepend
+# ---------------------------------------------------------------------------
+!if !$d(BCC32)
+BCC32 = bcc32
+!endif
+
+!if !$d(DCC32)
+DCC32 = dcc32
+!endif
+
+!if !$d(TASM32)
+TASM32 = tasm32
+!endif
+
+!if !$d(LINKER)
+LINKER = ilink32
+!endif
+
+!if !$d(BRCC32)
+BRCC32 = brcc32
+!endif
+# ---------------------------------------------------------------------------
+!if $d(PATHCPP)
+.PATH.CPP = $(PATHCPP)
+.PATH.C   = $(PATHCPP)
+!endif
+
+!if $d(PATHPAS)
+.PATH.PAS = $(PATHPAS)
+!endif
+
+!if $d(PATHASM)
+.PATH.ASM = $(PATHASM)
+!endif
+
+!if $d(PATHRC)
+.PATH.RC  = $(PATHRC)
+!endif
+# ---------------------------------------------------------------------------
+$(PROJECT): $(OBJFILES) $(RESDEPEN) $(DEFFILE)
+    $(BCB)\BIN\$(LINKER) @&&!
+    $(LFLAGS) +
+    $(ALLOBJ), +
+    $(PROJECT),, +
+    $(ALLLIB), +
+    $(DEFFILE), +
+    $(ALLRES)
+!
+# ---------------------------------------------------------------------------
+.pas.hpp:
+    $(BCB)\BIN\$(DCC32) $(PFLAGS) {$< }
+
+.pas.obj:
+    $(BCB)\BIN\$(DCC32) $(PFLAGS) {$< }
+
+.cpp.obj:
+    $(BCB)\BIN\$(BCC32) $(CFLAG1) $(CFLAG2) $(CFLAG3) -n$(@D) {$< }
+
+.c.obj:
+    $(BCB)\BIN\$(BCC32) $(CFLAG1) $(CFLAG2) $(CFLAG3) -n$(@D) {$< }
+
+.asm.obj:
+    $(BCB)\BIN\$(TASM32) $(AFLAGS) $<, $@
+
+.rc.res:
+    $(BCB)\BIN\$(BRCC32) $(RFLAGS) -fo$@ $<
+# ---------------------------------------------------------------------------

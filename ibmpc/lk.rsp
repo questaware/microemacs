@@ -1,0 +1,27 @@
+basic.obj+
+bind.obj+
+buffer.obj+
+char.obj +
+crypt.obj+
+display.obj+
+eval.obj +
+exec.obj +
+execasm.obj+
+file.obj +
+msdos.obj+
+fileio.obj+
+input.obj+
+isearch.obj+
+line.obj+
+main.obj+
+malloc.obj+
+mouse.obj+
+random.obj+
+region.obj+
+search.obj+
+window.obj+
+word.obj+
+ibmpc.obj+
+msdir.obj+
+msexec.obj+
+map
