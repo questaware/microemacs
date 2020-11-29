@@ -645,6 +645,7 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
   { n = -1;
     vp = vscreen[stt];
     memmove(&vscreen[stt], &vscreen[stt+1], lenm1 * sizeof(VIDEO*));
+	  vscreen[stt+lenm1] = vp;
 #if S_MSDOS == 0
     ttrow -= 2;
     tcapmove(ttrow + 2, ttcol);			/* a trick */
@@ -653,13 +654,12 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
   else 
   { vp = vscreen[stt+lenm1];
     memmove(&vscreen[stt+1], &vscreen[stt], lenm1 * sizeof(VIDEO*));
-    lenm1 = 0;
+	  vscreen[stt] = vp;
 #if S_MSDOS == 0
     tcapmove(ttrow, ttcol);
 #endif
   }
  /*lenm1 += stt;*/
-  vscreen[lenm1 + stt] = vp;
   vp->v_flag = VFCHG;
 #if S_MSDOS == 0
   tcapscreg(stt, stt+lenm1);
@@ -1131,11 +1131,13 @@ void Pascal updateline(int row)
     {
       return;
     }
-							/* Erase to EOL ? */
+#if 0
+															/* Erase to EOL ? */
     while (*--cp9 == *--ph9)	/* find out if there is a match on the right */
     { if (cp9[0] != ' ')
         revreq = -revreq;                /* non-blanks to the right */
     }
+#endif
   }
 
   tcapmove(row, cp1 - &vp1->v_text[0]);

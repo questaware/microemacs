@@ -1,26 +1,16 @@
-
-
 #include <stdlib.h>
 #include <string.h>
 #include "build.h"
 
-
 #include "h/map.h"
 
-
-
 #define LENINC 4096
-
-
-
 
 #if USE_MAPSTREAM
 #define update_map(map)  (map)->update_ct += 1
 #else
 #define update_map(map) 
 #endif
-
-
 
 #ifdef MINIMAP
 
@@ -59,26 +49,26 @@ static Vint compare(Map map, Key tgt)
 
   switch (map->format.key_type)
   { when T_DOMSTR:  /* printf("Comparing %s %s\n", map->srch_key, tgt->domstr);*/
-                      return  strcmp(key, tgt->domstr);
+                    return  strcmp(key, tgt->domstr);
 #ifndef MINIMAP
-    when T_DOMCHAR0:  return  1;  /* never matches */
-    case T_DOMINT1:   return  (Char)key - tgt->domint1;
-    when T_DOMINT2:   return  (Short)key - tgt->domint2;
-    when T_DOMINT3:   return  0; /* not implemented */
-    when T_DOMINT4:   return  (Int)key - tgt->domint4;
+    when T_DOMCHAR0:return  1;  /* never matches */
+    case T_DOMINT1: return  (Char)key - tgt->domint1;
+    when T_DOMINT2: return  (Short)key - tgt->domint2;
+    when T_DOMINT3: return  0; /* not implemented */
+    when T_DOMINT4: return  (Int)key - tgt->domint4;
 #endif
-    otherwise       { Vint ix;
-                      key -= T_DOMCHAR0;
-		   /* printf("Compare %s %s\n", map->srch_key, tgt->domchararr);*/
-  		      for (ix = T_DOMCHAR0-1;  ++ix < map->format.key_type; )
-		      { Char tch = tgt->domchararr[ix-T_DOMCHAR0];
-			if (key[ix] != tch)
-                          return (Byte)key[ix] - (Byte)tch;
-      		        if (tch == 0)
-      		          break;
-      		      }
-  		      return OK;
-		    }
+    otherwise     { Vint ix;
+                    key -= T_DOMCHAR0;
+						   /* printf("Compare %s %s\n", map->srch_key, tgt->domchararr);*/
+  		  				    for (ix = T_DOMCHAR0-1;  ++ix < map->format.key_type; )
+							      { Char tch = tgt->domchararr[ix-T_DOMCHAR0];
+											if (key[ix] != tch)
+                				return (Byte)key[ix] - (Byte)tch;
+		      		        if (tch == 0)
+    		  		          break;
+      			      	}
+				  		      return OK;
+		    					}
   }
 }
 
@@ -106,9 +96,9 @@ Vint binary(Map map, Byte * table)
       for (; ; ++low)
       { if (comp == 0)
           comp = *src - (Vint)keyfld[low];
-	if (keyfld[low] == 0)
-	  break;
-	++src;
+				if (keyfld[low] == 0)
+				  break;
+				++src;
       }
       low += map->format.key_offs + 1;
       map->format.eny_len = low - slow;

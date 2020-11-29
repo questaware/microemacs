@@ -887,7 +887,7 @@ Pascal srchdeffile(char * fname, char * str, int depth)
     if (fcp == NULL)
       loglog1("flook failed %s", fname);
     else
-    { bp = bufflink(cp, TRUE);
+    { bp = bufflink(fcp, TRUE);
       loglog3("SBP %x BP %x CBP %s", sbp, bp, curbp);
     }
 

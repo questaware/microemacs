@@ -293,7 +293,7 @@ bind-to-key filter-buffer ^X|
 #if S_VMS
 	{0x7F,		BINDFNC, backdel},
 #else
-	{0x7F,		BINDFNC, forwdel},
+	{0x7F,		BINDFNC, backdel}, // was forwdel
 #endif
 
 	{0,		0, NULL}
@@ -986,6 +986,9 @@ unsigned int Pascal stock(char * keyname)
   register unsigned int c = 0;
   register int i;
 
+  if (in_range(keyname[0], '0','9'))
+    return atoi(keyname);
+  
   for (i = -1; ++i < 6; )
     if (keyname[0] == viskey[i*2] && keyname[1] == viskey[i*2+1] &&
         (i != 0 || keyname[2] != 0))   /* Key is not bare ^X */

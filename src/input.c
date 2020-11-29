@@ -644,7 +644,7 @@ static  getstr(char * buf, int nbuf, int promptlen, int gs_type)
         for (tpos = cpos; ++tpos <= fulllen; )   /* include the 0 */
           buf[tpos-1] = buf[tpos];      
         --fulllen;
-	redo = 3;
+				redo = 3;
       }
     } 
     else if (ch == (CTRL | 'A') && gs_type >= 0)
@@ -741,10 +741,7 @@ getliteral:
       mybuf[1] = 0;
       (void)redrawln(mybuf, term.t_ncol-ttcol);
 #else
-//		if (disinp < 0)
-//		{	ttputc(0x8);
-//	  	ttflush();
-//		}
+			mlout(ch);
 #endif
       cpos++;
       fulllen++;

@@ -58,7 +58,7 @@ static char * mytgoto(char * cmd, int p1, int p2);
 
 typedef struct TBIND
 {	char  p_tiname[6]; /* terminfo name */
-	short p_name;      /* sequence name, then used by sequence matching */
+	short p_name;      /* sequence name, not in use */
 	short p_code;	   /* resulting keycode of sequence */
 	char  p_seq[8];	   /* terminal escape sequence */
 } TBIND;
@@ -307,7 +307,7 @@ int Pascal use_named_str(name, str)
 
   screxist = true;
 	        /* kseq[K_IND][0] != 0 && kseq[K_RI][0] != 0 || 
-		   kseq[K_IL1][0] != 0 && kseq[K_DL1][0] != 0; */
+					   kseq[K_IL1][0] != 0 && kseq[K_DL1][0] != 0; */
 
   revexist = false;	/* kseq[K_REV][0] != 0; */
 
@@ -358,8 +358,8 @@ void Pascal tcap_init()
     vv = atoi(v);
   
   if (vv != 0 && vv < 91)
-  { term.t_nrowm1 = vv - 1;			
-    term.t_mrowm1 = vv - 1;
+  { term.t_nrowm1 = vv - 2;			
+    term.t_mrowm1 = vv - 2;
   }
 
   vv = 132;
@@ -386,8 +386,7 @@ void Pascal tcap_init()
 
 void Pascal tcapopen()
 
-{
-        NOSHARE char * term_type;
+{	NOSHARE char * term_type;
 
 #if S_LINUX
 	term_type = getenv("EMTERM");
@@ -406,7 +405,7 @@ void Pascal tcapopen()
 #endif
 //      use_named_str(null, null);
 	in_init();
-        see_alarm(0);
+	see_alarm(0);
 }
 
 			/* This function gets called just before we go
@@ -579,7 +578,7 @@ int Pascal get1key()
 { int mct = 0;
   int ix;
 	cseq[0] = 
-        cseq[2] = A_ESC;
+	cseq[2] = A_ESC;
 	cseq[1] = c;
 	if (c != '[')
 	  cseq[3] = '[';
@@ -599,8 +598,8 @@ int Pascal get1key()
 	}
 
 #if FTRACE
-        if (ftrace != 0)
-          fprintf(ftrace, "MCT %d\n", mct);
+	if (ftrace != 0)
+		fprintf(ftrace, "MCT %d\n", mct);
 #endif
 
 	for (ix = 1; mct > 0 && ++ix <= 6; )
@@ -610,31 +609,30 @@ int Pascal get1key()
 		if (ftrace != 0)
 		fprintf(ftrace, "STT %c ", c);
 #endif
-	  for (btbl = &keytbl[NTBINDS]; --btbl >= &keytbl[0] && mct > 0;)
-		{ if (btbl->p_name)
-			{
+	  for (btbl = &keytbl[NTBINDS]; --btbl >= &keytbl[0];)
+		{ if (!btbl->p_name)
+				continue;
+#if FTRACE
+			if (ftrace != 0)
+				fprintf(ftrace, "MM %c %d\n", btbl->p_seq[ix], btbl-&keytbl[0]);
+#endif
+			if (btbl->p_seq[ix] != c)
+      { btbl->p_name = false;
 #if FTRACE
 				if (ftrace != 0)
-					fprintf(ftrace, "MM %c %d\n", btbl->p_seq[ix], btbl-&keytbl[0]);
+					fprintf(ftrace, "FAILS\n");
 #endif
-
-				if (btbl->p_seq[ix] != c)
-	      { btbl->p_name = false;
+        if (--mct <= 0)
+        	break;
+			}
+			else
+			{	if (btbl->p_seq[ix+1] == 0)
+				{ 
 #if FTRACE
 					if (ftrace != 0)
-						fprintf(ftrace, "FAILS\n");
+						fprintf(ftrace, "YES %d\n", btbl->p_code);
 #endif
-	        --mct;
-				}
-				else
-				{	if (btbl->p_seq[ix+1] == 0)
-					{ 
-#if FTRACE
-						if (ftrace != 0)
-							fprintf(ftrace, "YES %d\n", btbl->p_code);
-#endif
-	          return ecco(btbl->p_code);
-	        }
+          return ecco(btbl->p_code);
 				}
 			}
 		}
@@ -865,10 +863,10 @@ void Pascal ttscupdn(int n)
   { if (captbl[K_CSR].p_seq[0] != 0)
     { tcapmove(sctop, 0);
       putpad(captbl[K_RI].p_seq);
-/*
-    tcapmove(scbot,0);
-    tcapeeol();
-*/
+
+      tcapmove(scbot,0);
+	    tcapeeol();
+			tcapmove(sctop, 0);
     }
     else
 #if USE_SCR_BDY
@@ -885,8 +883,6 @@ void Pascal ttscupdn(int n)
   { if (captbl[K_CSR].p_seq[0] != 0)
     { tcapmove(scbot, 0);
       putpad(captbl[K_IND].p_seq);
-//    putpad(captbl[K_EL].p_seq);
-      /*tcapbeep();*/
     }
     else
     { tcapmove(sctop,0);

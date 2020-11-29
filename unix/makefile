@@ -36,7 +36,7 @@ emacs:	$(OFILES) $(UOFILES) $(MOFILES)
 line.i:   ../$(SRC)/line.c
 	$(CC) -E -I../$(USRC)/ -I../$(SRC) ../$(SRC)/line.c
 
-makekeys:
+makekeys: makekeys.c
 	$(CC) $(CFLAGS) -o makekeys makekeys.c
 
 keys.h:	makekeys
