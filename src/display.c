@@ -1125,19 +1125,14 @@ void Pascal updateline(int row)
     }
 	     /* Only called on changed lines but the following can still occur. 
 	      * A hard update is always done when a line splits, a massive 
-	      * change is done, or a buffer is displayed twice.
-	      */
+	      * change is done, or a buffer is displayed twice. */
     if (cp1 >= cp9)
-    {
       return;
-    }
-#if 0
 															/* Erase to EOL ? */
     while (*--cp9 == *--ph9)	/* find out if there is a match on the right */
     { if (cp9[0] != ' ')
         revreq = -revreq;                /* non-blanks to the right */
     }
-#endif
   }
 
   tcapmove(row, cp1 - &vp1->v_text[0]);
@@ -1150,7 +1145,7 @@ void Pascal updateline(int row)
     tcaprev(TRUE);
 #endif
 
-  if (!caution)
+  if (caution)
 		tcapeeol();
 
   if (revreq > 0)
