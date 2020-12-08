@@ -14,12 +14,12 @@
 
 #include  "estruct.h"
 
-#include  "edef.h"
-#include	"etype.h"
+#include  "../src/edef.h"
+#include	"../src/etype.h"
 #define Short short
 
-#include	"elang.h"
-#include	"logmsg.h"
+#include	"../src/elang.h"
+#include	"../src/logmsg.h"
 
 			/* The Mouse driver only works with typeahead defined */
 #if	MOUSE
@@ -748,7 +748,7 @@ void Pascal MySetCoMo()
  * Read a character from the terminal, performing no editing and doing no echo
  * at all. Also mouse events are forced into the input stream here.
  */
-Pascal ttgetc()
+int Pascal ttgetc()
 
 {
 #if GOTTYPAH
@@ -810,7 +810,7 @@ Pascal ttgetc()
     if (cc == WAIT_TIMEOUT)
     { if (cntr_c_pressed)
       { cntr_c_pressed = false;
-        return CTRL | 'C';
+        return (int)(CTRL | 'C');
       }
 			totalwait -= 1;
 
@@ -855,7 +855,7 @@ Pascal ttgetc()
       if (in_range(vsc, 0, 0x58 - 0x3b) &&
 	   		  chr != 0x7c && chr != '\\'
 	  		 )
-      { return ctrl | SPEC | scantokey[vsc];
+      { return (int)(ctrl | SPEC | scantokey[vsc]);
 #if 0
         in_put(ctrl >> 8);
         in_put(ctrl & 255);
@@ -864,7 +864,7 @@ Pascal ttgetc()
       }
        
 			++chars_since_shift;
-      return ctrl | (chr == 0xdd ? 0x7c : chr);
+      return (int)(ctrl | (chr == 0xdd ? 0x7c : chr));
     }}
     else if (rec.EventType == MENU_EVENT)
     { /*loglog1("Menu %x", rec.Event.MenuEvent.dwCommandId);*/
@@ -1812,9 +1812,6 @@ Cc ClipSet(char * src)
 	if (mwh == NULL)
 		return -1;
 
-{	HANDLE m_hData;
-	char * m_lpData;
-
 #if 0
 	GlobalUnlock(m_hData);
 	
@@ -1826,14 +1823,11 @@ Cc ClipSet(char * src)
 		SetClipboardData(CF_TEXT, m_hData);
 	CloseClipboard();
 #else
-	extend = /*len <= m_DataSize*/ false;
-	if (!extend)
-	{ m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
-		if (!m_hData)  
-			return -1;
-	}
-	
-	m_lpData = (char*)GlobalLock(m_hData);
+{	HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
+	if (!m_hData)  
+		return -1;
+
+{	char * m_lpData = (char*)GlobalLock(m_hData);
 	if (m_lpData == NULL)
 		return -1;
 	
@@ -1841,17 +1835,14 @@ Cc ClipSet(char * src)
 	GlobalUnlock(m_hData);
 
 	if (OpenClipboard(mwh))
-	{ if (!extend)
-						/* Clear the current contents of the clipboard, and set
-				 * the data handle to the new string.
-				 */
-		{  EmptyClipboard();
-			 SetClipboardData(CF_TEXT, m_hData);
-		}
+	{ 								/* Clear the current contents of the clipboard, and set
+										 * the data handle to the new string.*/
+		EmptyClipboard();
+		SetClipboardData(CF_TEXT, m_hData);
 		CloseClipboard();
 	}
+}}	
 #endif	
-}	
 	return OK;
 }
 

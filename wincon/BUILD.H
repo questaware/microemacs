@@ -70,7 +70,6 @@
 #define	IBMPC	1			/* IBM-PC CGA/MONO/EGA/VGA drvr	*/
 #define OS2NPM	0			/* OS/2 non-Presentation Mgr.	*/
 #define	TIPC	0			/* TI Profesional PC driver	*/
-#define	MAC	0			/* Macintosh			*/
 #define	ATARI	0			/* Atari 520/1040ST screen	*/
 #define	DASHER	0			/* DG Dasher 2xx/4xx crts	*/
 

@@ -694,7 +694,7 @@ void Pascal updline(int force)
 */
 {
 	register int i;
- static LINE * up_lp;
+ static LINE * up_lp = NULL;
 	register LINE * lp;
 		 WINDOW * wp = curwp;
 	
@@ -925,13 +925,13 @@ int Pascal reframe(WINDOW * wp)
 	register LINE *lp;		   /* search pointer */
 	register LINE *rp;		   /* reverse search pointer */
 	register int i; 		   /* general index/# lines to scroll */
-#define  centre i
-#define  clamp i
-		 int nlines = wp->w_ntrows;
-		 if (! modeflag)
-		   ++nlines;
-{		 int flags = wp->w_flag;
-		      /* if not a requested reframe, check for a needed one */
+
+	int nlines = wp->w_ntrows;
+	int centre = wp->w_force;
+	if (! modeflag)
+	  ++nlines;
+{	int flags = wp->w_flag;
+									      /* if not a requested reframe, check for a needed one */
 	if ((flags & WFFORCE) == 0)
 	{ lp = wp->w_linep;
 	  for (i = nlines; --i >= 0; ) 
@@ -944,25 +944,25 @@ int Pascal reframe(WINDOW * wp)
 				/* on to the next line */
 	    lp = lforw(lp);
 	  }
+		if	(sscroll && (flags & (WFFORCE+WFHARD)) == 0)
+		{ if	  (wp->w_dotp == lp 
+			    && screxist)
+		  { wp->w_linep = lforw(wp->w_linep);
+		    return flags | WFTXTD;
+		  }
+		  else if (lforw(wp->w_dotp) == wp->w_linep
+			    && screxist
+			    && (wp->w_dotp->l_props & L_IS_HD) == 0)
+		  { wp->w_linep = wp->w_dotp;
+		    return flags | WFTXTU;
+		  }
+		  centre = (nlines >> 2) + 1;
+		}
 	}
-				/* reaching here, we need a window refresh */
-	centre = wp->w_force;
-
-	if	(sscroll && (flags & (WFFORCE+WFHARD)) == 0)
-	{ if	  (wp->w_dotp == lp 
-		    && screxist)
-	  { wp->w_linep = lforw(wp->w_linep);
-	    return flags | WFTXTD;
-	  }
-	  else if (lforw(wp->w_dotp) == wp->w_linep
-		    && screxist
-		    && (wp->w_dotp->l_props & L_IS_HD) == 0)
-	  { wp->w_linep = wp->w_dotp;
-	    return flags | WFTXTU;
-	  }
 #if 0
-	  else		     /* search thru the buffer looking for the point */
-	  { clamp = 0x7fff;  /* why is this being done? */
+			 /* reaching here, we need a window refresh */
+	     /* search thru the buffer looking for the point */
+	  { int clamp = 0x7fff;  /* why is this being done? */
 	    rp = lp;
 	    
 	    while (lp != wp->w_dotp && rp != wp->w_dotp)
@@ -984,9 +984,8 @@ int Pascal reframe(WINDOW * wp)
 	    }
 	  }
 #endif
-	  centre = nlines >> 2;
-	}			/* how far back to reframe? */
-	else if (centre > 0)	/* only one screen worth of lines max */
+										/* how far back to reframe? */
+	if (centre > 0)					/* only one screen worth of lines max */
 	{ if (centre > nlines)
 	    centre = nlines;
 	  centre -= 1;

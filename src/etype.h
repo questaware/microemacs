@@ -61,9 +61,10 @@ char *Pascal gtfilename(char *);
 #if S_HPUX == 0 || 1
  const
 #endif
-	 char *Pascal gtusr(char*);
+       char *Pascal gtusr(char*);
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
+int input_timeout (int, unsigned int, unsigned int);
 char * Pascal io_message(char *, int, int);
 char *Pascal int_asc(int);
 #if S_HPUX == 0 || 1

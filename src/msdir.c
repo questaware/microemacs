@@ -397,7 +397,7 @@ Cc msd_push()
   /*eprintf(null, "Rd %s\n", msd_dp->d_name);*/
   { dirent_t * eny = (dirent_t *) &msd_readahead[ra_top];
     eny->d_ino = msd_dp->d_ino;
-    strcpy(&eny->d_name[0], msd_dp->d_name);
+    strpcpy(&eny->d_name[0], msd_dp->d_name, sizeof(eny->d_name));
     ra_top += strlen(msd_dp->d_name) + 1;
     ra_top += sizeof(ino_t) + sizeof(off_t) + sizeof(unsigned short) +
 		sizeof(ino_t) - 1;
@@ -462,7 +462,7 @@ Char * msd_pop()
 		  { Char * tt = &msd_path[pathend];
       	char sch = *tt;
         msd_chd = msd_ix;
-      	strcpy(&buf[0], msd_startdir);
+      	strpcpy(&buf[0], msd_startdir, sizeof(buf));
         *tt = 0;
       	strcat(&buf[0], msd_path);
         *tt = sch;
@@ -621,7 +621,7 @@ Cc msd_init(
   msd_cc = -100;
 
 #if S_MSDOS & S_WIN32 == 0
-  strcpy(&msd_path[pathend], "*.*");
+  strpcpy(&msd_path[pathend], "*.*", 4);
 
   ms_intdosx((Char *)dta, 0x1a00);		/*  set dta  */
 
@@ -635,7 +635,7 @@ Cc msd_init(
   
 #if   S_WIN32
   dir = pathend == 0 ? "./*.*" : msd_relpath;
-  strcpy(&msd_path[pathend], "*.*");
+  strpcpy(&msd_path[pathend], "*.*", 4);
 /*eprintf(null, "FF %s\n", dir);*/
   msd_curr = FindFirstFile(dir, &msd_sct);
 /*eprintf(null, "HANDLE %x %s\n", msd_curr, (Char*)msd_sct.cFileName);*/
@@ -723,7 +723,7 @@ Cc msd_init(
 staticc Cc getnext()
 {
 #if S_WIN32
-  strcpy(&msd_path[pathend], "*.*");
+  strpcpy(&msd_path[pathend], "*.*", 4);
 /*eprintf(null, "FNF %x, %s\n", msd_curr, msd_path);*/
 
   if (msd_curr == 0 || ! FindNextFile(msd_curr, &msd_sct))
@@ -736,7 +736,7 @@ staticc Cc getnext()
   
   ms_intdosx((Char *)dta, 0x1a00);		/*  set dta  */
 
-  strcpy(&msd_path[pathend], "*.*");
+  strpcpy(&msd_path[pathend], "*.*", 4);
 
 /*printf("DNF\n");*/
 
@@ -961,7 +961,7 @@ static Bool extract_fn(int * fnoffs)
 { 
 #if S_MSDOS
   register int ix;
-  strcpy(&rbuf[0], &msd_path[0]);
+  strpcpy(&rbuf[0], &msd_path[0], sizeof(rbuf));
   
 #if S_WIN32 == 0
   for (ix = -1; rbuf[++ix] != 0; )

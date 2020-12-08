@@ -13,9 +13,9 @@
 //more err;
 
 #include "estruct.h"
-#include "edef.h"
-#include "etype.h"
-#include "logmsg.h"
+#include "../src/edef.h"
+#include "../src/etype.h"
+#include "../src/logmsg.h"
 
 
 HANDLE  hConsoleOut;                   /* Handle to the console */

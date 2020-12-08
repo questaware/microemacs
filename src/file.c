@@ -508,7 +508,7 @@ int Pascal readin(char * fname, int lockfl)
 	  curwp->mrks.c[0].marko = 0;*/
   }
 
-{	char * sfline;
+{	char * sfline = NULL;
 	int    fno;
 	LINE * topline = curwp->w_dotp;
 #if S_MSDOS == 0

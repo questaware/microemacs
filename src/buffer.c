@@ -25,7 +25,7 @@ char * Pascal repl_bfname(BUFFER * bp, const char * str)
 
 
 
-Pascal hidebuffer(int f, int n)
+int Pascal hidebuffer(int f, int n)
 
 { curbp->b_luct = 0;
 	return OK;
@@ -33,19 +33,20 @@ Pascal hidebuffer(int f, int n)
 
 
 
-Pascal nextbuffer(int f, int n)  /* switch to the next buffer in the buffer list */
+int Pascal nextbuffer(int f, int n)  /* switch to the next buffer in the buffer list */
 
 {
-	register BUFFER *bp;	/* current eligible buffer */
-
 	if (f == FALSE)
 		n = 1;
+
+{	register BUFFER *bp = NULL;	/* current eligible buffer */
+
 							 /* cycle thru buffers until n runs out */
 	while (--n >= 0 && (bp = getdefb()) != NULL)
 		(void)swbuffer(bp);
 
 	return (int)bp;
-}
+}}
 
 
 
@@ -317,15 +318,14 @@ Pascal fmt_modecodes(char * t, int mode)
 
 Pascal listbuffers(int iflag, int n)
 		 
-{ 	 BUFFER * bp;
-	register LINE 	*lp;
-	Char line[256];
+{ BUFFER * bp;
+	Char line[256] = "Global Modes ";
 	Int nbytes; 		/* # of bytes in current buffer */
  
 	openwindbuf("[List]");
 				/* build line to report global mode settings */
 						/* output the mode codes */
-	strcpy(&line[0], "Global Modes ");
+//strcpy(&line[0], "Global Modes ");
 	fmt_modecodes(&line[13], g_gmode);
 
 	line[13+NUMMODES] = '\n';
@@ -342,6 +342,7 @@ Pascal listbuffers(int iflag, int n)
 			continue;
 
 		nbytes = 0L;			/* Count bytes in buf.	*/
+	{	LINE * lp;
 		for (lp = bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
 		/* for (lp = bp->b_baseline; (lp = lforw(lp)) != bp->b_baseline; ) */
 			nbytes += (Int)llength(lp)+1L;
@@ -356,7 +357,7 @@ Pascal listbuffers(int iflag, int n)
 					nbytes,
 			bp->b_bname,
 					fixnull(bp->b_fname));
-	}
+	}}
 	curbp->b_flag |= MDVIEW;
 	curbp->b_flag &= ~BFCHG;		/* don't flag this as a change */
 	gotobob(0,0);

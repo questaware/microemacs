@@ -49,34 +49,21 @@ export Path
 
 
 LINK32_OBJS= \
-basic.obj \
-bind.obj \
-buffer.obj \
-char.obj \
-crypt.obj \
+basic.obj bind.obj buffer.obj \
+char.obj crypt.obj \
 display.obj \
-eval.obj \
-exec.obj \
-execasm.obj \
-file.obj \
-fileio.obj \
-input.obj \
-isearch.obj \
+eval.obj exec.obj execasm.obj \
+file.obj fileio.obj \
+input.obj isearch.obj \
 line.obj \
-main.obj \
-map.obj \
-mouse.obj \
-msdir.obj \
-random.obj \
-region.obj \
-search.obj \
-sinc.obj \
+main.obj map.obj mouse.obj msdir.obj \
+random.obj region.obj \
+search.obj sinc.obj \
 tag.obj \
-window.obj \
-word.obj \
+window.obj word.obj \
 msemacs.obj \
-oswin.obj
-
+oswin.obj \
+sleep.obj
 
 .c.obj :
 	$(CPP) -I../ -I../../src/ $(CPP_PROJ) $< 
@@ -87,6 +74,8 @@ oswin.obj
 %.obj : %.c
 	$(CPP) -I../ -I../../src/ $(CPP_PROJ) $< 
 
+%.obj : %.cpp
+	$(CPP) -I../ -I../../src/ $(CPP_PROJ) $< 
 
 e.exe : $(LINK32_OBJS)
 	spath -a $(LINK32)

@@ -114,6 +114,7 @@ src/re.c
 src/region.c
 src/search.c
 src/sinc.c
+src/sleep.c
 src/tag.c
 src/window.c
 src/word.c

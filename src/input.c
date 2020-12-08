@@ -476,7 +476,7 @@ register int i;                             /* index into strings */
         eny = bp->b_bname;
         bp = bp->b_bufp;
       }
-      else if (wh == CMP_FILENAME)
+      else /* if (wh == CMP_FILENAME) */
       { 
         eny = msd_nfile(&trash);
         if (eny == NULL)

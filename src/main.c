@@ -595,10 +595,10 @@ void Pascal edinit()
 	subprocess would require a similar entrypoint.
 */
 
-#if CALLED
-int emacs(int argc, char * argv[])
-#elif S_WIN32
+#if S_WIN32
 int main_(int argc, char * argv[])
+#elif CALLED
+int emacs(int argc, char * argv[])
 #else
 int main(int argc, char * argv[])
 #endif
@@ -626,8 +626,10 @@ int main(int argc, char * argv[])
 				/* Process command line and let the user edit */
 	(void)dcline(argc, argv);
 
+{	int c = -1;
+
 	while (!eexitflag)
-	{ int c;
+	{ 
 		lastflag = 0; 	/* Fake last flags.*/
 
 					/* execute the "command" macro...normally null*/
@@ -635,7 +637,12 @@ int main(int argc, char * argv[])
 				
 		update(FALSE);		/* Fix up the screen	*/
 
+#if S_WIN32
+		if (c < 0)
+			(void)input_timeout(0,0,100);
+#endif
 		c = getkey(); 	/* get the next command from the keyboard */
+
 		eexitval = editloop(c);
 	}
 
@@ -653,13 +660,8 @@ int main(int argc, char * argv[])
 #if S_WIN32
 	cls();
 #endif
-#if CALLED
-	return status;
-#else
-	/*exit(eexitval);*/
 	return eexitval;
-#endif
-}
+}}
 
 #if CLEAN
 /*

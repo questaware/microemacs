@@ -200,7 +200,7 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 		 int  iarg2;
 		 int  arglen;
 		 char * arg1 = &result[stktop];
-		 char * arg2;
+		 char * arg2 = NULL;		/* to suppress warning */
 
 //*arg1 = 0;
 			      /* look the function up in the function table */
