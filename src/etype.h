@@ -203,6 +203,7 @@ int Pascal copyword(int, int);
 extern char bad_strmatch;
 const char * Pascal com_match(const char *, const char *, int);
 int Pascal ucrypt(char *, int);
+wchar_t * char_to_wchar(char const *, int, wchar_t *);
 int Pascal ctlxe(int, int);
 int Pascal ctlxlp(int, int);
 int Pascal ctlxrp(int, int);

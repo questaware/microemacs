@@ -18,7 +18,7 @@
 #include "../src/logmsg.h"
 
 
-HANDLE  hConsoleOut;                   /* Handle to the console */
+HANDLE  g_ConsOut;                   /* Handle to the console */
 
 CONSOLE_SCREEN_BUFFER_INFO csbiInfo;   /* Console information */
 CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
@@ -33,15 +33,15 @@ void ClearScreen( void )
           DWORD    dummy;
     const COORD    Home = { 0, 0 };
     int len = csbiInfo.dwSize.X * csbiInfo.dwSize.Y;
-    FillConsoleOutputAttribute( hConsoleOut, BG_GRAY, len, Home, &dummy );
-    FillConsoleOutputCharacter( hConsoleOut, ' ',     len, Home, &dummy );
+    FillConsoleOutputAttribute( g_ConsOut, BG_GRAY, len, Home, &dummy );
+    FillConsoleOutputCharacter( g_ConsOut, ' ',     len, Home, &dummy );
 }
 
 
 /* This function gets called just before we go back home to the command
  * interpreter.
  */
-int Pascal tcapclose()
+int Pascal tcapclose(int lvl)
 
 { 
 /*CloseHandle(hConsoleIn);
@@ -76,30 +76,67 @@ void Pascal tcap_init()
 char * argv__[] = { "wincon", "tt", null};
 int argc__ = 2;
 */
+#if _MSC_VER < 1900
+#define SC_CHAR char
+#define SC_WORD WORD
+#else
+#define SC_CHAR wchar_t
+#define SC_WORD DWORD
+																					// Overwrites the source
+char * wchar_to_char(SC_CHAR * src)
+
+{ char * t = (char*)src-1;
+	SC_CHAR * s;
+	for (s = src-1; *++s != 0; )
+		*++t = *s;
+	*++t = 0;
+
+	return (char*)src;
+}
+
+wchar_t * char_to_wchar(char const * src, int sz, wchar_t * tgt)
+
+{ wchar_t * t = tgt -1;
+	char const * s;
+	for (s = src-1; *++s != 0 && --sz > 0; )
+		*++t = *s;
+	*++t = 0;
+
+	return tgt;
+}
+
+#endif
+
+
 
 int main(int argc, char * argv[])
 
 {
-    char modulename[129];
-    HINSTANCE hInstance = GetModuleHandle(NULL);		// Grab An Instance For Our Window
-    GetModuleFileName(hInstance, modulename, sizeof(modulename)-1);
-    flook_init(modulename);
+	SC_CHAR modulename[129];
+	HINSTANCE hInstance = GetModuleHandle(NULL);	 // Grab An Instance For Window
+	GetModuleFileName(hInstance, modulename, sizeof(modulename)-1);
+
+#if _MSC_VER < 1900
+#else
+	(void)wchar_to_char(modulename);
+#endif
+	flook_init(modulename);
 
     /* Get display screen information & clear the screen.*/
-    hConsoleOut = GetStdHandle( STD_OUTPUT_HANDLE );
+	g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
 
-    GetConsoleScreenBufferInfo( hConsoleOut, &csbiInfo );
-    GetConsoleScreenBufferInfo( hConsoleOut, &csbiInfoO );
+	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
+	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfoO );
 
-    SetConsoleTextAttribute(    hConsoleOut, BG_GRAY);
-         
-    ClearScreen();
-    SetConsoleTextAttribute(hConsoleOut, BG_GRAY);
+	SetConsoleTextAttribute(	g_ConsOut, BG_GRAY);
+		 
+	ClearScreen();
+	SetConsoleTextAttribute(g_ConsOut, BG_GRAY);
 
-    main_(argc, argv);
+	main_(argc, argv);
 
  /* tcapclose(); */
-  /*CloseHandle( hConsoleOut );*/
+  /*CloseHandle( g_ConsOut );*/
 }
 
 #if 0
@@ -124,14 +161,15 @@ void Pascal tcapbfcol(color)	/* set the current output color */
 
 void Pascal setconsoletitle(char * title)
 
-{ /*
-  char consoletitle[100];
-	if      (title == null || title[0] == 0)
-    consoletitle[0] = 0;
-  else
-   strpcpy(&consoletitle[0], title, sizeof(consoletitle));
-  */
-  SetConsoleTitle( title );
+{
+#if _MSC_VER < 1900
+#define txt title
+#else
+#define txt buf
+	wchar_t buf[100];
+	swprintf(buf, 100, L"%S", title == null ? "" : title);
+#endif
+  SetConsoleTitle( title == NULL ? "" : txt);
 }
 
 
@@ -149,21 +187,21 @@ void Pascal tcapsetsize(int wid, int dpth)
   size.X = wid;
   size.Y = dpth;
   
-  SetConsoleScreenBufferSize( hConsoleOut, size);
-  GetConsoleScreenBufferInfo( hConsoleOut, &csbiInfo );
+  SetConsoleScreenBufferSize( g_ConsOut, size);
+  GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
 	// set the screen buffer to be big enough
 
   while (--ct >= 0 && csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top < dpth)
   { int rc;
 //  mlwrite("%d Ws %d Cp %d MWS %d dpth %d", ct, csbiInfo.dwSize.Y, 
-//                                csbiInfo.dwCursorPosition.Y,
-//                                csbiInfo.dwMaximumWindowSize.Y, dpth
+//		                        csbiInfo.dwCursorPosition.Y,
+//                            csbiInfo.dwMaximumWindowSize.Y, dpth
 //         );
-    csbiInfo.srWindow.Top = 0;
-    csbiInfo.srWindow.Bottom = dpth-1;
+		csbiInfo.srWindow.Top = 0;
+		csbiInfo.srWindow.Bottom = dpth-1;
     csbiInfo.dwCursorPosition.Y = dpth - 1;
     
-    rc = SetConsoleWindowInfo(hConsoleOut, 1, &csbiInfo.srWindow);
+    rc = SetConsoleWindowInfo(g_ConsOut, 1, &csbiInfo.srWindow);
 //  if (rc == 0)
 //    tcapbeep();
 //    mlwrite("Failed %d MWS %d %d", rc, csbiInfo.dwMaximumWindowSize.X, csbiInfo.dwMaximumWindowSize.Y);
@@ -218,14 +256,14 @@ void Pascal tcapmove(int row, int col)
   Coords.X = ttcol;
 
   if (cursor_on)
-  { WriteConsoleOutputAttribute( hConsoleOut, &oldattr, 1, oldcur, &Dummy );
-    WriteConsoleOutputAttribute( hConsoleOut, &MyAttrib, 1, Coords, &Dummy );
+  { WriteConsoleOutputAttribute( g_ConsOut, &oldattr, 1, oldcur, &Dummy );
+    WriteConsoleOutputAttribute( g_ConsOut, &MyAttrib, 1, Coords, &Dummy );
    
     
     oldattr = attr;
     oldcur = Coords;
   }
-  SetConsoleCursorPosition( hConsoleOut, Coords);
+  SetConsoleCursorPosition( g_ConsOut, Coords);
 }}}
 
 
@@ -247,7 +285,7 @@ int Pascal tcapbeeol(int row, int col) /* erase to the end of the line */
   Coords.Y = row;
   Coords.X = col;
   
-  FillConsoleOutputCharacter(hConsoleOut, ' ',csbiInfo.dwSize.X-col,Coords,&Dummy );
+  FillConsoleOutputCharacter(g_ConsOut, ' ',csbiInfo.dwSize.X-col,Coords,&Dummy );
   return OK;
 }
 
@@ -303,7 +341,7 @@ void Pascal ttscupdn(n)                  /* direction the window moves */
   ci.Char.AsciiChar = ' ';
   ci.Attributes = BG_GRAY;
     
-  if (ScrollConsoleScreenBufferA( hConsoleOut, &rect, null, doo, &ci) == 0)
+  if (ScrollConsoleScreenBufferA( g_ConsOut, &rect, null, doo, &ci) == 0)
     tcapbeep();
 }
 
@@ -315,9 +353,14 @@ void Pascal ttputc(ch) /* put a character at the current position in the
 {			/* if its a newline, we have to move the cursor */
   DWORD     Dummy;
   register int col;
+#if _MSC_VER < 1900
+#define gch ch
+#else
+	wchar_t gch = ch;
+#endif
 
-/*GetConsoleScreenBufferInfo( hConsoleOut, &ccInfo );*/
-  GetConsoleScreenBufferInfo( hConsoleOut, &csbiInfo );
+/*GetConsoleScreenBufferInfo( g_ConsOut, &ccInfo );*/
+  GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
   col = csbiInfo.dwCursorPosition.X;
 /* ttcol = col;*/
   ttrow = csbiInfo.dwCursorPosition.Y;
@@ -344,10 +387,10 @@ void Pascal ttputc(ch) /* put a character at the current position in the
     }
   }
 				/* write char to screen with current attrs */
-  WriteConsoleOutputCharacter(hConsoleOut, &ch,1, csbiInfo.dwCursorPosition, &Dummy);
+  WriteConsoleOutputCharacter(g_ConsOut, &gch,1, csbiInfo.dwCursorPosition, &Dummy);
   csbiInfo.dwCursorPosition.X = col;
   csbiInfo.dwCursorPosition.Y = ttrow;
-  SetConsoleCursorPosition( hConsoleOut, csbiInfo.dwCursorPosition);
+  SetConsoleCursorPosition( g_ConsOut, csbiInfo.dwCursorPosition);
 /* rg.x.bx = cfcolor; */
 }
 
@@ -381,11 +424,10 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 	short *outstr;		/* string to output (must be term.t_ncol long)*/
 	int    color;		/* background, foreground */
 {		    /* build the attribute byte and setup the screen pointer */
-  char buf[149];
-  WORD cuf[149];
-
-	const int sclen = csbiInfo.dwSize.X >= 148 ? 148 : csbiInfo.dwSize.X;
-  DWORD  Dummy;
+  SC_CHAR buf[512];
+  WORD cuf[512];
+	const SC_WORD sclen = csbiInfo.dwSize.X >= 148 ? 148 : csbiInfo.dwSize.X;
+  SC_WORD  Dummy;
   WORD attr = color;
   WORD attr_ = attr;
 
@@ -414,9 +456,8 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
   buf[++col] = 0;
   cuf[col] = 0;
   Coords.X = 0;
- /*loglog("TO %d %s", row, buf);*/
-  WriteConsoleOutputCharacter( hConsoleOut, buf, sclen, Coords, &Dummy );
-  WriteConsoleOutputAttribute( hConsoleOut, cuf, sclen, Coords, &Dummy);
+  WriteConsoleOutputCharacter( g_ConsOut, buf, sclen, Coords, &Dummy );
+	WriteConsoleOutputAttribute( g_ConsOut, cuf, sclen, Coords, &Dummy);
   return OK;
 }
 

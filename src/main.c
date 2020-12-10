@@ -626,8 +626,6 @@ int main(int argc, char * argv[])
 				/* Process command line and let the user edit */
 	(void)dcline(argc, argv);
 
-{	int c = -1;
-
 	while (!eexitflag)
 	{ 
 		lastflag = 0; 	/* Fake last flags.*/
@@ -637,14 +635,10 @@ int main(int argc, char * argv[])
 				
 		update(FALSE);		/* Fix up the screen	*/
 
-#if S_WIN32
-		if (c < 0)
-			(void)input_timeout(0,0,100);
-#endif
-		c = getkey(); 	/* get the next command from the keyboard */
+	{ int	c = getkey(); 	/* get the next command from the keyboard */
 
 		eexitval = editloop(c);
-	}
+	}}
 
 	tcapclose(0);
 
@@ -661,7 +655,7 @@ int main(int argc, char * argv[])
 	cls();
 #endif
 	return eexitval;
-}}
+}
 
 #if CLEAN
 /*

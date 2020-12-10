@@ -9,7 +9,7 @@ CPP_PROJ=/nologo /W3 /O1 /Os /Og /Oy /GF $(C_FLG) /D "WIN32" /D "WIN32_LEAN_AND_
 RSC=rc.exe
 
 LINK32=cl.exe
-LINK32_FLAGS=/nodedefaultlib $(C_FLG) /Fe.\e.exe
+LINK32_FLAGS=/nodedefaultlib /Fm $(C_FLG) /Fe.\e.exe
 
 else
 
@@ -62,8 +62,7 @@ search.obj sinc.obj \
 tag.obj \
 window.obj word.obj \
 msemacs.obj \
-oswin.obj \
-sleep.obj
+oswin.obj
 
 .c.obj :
 	$(CPP) -I../ -I../../src/ $(CPP_PROJ) $< 

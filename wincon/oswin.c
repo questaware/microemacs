@@ -21,17 +21,6 @@
 #include	"../src/elang.h"
 #include	"../src/logmsg.h"
 
-			/* The Mouse driver only works with typeahead defined */
-#if	MOUSE
-static int mexist;	/* is the mouse driver installed? */
-static int nbuttons;	/* number of buttons on the mouse */
-static int oldbut;	/* Previous state of mouse buttons */
-#endif
-
-/*extern char *getenv();*/
-/*extern char *malloc();*/
-
-
 #include <process.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -41,15 +30,19 @@ static int oldbut;	/* Previous state of mouse buttons */
 #define O_RDONLY _O_RDONLY
 #endif
 
-
 #define MLIX 3
-
-int chars_since_shift;
-int timeout_secs;
-
 
 extern char lastline[MLIX+1][NSTRING];
 
+			/* The Mouse driver only works with typeahead defined */
+#if	MOUSE
+static int mexist;	/* is the mouse driver installed? */
+static int nbuttons;	/* number of buttons on the mouse */
+static int oldbut;	/* Previous state of mouse buttons */
+#endif
+
+int g_chars_since_shift;
+int timeout_secs;
 
 static void flagerr(const char * fmt)
 
@@ -59,21 +52,18 @@ static void flagerr(const char * fmt)
   ttgetc();
 }
 
+#if 0
 /*
 sprintf()
 
 { char ch;
   flagerr("printf?");
 }
-*/
-#if 0
-/*
 
 fprintf()
 
 { sprintf();
 }
-
 
 printf()
 
@@ -112,24 +102,20 @@ BOOL GetFormattedError(LPTSTR dest,int size)
 	flags |= FORMAT_MESSAGE_FROM_SYSTEM;
 	flags |= FORMAT_MESSAGE_IGNORE_INSERTS;
 	return 0 != FormatMessage(flags,
-			NULL,
-			dwLastError,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			dest,
-			size,
-			NULL);
+														NULL,
+														dwLastError,
+														MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+														dest,
+														size,	NULL);
+	
 
-int hCrt; 
-FILE *hf; 
-
-AllocConsole(); 
-hCrt = _open_osfhandle((long) GetStdHandle(STD_OUTPUT_HANDLE),_O_TEXT ); 
-hf = _fdopen( hCrt, &qout;w&qout; ); 
-*stdout = *hf; 
-i = setvbuf( stdout, NULL, _IONBF, 0 );
-printf("Hello world\n";
-
-}
+	AllocConsole(); 
+{	int hCrt = _open_osfhandle((long) GetStdHandle(STD_OUTPUT_HANDLE),_O_TEXT ); 
+	FILE *hf = _fdopen( hCrt, &qout;w&qout; ); 
+	*stdout = *hf; 
+	i = setvbuf( stdout, NULL, _IONBF, 0 );
+	return 0;
+}}
 
 */
 #endif
@@ -167,7 +153,7 @@ X				/* get an event from the input buffer */
 void ttopen()
 
 {
-/*	if (gflags & MD_NO_MMI)
+/*if (gflags & MD_NO_MMI)
 	  return; */
 	long miaddr;	/* mouse interupt routine address */
 
@@ -562,13 +548,10 @@ int extcode(c_)
 #endif
 
 #if GOTTYPAH
-
-	/* typahead:	See if any characters are already in the keyboard buffer
-	*/
+				 /* typahead: See if any characters are already in the keyboard buffer */
 int Pascal typahead()
 
-{
-  return _kbhit();
+{	return _kbhit();
 }
 
 
@@ -577,8 +560,7 @@ static int  eaten_char = -1;		 /* Re-eaten char */
 
 void Pascal reeat(int c)
 
-{
-	eaten_char = c;			/* save the char for later */
+{	eaten_char = c;			/* save the char for later */
 }
 
 #endif
@@ -596,9 +578,14 @@ void flush_typah()
 
 #define KBRD 7
 
-static HANDLE hConsoleIn;
+extern HANDLE  g_ConsOut;                   /* Handle to the console */
+extern CONSOLE_SCREEN_BUFFER_INFO csbiInfo;  /* Orig Console information */
+extern CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
 
-static int cntr_c_pressed = false;
+static HANDLE g_ConsIn;
+static HWND   g_origwin = NULL;
+
+static int g_got_ctrl = false;
 
 
 BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
@@ -617,23 +604,15 @@ BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
   rec_.Event.KeyEvent.wVirtualScanCode = 0x20;
   rec_.Event.KeyEvent.wVirtualKeyCode = 'C';
 
-  rc = WriteConsoleInputA( hConsoleIn, &rec_, 1, &ct);
+  rc = WriteConsoleInputA( g_ConsIn, &rec_, 1, &ct);
   if (rc == 0 || ct != 1)
   { /*DWORD ec = GetLastError();
     mlwrite("Err %d %d", ec, ct);
     Beep(600, 1000);*/
-    cntr_c_pressed = true;
+    g_got_ctrl = true;
   }
   return true;
 }
-
-
-HWND origwin = NULL;
-
-extern HANDLE  hConsoleOut;                   /* Handle to the console */
-extern CONSOLE_SCREEN_BUFFER_INFO csbiInfo;  /* Orig Console information */
-extern CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
-
 
 void cls()
                /* get the number of character cells in the current buffer */
@@ -657,11 +636,11 @@ void cls()
 
 static void homes()
 
-{   const COORD coordScreen = { 0, 0 };  /* here's where we'll home the cursor */
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+{	const COORD coordScreen = { 0, 0 };  /* here's where we'll home the cursor */
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    (void)SetConsoleCursorPosition( hConsole, coordScreen ); /* doesnt work */
-    Sleep(10);
+	(void)SetConsoleCursorPosition( hConsole, coordScreen ); /* doesnt work */
+	Sleep(10);
 }
 
 #endif
@@ -679,15 +658,13 @@ typedef struct _WINDOWPLACEMENT {
 
 void setMyConsoleIP()
 
-{ hConsoleIn = GetStdHandle( STD_INPUT_HANDLE );
-  if (hConsoleIn < 0)					                    /* INVALID_HANDLE_VALUE */
+{ g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
+  if (g_ConsIn < 0)					                    /* INVALID_HANDLE_VALUE */
     flagerr("Piperr %d");
 
-/* SetStdHandle( STD_INPUT_HANDLE, hConsoleIn ); */
-#if 1
-  if (0 == SetConsoleMode(hConsoleIn, ENABLE_WINDOW_INPUT/*|ENABLE_PROCESSED_INPUT*/))
+/* SetStdHandle( STD_INPUT_HANDLE, g_ConsIn ); */
+  if (0 == SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT/*|ENABLE_PROCESSED_INPUT*/))
     flagerr("PipeC %d");
-#endif
 }
 
 
@@ -701,8 +678,6 @@ void Pascal MySetCoMo()
     term.t_nrowm1 = csbiInfoO.dwSize.Y - 1;
   if (term.t_ncol > csbiInfoO.dwSize.X)
     term.t_ncol = csbiInfoO.dwSize.X;
-//if (term.t_ncol > 80)
-//  term.t_ncol = 80;
    
   sr.Left = 0+0;
   sr.Top = 0+3;
@@ -711,18 +686,18 @@ void Pascal MySetCoMo()
   sr.Bottom = 0+term.t_nrowm1-3/* say */;
   sz.Y = term.t_nrowm1+1;
 
-  origwin = GetForegroundWindow();
+  g_origwin = GetForegroundWindow();
  
-  GetWindowRect(origwin, &rc); 
+  GetWindowRect(g_origwin, &rc); 
 
   FreeConsole();
   AllocConsole();
 
-  hConsoleOut = GetStdHandle( STD_OUTPUT_HANDLE );
+  g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
 
-  if (SetConsoleScreenBufferSize(hConsoleOut, sz) == 0)
+  if (SetConsoleScreenBufferSize(g_ConsOut, sz) == 0)
     flagerr("SCSBerr %d");
-  if (SetConsoleWindowInfo(hConsoleOut, true, &sr) == 0)
+  if (SetConsoleWindowInfo(g_ConsOut, true, &sr) == 0)
     flagerr("SCWIEerr %d");
 
   //SetConsoleTitle("Debug Window");
@@ -748,7 +723,7 @@ void Pascal MySetCoMo()
  * Read a character from the terminal, performing no editing and doing no echo
  * at all. Also mouse events are forced into the input stream here.
  */
-int Pascal ttgetc()
+Pascal ttgetc()
 
 {
 #if GOTTYPAH
@@ -791,7 +766,7 @@ int Pascal ttgetc()
 		} /* while */
 	}
 #endif
-  if (hConsoleIn == 0)
+  if (g_ConsIn == 0)
   {/*FreeConsole();
      AllocConsole();*/
      setMyConsoleIP();
@@ -803,13 +778,14 @@ int Pascal ttgetc()
 
   while (1)
   { DWORD actual;
+  	const DWORD lim = 1000;
   	INPUT_RECORD rec;
   	int keystate;
 
-    int cc = WaitForSingleObject(hConsoleIn, 1000);
+    int cc = WaitForSingleObject(g_ConsIn, lim);
     if (cc == WAIT_TIMEOUT)
-    { if (cntr_c_pressed)
-      { cntr_c_pressed = false;
+    { if (g_got_ctrl)
+      { g_got_ctrl = false;
         return (int)(CTRL | 'C');
       }
 			totalwait -= 1;
@@ -817,16 +793,19 @@ int Pascal ttgetc()
 			if (totalwait == 0 && timeout_secs > 0)
 			{ exit(2);
 			}
+			_sleep(10);
       continue;
     }
 
-    SetConsoleMode(hConsoleIn, ENABLE_WINDOW_INPUT);
-    if (!ReadConsoleInput(hConsoleIn, &rec, (DWORD)1, &actual) || actual < 1)
+    SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
+    if (!ReadConsoleInput(g_ConsIn, &rec, (DWORD)1, &actual) || actual < 1)
+    { _sleep(10);
 	    continue;
+		}
 
 		keystate = rec.Event.KeyEvent.dwControlKeyState;
     if (keystate & LEFT_CTRL_PRESSED)
-			chars_since_shift = 0;
+			g_chars_since_shift = 0;
 
     if      (rec.EventType == KEY_EVENT && rec.Event.KeyEvent.bKeyDown)
     { int ctrl = 0;
@@ -863,7 +842,7 @@ int Pascal ttgetc()
 #endif
       }
        
-			++chars_since_shift;
+			++g_chars_since_shift;
       return (int)(ctrl | (chr == 0xdd ? 0x7c : chr));
     }}
     else if (rec.EventType == MENU_EVENT)
@@ -895,23 +874,22 @@ int Pascal ttgetc()
 char * mkTempName (/*out*/char *buf, char *name, char *ext)
 {
 #ifdef _CONVDIR_CHAR
- #define PIPEDIR_CHAR _CONVDIR_CHAR
+ #define DIRY_CHAR _CONVDIR_CHAR
 #else
- #define PIPEDIR_CHAR DIRSEPCHAR
+ #define DIRY_CHAR DIRSEPCHAR
 #endif
-	static char appnm[4] = "me";
 	static char *tmpDir = NULL ;
+				 char c2[2];
 				 char * td = tmpDir;
 
+	c2[0] = c2[1] = 0;
+
 	if (td == NULL)
-	{
-		td = (char *)getenv("TEMP");
+	{	td = (char *)getenv("TEMP");
 		if (td != NULL)
 		{
-			if (td[strlen(td)-1] != PIPEDIR_CHAR)
-			{ appnm[0] = PIPEDIR_CHAR ;
-				strcpy(appnm+1,"me");
-			}
+			if (td[strlen(td)-1] != DIRY_CHAR)
+				c2[0] = DIRY_CHAR;
 		}
 	  else
 #if (defined _DOS) || (defined _WIN32)
@@ -922,7 +900,7 @@ char * mkTempName (/*out*/char *buf, char *name, char *ext)
 #endif
 		}
 		tmpDir = td;
-		concat(buf,td,appnm,int_asc(_getpid()),name,ext,0);
+		concat(buf,td,c2,"me",int_asc(_getpid()),name,ext,0);
 
 		return &buf[strlen(buf)];
 }
@@ -941,7 +919,7 @@ static char * mkTempCommName(/*out*/char *filename, char *basename)
 		{  CloseHandle(hdl);
 			 break ;
 		}
-		*ss = ch;
+		*ss = ch;				// File in use?
 		ss[1] = '~';
 		ss[2] = 0;
 	}
@@ -1017,8 +995,24 @@ int platformId = -1;
 #endif
 
 
+HANDLE CreateF(char * filenm, DWORD gen, DWORD share, SECURITY_ATTRIBUTES * sb,
+							 DWORD cmd, BOOL temp)
+{
+#if _MSC_VER < 1900
+	char * nm = filenm;
+#else
+	wchar_t buf[512];
+  wchar_t * nm = char_to_wchar(filenm, 512, buf);
+#endif
+	DWORD sh = share != 0 					? share :
+						 gen == GENERIC_WRITE ? FILE_SHARE_WRITE :
+																		FILE_SHARE_READ;
+	DWORD attr = temp ? FILE_ATTRIBUTE_TEMPORARY : FILE_ATTRIBUTE_NORMAL;
+	return CreateFile(nm,gen,sh,sb,
+											cmd,attr,NULL);
+}
 
-HANDLE CreateF(char * filenm)
+HANDLE CreateRetry(char * filenm)
 
 { int gen = GENERIC_WRITE;
 	int share = FILE_SHARE_WRITE;
@@ -1026,11 +1020,15 @@ HANDLE CreateF(char * filenm)
 	HANDLE Hdl;
 	int ct = 2;
 
-	(void)mkTempName(filenm, DUMMY_STDIN_FILE,NULL);
-	
+#if _MSC_VER < 1900
+	char * nm = filenm;
+#else
+	wchar_t buf[512];
+  wchar_t * nm = char_to_wchar(filenm, 512, buf);
+#endif
+
 	for (; ;)
-	{
-		Hdl = CreateFile(filenm,gen,share,NULL,
+	{	Hdl = CreateFile(nm,gen,share,NULL,
 											cmd,FILE_ATTRIBUTE_NORMAL,NULL);
 		if (--ct == 0)
 			break;
@@ -1115,8 +1113,8 @@ WinLaunchProgram(char *cmd, int flags, char *inFile, char *outFile, char *outErr
 	if (pipeStderr == 0)
 		pipeStderr = getenv("ME_PIPE_STDERR") != NULL ? 1 : -1 ;
 #endif
-
-						/*set the startup window size*/
+																	/*set the startup window size*/
+	memset(&mePInfo, 0, sizeof (PROCESS_INFORMATION));
 	memset(&meSuInfo, 0, sizeof (STARTUPINFO));
 	meSuInfo.cb = sizeof(STARTUPINFO);
 
@@ -1125,7 +1123,15 @@ WinLaunchProgram(char *cmd, int flags, char *inFile, char *outFile, char *outErr
 		meSuInfo.wShowWindow = SW_HIDE;
 		meSuInfo.dwFlags |= STARTF_USESHOWWINDOW ;
 	}
-	meSuInfo.lpTitle = cmd;
+{
+#if _MSC_VER < 1900
+	char * cmd_ = cmd;
+#else
+	wchar_t buf[1000];
+	LPTSTR cmd_ = char_to_wchar(cmd, 1000, buf);
+//meSuInfo.pipeOutFile = NULL;
+#endif
+	meSuInfo.lpTitle = cmd_;
 //meSuInfo.hStdInput	= INVALID_HANDLE_VALUE ;
 //meSuInfo.hStdOutput = INVALID_HANDLE_VALUE ;
 //meSuInfo.hStdError	= INVALID_HANDLE_VALUE ;
@@ -1202,7 +1208,7 @@ C 					 * unless a dummy input file is used, no idea why but doing the
 C 					 * following (taken from above) works! */
 C 			error error
 C 																						/* Re-open the file for reading */
-C 			meSuInfo.hStdInput = CreateF(dummyInFile);
+C 			meSuInfo.hStdInput = CreateRetry(dummyInFile);
 C 			if (meSuInfo.hStdInput < 0) 	/* INVALID_HANDLE_VALUE */
 C 			{
 C 					DeleteFile(dummyInFile) ;
@@ -1291,19 +1297,20 @@ C 	else
 				strcat (cmdLine, pipeStderr > 0 ? " >& " : " > ");
 				strcat (cmdLine, outFile);
 #else
-				meSuInfo.hStdOutput = CreateFile(outFile,GENERIC_WRITE,FILE_SHARE_WRITE,&sbuts,
-																				 CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
+				meSuInfo.hStdOutput = CreateF(outFile,GENERIC_WRITE,0,&sbuts,
+																			CREATE_ALWAYS,1);
 				if			(meSuInfo.hStdOutput < 0)
 					status = 0;
 #endif
 				else if (inFile != NULL)
 				{ 
-					dumHdl = CreateFile(inFile,GENERIC_READ,FILE_SHARE_READ,NULL,
-															OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+					dumHdl = CreateF(inFile,GENERIC_READ,0,NULL,OPEN_ALWAYS,0);
 					/*mbwrite(inFile);*/
 				}
 				else if ((flags & LAUNCH_STDIN) == 0)
-					dumHdl = CreateF(dummyInFile);
+				{	(void)mkTempName(dummyInFile, DUMMY_STDIN_FILE,NULL);
+					dumHdl = CreateRetry(dummyInFile);
+				}
 				
 				if			(dumHdl == 0)
 					;
@@ -1315,8 +1322,9 @@ C 	else
 				else 
 				{ meSuInfo.hStdInput = dumHdl;
 					if (outErr != NULL)
-					{ meSuInfo.hStdError = CreateFile(outErr,GENERIC_WRITE,FILE_SHARE_READ,&sbuts,
-																						OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+					{ meSuInfo.hStdError = CreateF(outErr,GENERIC_WRITE,0, /*FILE_SHARE_READ*/
+																				 &sbuts,
+																				 OPEN_ALWAYS,0);
 						if (meSuInfo.hStdError < 0)
 							status = 0;
 					}
@@ -1378,11 +1386,19 @@ C		error error
 #else 																												/* ! _WIN32s */
 	/*mbwrite(cp);*/
 		loglog1("CrePre %s", compSpecName);
+	{
+#if _MSC_VER < 1900
+		char * app = NULL;
+		char * csn = compSpecName;
+#else
+		wchar_t abuf[256], cbuf[256];
+		LPTSTR app = NULL;
+		LPTSTR csn = char_to_wchar(compSpecName, 256, abuf);
+#endif
 													 /* start the process and get a handle on it */
-		status = CreateProcess(NULL,
-													 compSpecName,
-													 NULL,
-													 NULL,
+		status = CreateProcess(app,
+													 csn,
+													 NULL,NULL,
 													 !(flags & LAUNCH_SHELL),
 											 /*(flags & LAUNCH_DETACHED) ? DETACHED_PROCESS : CREATE_NEW_CONSOLE,*/
 													 CREATE_NEW_CONSOLE,
@@ -1477,12 +1493,12 @@ C		error error
 			}
 		}
 #endif
-	}
+	}}
 	if (dummyInFile[0] != 0)													
 		DeleteFile(dummyInFile);	/* Delete the dummy stdin file if there is one. */
 
 	return status ;
-}}
+}}}
 
 
 #ifdef _DOS
@@ -1530,7 +1546,7 @@ static Cc Pascal usehost(wh, line)
 	ttopen();
 #endif
 	tcapopen();
-	if (0 == SetConsoleMode(hConsoleIn, ENABLE_WINDOW_INPUT/*|ENABLE_PROCESSED_INPUT*/))
+	if (0 == SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT/*|ENABLE_PROCESSED_INPUT*/))
 		Beep(1400, 200);
 	
 	ttcol = 0;				 /* otherwise we shall not see the message */
@@ -1625,7 +1641,7 @@ int pipefilter(wh)
 	}}
 	else if (wh == '#'-'@') 						 /* setup the proper file names */
 	{ 			
-		filnam1 = mkTempCommName(pipeInFile,"fltinp");
+		filnam1 = mkTempCommName(pipeInFile,"si");
 
 		if (writeout(filnam1) != TRUE)		/* write it out, checking for errors */
 		{ mlwrite(TEXT2);
@@ -1637,7 +1653,7 @@ int pipefilter(wh)
 		strcat(&line[0], filnam1);
 #endif
 	}
-{ char * filnam2 = mkTempCommName(pipeOutFile,"fltoutp") ;
+{ char * filnam2 = mkTempCommName(pipeOutFile,"so") ;
 	loglog1("Launch Out %s", filnam2);
 #if 0
 	strcat(&line[0], ">");
@@ -1645,7 +1661,7 @@ int pipefilter(wh)
 
 	if (wh == 'E' - '@')
 	{ 
-		filnam3 = mkTempCommName(pipeEFile,"fltoute") ;
+		filnam3 = mkTempCommName(pipeEFile,"se") ;
 #if 0
 		strcat(&line[0], " 2>");
 		strcat(&line[0], filnam3);		/* WinLaunchProgram cannot cope */
@@ -1806,23 +1822,11 @@ HANDLE	m_hClipData;
 
 Cc ClipSet(char * src)
 
-{ Bool extend;
-	Int len = strlen(src);
+{ Int len = strlen(src);
 	HWND mwh = GetTopWindow(NULL);
 	if (mwh == NULL)
 		return -1;
 
-#if 0
-	GlobalUnlock(m_hData);
-	
-	if (!OpenClipboard(/*m_pMainWnd->*/mwh))
-		return -1;
-		
-	EmptyClipboard();
-	if (m_hData)
-		SetClipboardData(CF_TEXT, m_hData);
-	CloseClipboard();
-#else
 {	HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
 	if (!m_hData)  
 		return -1;
@@ -1841,10 +1845,8 @@ Cc ClipSet(char * src)
 		SetClipboardData(CF_TEXT, m_hData);
 		CloseClipboard();
 	}
-}}	
-#endif	
 	return OK;
-}
+}}}
 
 
 #if 0
@@ -1901,12 +1903,21 @@ void ClipPasteEnd()
 
 
 
-void Pascal mbwrite(const char * msg)
+void Pascal mbwrite(char const * msg)
 
 {
 #if S_WIN32
+		char * em_ = "Emacs";
+#if _MSC_VER < 1900
+		char * m = (char*)msg;
+		char * em = em_;
+#else
+		wchar_t buf[256], ebuf[256];
+		LPTSTR m = char_to_wchar(msg, 256, buf);
+		LPTSTR em = char_to_wchar(em_, 256, ebuf);
+#endif
 		HWND mwh = /*GetTopWindow(NULL);*/GetFocus();
-		MessageBox(mwh, msg, "Emacs", MB_OK | MB_SYSTEMMODAL);
+		MessageBox(mwh, m, em, MB_OK | MB_SYSTEMMODAL);
 		SetActiveWindow(mwh);
 #endif
 }
@@ -1921,12 +1932,11 @@ void Pascal mbwrite(const char * msg)
 
 void Pascal mbmenu(const char * msg)
 
-{ HMENU hMenu, hSubMenu;
-	HICON hIcon, hIconSm;
+{ HICON hIcon, hIconSm;
 
-	hMenu = CreateMenu();
+	HMENU hMenu = CreateMenu();
 
-	hSubMenu = CreatePopupMenu();
+	HMENU hSubMenu = CreatePopupMenu();
 	AppendMenu(hSubMenu, MF_STRING, ID_FILE_EXIT, "E&xit");
 	AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, "&File");
 
@@ -1959,12 +1969,9 @@ void Pascal mbwrite2(const char * diag, const char * msg)
 		int len = strlen(diag) + strlen(msg) + 3;
 		char * t = malloc(len);
 
-		strcpy(t,diag);
-		strcat(t,msg);
+		strcat(strcpy(t,diag),msg);
 
-{ 	HWND mwh = /*GetTopWindow(NULL);*/GetFocus();
-		MessageBox(mwh, t, "Emacs", MB_OK | MB_SYSTEMMODAL);
-		SetActiveWindow(mwh);
+		mbwrite(t);
 
 		free(t);
 }
@@ -1976,7 +1983,7 @@ void Pascal mbwrite2(const char * diag, const char * msg)
 void Pascal SetParentFocus()
 
 { 
-	if (origwin != NULL)
+	if (g_origwin != NULL)
 	{ HWND mwh = GetForegroundWindow();
 		if (mwh != NULL)
 			mwh = GetParent(mwh);

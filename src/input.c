@@ -553,7 +553,7 @@ static int  redrawln(char buf[], int clamp)
 }
 
 extern int gtxt_woffs;
-extern int chars_since_shift;
+extern int g_chars_since_shift;
 
 
 int gs_keyct;
@@ -573,7 +573,7 @@ static  getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
   buf[0] = 0;
 
-  chars_since_shift = 10000;
+  g_chars_since_shift = 10000;
   gs_keyct = 0;
   gtxt_woffs = curwp->w_doto;
 

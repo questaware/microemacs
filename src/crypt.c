@@ -63,12 +63,12 @@ int Pascal setekey(char * * key_ref)
 				key = ekey;
 			else
 			{ // char msg[30];
-			  extern int chars_since_shift;
+			  extern int g_chars_since_shift;
 
-				if (chars_since_shift < 10000)
-					strcat(mykey,int_asc(chars_since_shift));
+				if (g_chars_since_shift < 10000)
+					strcat(mykey,int_asc(g_chars_since_shift));
 
-//			strcat(strcat(strcpy(msg, int_asc(chars_since_shift)), " Css "), mykey);
+//			strcat(strcat(strcpy(msg, int_asc(g_chars_since_shift)), " Css "), mykey);
 //		  mbwrite(msg);
 			}
 		}

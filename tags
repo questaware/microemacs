@@ -1338,6 +1338,7 @@ ccbuf	./src/execasm.c
 cclmake	./src/search.c
 centre	./src/display.c
 cex	./src/main.c
+char_to_wchar	wincon/msemacs.c
 chcaseunsafe	./src/edef.h
 chdir	./src/msdir.c
 chdir	./wincon/hold/msdir.c
@@ -1632,6 +1633,7 @@ inp	./ibmpc/estruct.h
 inp	./mtgdi/estruct.h
 inp	./unix/estruct.h
 inp	./wincon/estruct.h
+input_timeout	./src/sleep.cpp
 ins_newline	./src/random.c
 insfile	./src/file.c
 insspace	./src/line.c
@@ -2218,6 +2220,7 @@ vtmove	./src/display.c
 vttidy	./src/display.c
 wLine	./src/sinc.c
 wOffset	./src/sinc.c
+wchar_to_char	./wincon/msemacs.c
 when	./src/sinc.c
 widen	./src/region.c
 window_bgfg	./src/display.c
