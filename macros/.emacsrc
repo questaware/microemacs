@@ -1,4 +1,4 @@
-2 handle-tab
+; 2 handle-tab
 
 15 store-macro
   insert-string "F	"
@@ -229,6 +229,10 @@ btk forward-character ^L
 btk clear-and-redraw M-^[
 
 18 store-macro       ; 
+   set %fw 1
+	 !if &equ $lastkey 66
+		 set %fw 0
+	 !endif
 ;  set %oo @&cat "key " $lastkey
    !if &equ $lastkey 54
      search-reverse "^{"
@@ -238,12 +242,12 @@ btk clear-and-redraw M-^[
        next-word
        copy-region
     !else
-       set %lk = $lastkey
        !if &equ $keycount 1	; sequence of keystrokes
          search-forward "[A-Za-z0-9_][A-Za-z0-9_]*"
          set %mtch $match
        !endif
-       !if &or &or &or &equ %lk 141 &equ %lk 1234 &equ %lk 18498 &equ %lk 66
+;			 set %oo @&cat "key " $lastkey
+			 !if &equ %fw 0
 ;          set %oo @&cat "sr" %mtch
            search-reverse %mtch
        !else
@@ -256,9 +260,11 @@ btk clear-and-redraw M-^[
 btk execute-macro-18 FN6
 btk execute-macro-18 FN^P
 btk execute-macro-18 FN^N
-btk execute-macro-18 A-FNB
-btk execute-macro-18 A-FNF
+btk execute-macro-18 A-B
+btk execute-macro-18 A-F
 btk execute-macro-18 A-5
+
+btk next-window 
 
 19 store-macro ; do-os-cmd
        set %lk $lastkey
@@ -283,8 +289,10 @@ btk save-file ^XA-S
 btk select-buffer ^XB
 btk next-buffer M-FN;
 btk last-buffer M-FN9
-btk move-window-down  M-FNN
-btk move-window-up  M-FNP
+btk move-window-up   A-P
+btk move-window-down A-N
+btk move-window-up   M-FNP
+btk next-window      M-FNN
 btk find-tag M-FN>
 
 btk help A-1               ; SNA like
@@ -295,6 +303,7 @@ btk shell-command A-6
 btk backward-page A-^Z
 btk next-page A-(
 
+btk search-incls M-FN<
 btk pipe-command ^X'
 
 set $discmd 1
@@ -302,4 +311,4 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".sql=^4.c=2"
+set $fileprof ".sql=4^.c=2.cpp=2"

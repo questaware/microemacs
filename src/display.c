@@ -162,7 +162,7 @@ void Pascal scroll_vscr()
  */
 void Pascal vtinit()
 
-{    register int i;
+{		register int i;
     register VIDEO *vp;
 
 /*  if (gflags & MD_NO_MMI)
@@ -170,6 +170,43 @@ void Pascal vtinit()
 
 #if S_WIN32
 #else
+{		int lines = 0;
+		int cols = 0;
+		char * v = getenv("COLUMNS");
+		if (v != NULL)
+			cols = atoi(v);
+		if (cols == 0)
+		{ char buf[40];
+			FILE * ip = popen("stty size", "r");
+			if      (ip == NULL)
+				cols = 80;
+			else 
+			{	if (fgets(buf, sizeof(buf), ip) != NULL)
+				{ char * s = buf;
+					while (*s > ' ')
+						++s;
+					lines = atoi(buf) - 2;
+					cols = atoi(s);
+				}
+				pclose(ip);
+			}
+		}
+		if (lines <= 0)
+		{	lines = SCR_LINES - 2;
+			v = getenv("LINES");
+			if (v != NULL)
+  			lines = atoi(v) - 2;
+  	}
+		if (lines > 0)
+		{ term.t_nrowm1 = lines;			
+			term.t_mrowm1 = lines;
+		}
+		if (cols > 0)
+		{ term.t_ncol = cols;
+			term.t_mcol = cols;
+			term.t_margin = cols / 10;
+		}
+}
     tcapsetfgbg(0x7000);      /* white background */ // should be derived
 #endif
     if (vscreen != null)
@@ -468,10 +505,7 @@ void Pascal modeline(WINDOW * wp)
 #if S_MSDOS && S_WIN32 == 0
 	n = wp == curwp ? 0xcd : /* 173 :  */
 #else
-	n = wp == curwp ? '='  :
-#endif
-#if	REVSTA
-	    revexist    ? ' ' :
+	n = wp == curwp ? '='  : '-';
 #endif
 			          '-';
 	memset(&tline.lc.l_text[0], n, NLINE);
@@ -807,11 +841,8 @@ void Pascal updline(int force)
 	{  
 	 /*tcapmove(0, 0);		** Erase the screen. */
 	   tcapeeop();			/* Erase-page clears the message area. */
-#if 0
-	   mlerase();			/* needs to be cleared if colored */
-#endif
 	   mpresf = FALSE; 		 
-        }
+	}
 #endif
 
 	for (i = -1; ++i <= term.t_nrowm1; )
@@ -856,9 +887,9 @@ void Pascal updline(int force)
 int /*Pascal*/ update(int force)
 	/* int force;	** force update past type ahead? */
 {
-    register WINDOW *wp;
+	register WINDOW *wp;
 
-    if (vscreen != NULL
+	if (vscreen != NULL
 
 #if	GOTTYPEAH || VISMAC == 0
             && (force
@@ -945,13 +976,11 @@ int Pascal reframe(WINDOW * wp)
 	    lp = lforw(lp);
 	  }
 		if	(sscroll && (flags & (WFFORCE+WFHARD)) == 0)
-		{ if	  (wp->w_dotp == lp 
-			    && screxist)
+		{ if	  (wp->w_dotp == lp)
 		  { wp->w_linep = lforw(wp->w_linep);
 		    return flags | WFTXTD;
 		  }
 		  else if (lforw(wp->w_dotp) == wp->w_linep
-			    && screxist
 			    && (wp->w_dotp->l_props & L_IS_HD) == 0)
 		  { wp->w_linep = wp->w_dotp;
 		    return flags | WFTXTU;

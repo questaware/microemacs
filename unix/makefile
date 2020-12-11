@@ -40,7 +40,9 @@ makekeys: makekeys.c
 	$(CC) $(CFLAGS) -o makekeys makekeys.c
 
 keys.h:	makekeys
-	./makekeys > keys.h
+	./makekeys | sort > keys.h
+# Can be combined using
+# cat keys1.h keys2.h | sort | uniq > keys.h
 
 map.o : ../src/map.c
 	$(CC) -c $(CFLAGS) ../src/map.c

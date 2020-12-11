@@ -240,8 +240,8 @@ extern Paren_t paren;
 /* from MAIN.C */
 
 extern int kinsert_n;
-extern int got_uarg;
-extern int got_search;
+extern int g_got_uarg;
+extern int g_got_search;
 
 /* initialized global external declarations */
 NOSHARE extern int g_clexec;	/* command line execution flag	*/
@@ -252,14 +252,12 @@ NOSHARE extern char *ekey;		/* global encryption key	*/
 NOSHARE extern char *execstr;		/* pointer to string to execute */
 NOSHARE extern char golabel[];		/* current line to go to	*/
 NOSHARE extern int g_execlevel;		/* execution IF level		*/
-/*NOSHARE extern int revexist;		** does reverse video exist?	*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
 NOSHARE extern int  g_numcmd;		/* number of bindable functions */
 NOSHARE extern const NBIND names[];	/* name to function table	*/
 NOSHARE extern int gfcolor;		/* global forgrnd color (white) */
 NOSHARE extern int gbcolor;		/* global backgrnd color (black)*/
 NOSHARE extern int mpresf;		/* Stuff in message line	*/
-NOSHARE extern int screxist;      	/* terminal can scroll          */
 NOSHARE extern int vtrow;		/* Row location of SW cursor	*/
 NOSHARE extern int vtcol;		/* Column location of SW cursor */
 NOSHARE extern int ttinit;		/* => ttrow is wrong */

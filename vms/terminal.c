@@ -44,8 +44,6 @@ int Pascal get1key();
 #define Char char
 
  extern	char *getenv();
- extern int Dscrexist;      /* terminal can scroll          */
- extern int Drevexist;      /* terminal can scroll          */
  extern char sres[];		/* current screen resolution	*/
 
 static char * mytgoto(char * cmd, int p1, int p2);
@@ -315,12 +313,6 @@ int Pascal use_named_str(char * name, char * str)
 	}}
 	
  /* strcat(&kseq[K_ED][0], kseq[K_SGR0]); */
-
-	screxist = true;
-					/* kseq[K_IND][0] != 0 && kseq[K_RI][0] != 0 || 
-			 kseq[K_IL1][0] != 0 && kseq[K_DL1][0] != 0; */
-
-	revexist = false; /* kseq[K_REV][0] != 0; */
 
 	if (keytbl[BS_O].p_seq[0] == 0x7f and 
 			keytbl[BS_O].p_seq[1] == 0)

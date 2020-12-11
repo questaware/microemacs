@@ -117,7 +117,6 @@ extern NOSHARE int predefvars[];
 #define kbdrep    predefvars[EVCMODE]
 
 #define nclicks   predefvars[EVPENDING]
-#define revexist  predefvars[EVCURCHAR]
 
 #if 0
 					/* overloading variables */

@@ -92,7 +92,7 @@ int ctlxlp(int f, int n)
 
 	mlwrite(TEXT106);
 /*		"[Start macro]" */
-	got_search = FALSE;
+	g_got_search = FALSE;
 
 	kbdwr = 0;
 	kbdmode = RECORD;
@@ -147,7 +147,7 @@ int  ctlxrp(int f, int n)
 /*			"[End macro]" */
 		n = macro_start_col - curwp->w_doto;
 
-		if (n != 0 && !got_search &&	macro_start_line == curwp->w_dotp->l_bp)
+		if (n != 0 && !g_got_search &&	macro_start_line == curwp->w_dotp->l_bp)
 		{ int key = 2118;		// forward-character
 			curwp->w_doto = macro_start_col;
 			if (n < 0)
@@ -186,7 +186,7 @@ int  ctlxe(int f, int n)
 
 	g_slastkey = lastkey;
 
-	if (got_search || curwp->w_dotp->l_used > macro_start_col)
+	if (g_got_search || curwp->w_dotp->l_used > macro_start_col)
 	{
 //	curwp->w_doto = macro_start_col;
 						

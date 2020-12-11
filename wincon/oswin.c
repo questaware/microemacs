@@ -30,6 +30,8 @@
 #define O_RDONLY _O_RDONLY
 #endif
 
+extern int input_timeout (int filedes, unsigned int secs, unsigned int usecs);
+
 #define MLIX 3
 
 extern char lastline[MLIX+1][NSTRING];
@@ -555,12 +557,12 @@ int Pascal typahead()
 }
 
 
-static int  eaten_char = -1;		 /* Re-eaten char */
+static int g_eaten_char = 1000000;		 /* Re-eaten char */
 
 
 void Pascal reeat(int c)
 
-{	eaten_char = c;			/* save the char for later */
+{	g_eaten_char = c;			/* save the char for later */
 }
 
 #endif
@@ -569,7 +571,7 @@ void flush_typah()
 
 { 
 #if GOTTYPAH
-	eaten_char = -1;
+	g_eaten_char = -1;
 #endif
 	while (_kbhit())
     (void)ttgetc();
@@ -727,10 +729,12 @@ Pascal ttgetc()
 
 {
 #if GOTTYPAH
-	if (eaten_char != -1)
-	{ int c = eaten_char;
-		eaten_char = -1;
-		return c;
+	if (g_eaten_char >= 0)
+	{ int c = g_eaten_char;
+		g_eaten_char = -1;
+		if (c != 1000000)
+			return c;
+		(void)input_timeout(0,0,100000);
 	}
 #endif
 
@@ -793,13 +797,13 @@ Pascal ttgetc()
 			if (totalwait == 0 && timeout_secs > 0)
 			{ exit(2);
 			}
-			_sleep(10);
+			(void)input_timeout(0,0,40000);
       continue;
     }
 
-    SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
+//  SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
     if (!ReadConsoleInput(g_ConsIn, &rec, (DWORD)1, &actual) || actual < 1)
-    { _sleep(10);
+    { (void)input_timeout(0,0,40000);
 	    continue;
 		}
 

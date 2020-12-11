@@ -418,7 +418,7 @@ int Pascal hunt(int n, int again)
 //paren.sdir = 1;
 
   if (kbd_record(kbdmode))
-    got_search = TRUE;
+    g_got_search = TRUE;
 
   if (pat[0] == '\0')
 	{ mlwrite(TEXT78);

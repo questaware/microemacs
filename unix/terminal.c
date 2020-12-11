@@ -44,8 +44,6 @@ extern void serialclose();
 extern int ttgetraw();
 
  extern	char *getenv();
- extern int Dscrexist;      /* terminal can scroll          */
- extern int Drevexist;      /* terminal can scroll          */
 
 static char * mytgoto(char * cmd, int p1, int p2);
 
@@ -305,11 +303,8 @@ int Pascal use_named_str(name, str)
   
  /* strcat(&kseq[K_ED][0], kseq[K_SGR0]); */
 
-  screxist = true;
 	        /* kseq[K_IND][0] != 0 && kseq[K_RI][0] != 0 || 
 					   kseq[K_IL1][0] != 0 && kseq[K_DL1][0] != 0; */
-
-  revexist = false;	/* kseq[K_REV][0] != 0; */
 
   if (keytbl[BS_O].p_seq[0] == 0x7f &&
       keytbl[BS_O].p_seq[1] == 0)
@@ -352,27 +347,7 @@ void ttopen()
 
 void Pascal tcap_init()
 
-{ int vv = SCR_LINES;
-  char * v = getenv("LINES");
-  if (v != NULL)
-    vv = atoi(v);
-  
-  if (vv != 0 && vv < 91)
-  { term.t_nrowm1 = vv - 2;			
-    term.t_mrowm1 = vv - 2;
-  }
-
-  vv = 132;
-  v = getenv("COLUMNS");
-  if (v != NULL)
-    vv = atoi(v);
-  if (vv != 0 && vv < 136)
-  { term.t_ncol = vv;
-    term.t_mcol = vv;
-    term.t_margin = vv / 10;
-  }
-  
-  tcapscreg(0,term.t_nrowm1-2);   /* allow for modeline */
+{
 }
 
 
@@ -385,6 +360,8 @@ void Pascal tcap_init()
 */
 
 void Pascal tcapopen()
+
+{ tcapscreg(0,term.t_nrowm1-2);   /* allow for modeline */
 
 {	NOSHARE char * term_type;
 
@@ -406,7 +383,7 @@ void Pascal tcapopen()
 //      use_named_str(null, null);
 	in_init();
 	see_alarm(0);
-}
+}}
 
 			/* This function gets called just before we go
 			 * back home to the command interpreter.	 */
@@ -442,7 +419,7 @@ int Pascal get1key(); /* forward */
 */
 
 
-int chars_since_shift; /* these do not work in unix */
+int g_chars_since_shift; /* these do not work in unix */
 int timeout_secs = 0;
 
 int Pascal ttgetc()
@@ -577,6 +554,7 @@ int Pascal get1key()
 
 { int mct = 0;
   int ix;
+//cseq[4] = 0;
 	cseq[0] = 
 	cseq[2] = A_ESC;
 	cseq[1] = c;
@@ -591,10 +569,6 @@ int Pascal get1key()
 	  { btbl->p_name = true;
 	    ++mct;
 	  }
-#if 0
-	  if (*(short*)(btbl->p_seq))
-	    fprintf(ftrace, "X%x %x ", *(short*)&cseq[2], *(short*)(btbl->p_seq));
-#endif	
 	}
 
 #if FTRACE

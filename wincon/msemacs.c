@@ -50,28 +50,6 @@ int Pascal tcapclose(int lvl)
   return OK;
 }
 
-
-void Pascal tcap_init()
-
-{ char * v = getenv("LINES");
-  if (v != NULL)
-  { int vv = atoi(v);
-    if (vv != 0 && vv < 91)
-    { term.t_nrowm1 = vv - 1;			
-      term.t_mrowm1 = vv - 1;
-    }
-  }
-  v = getenv("COLS");
-  if (v != NULL)
-  { int vv = atoi(v);
-    if (vv != 0 && vv < 136)
-    { term.t_ncol = vv;
-      term.t_mcol = vv;
-      term.t_margin = vv / 10;
-    }
-  }
-}
-
 /*
 char * argv__[] = { "wincon", "tt", null};
 int argc__ = 2;
@@ -400,21 +378,18 @@ int Pascal tcapbeep()
 
 { 
   Beep( 500, 250 /*millisecs*/);
+//mbwrite("BEEP\n");
   return OK;
 }
 
 
 void Pascal tcapopen()
 
-{ screxist = TRUE;
-  revexist = TRUE;
 { int plen = csbiInfo.srWindow.Bottom-csbiInfo.srWindow.Top+1;
   int pwid = csbiInfo.srWindow.Right -csbiInfo.srWindow.Left+1;
-  if (plen > 25)
-    newdims(pwid, plen);
-  else				/* it is the default XP window: pick up LINES */
-    tcapsetsize(term.t_ncol,term.t_mrowm1+1);
-}}
+
+  newdims(pwid, plen);
+}
 
 
 

@@ -136,7 +136,7 @@ int Pascal execcmd(int f, int n)
 int Pascal docmd(char * cline)
 			/* command line to execute */
 {
-	register int f = got_uarg;  /* default argument flag */
+	register int f = g_got_uarg;  /* default argument flag */
 	register int n = ! f ? 1 : prenum;   /* numeric repeat value */
 	int (Pascal *fnc)(int, int);      	/* function to execute */
 	int cc;
@@ -145,7 +145,7 @@ int Pascal docmd(char * cline)
 	char ebuffer[40];
 #define tkn (&ebuffer[1])
 		     /* if we are scanning and not executing..go back here */
-  got_uarg = FALSE;
+  g_got_uarg = FALSE;
 
 	if (g_execlevel)
 		return TRUE;

@@ -51,11 +51,9 @@ NOSHARE int g_nosharebuffs = FALSE; /* never allow different files in the same b
 NOSHARE char *ekey = NULL;		/* global encryption key	*/
 NOSHARE char *execstr = NULL;		/* pointer to string to execute */
 NOSHARE int g_execlevel = 0;	/* execution IF level		*/
-/*NOSHARE int Drevexist = FALSE;	** does reverse video exist?	*/
 NOSHARE int gfcolor = 7;		/* global forgrnd color (white) */
 NOSHARE int gbcolor = 0;		/* global backgrnd color (black)*/
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
-NOSHARE int screxist = TRUE;      /* terminal can scroll          */
 NOSHARE int vtrow = 0;		/* Row location of SW cursor	*/
 NOSHARE int vtcol = 0;		/* Column location of SW cursor */
 NOSHARE int ttrow = HUGE; 	/* Row location of HW cursor	*/
@@ -138,30 +136,6 @@ NOSHARE char outline[NSTRING];	/* global string to hold debug line text */
 Map_t namemap = mk_const_map(T_DOMSTR, 0, names);
 
 				/* increase the default stack space */
-
-#if	S_MSDOS & LATTICE
-unsigned _stack = 20000;
-#endif
-
-#if	S_MSDOS & DTL
-int	_okbigbuf = 0;		/* Only allocate memory when needed.*/
-int	_stack = 20000; 	/* Reset the ol' stack size.*/
-#endif
-
-#if	ATARI & MWC
-long _stksize = 20000L; 	/* reset stack size (must be even) */
-#endif
-
-#if	S_MSDOS & AZTEC
-int _STKSIZ = 20000/16; 	/* stack size in paragraphs */
-int _STKRED = 1024;		/* stack checking limit */
-int _HEAPSIZ = 4096/16; 	/* (in paragraphs) */
-/*int _STKLOW = 0;		default is stack above heap (small only) */
-#endif
-
-#if	S_MSDOS & TURBO
-extern unsigned int _stklen = 10000;
-#endif
 
 /*	make VMS happy...	*/
 
@@ -427,7 +401,6 @@ void Pascal dcline(int argc, char * argv[])
 		}
 	}
 
-//tcapopen(); 	/* open the screen */
 	curwp->w_ntrows = term.t_nrowm1-1; /* "-1" for mode line. */
 	curbp = firstbp;
 	openwind(curwp, curbp);
@@ -462,7 +435,6 @@ void Pascal dcline(int argc, char * argv[])
 	}
 	if (carg == 13)
 		exit(1);
-
 
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
 	{ bp->b_flag |= g_gmode;
@@ -611,7 +583,6 @@ int main(int argc, char * argv[])
 	loglog("***************Started***************");
 #endif
 //char ch  = ttgetc();
-	tcap_init();
 	vtinit();
 	edinit(); 		/* Buffers, windows */
 #if CALLED
@@ -620,9 +591,8 @@ int main(int argc, char * argv[])
 #if DIACRIT
 	initchars();		/* character set definitions */
 #endif
-//#if S_MSDOS
 	tcapopen(); 	/* open the screen AGAIN ! */
-//#endif
+
 				/* Process command line and let the user edit */
 	(void)dcline(argc, argv);
 
@@ -783,8 +753,8 @@ static int Pascal execute(int c, int f, int n)
 }
 
 
-int got_uarg = FALSE;
-int got_search = FALSE;
+int g_got_uarg = FALSE;
+int g_got_search = FALSE;
 
 /*
 	This is called to let the user edit something.	Note that if you
@@ -819,10 +789,10 @@ int Pascal editloop(int c_)
 	else
 	{ macro_last_pos = kbdwr;
 	  n = 1;
-		f = got_uarg;
+		f = g_got_uarg;
 		if (f)
 		{ n = univct;
-			got_uarg = 0;
+			g_got_uarg = 0;
 		}
 	}
 					/* do META-# processing if needed */
@@ -1024,6 +994,6 @@ int Pascal uniarg(int f, int n) /* set META prefixing pending */
 		univct = atoi(buff);
 	}
 
-	got_uarg = TRUE;
+	g_got_uarg = TRUE;
 	return TRUE;
 }

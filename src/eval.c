@@ -37,7 +37,7 @@ STOP,  /* EVCBFLAGS */		/* actual: kbdmode - curr keyboard macro mode*/
 0x71,  /* EVCMTCOL */		  /* comment colour *//* 0x80:blink,  0x8:intense */
 -1,    /* EVCOL1CH */		  /* character selecting colour 1 */
 -1,    /* EVCOL2CH */		  /* character selecting colour 2 */
-FALSE, /* EVCURCHAR */		/* actual: revexist -does reverse video exist?*/
+TRUE, /* EVCURCHAR */			/* actual: revexist -does reverse video exist?*/
 7,     /* EVCURCOL */		  /* */
 0,     /* EVCURLINE */		/* */
 TRUE,  /* EVCURWIDTH */		/* actual: sgarbf  - screen is garbage	*/

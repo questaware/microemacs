@@ -580,8 +580,8 @@ Pascal newdims(int wid, int dpth)	/* resize the screen, re-writing the screen */
 	  term.t_ncol = wid;
 	  term.t_margin = wid / 10;
 	  term.t_scrsiz = wid - (term.t_margin * 2);
-          term.t_nrowm1 = dpth - 1;			
-          term.t_mrowm1 = dpth - 1;			
+		term.t_nrowm1 = dpth - 1;			
+		term.t_mrowm1 = dpth - 1;			
 #if 0
 	  curwp->w_ntrows = term.t_nrowm1-1;
 #else
