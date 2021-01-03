@@ -13,8 +13,6 @@ For Visual Studio 2019:
 
 Open Project/Solution vs2019/memacs.sln
 
-Also compiles in Visual Studio 2019.
-
 **In Linux**
 
 cd unix
