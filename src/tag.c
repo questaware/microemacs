@@ -188,103 +188,103 @@ static char * g_tagLastName = NULL;
  *    2 - Found nothing
  */
 static int
-findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline, int tlsz)
-{
-    int fd_cc = 1;
+findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 
-    char keybuf[100];
-    int iter;
-    FILE * fp = fopen((char *)tags, "rb");
-    if (fp == NULL)
-	 return 2 ;
+{  int fd_cc = 1;
 
-    strpcpy(keybuf, key, sizeof(keybuf));
+  char keybuf[100];
+  int iter;
+  FILE * fp = fopen((char *)tags, "rb");
+  if (fp == NULL)
+    return 2 ;
 
-    for (iter = 2; --iter >= 0; )
-					     /* Read in the tags file */
-    { fseek(fp, 0L, 2);
+  strpcpy(keybuf, key, sizeof(keybuf));
 
-    { char linebuf[1025];
-	  int end = ftell(fp);						/* points after newline */
-      int start = *stt_ref;						/* points after newline */
-      int pos = (start+end) >> 1;
-      linebuf[0] = 0;
+  for (iter = 2; --iter >= 0; )
+                    	     /* Read in the tags file */
+  { fseek(fp, 0L, 2);
 
-      for (;;)
-      { /*mlwrite("%d Seek %s from %d in %d\n", start, key, pos, end);ttgetc();*/
-		fseek(fp, pos, 0);
-		if (pos > start)
-		{ while (++pos < end && (fgetc(fp) != '\n'))
-			;
+  { char linebuf[1025];
+    int end = ftell(fp);						/* points after newline */
+    int start = *stt_ref;						/* points after newline */
+    int pos = (start+end) >> 1;
+    linebuf[0] = 0;
+
+    for (;;)
+    { /*mlwrite("%d Seek %s from %d in %d\n", start, key, pos, end);ttgetc();*/
+      fseek(fp, pos, 0);
+      if (pos > start)
+      { while (++pos < end && (fgetc(fp) != '\n'))
+	      ;
+	  }
+	  if (pos >= end)
+	  {/*mlwrite("B %d %d %d\n", pos, start, end); ttgetc();*/
+	    if (pos == start)
+	      break ;
+		pos = start ;
+	  }
+	  else				     /* Get line of info */
+	  { int ix;
+	    char * ln = fgets(linebuf, sizeof(linebuf)-1, fp);
+	    if (ln == NULL || ln[0] == 0)
+		  break;
+
+		if (ln[0] == '\n')
+		{ pos += 1;
+		  if (pos >= end)
+		    pos = start;
+		  continue;
 		}
-		if (pos >= end)
-	    {/*mlwrite("B %d %d %d\n", pos, start, end); ttgetc();*/
-		  if (pos == start)
-			break ;
-		  pos = start ;
-		}
-		else				     /* Get line of info */
-		{ int ix;
-		  char * ln = fgets(linebuf, sizeof(linebuf)-1, fp);
-		  if (ln == NULL || ln[0] == 0)
-			break;
 
-		  if (ln[0] == '\n')
-		  { pos += 1;
-		    if (pos >= end)
-			  pos = start;
-		    continue;
-		  }
-
-	    /*mlwrite("Try %d %s\n", pos, ln);ttgetc();*/
-		  for (ix = -1; linebuf[++ix] != 0 && linebuf[ix] != '\t'; )
+	  /*mlwrite("Try %d %s\n", pos, ln);ttgetc();*/
+		for (ix = -1; linebuf[++ix] != 0 && linebuf[ix] != '\t'; )
+		  ;
+		if (linebuf[ix] != 0)
+		{ linebuf[ix] = 0;
+		  for (; linebuf[++ix] != 0; )
 		    ;
-		  if (linebuf[ix] != 0)
-		  { linebuf[ix] = 0;
-		    for (; linebuf[++ix] != 0; )
-			  ;
-		  }
-		  if (linebuf[ix-1] == '\n')
-		    linebuf[ix-1] = 0;
-		{ int tmp = strcmp(keybuf, linebuf);
-	    /*mlwrite("%d Cmp %s,%s\n", tmp, key, linebuf);ttgetc();*/
-		  if (!tmp)						/* found */
-		  { end = pos;
-		    fd_cc = 0;
-	      /*mlwrite("Fd %s\n", linebuf+strlen(linebuf)+1);ttgetc();*/
-		    memcpy(tagline, linebuf, ix+2);
-		    *stt_ref = pos+ix;			/* point after newline */
-		  }
-		  else if (tmp > 0)				/* forward */
-		    start = pos+ix;
-		  else 
-		    end = pos;
-		  pos = ((start+end) >> 1) ;
-	    }}
-      } /* loop */
-      if (fd_cc == 0)
-        break;
-    { int ix;
-	  char * ln;
-	  if (linebuf[0] == 0)
-	    break;
-	  ln = fgets(linebuf, sizeof(linebuf)-1, fp);
-	  if (ln == NULL || ln[0] == 0)
-		break;
+		}
+		if (linebuf[ix-1] == '\n')
+		  linebuf[ix-1] = 0;
+	  { int tmp = strcmp(keybuf, linebuf);
+	  /*mlwrite("%d Cmp %s,%s\n", tmp, key, linebuf);ttgetc();*/
+	    if (!tmp)						/* found */
+	    { end = pos;
+	      fd_cc = 0;
+	    /*mlwrite("Fd %s\n", linebuf+strlen(linebuf)+1);ttgetc();*/
+		  memcpy(tagline, linebuf, ix+2);
+		  *stt_ref = pos+ix;			/* point after newline */
+		}
+		else if (tmp > 0)				/* forward */
+		  start = pos+ix;
+		else 
+		  end = pos;
+		pos = ((start+end) >> 1) ;
+	  }}
+    } /* loop */
+    if (fd_cc == 0)
+      break;
+  { int ix;
+    char * ln;
+	if (linebuf[0] == 0)
+	  break;
+	ln = fgets(linebuf, sizeof(linebuf)-1, fp);
+	if (ln == NULL || ln[0] == 0)
+	  break;
 
-      for (ix = -1; linebuf[++ix] != 0 && linebuf[ix] != ':'; )
-	    ;
+    for (ix = -1; linebuf[++ix] != 0 && linebuf[ix] != ':'; )
+	  ;
 		
-      if (linebuf[ix] != ':' || keybuf[ix] != 0)
-        break;
-      linebuf[ix] = 0;
-      strpcpy(keybuf+ix, "::", 100-ix);
-      strpcpy(keybuf+ix+2, linebuf, 98-ix);
-    /*mbwrite(keybuf);*/
-    }}}
+    if (linebuf[ix] == 0 || keybuf[ix] != 0)
+      break;
+    linebuf[ix] = 0;
+    strpcpy(keybuf+ix, "::", 100-ix);
+    strpcpy(keybuf+ix+2, linebuf, 98-ix);
+  /*mbwrite(keybuf);*/
+  }}}
 
-    fclose(fp);
-    return fd_cc;
+  fclose(fp);
+  return fd_cc;
 }
 
 
@@ -313,49 +313,43 @@ findTagSearch(const char * fromfile, const char *key, char *tagline, int tlsz)
       tagFile = g_tagLastFile;
     else
     { g_tagLastStart = 0;
-      tagFile = fex_up_dirs(fromfile, &tagf[3]);
+      tagFile = fex_up_dirs(fromfile, tagf+3);
       if (tagFile == NULL && fexist(tagf+3))
         tagFile = tagf+3;
       if (tagFile == NULL)
-	  { mbwrite(fromfile);
-	    mlwrite("[no tag file]");
+	  { mlwrite("[no tag file]");
 	    return false;
 	  }
 	  if (g_tagLastFile != NULL)
 	    free(g_tagLastFile);
 	  g_tagLastFile = NULL;
+	  g_tagLastName = NULL;
     }
    
-	if (g_tagLastName != NULL)
-	  free(g_tagLastName);
-	g_tagLastName = NULL;
-
     for (; tagFile != NULL && --clamp >= 0; )
-    {	    /* Get the current directory location of our file and use this to locate
-		     * the tag file. */
-	  /*mbwrite(tagFile);*/
-    {   int ii = findTagInFile(tagFile, key, &g_tagLastStart, tagline, tlsz);
-        if (ii == 0)			/* found tag */
-        {	ii = strlen(tagFile);
-			g_tagLastFile = malloc(ii+260);
-			memcpy(g_tagLastFile,tagFile,ii+1);
-			ii = strlen(tagline);
-			g_tagLastName = malloc(ii+260);
-			memcpy(g_tagLastName,tagline,ii+1);
-//			g_tagLastFile = strdup(tagFile);
-//			g_tagLastName = strdup(tagline);
-			return true;
-        }
-        else		/* continue search. Ascend the tree by getting the directory path */
-		{           /* component of our current path position */
-        	pathcat(tagFile, 260, tagFile, tagf);
+    {	        /* Get the current directory location of our file and use this
+                 * to locate the tag file. */
+	/*mbwrite(tagFile);*/
+    { int ii = findTagInFile(tagFile, key, &g_tagLastStart, tagline);
+      if (ii == 0)			/* found tag */
+      {	int sl_tf = strlen(tagFile);
+		int sl_tl = strlen(tagline);
+		g_tagLastFile = malloc(sl_tf+sl_tl+260*2);
+		strcpy(g_tagLastFile,tagFile);
+		g_tagLastName = g_tagLastFile+sl_tf+260;
+		strcpy(g_tagLastName,tagline);
+		return true;
+      }
+      else	  /* continue search. Ascend tree by getting the directory path */
+      {           /* component of our current path position */
+        pathcat(tagFile, 260, tagFile, tagf);
 
-		    tagFile = fex_up_dirs(tagFile, tagf+3);
-			if (tagFile == NULL)
-			  break;
-		  /*printf("Next tag file %s\n", tagFile);*/
-			g_tagLastStart = 0;
-		}
+		tagFile = fex_up_dirs(tagFile, tagf+3);
+		if (tagFile == NULL)
+		  break;
+		g_tagLastStart = 0;
+	  /*printf("Next tag file %s\n", tagFile);*/
+	  }
     }}
     
     MLWRITE(g_tagLastFile != null ? "No More Tags" : "[tag %s not in tagfiles]", key);
@@ -489,7 +483,7 @@ findTagExec(const char tag[])
 
     ix = hunt(ee != '?' ? 1 : -1, 1);
     strcpy(pat,tagline);
-    mcstr(curwp->w_bufp->b_flag);
+    mcstr(-1);
     return ix;
 }}}
 

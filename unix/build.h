@@ -60,21 +60,10 @@
 /*	[Set one of these!!]			*/
 
 #define ANSI	0			/* ANSI escape sequences	*/
-#define	HP150	0			/* HP150 screen driver		*/
-#define	HP110	0			/* HP110 screen driver		*/
-#define	VMSVT	0			/* various VMS terminal entries	*/
 #define VT52	0			/* VT52 terminal (Zenith).	*/
 #define RAINBOW 0			/* Use Rainbow fast video.	*/
 #define TERMCAP 1			/* Use TERMCAP			*/
 #define	IBMPC	0			/* IBM-PC CGA/MONO/EGA/VGA drvr	*/
-#define OS2NPM	0			/* OS/2 non-Presentation Mgr.	*/
-#define	DG10	0			/* Data General system/10	*/
-#define	TIPC	0			/* TI Profesional PC driver	*/
-#define	Z309	0			/* Zenith 100 PC family	driver	*/
-#define	ATARI	0			/* Atari 520/1040ST screen	*/
-#define	DASHER	0			/* DG Dasher 2xx/4xx crts	*/
-
-#define REVERSE_VIDEO 1
 
 /*	Language text options	(pick one)				*/
 

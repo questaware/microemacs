@@ -4,6 +4,7 @@
 	written 11-feb-86 by Daniel Lawrence
 */
 #include	<stdio.h>
+#include	<stdlib.h>
 #include	<stdarg.h>
 #include	<sys/stat.h>
 
@@ -11,8 +12,8 @@
 #include	"edef.h"
 #include	"etype.h"
 #include	"elang.h"
-#include	"h/map.h"
-#include	"h/msdir.h"
+#include	"map.h"
+#include	"msdir.h"
 #include	"logmsg.h"
 
 
@@ -263,7 +264,8 @@ bind-to-key filter-buffer ^X|
 	{META|',',	BINDFNC, indentsearch},
 	{SPEC|'<',	BINDFNC, gotobob},
 	{SPEC|'P',	BINDFNC, backline},
-	{META|SPEC|'P', BINDFNC, searchIncls},
+	{META|SPEC|'P',BINDFNC, searchIncls},
+	{META|SPEC|'N',BINDFNC, nextwind},
 	{SPEC|'Z',	BINDFNC, backpage},
 	{SPEC|'B',	BINDFNC, backchar},
 	{SPEC|'F',	BINDFNC, forwchar},
@@ -491,19 +493,14 @@ Pascal unbindkey(int f, int n)
 #if NBINDS
   KEYTAB * ktp = getbind(0) - 1;		/* get pointer to end of table */
 			           										/* copy the last entry to the current one */
-  sktp->k_code   = ktp->k_code;
-  sktp->k_type   = ktp->k_type;
-  sktp->k_ptr.fp = ktp->k_ptr.fp;
-
+  *sktp = *ktp;
   ktp->k_code   = 0;		/* null out the last one */
 
 #else
   if (in_range(sktp - keytab, 0, upper_index(keytab)))
     addnewbind(c, NULL);
   else
-  {
     sktp->k_ptr.fp = NULL;
-  }
 #endif
   return TRUE;
 }}}
@@ -551,7 +548,7 @@ int Pascal desbind(int f, int n)
 }
 
 
-Pascal apro(int f, int n)	/* Apropos (List functions that match a substring) */
+int Pascal apro(int f, int n)	/*Apropos (List functions that match a substring)*/
 
 { char mstring[NSTRING];	/* string to match cmd names to */
 
@@ -593,9 +590,9 @@ int Pascal buildlist(const char * mstring)
 			if (append_keys(nptr->n_name, (const BUFFER*)nptr->n_func, mstring) < 0)
 				break;
 		}
-										 /* add a blank line between the key and macro lists */
+									 /* add a blank line between the key and macro lists */
 		lnewline();
-									   /* scan all buffers looking for macros and their bindings */
+									 /* scan all buffers looking for macros and their bindings*/
         
 		for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
 		{																					/* add in the command name */
@@ -677,17 +674,17 @@ int Pascal name_mode(const char * s)
 }
 
 
+#if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
+
 int Pascal fexist(const char * fname)	/* does <fname> exist on disk? */
 					/* file to check for existance */
 {
-#if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
   char tfn[NFILEN+2];
   /* nmlze_fname(&tfn[0], fname); */
   return access(fname, 0) == 0;
-#else
-  return name_mode(fname);
-#endif
 }
+
+#endif
 
 
 /* replace the last entry in dir by file */
@@ -791,7 +788,7 @@ const char * Pascal flook(char wh, const char * fname)
 
 	if (fexist(fname))
 	  return fname;
-			    /* if we have an absolute path check only there! */
+			                  /* if we have an absolute path check only there! */
 	if (*fname == '\\' || *fname == '/' ||
 	    *fname != 0 && fname[1] == ':')
 	  return NULL;
@@ -799,9 +796,9 @@ const char * Pascal flook(char wh, const char * fname)
 	//loglog1("not so far %s", fname);
 
 	if (uwh == 'I')
-        { 	  //loglog2("from file %s inc %s", curbp->b_fname, fname);
-          if (fex_path(curbp->b_fname, fname))
-	    return fspec;
+  { //loglog2("from file %s inc %s", curbp->b_fname, fname);
+    if (fex_path(curbp->b_fname, fname))
+      return fspec;
 
 #if ENVFUNC
 	  if (wh < 'a' && homedir[0] != 0)
@@ -842,19 +839,19 @@ const char * Pascal flook(char wh, const char * fname)
 	  return NULL;
 	}
 #if S_VMS
-        if (invokenm != NULL && strlen(invokenm)+strlen(fname) < sizeof(fspec))
-        { strcpy(fspec, invokenm);
-          for (path = fspec-1; *++path != 0 && *path != ']'; )
-            ;
-          if (*path != 0)
-          { strcpy(path+1, fname);
-            if (fexist(fspec))
-              return fspec;
-          }
-        }
+  if (invokenm != NULL && strlen(invokenm)+strlen(fname) < sizeof(fspec))
+  { strcpy(fspec, invokenm);
+    for (path = fspec-1; *++path != 0 && *path != ']'; )
+      ;
+    if (*path != 0)
+    { strcpy(path+1, fname);
+      if (fexist(fspec))
+        return fspec;
+    }
+  }
 #else
 	if (fname != invokenm)
-        { if (fex_path(flook('E', invokenm), fname))
+  { if (fex_path(flook('E', invokenm), fname))
 	    return fspec;
 	}
 #endif
@@ -875,12 +872,12 @@ const char * Pascal flook(char wh, const char * fname)
               strcpy(&fspec[0], inclmod);
 */
 	    for (ix = -1; ix < (int)sizeof(fspec)-2 &&
-		   *path != 0
+	            	   *path != 0
 #if S_MSDOS == 0
-		   && *path != ' '
+           		   && *path != ' '
 #endif
-		   && *path != PATHCHR
-		; )
+          		   && *path != PATHCHR
+		              ; )
 	      fspec[++ix] = *path++;
 	    
 	    if (path[-1] != DIRSEPCHAR)
@@ -888,9 +885,9 @@ const char * Pascal flook(char wh, const char * fname)
 	        
 	    fspec[ix+1] = 0;	        
 /*	{ char buf[200];
-	  strcat(strcat((buf, "PATHE "),fspec);
+  	  strcat(strcat((buf, "PATHE "),fspec);
   	  MessageBox(NULL, buf, "pe",MB_YESNO|MB_ICONQUESTION);
-        } */
+    } */
 	    if (fex_path(fspec, fname))
 	      return fspec;
 
@@ -947,15 +944,15 @@ char * Pascal cmdstr(char * t, int c)
 	register char * ptr = t;
 	register int i;
 	for (i = -1; ++i < 7; )
-          if (c & viscod[i])
-          { ((char*)ptr)[0] = *(char *)&viskey[i*2];
-            ((char*)ptr)[1] = *(char *)&viskey[i*2+1];
+    if (c & viscod[i])
+    { ((char*)ptr)[0] = *(char *)&viskey[i*2];
+      ((char*)ptr)[1] = *(char *)&viskey[i*2+1];
 	     
-            if (i == 6)			/* must be last */
-              ptr += 1;
-            else
-              ptr += 2;
-          }
+      if (i == 6)			/* must be last */
+        ptr += 1;
+      else
+        ptr += 2;
+    }
 					/* and output the final sequence */
 	ptr[0] = c & 255;	/* strip the prefixes */
 	ptr[1] = 0;
@@ -1101,7 +1098,7 @@ Pascal help(int f, int n)	/* give me some help!!!!
 		   bring up a fake buffer and read the help file
 		   into it with view mode			*/
 {
-  static const char emacshlp[] = "emacs.hlp";
+  static const char emacshlp[] = "emacs.md";
 	       char *fname = (char*)flook(0, emacshlp);
 
 	register BUFFER *bp;
@@ -1116,7 +1113,8 @@ Pascal help(int f, int n)	/* give me some help!!!!
 
 	(void)swbuffer(bp);
 		    /* make this window in VIEW mode, update all mode lines */
-	curbp->b_flag |= MDVIEW | BFINVS;
+	curbp->b_flag |= MDVIEW;
+	curbp->b_fname = strdup("HELP");  // allow the leakage
 	upmode();
 	return TRUE;
 }

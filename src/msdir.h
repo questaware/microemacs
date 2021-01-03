@@ -2,7 +2,7 @@ extern Char * match_fn_re(Char*, Char*);
 extern Char * match_fn_re_ic(Char*, Char*, int /*bool */);
 extern Cc     msimp_fn_re_ic(Char*, Char*, int /*bool */);
 
-extern Cc   msd_init (Char *, Char *, int);
+extern Cc   msd_init (const Char *, const Char *, int);
 extern Char * msd_nfile(int * fnoffs);
 extern Cc msd_push (void);
 extern Char * msd_pop (void);

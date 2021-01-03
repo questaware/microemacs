@@ -22,8 +22,7 @@ null_proc()
 
 void adb(int n)
 
-{ TTbeep();
-  mlwrite("ADB(%d)", n);
+{ mlwrite("\007ADB(%d)", n);
   ttgetc();
 }
 
@@ -75,12 +74,11 @@ char * Pascal io_message(char * text, int s, int nline)
 }
 
 
-BUFFER * Pascal prevele(BUFFER * bl_, BUFFER * bp)
+BUFFER * Pascal prevele(BUFFER * bh, BUFFER * bp)
 
-{ register BUFFER * bl = bl_;
-  if (bl == bp)
-    return NULL;
-  while (bl->b_bufp != bp && bl != NULL)
+{ register BUFFER * bl = bh;
+
+  while (bl != NULL && bl->b_bufp != bp)
     bl = bl->b_bufp;
   return bl;
 }
@@ -106,13 +104,13 @@ X}
 X
 #endif
 
-Pascal gotobol(int f, int n)
+int Pascal gotobol(int f, int n)
 
 { curwp->w_doto  = 0;
   return TRUE;
 }
 
-Pascal gotoeol(int f, int n)
+int Pascal gotoeol(int f, int n)
 
 { curwp->w_doto  = llength(curwp->w_dotp);
   return TRUE;
@@ -120,7 +118,7 @@ Pascal gotoeol(int f, int n)
 
 
 
-Pascal forwchar(int f, int n)
+int Pascal forwchar(int f, int n)
 
 { register WINDOW * wp = curwp;
 
@@ -154,13 +152,13 @@ Pascal forwchar(int f, int n)
 
 
 
-Pascal backchar(int f, int n)
+int Pascal backchar(int f, int n)
 
 { return forwchar(f, -n);
 }
 
 
-Pascal gotobob_()
+int Pascal gotobob_()
 
 { register WINDOW * wp = curwp;
   
@@ -172,13 +170,13 @@ Pascal gotobob_()
   return TRUE;
 }
 
-Pascal gotobob(int f, int n)
+int Pascal gotobob(int f, int n)
 
 { return gotobob_();
 }
 
 
-Pascal gotoline(int f, int n)	/* move to a particular line.
+int Pascal gotoline(int f, int n)	/* move to a particular line.
 				   argument (n) must be a positive integer for
 				   this to actually do anything 	*/
 { char arg[20];
@@ -203,7 +201,7 @@ Pascal gotoline(int f, int n)	/* move to a particular line.
 }
 
 
-Pascal gotoeob(int f, int n)
+int Pascal gotoeob(int f, int n)
 
 {
 #if 1
@@ -231,7 +229,7 @@ Pascal gotoeob(int f, int n)
 extern KEYTAB * prevbind;
 
 
-Pascal forwline(int f, int n_)
+int Pascal forwline(int f, int n_)
 		/* if we are on the last line as we start....fail the command */
 { register int n = n_;
   register LINE *  dlp = curwp->w_dotp;
@@ -266,15 +264,15 @@ Pascal forwline(int f, int n_)
 
 
 
-Pascal backline(int f, int n)
+int Pascal backline(int f, int n)
 
 { return forwline(f, -n);
 }
 
 #if	WORDPRO
-Pascal gotobop(int f, int n) /* go back to the beginning of the current paragraph
-			   here look for a <NL><NL> or <NL><TAB> or <NL><SPACE>
-			 combination to delimit the beginning of a paragraph  */
+int Pascal gotobop(int f, int n) /* go back to beginning of current paragraph
+										   here look for a <NL><NL> or <NL><TAB> or <NL><SPACE>
+										 combination to delimit the beginning of a paragraph  */
 {
 #if 1
   return gotoeop(f, -n);
@@ -286,18 +284,18 @@ Pascal gotobop(int f, int n) /* go back to the beginning of the current paragrap
     return gotoeop(f, -n);
 
   while (n-- > 0)	/* for each one asked for */
-		/* first scan back until we are in a word */
+																/* first scan back until we are in a word */
   { while (backchar(FALSE, 1) && !inword())
       ;
     curwp->w_doto = 0;			  /* go to the B-O-Line */
-			  /* and scan back until we hit a <NL><NL> or <NL><TAB>
-				or a <NL><SPACE>			*/
+								  /* and scan back until we hit a <NL><NL> or <NL><TAB>
+											or a <NL><SPACE>			*/
     for (ln = curwp->w_dotp; 
          (lback(ln)->l_props & L_IS_HD) == 0;
          ln = lback(ln))
     { if (llength(ln) == 0 ||
-           (ch = lgetc(ln, 0)) == '\t' || ch == ' ')
-	break;
+          (ch = lgetc(ln, 0)) == '\t' || ch == ' ')
+				break;
     }
 				/* to be w_line_no'ed */
     curwp->w_dotp = ln;
@@ -310,9 +308,9 @@ Pascal gotobop(int f, int n) /* go back to the beginning of the current paragrap
 #endif
 }
 
-Pascal gotoeop(int f, int n)  /* go forword to the end of the current paragraph
-			    here look for a <NL><NL> or <NL><TAB> or <NL><SPACE>
-			  combination to delimit the beginning of a paragraph */
+int Pascal gotoeop(int f, int n)  /* go forword to end of current paragraph
+										    here look for a <NL><NL> or <NL><TAB> or <NL><SPACE>
+											  combination to delimit the beginning of a paragraph */
 { register WINDOW * wp = curwp;
   register LINE * ln;
   register char suc;	/* success of last backchar */
@@ -324,7 +322,7 @@ Pascal gotoeop(int f, int n)  /* go forword to the end of the current paragraph
   }
 
   while (n-- > 0)	/* for each one asked for */
-  {				/* first scan until we are in a word */
+  {															/* first scan until we are in a word */
     while ((suc = forwchar(FALSE, dir)) && !inword())
       ;
 						/* and go to the B-O-Line */
@@ -332,12 +330,12 @@ Pascal gotoeop(int f, int n)  /* go forword to the end of the current paragraph
     ln = wp->w_dotp;
     if (dir > 0 && suc)				
       ln = lforw(ln);
-		      /* and scan forword until we hit a <NL><NL> or <NL><TAB>
-			     or a <NL><SPACE>				*/
+				 		     		/* and scan forword until we hit a <NL><NL> or <NL><TAB>
+				  			  		 or a <NL><SPACE>				*/
     while ((ln->l_props & L_IS_HD) == 0)
     { if (llength(ln) == 0 ||
-	  (suc = lgetc(ln, 0)) == '\t' || suc == ' ')
-	break;
+				  (suc = lgetc(ln, 0)) == '\t' || suc == ' ')
+				break;
       if (dir > 0)
         ln = lforw(ln);
       else
@@ -369,7 +367,7 @@ Pascal gotoeop(int f, int n)  /* go forword to the end of the current paragraph
  * the overlap; this value is the default overlap value in ITS EMACS. Because
  * this zaps the top line in the display window, we have to do a hard update.
  */
-Pascal forwpage(int f, int n)
+int Pascal forwpage(int f, int n)
 
 { register WINDOW * wp = curwp;
 
@@ -410,7 +408,7 @@ Pascal forwpage(int f, int n)
 }}
 
 
-Pascal backpage(int f, int n)
+int Pascal backpage(int f, int n)
 
 {
 #if S_MSDOS == 0
@@ -427,12 +425,12 @@ static LINE * remdotp;
 static int    remdoto;
  
 
-Pascal setmark(int f, int n)
+int Pascal setmark(int f, int n)
 
 { n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1);
   mlwrite(TEXT9, n);
 /*		"[Mark %d set]" */
-{	   MARK * mrk = &curwp->mrks.c[n];
+{	MARK * mrk = &curwp->mrks.c[n];
   remdotp = mrk->markp;
   remdoto = mrk->marko;
   mrk->markp = curwp->w_dotp;
@@ -442,7 +440,7 @@ Pascal setmark(int f, int n)
 
 
 
-Pascal remmark(int f, int n)
+int Pascal remmark(int f, int n)
 
 { n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1);
   mlwrite(TEXT10, n);
@@ -453,7 +451,7 @@ Pascal remmark(int f, int n)
 
 static const char text11[] = TEXT11;
 
-Pascal swapmark(int f, int n)
+int Pascal swapmark(int f, int n)
  
 { setmark(f, n);
   if (remdotp == NULL)
@@ -468,7 +466,7 @@ Pascal swapmark(int f, int n)
 }
 
 
-Pascal gotomark(int f, int n)
+int Pascal gotomark(int f, int n)
 
 { register WINDOW * wp = curwp;
   n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1); /* make sure it is in range */

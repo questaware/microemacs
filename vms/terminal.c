@@ -868,7 +868,7 @@ tcapchrom(short chroms)
 			{ if (pix)
 				{ chm = !(last_chroms & CHROM_OFF) and 
 								(lastl_chroms & 0x7700) ? (lastl_chroms >> 8) & 0x7f :
-								REVERSE_VIDEO 	 ? 0x70 	: 0x7;		/* background,foreground */
+								                          0x7;		/* background,foreground */
 					last_was_chrom = 1; /* select 0 */
 				}
 				else

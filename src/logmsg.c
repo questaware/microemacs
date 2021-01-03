@@ -112,11 +112,11 @@ static void log_restart( logfile, filename, max_size )
         fclose( *logfile );
 
         eprintf( cmd, "move %s.bak %s.BAK", filename, filename_ );
-        if ( system( cmd ) < 0 )
+        if ( ttsystem( cmd ) < 0 )
   	      fprintf( stderr, "system(%d): %s\n", errno, cmd );
 
         eprintf( cmd, "move %s %s.bak", filename, filename_ );
-        if ( system( cmd ) < 0 )
+        if ( ttsystem( cmd ) < 0 )
   	{     fprintf( stderr, "system(%d): %s\n", errno, cmd );
   	      log_max_file = INT_MAX;
   	}

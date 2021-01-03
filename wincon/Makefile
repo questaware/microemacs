@@ -56,7 +56,7 @@ eval.obj exec.obj execasm.obj \
 file.obj fileio.obj \
 input.obj isearch.obj \
 line.obj \
-main.obj map.obj mouse.obj msdir.obj \
+main.obj map.obj msdir.obj \
 random.obj region.obj \
 search.obj sinc.obj \
 tag.obj \

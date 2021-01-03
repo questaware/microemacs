@@ -6,9 +6,12 @@
                         	Steve Wilhite and George Jones
 */
 
-
-/* ALL global fuction declarations */
-
+#if S_WIN32
+#define WinChar wchar_t
+#else
+#define WinChar void
+#endif         
+											/* ALL global fuction declarations */
 extern int rubbish;
 
 Char * ClipAlloc(int);
@@ -35,13 +38,13 @@ BUFFER *Pascal bfind(const char * bname, int cflag, int bflag);
 int Pascal getIncls(int f, int n);
 BUFFER *Pascal getdefb(void);
 BUFFER *Pascal getcbuf(char *, char *, int);
-BUFFER *Pascal bufflink(char *, int);
+BUFFER *Pascal bufflink(const char *, int);
 char * Pascal repl_bfname(BUFFER*, const char *);
 char *Pascal bytecopy();
 char *Pascal complete();
 char *Pascal envval();
 void Pascal expandp(char *, char *, char *, int);
-char *Pascal fixnull(char * s);
+const char *Pascal fixnull(const char * s);
 const char * Pascal flook(char, const char *);
 char * Pascal flookdown(char *, char *);
 char *Pascal flooknear();
@@ -64,7 +67,6 @@ char *Pascal gtfilename(char *);
        char *Pascal gtusr(char*);
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
-int input_timeout (int, unsigned int, unsigned int);
 char * Pascal io_message(char *, int, int);
 char *Pascal int_asc(int);
 #if S_HPUX == 0 || 1
@@ -93,7 +95,11 @@ int Pascal echochar(int,int);
 int Pascal myeq(int, int);
 int Pascal ernd(void);
 int Pascal execkey(KEYTAB *, int, int);
+#if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
 int Pascal fexist(const char *);
+#else
+#define fexist(fn) name_mode(fn)
+#endif
 int fex_path(const char * dir, const char * file);
 char * fex_up_dirs(const char * dir, char * file);
 void Pascal flook_init(char *);
@@ -105,16 +111,14 @@ int Pascal getwpos();
 int Pascal get_char();
 int Pascal mcstr(int);
 extern void Pascal mkdes();
-int Pascal nmlze_fname(char *, char *, char *);
+int Pascal nmlze_fname(char *, const char *, char *);
 void Pascal openwind(WINDOW *, BUFFER*);
 int Pascal openwindbuf(char *);
 int Pascal orwindmode(int, int);
 char * Pascal pathcat(char *, int, const char *, const char *);
-int Pascal readpattern(char *, char * apat);
 int Pascal reglines();
 void Pascal release(char * mp);
 int Pascal remmark(int, int);
-int Pascal replaces(int, int, int);
 int Pascal risearch(int, int);
 void Pascal rpl_all(LINE*, LINE*, int, int, int);
 int Pascal scan_for_sl(LINE * lp);
@@ -124,7 +128,7 @@ int Pascal settabsize(int, int);
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);
-int Pascal set_var(char *, char *);
+int Pascal set_var(const char *, char *);
 int Pascal sindex(char *, char *);
 int Pascal stol(char * s);
 int Pascal svar(int, char *);
@@ -203,7 +207,7 @@ int Pascal copyword(int, int);
 extern char bad_strmatch;
 const char * Pascal com_match(const char *, const char *, int);
 int Pascal ucrypt(char *, int);
-wchar_t * char_to_wchar(char const *, int, wchar_t *);
+WinChar * char_to_wchar(char const *, int, WinChar *);
 int Pascal ctlxe(int, int);
 int Pascal ctlxlp(int, int);
 int Pascal ctlxrp(int, int);
@@ -240,7 +244,7 @@ int Pascal ffisdiry();
 int Pascal ffclose();
 int Pascal ffgetline(int *);
 int Pascal ffputline(char *, int);
-int Pascal ffropen(char *);
+int Pascal ffropen(const char *);
 int Pascal ffwopen(int, char *);
 int Pascal filefind(int, int);
 int Pascal filename(int, int);
@@ -258,7 +262,6 @@ int Pascal forwhunt(int, int);
 int Pascal forwline(int, int);
 int Pascal forwpage(int, int);
 int Pascal forwsearch(int, int);
-int Pascal forwword(int, int);
 void Pascal freewhile();
 int Pascal getccol();
 int Pascal getcmd();
@@ -269,7 +272,7 @@ int Pascal getregion();
 int Pascal getstring(char * buf, int nbuf, const char * prompt);
 short * Pascal get_vscr_line(int row);
 char    Pascal get_vscr_colors(int row);
-BUFFER * Pascal gotfile(char * fname);
+BUFFER * Pascal gotfile(const char * fname);
 int Pascal gotobob(int, int);
 int Pascal gotobol(int, int);
 int Pascal gotobop(int, int);
@@ -372,7 +375,7 @@ int Pascal quit(int, int);
 int Pascal quote(int, int);
 int        rdonly();
 /*extern Int readin_lines;*/
-int Pascal readin(/* NOT const*/char *, int);
+int Pascal readin(const char *, int);
 int Pascal reframe(WINDOW *);
 int Pascal refresh(int, int);
 int Pascal reposition(int, int);
@@ -389,7 +392,6 @@ int Pascal savewnd(int, int);
 void Pascal scroll_vscr(void);
 int Pascal scwrite(int, short *, int);
 int Pascal sendfile(int, int);
-int Pascal setccol(int);
 int Pascal setcline(void);
 int Pascal setuekey(int, int);
 int Pascal setekey(char * *);
@@ -410,7 +412,7 @@ int Pascal splitip();
 int Pascal splitwind(int, int);
 int Pascal searchIncls(int, int);
 int Pascal sreplace(int, int);
-int Pascal startup(char *, int);
+int Pascal startup(const char *);
 int Pascal storemac(int, int);
 int Pascal storeproc(int, int);
 int Pascal strinclude(const char *, const char *);
@@ -422,6 +424,7 @@ int Pascal swbuffer(BUFFER*);
 void Pascal tcapopen();
 int Pascal toggmode(int, int);
 int Pascal togmod(int, int);
+int Pascal ttsystem(const char *);
 int Pascal ttclose();
 int Pascal ttflush();
 int Pascal ttgetc();
@@ -496,7 +499,6 @@ int Pascal writemsg(int, int);
 int Pascal writeout(const char *);
 int Pascal yank(int, int);
 int Pascal zotbuf(BUFFER*);
-
 void Pascal MySetCoMo();
 
 int Pascal init_paren(const char *, int);

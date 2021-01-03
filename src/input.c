@@ -46,7 +46,7 @@
 #include	"etype.h"
 #include	"elang.h"
 #include	"base.h"
-#include	"h/msdir.h"
+#include	"msdir.h"
 #include	"logmsg.h"
 
 extern int ttgetraw(void);
@@ -161,7 +161,7 @@ int  ctlxrp(int f, int n)
 	}
 
 	memcpy(pat,pat_sv,NPAT+10);
-	mcstr(curwp->w_bufp->b_flag);
+	mcstr(-1);
 	lastdir = slast_dir;
 
 	return TRUE;
@@ -552,13 +552,13 @@ static int  redrawln(char buf[], int clamp)
   return clamp - len;
 }
 
-extern int gtxt_woffs;
-extern int g_chars_since_shift;
+int g_txt_woffs;
+int g_chars_since_shift;
 
 
 int gs_keyct;
 
-static  getstr(char * buf, int nbuf, int promptlen, int gs_type)
+static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 	  
 { int llix = -1;
   int llcol = -1;
@@ -575,7 +575,7 @@ static  getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
   g_chars_since_shift = 10000;
   gs_keyct = 0;
-  gtxt_woffs = curwp->w_doto;
+  g_txt_woffs = curwp->w_doto;
 
   for (;;)
   { if (redo & 1)
@@ -787,7 +787,7 @@ char * complete(char * prompt, char * defval, int type, int maxlen)
     concat(&gs_buf[0], "[", defval, "]", null);
 
 { int cc = mlreply(strcat(&gs_buf[0], ": "), gs_buf, maxlen);
-  return cc == ABORT	          ? NULL   : 
+  return cc == ABORT	          	? NULL   : 
          defval && gs_buf[0] == 0 ? defval : gs_buf;
 }
 #else

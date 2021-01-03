@@ -2,7 +2,7 @@
 #include <string.h>
 #include "build.h"
 
-#include "h/map.h"
+#include "map.h"
 
 #define LENINC 4096
 

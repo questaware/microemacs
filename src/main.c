@@ -29,7 +29,7 @@
 #include	"elang.h"	/* human language definitions */
 #include	"epredef.h"
 #include	"build.h"
-#include	"h/map.h"
+#include	"map.h"
 #include	"logmsg.h"
 
 
@@ -55,7 +55,6 @@ NOSHARE int gfcolor = 7;		/* global forgrnd color (white) */
 NOSHARE int gbcolor = 0;		/* global backgrnd color (black)*/
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
 NOSHARE int vtrow = 0;		/* Row location of SW cursor	*/
-NOSHARE int vtcol = 0;		/* Column location of SW cursor */
 NOSHARE int ttrow = HUGE; 	/* Row location of HW cursor	*/
 NOSHARE int ttcol = HUGE; 	/* Column location of HW cursor */
 NOSHARE int lbound = 0;		/* leftmost column of current line
@@ -242,8 +241,8 @@ void Pascal dcline(int argc, char * argv[])
 					genflag |= 0x8000;
 				when 'P': /* -p for search $PATH */
 					genflag |= 2;
-				when 'T': /* -T for search directory structure */
-					genflag |= 16;
+//			when 'T': /* -T for search directory structure */
+//				genflag |= 16;
 				when 'V': /* -v for View File */
 					genflag |= MDVIEW; /* 0x100 */
 				when 'Z': g_newest = 1;
@@ -251,66 +250,6 @@ void Pascal dcline(int argc, char * argv[])
 									if (timeout_secs == 0)
 										timeout_secs = 900;			/* 15 minutes */
 			}
-		else if (filev[0]== ',')
-		{ 
-		  genflag |= 32;
-			if (filev[1] == 0)
-			{ genflag |= MDEXACT;
-			}
-			else
-			{ char * tgt = &lastline[0][0];
-			  --tgt;
-//		  strcpy(&lastline[0][0], "1234567890abcdefghijklmnopq");
-			  if      (filev[1] == '/')
-			  { genflag |= 64;
-			  }
-			  else if (filev[1] == '?')
-			  { genflag |= 128;
-			  }
-
-			  if (genflag & (64+128))
-			  { filev += 1;
-			    tgt[1] = 'l';
-			    tgt[2] = 'l';
-			    tgt[3] = ' ';
-			    tgt[4] = '-';
-			    tgt[5] = 'G';
-			    tgt += 3 + ((genflag & 128) >> 6);
-				}
-
-				patmatch = strdup(strpcpy(pat, filev+1, NPAT));
-
-      {	char * s = filev+1;
-
-				for ( ; --carg >= 0; s = *++argv)
-				{ 
-//			  mbwrite(s == NULL ? "Null" : s);
-
-					int sl = strlen(s);
-					if (sl + tgt - lastline[0] >= NSTRING) break;
-					
-				{	char * ss;
-					for (ss = s; *ss != 0 && !isspace(*ss); ++ss)
-						;
-					*++tgt = ' ';
-
-					if (*ss != 0)
-						*++tgt = '"';
-
-					strcpy(tgt+1,s);
-					tgt += sl;
-					
-					if (*ss != 0)
-						*++tgt = '"';
-				  
-//				mbwrite(&lastline[0][0]);
-				}}
-				tgt[1] = 0;
-//			mbwrite("Done");
-//			mbwrite(&lastline[0][0]);
-				ll_ix = 0;
-			}}
-		}
 		else if (filev[0]== '@')
 			startfile = &filev[1];
 		else			/* Process an input file */
@@ -342,11 +281,11 @@ void Pascal dcline(int argc, char * argv[])
 					--sl;
 				if (del_svn < 1000)
 				{ concat(spareline,"svncone ",filev," tmpdir", null);
-				  system(spareline);
+				  ttsystem(spareline);
 				  concat(spareline,"tmpdir/",&filev[sl+1], null);
 				  filev = spareline;
 				  concat(lastline[1],"copy ",filev," .", null);
-				  system(lastline[1]);
+				  ttsystem(lastline[1]);
 				  del_svn = 1 - g_newest;
 				}
 				else
@@ -357,20 +296,19 @@ void Pascal dcline(int argc, char * argv[])
 				}
 		  }
 #endif
-
 		  if			(genflag & 2)
 		  { filev = (char *)flook(0, filev);
 				if (filev == null)
 					filev = argv[0];
 		  }
-		  bp = bufflink(strdup(filev), TRUE | (genflag & 16)); /* setup buffer for this file */
+		  bp = bufflink(strdup(filev),TRUE/*|(genflag & 16)*/); /* setup buffer for file */
 		  if (bp != NULL)
 		  { bp->b_flag |= (genflag & MDVIEW);
 
 				if (firstbp == NULL)
-				{ if (genflag & 0x8000)
+				{ if (genflag & BFACTIVE)
 				  { zotbuf(bp);
-						bp = bufflink(def_bname, TRUE | (genflag & 16));
+						bp = bufflink(def_bname, TRUE /*|(genflag & 16)*/);
 						if (bp == NULL)
 					  	mbwrite(def_bname);
 						else
@@ -388,11 +326,7 @@ void Pascal dcline(int argc, char * argv[])
 	if (firstbp == null)
 	{ 				/* if there are any files to read, read the first one! */
 		firstbp = bfind(def_bname, TRUE, 0);
-#if 1
 		nopipe = iskboard();
-#else
-		nopipe = openkb();
-#endif
 		if (nopipe == 0)
 		{ 
 			firstbp->b_fname = strdup("-");
@@ -405,7 +339,7 @@ void Pascal dcline(int argc, char * argv[])
 	curbp = firstbp;
 	openwind(curwp, curbp);
 					/* if we are C error parsing... run it! */
-	carg = startup(startfile, 1);
+	carg = startup(startfile);
 #if 0
 	if (gflags & MD_NO_MMI)
 	{ writeout(null);
@@ -431,11 +365,11 @@ void Pascal dcline(int argc, char * argv[])
 	}
 	else
 	{ if (genflag & 4)
-			carg = startup("error.rc", 1);
+			carg = startup("error.rc");
 	}
 	if (carg == 13)
 		exit(1);
-
+																								/* we now have the .rc file */
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
 	{ bp->b_flag |= g_gmode;
 	  if (bp->b_fname != NULL)
@@ -475,27 +409,11 @@ void Pascal dcline(int argc, char * argv[])
 	
 	if (nopipe == 0)
 		firstbp->b_fname = null;
-#if S_MSDOS
-	if (genflag & 32)
-	{ 
-		pipefilter(/*genflag & MDEXACT ? 'e' : */ 'E');
-		curbp->b_flag &= ~BFCHG;	/* flag it as unchanged */
-	   if (genflag & (64 + 128))
-			  strcpy(&lastline[0][0],pat);
-	}
-#endif
+
 	(void)gotoline(TRUE, gline);
  
 	if (genflag & 1)
-	{ (void)forwhunt(FALSE, 0);
-	}
-
-  if (genflag & (64+128))
-	{ execstr = pat;		// Anything non null;
-
-    (void)readpattern("?", &pat[0]);
-		execstr = null;
-  }
+		(void)forwhunt(FALSE, 0);
 
   g_gmode &= ~MDCRYPT;
 	g_clexec = FALSE;
@@ -508,7 +426,7 @@ static int meexit(int status)
 	eexitval = status;
 	eexitflag = TRUE; /* flag a program exit */
 			/* and now.. we leave and let the main loop kill us */
-#if S_WIN32
+#if S_WIN32 && 0
 	SetParentFocus();
 #endif
 	return OK;
@@ -610,19 +528,21 @@ int main(int argc, char * argv[])
 		eexitval = editloop(c);
 	}}
 
+#if S_WIN32 == 0
 	tcapclose(0);
+#endif
 
 #ifdef USE_SVN
 	if (del_svn)
 	{ 
-		system("rmdir /s/q tmpsvndir");
+		ttsystem("rmdir /s/q tmpsvndir");
 	}
 #endif
 #if CLEAN
 	clean();
 #endif
-#if S_WIN32
-	cls();
+#if S_WIN32 && 0
+	ClearScreen();
 #endif
 	return eexitval;
 }
@@ -796,8 +716,7 @@ int Pascal editloop(int c_)
 		}
 	}
 					/* do META-# processing if needed */
-	c_ = (c & ~META) - '0'; 	/* strip meta char off if there */
-	if ((c & META) && ((unsigned)c_ <= 9 || (c & ~META) == '-')
+	if ((c & META) && ((unsigned)((c & 0xff) - '0') <= 9 || (c & 0xff) == '-')
 								 && getbind(c)->k_code == 0)
 	{ n = 0;		/* start with a zero default */
 		f = TRUE; 	/* there is a # arg */
@@ -808,17 +727,17 @@ int Pascal editloop(int c_)
 			if			(c == '-'-'0')
 			{ if (mflag < 0 || n != 0) /* already hit a minus or digit? */
 					break;
-				mlwrite("Arg: -");
 				mflag = -1;
 			}
 			else if ((unsigned)c > 9)
 				break;
 			else
-			{ n = n * 10 + c * mflag;
-				mlwrite("Arg: %d",n);
-			}
+				n = n * 10 + c;
+			
+			mlwrite(c == '-'-'0' ? "Arg: -" : "Arg: %d", n * mflag);
 			c = getkey(); /* get the next key */
 		}
+		n *= mflag;
 		c += '0';
 	}
 #if 0
@@ -831,14 +750,14 @@ X 	while (true)
 X 	{ c = getkey();
 X 		if			(c == reptc)
 X 			if ((n > 0) == ((n*4) > 0))
-X 	n *= 4;
+X 				n *= 4;
 X 			else
-X 	n = 1;
+X 				n = 1;
 X 		/* If dash, and start of argument string, set arg.
 X 		 * to -1.  Otherwise, insert it.		 */
 X 		else if (c == '-')
 X 		{ if (mflag)
-X 	break;
+X 				break;
 X 			n = 0;
 X 			mflag = -1;
 X 		}
@@ -852,7 +771,7 @@ X 				break;
 X 			}
 X 			if (!mflag)
 X 			{ n = 0;
-X 	mflag = 1;
+X 				mflag = 1;
 X 			}
 X 			n = 10 * n + c;
 X 		}
@@ -935,7 +854,9 @@ Pascal quit(int f, int n)
 			n = 1;
 		}
 #endif
+#if S_WIN32 == 0
 		tcapclose(0);
+#endif
 		meexit(f ? n : GOOD);
 	}
 	return status;

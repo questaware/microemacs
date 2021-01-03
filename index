@@ -53,7 +53,7 @@ src/dolock.c
 src/edef.h
 src/efunc.h
 src/elang.h
-src/emacs.hlp
+src/emacs.md
 src/english.h
 src/epredef.h
 src/etype.h
@@ -63,8 +63,7 @@ src/exec.c
 src/execasm.c
 src/file.c
 src/fileio.c
-src/h/map.h
-src/h/msdir.h
+src/map.h
 src/input.c
 src/isearch.c
 src/line.c
@@ -74,12 +73,13 @@ src/main.c
 src/malloc.c
 src/map.c
 src/mouse.c
+src/msdir.h
 src/msdir.c
 src/random.c
 src/re.c
 src/region.c
 src/search.c
-src/sinc.c
+src/sinc.cpp
 src/sleep.cpp
 src/tag.c
 src/window.c
@@ -117,4 +117,10 @@ wincon/winpipe.c
 wincon/winpipe.h
 wincon/debug/Makefile
 wincon/release/Makefile
-
+vs2019/BUILD.H
+vs2019/estruct.h
+vs2019/winpipe.h
+vs2019/memacs.sln
+vs2019/memacs.vcxproj
+vs2019/memacs.vcxproj.filters
+vs2019/memacs.vcxproj.user

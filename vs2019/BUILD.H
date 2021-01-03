@@ -61,9 +61,11 @@
 /*	[Set one of these!!]			*/
 
 #define ANSI	0			/* ANSI escape sequences	*/
-#define VT52	0			/* VT52 terminal (Zenith).	*/
+#define	VMSVT	0			/* various VMS terminal entries	*/
 #define TERMCAP 0			/* Use TERMCAP			*/
 #define	IBMPC	1			/* IBM-PC CGA/MONO/EGA/VGA drvr	*/
+
+#define VS_CHAR8 1  /* Visual Studio Wincon uses byte chars */
 
 /*	Language text options	(pick one)				*/
 

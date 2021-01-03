@@ -43,8 +43,9 @@
 # endif
 #endif
 
+extern char * strpcpy(char * tgt, const char * src, int mlen);
 
-#include        "h/msdir.h"
+#include        "msdir.h"
 /*#include 	"h/msera.h"*/
 /*#include	"h/eprintf.h"*/
 
@@ -207,7 +208,18 @@ Bool msd_empty_dir = false;
 
 #if S_WIN32
  staticc HANDLE msd_curr = 0;
- WIN32_FIND_DATA msd_sct;
+ 
+//#if _MSC_VER < 1900
+#undef VS_CHAR8
+#define VS_CHAR8 1
+//#endif 
+
+#if VS_CHAR8
+ WIN32_FIND_DATA  msd_sct;
+#else
+ extern  wchar_t * char_to_wchar(char const *, int, wchar_t *);
+ WIN32_FIND_DATAA msd_sct;
+#endif
 
 #elif S_MSDOS
  unsigned char dta[128];	    /* return file buffer */
@@ -543,8 +555,8 @@ Char * msd_pop()
 		/* do a wild card directory search (for file name completion) */
 
 Cc msd_init(
-	Char *  diry,	/* must not be "" */
-	Char *  pat,	/* pattern to match, null => take it from diry */
+	Char const *  diry,	/* must not be "" */
+	Char const *  pat,	/* pattern to match, null => take it from diry */
 	int     props)	/* msdos props + top bits set => repeat first file */
 { register Char ch;
   register short pe;
@@ -637,7 +649,15 @@ Cc msd_init(
   dir = pathend == 0 ? "./*.*" : msd_relpath;
   strpcpy(&msd_path[pathend], "*.*", 4);
 /*eprintf(null, "FF %s\n", dir);*/
+
+#if VS_CHAR8
   msd_curr = FindFirstFile(dir, &msd_sct);
+#else
+	wchar_t buf[512];
+  wchar_t * nm = char_to_wchar(dir, 512, buf);
+  msd_curr = FindFirstFileA(dir, &msd_sct);
+#endif
+
 /*eprintf(null, "HANDLE %x %s\n", msd_curr, (Char*)msd_sct.cFileName);*/
   msd_path[pathend-1] = '/';
   msd_path[pathend] = 0;
@@ -726,7 +746,11 @@ staticc Cc getnext()
   strpcpy(&msd_path[pathend], "*.*", 4);
 /*eprintf(null, "FNF %x, %s\n", msd_curr, msd_path);*/
 
+#if VS_CHAR8
   if (msd_curr == 0 || ! FindNextFile(msd_curr, &msd_sct))
+#else
+  if (msd_curr == 0 || ! FindNextFileA(msd_curr, &msd_sct))
+#endif
   { msd_path[pathend] = 0;
     return ~OK;
   }
@@ -958,19 +982,19 @@ static Bool extract_fn(int * fnoffs)
 /*eprintf(null, "M %x.%s %s\n", match[0], match, &dta[0x1e]);*/
 /*eprintf(null, msd_attrs & MSD_DIRY ? "YY %s %x %x\n"
 			      : "DD %s %x %x\n", msd_path, msd_attrs, 0**msd_stat.st_mode**);*/
-{ 
 #if S_MSDOS
-  register int ix;
   strpcpy(&rbuf[0], &msd_path[0], sizeof(rbuf));
   
 #if S_WIN32 == 0
+{ register int ix;
   for (ix = -1; rbuf[++ix] != 0; )
     if (in_range(rbuf[ix], 'A', 'Z'))
        rbuf[ix] += 'a' - 'A';
+}
 #endif
 #endif
   return true;
-}}
+}
 
 
 
@@ -1005,7 +1029,7 @@ Char * msd_nfile(int * fnoffs)
       return null;
 #else
       if ((msd_props & MSD_STAY) || msd_pop() == null)
-	return null;
+      	return null;
       msd_attrs = 0;
 #endif
     }
@@ -1018,6 +1042,7 @@ Char * msd_nfile(int * fnoffs)
   }
 }
 
+#if 0
 
 int msd_getprops(Char * fn)
 
@@ -1038,4 +1063,4 @@ int msd_getprops(Char * fn)
 }
 
 #endif
-
+#endif

@@ -11,11 +11,14 @@
 
 #define CHECK 1
 
+#define _CRT_SECURE_NO_WARNINGS
+
 extern "C" void tcapbeep(void);
-extern "C" void mbwrite(char*);
+extern "C" void mbwrite(const char*);
 
 extern "C"
 {
+#if CHECK
 
 int gettimeofday(struct timeval * tp, struct timezone * tzp)	/* one day only */
 {
@@ -27,8 +30,9 @@ int gettimeofday(struct timeval * tp, struct timezone * tzp)	/* one day only */
     tp->tv_usec = (int)sys_ti.wMilliseconds * 1000;
     return sys_ti.wMonth * 31 + sys_ti.wDay;
 }
+#endif
 
-int input_timeout (int filedes, unsigned int secs, unsigned int usecs)
+int millisleep (unsigned int msecs)
 {
 #if CHECK
     struct timeval stt,fin;
@@ -52,17 +56,17 @@ int input_timeout (int filedes, unsigned int secs, unsigned int usecs)
 	  int cc = select (NULL, NULL, NULL, NULL, &timeout);
 #else
 		int cc = 0;
-    Sleep(secs * 1000+usecs / 1000);
+    Sleep(msecs);
 #endif
 
 #if CHECK
     int fin_day = gettimeofday(&fin, NULL);
     
     int u = (fin.tv_sec - stt.tv_sec) * 1000000 + (fin.tv_usec - stt.tv_usec);
-    if (u < (int)secs * 1000000 + (int)usecs && fin_day == stt_day)
+    if (u < (int)msecs * 1000 && fin_day == stt_day)
     { char msg[80];
-    	sprintf(msg, "Cc %d %d Fin %d Stt %d", cc, u, fin.tv_usec, stt.tv_usec);
-    	mbwrite(msg);
+//   	sprintf(msg, "Cc %d %d Fin %d Stt %d", cc, u, fin.tv_usec, stt.tv_usec);
+    	mbwrite("Didnt SLEEP");
     }
 #endif
 		return cc;

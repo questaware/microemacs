@@ -29,19 +29,17 @@
 #include	"edef.h"
 #include	"etype.h"
 #include	"elang.h"
-#include	"h/msdir.h"
+#include	"msdir.h"
 
 #ifndef S_IFCHR
 #define S_IFCHR 0x2000
 #endif
 
-int pipefd = 0;			/* 0 is stdin */
 /*int confd = 0;*/
 
-
-NOSHARE FILE *g_ffp;		/* File pointer, all functions. */
-static int eofflag;		/* end-of-file flag */
-int crlfflag;
+static FILE *g_ffp;		/* File pointer, all functions. */
+static int g_eofflag;		/* end-of-file flag */
+int g_crlfflag;
 
 
 					/* returns old input */
@@ -49,8 +47,7 @@ int crlfflag;
 int Pascal iskboard()
 
 { struct stat fstat_;
-  register int cc = fstat(0 , &fstat_);
-  return cc == 0 && (fstat_.st_mode & S_IFCHR) ? 1 : 0;
+  return fstat(0 , &fstat_) != 0 ? 0 : (fstat_.st_mode & S_IFCHR);
 }
 
 
@@ -60,26 +57,29 @@ int Pascal iskboard()
 /*
  * Open a file for reading.
  */
-int Pascal ffropen(char * fn)
+int Pascal ffropen(const char * fn)
 
-{ 
+{ 		      /* g_flen, fline private to ffropen, ffclose, ffgetline */
+  g_flen = 0;		/* force ffgetline to realloc */
+  g_eofflag = FALSE;
+  g_crlfflag = FALSE;
+
   if (fn != NULL && !(fn[0] == '-' && fn[1] == 0))
-      g_ffp = fopen(fn, "rb");
+		g_ffp = fopen(fn, "rb");
   else
   {
 #if _WINDOWS
-    g_ffp = fdopen(0, "rb");
+//  g_ffp = fdopen(0, "rb");
+		g_ffp = NULL;							// Not needed
+	  return FIOSUC;
 #else
-    pipefd = dup(0);
-    if (pipefd < 0)
+    int g_pipefd = dup(0);
+    if (g_pipefd < 0)
       return 0;
-    g_ffp = fdopen(pipefd, "rb");
+    g_ffp = fdopen(g_pipefd, "rb");
 #endif
     fclose(stdin);
  
-#if S_WIN32
-    MySetCoMo();
-#else
     if (
 #if S_MSDOS
         open("CON", O_RDONLY+O_BINARY)
@@ -90,16 +90,12 @@ int Pascal ffropen(char * fn)
     {
       return 0;
     }
+#if S_WIN32
+    MySetCoMo();
 #endif
   }
 
-  if (g_ffp == NULL)
-     return -1;
-		      /* g_flen, fline private to ffropen, ffclose, ffgetline */
-  g_flen = 0;		/* force ffgetline to realloc */
-  eofflag = FALSE;
-  crlfflag = FALSE;
-  return FIOSUC;
+  return g_ffp == NULL ? -1 : FIOSUC;
 }
 
 
@@ -119,18 +115,17 @@ int Pascal ffclose()
     fline = NULL;
   }
 
+{	Cc cc = g_ffp == NULL ? OK : fclose(g_ffp);
 #if S_UNIX5 | S_LINUX | S_HPUX | S_SUN | S_XENIX | S_BSD | (S_MSDOS & (LATTICE | MSC | DTL | TURBO)) | S_OS2
-  if (fclose(g_ffp) != FALSE)
+  if (cc != OK)
   { mlwrite(TEXT156);
 /*			"Error closing file" */
     return FIOERR;
   }
-#else
-  fclose(g_ffp);
 #endif
 
   return FIOSUC;
-}
+}}
 
 
 
@@ -144,12 +139,11 @@ int Pascal ffwopen(int mode, char * fn)
   { g_ffp = stdout;
     return OK;
   }
-{ 
-  int fd;
+{ int fd;
 #if S_MSDOS && S_WIN32 == 0
   char afn[266];
   fd = open(LFN_to_8dot3(LFN_to_83, 0, fn, &afn[0]), 
-  		O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), 0755);
+        		    O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), 0755);
 #else
   fd = open(fn, O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), 0755);
 #endif
@@ -193,7 +187,7 @@ int Pascal ffputline(char buf[], int nbuf)
 
 #endif
 
-	if (crlfflag)
+	if (g_crlfflag)
 	  putc('\r', g_ffp);
 
 	putc('\n', g_ffp);
@@ -218,10 +212,10 @@ int Pascal ffgetline(int * len_ref)
 {	register int c; 	/* current character read */
 	register int i = -1; 	/* current index into fline */
 
-	if (eofflag)			/* if we are at the end...return it */
+	if (g_eofflag)			/* if we are at the end...return it */
 	  return FIOEOF;
 					/* dump fline if it ended up too big */
-        if (g_flen > NSTRING)
+  if (g_flen > NSTRING)
 	  g_flen = 0;
 							/* read the line in */
 	*len_ref = 0;
@@ -229,7 +223,7 @@ int Pascal ffgetline(int * len_ref)
 	{ c = getc(g_ffp);		    /* if it's longer, get more room */
 	  if (c <= 'Z'- '@')
 	  { if (c == '\r')
-	    { crlfflag = TRUE;
+	    { g_crlfflag = TRUE;
 	      if ((gflags & MD_KEEP_CR) == 0)
 	         continue;
 	    } 
@@ -267,7 +261,7 @@ int Pascal ffgetline(int * len_ref)
 
 	  if (i == 0)
 	    return FIOEOF;
-	  eofflag = TRUE;
+	  g_eofflag = TRUE;
 	}
 					/* terminate and decrypt the string */
 #if	CRYPT
@@ -283,10 +277,10 @@ int Pascal ffgetline(int * len_ref)
 //extern char * getcwd(char*, int);
 
 
-int Pascal nmlze_fname(char * tgt, char * src, char * tmp)
+int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	
-{ register char * t = tgt;
-  register char * s = src;
+{ register 			 char * t = tgt;
+  register const char * s = src;
   register char ch;
        int got_star = 0;
 
@@ -328,8 +322,8 @@ int Pascal nmlze_fname(char * tgt, char * src, char * tmp)
 #endif
   if (cwd_ == null)
     cwd_ = "/";
-{ Char * cwdend = &cwd_[strlen(cwd_)];
-  Char * cw = cwdend;
+{ const Char * cwdend = &cwd_[strlen(cwd_)];
+  const Char * cw = cwdend;
   t = tgt;
 
   while (*strmatch("../", t) == 0 && cw >= cwd_)
@@ -367,4 +361,3 @@ int Pascal ffisdiry()
 }
 
 #endif
-

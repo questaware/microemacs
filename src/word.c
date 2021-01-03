@@ -16,7 +16,7 @@
 #define A_LEND (-2)
 
 
-Pascal thischar()
+int Pascal thischar()
 
 { return curwp->w_doto == llength(curwp->w_dotp)
 				? A_LEND : lgetc(curwp->w_dotp, curwp->w_doto);
@@ -27,7 +27,7 @@ Pascal thischar()
  * Return TRUE if the character at dot is a character that is considered to be
  * part of a word. The word character list is hard coded. Should be setable.
  */
-Pascal inword()
+int Pascal inword()
 
 { return curwp->w_doto == llength(curwp->w_dotp)
 		       ? FALSE : isword(lgetc(curwp->w_dotp, curwp->w_doto));
@@ -41,7 +41,7 @@ Pascal inword()
  * left edge of the current window
  * Returns TRUE on success, FALSE on errors.
  */
-Pascal wrapword(int f, int n)
+int Pascal wrapword(int f, int n)
 
 {
 	register int cnt;	/* size of word wrapped to next line */
@@ -88,7 +88,7 @@ char b_stop_eol;
  * performed by the "backchar" and "forwchar" routines. Error if you try to
  * move beyond the buffers.
  */
-Pascal backword(int f, int n)
+int Pascal backword(int f, int n)
 
 { register int ch;
   
@@ -104,7 +104,7 @@ Pascal backword(int f, int n)
       b_f_size += 1;
       ch = thischar();
       if (! is_space(ch) && (ch != A_LEND || b_stop_eol))
-	break;
+				break;
     }
 
     if (--n < 0)
@@ -114,11 +114,11 @@ Pascal backword(int f, int n)
 
     if (n > 0 || ! b_stop_eol)      
       for (;!in_word ? !is_space(ch) && ch != A_LEND && 
-	               !isletter(ch) && ! in_range(ch,'0','9')
-	             : inword();
-	     ch = thischar())
+      	               !isletter(ch) && ! in_range(ch,'0','9')
+	                   : inword();
+	          ch = thischar())
       { if (backchar(FALSE, 1) == FALSE)
-	  return TRUE;
+				  return TRUE;
         b_f_size += 1;
       }
     if (n <= 0)
@@ -127,52 +127,22 @@ Pascal backword(int f, int n)
   return forwchar(FALSE, 1);
 }
 
+
 /*
  * Move the cursor forward by the specified number of words. All of the motion
  * is done by "forwchar". Error if you try and move beyond the buffer's end.
  */
-Pascal forwword(int f, int n)
+int Pascal nextword(int f, int n)
 
 { register int ch;
 
 	if (n < 0)
 	  return backword(f, -n);
 
-//     	b_f_size = 0;
+  b_f_size = 0;
 	
 	while (n--) 
-	{ ch = thischar();
-	  for (; is_space(ch) || ch == A_LEND; ch = thischar())
-	  { if (forwchar(FALSE, 1) == FALSE)
-	      return FALSE;
-//          b_f_size += 1;
-	  }
-	  
-	  for (;isletter(ch) || in_range(ch,'0','9') || ch == '_';
-		ch = thischar())
-	  { if (forwchar(FALSE, 1) == FALSE)
-	      return FALSE;
-//          b_f_size += 1;
-	  }
-	}
-	return TRUE;
-}
-
-/*
- * Move the cursor forward by the specified number of words. All of the motion
- * is done by "forwchar". Error if you try and move beyond the buffer's end.
- */
-Pascal nextword(int f, int n)
-
-{ register int ch;
-
-	if (n < 0)
-	  return backword(f, -n);
-
-       	b_f_size = 0;
-	
-	while (n--) 
-        { int in_word = inword();
+	{ int in_word = inword();
 	  
 	  ch = thischar();
 	  for (;in_word ? inword()
@@ -181,20 +151,20 @@ Pascal nextword(int f, int n)
 		ch = thischar())
 	  { if (forwchar(FALSE, 1) == FALSE)
 	      return FALSE;
-            b_f_size += 1;
+			b_f_size += 1;
 	  }
 
 	  for (; is_space(ch) || ch == A_LEND; ch = thischar())
 	  { if (forwchar(FALSE, 1) == FALSE)
 	      return FALSE;
-            b_f_size += 1;
+      b_f_size += 1;
 	  }
 	}
 	return TRUE;
 }
 
 
-static Pascal ccaseword(int n, int low)
+static int Pascal ccaseword(int n, int low)
 
 {   if (low != 3 && (curbp->b_flag & MDVIEW)) /* disallow this command if */
       return rdonly();	                 /* we are in read only mode */
@@ -228,7 +198,7 @@ static Pascal ccaseword(int n, int low)
  * convert characters to lower case. Error if you try and move over the end of
  * the buffer. Bound to "M-L".
  */
-Pascal lowerword(int f, int n)
+int Pascal lowerword(int f, int n)
 
 { return ccaseword(n, 0);
 }
@@ -238,7 +208,7 @@ Pascal lowerword(int f, int n)
  * Convert any characters to upper case. Error if you try and move beyond the
  * end of the buffer. Bound to "M-U".
  */
-Pascal upperword(int f, int n)
+int Pascal upperword(int f, int n)
 
 { return ccaseword(n, 1);
 }
@@ -249,7 +219,7 @@ Pascal upperword(int f, int n)
  * characters to lower case. Error if you try and move past the end of the
  * buffer. Bound to "M-C".
  */
-Pascal capword(int f, int n)
+int Pascal capword(int f, int n)
 
 { return ccaseword(n, 2);
 }
@@ -258,10 +228,10 @@ Pascal capword(int f, int n)
  * Move forward to the end of the nth next word. Error if you move past
  * the end of the buffer.
  */
-Pascal endword(int f, int n)
+int Pascal endword(int f, int n)
 
 { return n < 0 ? nextword(f, n)
-	       : ccaseword(n, 3);
+	  			     : ccaseword(n, 3);
 }
 
 /*
@@ -272,8 +242,7 @@ Pascal endword(int f, int n)
  */
 Pascal delfword(int f, int n)
 
-{
-	Lpos_t save = *(Lpos_t*)&curwp->w_dotp;
+{	Lpos_t save = *(Lpos_t*)&curwp->w_dotp;
 
 	if (curbp->b_flag & MDVIEW)
 	  return rdonly();
@@ -285,10 +254,11 @@ Pascal delfword(int f, int n)
 		      /* Clear the kill buffer if last command wasn't a kill */
 	if ((lastflag & CFKILL) == 0)
 	  kdelete(0, 0);
+
 	thisflag |= CFKILL;	/* this command is a kill */
         
 	b_stop_eol = true;
-        nextword(f, n);
+  (void)nextword(f, n);
 	b_stop_eol = false;
 			/* restore the original position and delete the words */
 	if (n > 0)
@@ -303,7 +273,7 @@ Pascal delfword(int f, int n)
  * fire off the kill command. Bound to "M-Rubout" and to "M-Backspace".
  */
 
-Pascal delbword(int f, int n)
+int Pascal delbword(int f, int n)
 
 { return delfword(f, -n);                  
 }
@@ -311,7 +281,7 @@ Pascal delbword(int f, int n)
 #if	WORDPRO
 
 void Pascal reform(char * para)	/* reformat a paragraph as stored in a string */
-			/* string buffer containing paragraph */
+						/* string buffer containing paragraph */
 {
 	register int sp = -1;		  /* string scan pointer */
 	         int lastbreak = -0x3fff; /* ix of last word break */
@@ -357,6 +327,7 @@ Pascal fillpara(int f, int n)/* Fill the current paragraph according to the
 
 	if (curbp->b_flag & MDVIEW)
 	  return rdonly();
+
 	if (fillcol == 0)	/* no fill column set */
 	{ mlwrite(TEXT98);
 /*			"No fill column set" */
@@ -382,7 +353,7 @@ Pascal fillpara(int f, int n)/* Fill the current paragraph according to the
 	pp = para;
 	while (lp != eop)
 	{ lsize = lp->l_used + 1;
-	  if	  (back != 0)
+	  if	    (back != 0)
 	    back += lsize;
 	  else if (lp == ptline)
 	    back = lsize - ptoff;
@@ -441,13 +412,12 @@ Pascal killpara(int f, int n)/* delete n paragraphs starting with the current on
 
 
 /*	wordcount:	count the # of words in the marked region,
-			along with average word sizes, # of chars, etc,
-			and report on them.			*/
+								along with average word sizes, # of chars, etc,
+								and report on them.			*/
 
-Pascal wordcount(int f, int n)
+int Pascal wordcount(int f, int n)
 
-{
-				/* make sure we have a region to count */
+{				/* make sure we have a region to count */
 	Int nchars = getregion();
 	Int size = nchars;
 {	register LINE *lp = region.r_linep;
@@ -456,7 +426,7 @@ Pascal wordcount(int f, int n)
 	int inword = FALSE;
 	Int nwords = 0;
 	Int nlines = 1;
-        char ch;
+  char ch;
 	
 	while (size--)
 	{					/* get the current character */
@@ -482,14 +452,14 @@ Pascal wordcount(int f, int n)
 						/* and report on the info */
 	mlwrite(TEXT100,
 /*		"Words %D Chars %D Lines %d Avg chars/word %f" */
-		nwords, nchars, nlines, 
-		nwords <= 0 ? 0 : (int)((100L * nchars) / nwords));
+					nwords, nchars, nlines, 
+					nwords <= 0 ? 0 : (int)((100L * nchars) / nwords));
 	return TRUE;
 }}
 
 #endif
 
-int gtxt_woffs;
+extern int g_txt_woffs;
 
 char * Pascal getwtxt(int wh, char * buf, int lim)
 	  
@@ -500,8 +470,8 @@ char * Pascal getwtxt(int wh, char * buf, int lim)
   if (wh == 'S'-'@' || wh == 'S')
     return fixnull(patmatch);
 
-{ register int offs = wh == 'W'-'@' || wh == 'K'-'@' ? gtxt_woffs : 0;
-	   int lct = llength(curwp->w_dotp) - offs;
+{ int offs = wh == 'W'-'@' || wh == 'K'-'@' ? g_txt_woffs : 0;
+	int lct = llength(curwp->w_dotp) - offs;
   if (lct > lim)
     lct = lim;
 
@@ -517,7 +487,7 @@ char * Pascal getwtxt(int wh, char * buf, int lim)
   }
 
   if (wh == 'W'-'@')
-    gtxt_woffs = offs;
+    g_txt_woffs = offs;
 
   *t = 0;
   return buf;

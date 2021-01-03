@@ -61,7 +61,7 @@ void Pascal leavewind(WINDOW * wp_)
   }
 }
 
-Pascal openwindbuf(char * bname)
+int Pascal openwindbuf(char * bname)
 	
 {		/* split the current window to make room for the binding list */
   if (splitwind(FALSE, 1) == FALSE)
@@ -89,7 +89,7 @@ Pascal openwindbuf(char * bname)
  * bottom. If it is 0 the window is centered (this is what the standard
  * redisplay code does). With no argument it defaults to 0. Bound to M-!.
  */
-Pascal reposition(int f, int n)
+int Pascal reposition(int f, int n)
 
 {   curwp->w_force = f == FALSE ? 0 : n;
     curwp->w_flag |= WFFORCE;
@@ -100,7 +100,7 @@ Pascal reposition(int f, int n)
  * Refresh the screen. With no argument, it just does the refresh. With an
  * argument it recenters "." in the current window. Bound to "C-L".
  */
-Pascal refresh(int f, int n)
+int Pascal refresh(int f, int n)
 
 {  if (f != FALSE)
       return reposition(0, 0);  /* Center dot. */
@@ -116,7 +116,7 @@ Pascal refresh(int f, int n)
  * with an argument this command finds the <n>th window from the top
  *
  */
-Pascal nextwind(int f, int n)
+int Pascal nextwind(int f, int n)
 
 {
 	register WINDOW *wp;
@@ -126,23 +126,19 @@ Pascal nextwind(int f, int n)
 	    wp = wheadp;
 	}
 	else
-	{ if (n < 0)
-		/* if the argument is negative, it is the nth window
-		   from the bottom of the screen		    */
-	    n += 1 + orwindmode(0, 0);  /* 0,: just count windows */
+	{ int wct = orwindmode(0, 0);  /* 0,: just count windows */
+	
+    if (n < 0)
+      n = ((wct+n) % wct)+1;  /* the nth window from bottom of the screen */
 	  
-		/* if an argument, give them that window from the top */
 	  wp = wheadp;
-	  while (--n)
+	  while (--n > 0)
 	  { wp = wp->w_wndp;
 	    if (wp == NULL)
-	    { mlwrite(TEXT203);
-/*				"Window number out of range" */
-	      return FALSE;
-	    }
+	      wp = wheadp;
 	  }
 	}
-        curwp->w_flag |= WFMODE;		/* Mode line is updated */
+  curwp->w_flag |= WFMODE;		/* Mode line is updated */
 	curwp = wp;
 	curbp = wp->w_bufp;
 	upmode();
@@ -154,15 +150,16 @@ Pascal nextwind(int f, int n)
  * current window. There arn't any errors, although the command does not do a
  * lot if there is 1 window.
  */
-Pascal prevwind(int f, int n)
+int Pascal prevwind(int f, int n)
 
 {	   /* if we have an argument, we mean the nth window from the bottom */
 	if (f)
 	  return nextwind(f, -n);
 
-	curwp = (WINDOW*)prevele((BUFFER*)wheadp,
-			         (BUFFER*)(wheadp == curwp ? NULL : curwp));
-	return nextwind(f, 0);
+  if (wheadp == curwp)
+  	return nextwind(f, 0);
+	curwp = (WINDOW*)prevele((BUFFER*)wheadp,(BUFFER*)curwp);
+	return TRUE;
 }
 
 /*
@@ -172,7 +169,7 @@ Pascal prevwind(int f, int n)
  * (this command does not really move "."; it moves the frame). Bound to
  * "C-X C-P".
  */
-Pascal mvupwind(int f, int n)
+int Pascal mvupwind(int f, int n)
 
 {   register LINE * lp = curwp->w_linep;
              LINE * p = curbp->b_baseline;
@@ -212,7 +209,7 @@ Pascal mvupwind(int f, int n)
  * a new dot. We share the code by having "move down" just be an interface to
  * "move up". Magic. Bound to "C-X C-N".
  */
-Pascal mvdnwind(int f, int n)
+int Pascal mvdnwind(int f, int n)
 
 {
   return mvupwind(f, -n);
@@ -226,7 +223,7 @@ Pascal mvdnwind(int f, int n)
  * the buffer structures right if the destruction of a window makes a buffer
  * become undisplayed.
  */
-Pascal onlywind(int f, int n)
+int Pascal onlywind(int f, int n)
 
 {	register WINDOW *wp;
 	register WINDOW *nwp;
@@ -244,7 +241,7 @@ Pascal onlywind(int f, int n)
 	  }
 	}
 #if 0
-        (void)backline(0, curwp->w_toprow);
+  (void)backline(0, curwp->w_toprow);
 #endif
 	wp = wheadp;
 	curwp = wp;
@@ -259,7 +256,7 @@ Pascal onlywind(int f, int n)
  * Delete the current window, placing its space in the window above,
  * or, if it is the top window, the window below. Bound to C-X 0.
  */
-Pascal delwind(int f, int n)
+int Pascal delwind(int f, int n)
 				/* arguments are ignored for this command */
 {
 	register WINDOW *wp;		/* window to recieve deleted space */
@@ -311,7 +308,7 @@ two forces the cursor to the lower window.  The only other error that
 is possible is a "malloc" failure allocating the structure for the new
 window.  Bound to "C-X 2". 
 */
-Pascal splitwind(int f, int n)
+int Pascal splitwind(int f, int n)
 
 {
 	register WINDOW *wp;
@@ -348,8 +345,7 @@ Pascal splitwind(int f, int n)
 	  curwp->w_ntrows = ntru;
 	} 
 	else					      /* Old is lower window */
-	{ WINDOW * wp1 = (WINDOW*)prevele((BUFFER*)wheadp,
-			                  (BUFFER*)curwp);
+	{ WINDOW * wp1 = (WINDOW*)prevele((BUFFER*)wheadp,(BUFFER*)curwp);
 	  if (wp1 == null)
 	    wheadp = wp;
 	  else
@@ -378,9 +374,9 @@ Pascal splitwind(int f, int n)
  * all the hard work. You don't just set "force reframe" because dot would
  * move. Bound to "C-X Z".
  */
-Pascal enlargewind(int f, int n)
+int Pascal enlargewind(int f, int n)
 
-{	     WINDOW * thisp = curwp;
+{            WINDOW * thisp = curwp;
     register WINDOW * adjwp;
     register LINE * lp;
     register int  ix;
@@ -390,35 +386,32 @@ Pascal enlargewind(int f, int n)
 /*			"Only one window" */
       return FALSE;
     }
-    adjwp = curwp->w_wndp;
+    adjwp = thisp->w_wndp;
     if (adjwp == NULL)
-	adjwp = (WINDOW*)prevele((BUFFER*)wheadp,
-			         (BUFFER*)(wheadp == curwp ? NULL : curwp));
-    ix = thisp->w_wndp == adjwp;
+    	adjwp = wheadp;
+
     if (n < 0)
     { n = -n;
       thisp = adjwp;	
       adjwp = curwp;
-      ix -= 1; 
-      ix &= 1;
     }
     if (adjwp->w_ntrows - n <= modeflag - 1)
     { mlwrite(TEXT207);
 /*			"Impossible change" */
       return FALSE;
     }
-    if (ix)			/* thisp->w_wndp == adjwp Shrink below. */
+    if (adjwp != wheadp)    // Shrink below.
     { lp = adjwp->w_linep;
       for (ix = n; --ix >= 0 && (lp->l_props & L_IS_HD) == 0; )
-	lp = lforw(lp);
+      	lp = lforw(lp);
       adjwp->w_linep  = lp;
       adjwp->w_toprow += n;
     } 
-    else				    /* Shrink above.	    */
+    else                    /// Shrink above.
     { LINE * p = lforw(thisp->w_bufp->b_baseline);
       lp = thisp->w_linep;
       for (ix = n; --ix >= 0 && lp != p; )
-	lp = lback(lp);
+      	lp = lback(lp);
       thisp->w_linep  = lp;
       thisp->w_toprow -= n;
     }
@@ -434,7 +427,7 @@ Pascal enlargewind(int f, int n)
  * window descriptions. Ask the redisplay to do all the hard work. Bound to
  * "C-X C-Z".
  */
-Pascal shrinkwind(int f, int n)
+int Pascal shrinkwind(int f, int n)
 
 {	
 	return enlargewind(f, n == 0 ? -1 : -n);
@@ -476,7 +469,7 @@ X	return TRUE;
 }
 
 			 /* Resize the current window to the requested size */
-Pascal resize(int f, int n)
+int Pascal resize(int f, int n)
 
 {
 	int clines = curwp->w_ntrows;/* current # of lines in window */
@@ -509,7 +502,7 @@ WINDOW *Pascal wpopup()
 
 #endif
 
-Pascal nextup(int f, int n)	/* scroll the next window up (back) a page */
+int Pascal nextup(int f, int n)	/* scroll the next window up (back) a page */
 
 {	nextwind(FALSE, 1);
 	backpage(f, n);
@@ -517,7 +510,7 @@ Pascal nextup(int f, int n)	/* scroll the next window up (back) a page */
 	return TRUE;
 }
 
-Pascal nextdown(int f, int n)	/* scroll next window down (forward) a page */
+int Pascal nextdown(int f, int n)	/* scroll next window down (forward) a page*/
 
 {	return nextup(f, -n);
 }
@@ -526,13 +519,13 @@ Pascal nextdown(int f, int n)	/* scroll next window down (forward) a page */
 static WINDOW *swindow = NULL; 	/* saved window pointer 	*/
 
 
-Pascal savewnd(int f, int n)	/* save ptr to current window */
+int Pascal savewnd(int f, int n)	/* save ptr to current window */
 
 {	swindow = curwp;
 	return TRUE;
 }
 
-Pascal restwnd(int f, int n)	/* restore the saved screen */
+int Pascal restwnd(int f, int n)	/* restore the saved screen */
 
 {
 	register WINDOW *wp;
@@ -554,18 +547,17 @@ Pascal restwnd(int f, int n)	/* restore the saved screen */
 const static char text209[] = TEXT209;
 #endif
 
-Pascal newdims(int wid, int dpth)	/* resize the screen, re-writing the screen */
+int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 
-{
-     /* int inr = true; */
-        loglog2("newdims X %d Y %d", wid, dpth);
-					     /* make sure it's in range */
-	if (! in_range(dpth, 3, 90))
+{ // int inr = true;
+  loglog2("newdims X %d Y %d", wid, dpth);
+                      					     /* make sure it's in range */
+	if (! in_range(dpth, 3, term.t_mrowm1+1))
   { logwarn2("Imp Scr Y %d %d", dpth, term.t_mrowm1 + 1);
 	  dpth = 90;
 	/*inr = 0;*/
 	}
-	if (! in_range(wid, 10, 134))
+	if (! in_range(wid, 10, term.t_mcol))
         { loglog2("Imp Scr X %d %d", wid, term.t_mcol);
 	  wid = 134;
 	/*inr = 0;*/

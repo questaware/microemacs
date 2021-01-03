@@ -155,15 +155,7 @@ btk execute-macro-10 FN^2
 
 btk execute-macro-11 ^D
 
-12 store-macro		; get word
-  kill-kill
-  set-mark
-  next-word
-  copy-region
-  backward-word
-!endm
-
-btk execute-macro-12 M-W
+;12 store-macro		; Not in use
 
 13 store-macro         ; expand macros
   !if &equ $uarg 0
@@ -300,4 +292,4 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".sql=^4.c=2"
+set $fileprof ".sql=^4.h=2.c=2.cpp=2"

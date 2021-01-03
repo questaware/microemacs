@@ -12,7 +12,7 @@
 
 #define null 0
 
-#define in_range(a, b, c) ((unsigned)((a)-(b)) <= ((c)-(b)) && (c)-(b) >= 0)
+#define in_range(a,b,c) ((unsigned)((a)-(b)) <= (unsigned)((c)-(b)) && ((signed)c)-(b) >= 0)
 #define fieldoffs(mode, fld) ((Int)&((mode)0)->fld)
 #define backbyfield(p, mode, fld) (mode*)((char*)p - fieldoffs(mode*, fld))
 

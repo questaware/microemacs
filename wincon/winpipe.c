@@ -163,8 +163,7 @@ Cc Wp_Create(char * szCommand, int pipesz, Bool connect_stdin)
 
 int Wp_Read(int * offset, char * PipeData, int bufsz)
 
-{ 
-  int ix;
+{ int ix;
 
   if (next_offset == -1)
     next_offset = next_end+3;
@@ -221,10 +220,10 @@ int Wp_Read(int * offset, char * PipeData, int bufsz)
     { DWORD ii;
 
       rc = ReadFile(UpReadHandle, // handle to pipe to copy from 
-  		    &PipeData[next_end+1],// address of buffer that receives data
-  		    space, 		// number of bytes to read
-  		    &NumBytesRead,  // address of number of bytes read
-  		    NULL); // address of structure for data for overlapped I/O
+					  		    &PipeData[next_end+1],// address of buffer that receives data
+  		    					space, 		// number of bytes to read
+					  		    &NumBytesRead,  // address of number of bytes read
+					  		    NULL); // address of structure for data for overlapped I/O
       if ( !rc )
       { loglog("ReadFile fialed");
         break;
@@ -239,7 +238,6 @@ int Wp_Read(int * offset, char * PipeData, int bufsz)
         if ( PipeData[ii] == '\b' )
           PipeData[ii] = ' ';
       }  		
-
     		//-------------------------------------------------------------
     		//	Append the output to the CEdit control.
     		//-------------------------------------------------------------
@@ -262,17 +260,17 @@ int Wp_Read(int * offset, char * PipeData, int bufsz)
 
         if ( m_bStopped )
         {
-  	  rc = TerminateProcess(ProcessInfo.hProcess, 0);
+		  	  rc = TerminateProcess(ProcessInfo.hProcess, 0);
 
-	  if ( rc )
-	  {
-	    strcpy(&PipeData[0], "\r\nCancelled.\r\n\r\nProcess terminated successfully.\r\n");
-	  }
-	  else
-	  { loglog("Error terminating process.");
-	  }
+				  if ( rc )
+				  {
+				    strcpy(&PipeData[0], "\r\nCancelled.\r\n\r\nProcess terminated successfully.\r\n");
+				  }
+				  else
+				  { loglog("Error terminating process.");
+				  }
 
-	  return -1;
+				  return -1;
         }
 
         Sleep(m_dwSleepMilliseconds);

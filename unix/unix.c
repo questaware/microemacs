@@ -549,19 +549,19 @@ int filter(int f, int n)
   if (bp->b_flag & MDVIEW)
     return rdonly();
 					/* get the filter name and its args */
-{ int s = mlreply("#", line, NLINE);
-  if (s != TRUE)
-    return s;
+{ int cc = mlreply("#", line, NLINE);
+  if (cc != TRUE)
+    return cc;
 
   bp->b_fname = null;			/* prevent freeing */
 					/* write it out, checking for errors */
-  s = writeout(filnam1);
-  if (s != TRUE)
-    s = 1000;
+  cc = writeout(filnam1);
+  if (cc != TRUE)
+    cc = 1000;
   else
   { usehost(strcat(line," </tmp/fltinp >/tmp/fltout"), FALSE);
 					  /* on failure, escape gracefully */
-    s = readin(filnam2,FALSE);
+    cc = readin(filnam2,FALSE);
     unlink(filnam1);			  /* and get rid of the temporary file */
     unlink(filnam2);
   }
@@ -570,12 +570,12 @@ int filter(int f, int n)
     free(bp->b_fname);
   bp->b_fname = tmpnam;
 
-  if (s != TRUE)
-  { mlwrite(s == 1000 ? TEXT2 : TEXT3);
+  if (cc != TRUE)
+  { mlwrite(cc == 1000 ? TEXT2 : TEXT3);
 /*                      "[Cannot write filter file]" */
 /*                      "[Execution failed]" */
     sleep(1);
-    return s;
+    return cc;
   }
 
   bp->b_flag |= BFCHG;			/* flag it as changed */

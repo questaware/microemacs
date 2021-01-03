@@ -8,7 +8,7 @@
 #include	"etype.h"
 #include	"elang.h"
 #include	"epredef.h"
-#include	"h/map.h"
+#include	"map.h"
 
 
 #if	S_UNIX5 | S_HPUX
@@ -16,7 +16,7 @@
 #endif
 #if	S_BSD | S_XENIX
 #include	<sys/types.h>
-#include        <sys/select.h>
+#include  <sys/select.h>
 #include	<time.h>
 #endif
 
@@ -405,10 +405,19 @@ int tcapclose(int lvl)
 	return OK;
 }
 
+
 void tcapkopen()
 
 {
 }
+
+
+int Pascal ttsystem(const char * cmd)
+
+{ Cc cc = system(cmd);
+  return cc;
+}
+
 
 
 int Pascal get1key(); /* forward */
@@ -801,21 +810,36 @@ void tcapsetfgbg(int chrom)
 void tcapchrom(short chroms)
 
 { static char chromattrs[20] = "\033[";
-  static short last_chm;
-  register int tix = 2;
-         short chm = (chroms >> 8) & 0x7f;	/* background,foreground */
-  if (chm == 0 || (chroms & CHROM_OFF))
-    chm = def_colour;
+	static short last_chm;
+				 int tix = 2;
+				 short chm = (chroms >> 8) & 0x7f;	/* background,foreground */
+	if (chm == 0 || (chroms & CHROM_OFF))
+		chm = def_colour;
 
-  if (chm != last_chm)
-  {
-    sprintf(&chromattrs[2], "4%d;3%d", (chm & 0x70) >> 4, chm & 0x7);
-    tix += 5;
-    chromattrs[tix++] = 'm';
-    chromattrs[tix] = 0;
-    putpad(chromattrs);
-    last_chm = chm;
-  }
+	if (chm != last_chm)
+	{
+		if			(chroms & CHROM_OFF)
+		{ if (last_chm == 0)
+				return;
+			if (last_chm & 8)
+			{ chromattrs[2] = 'm';
+				chromattrs[3] = 0;
+				putpad(chromattrs);
+			}
+		}
+
+		if (chm & 8)		// bold
+			chromattrs[2] = '4';					// Only underline works
+		else
+		{ sprintf(&chromattrs[2], "4%d;3%d", (chm & 0x70) >> 4, chm & 0x7);
+			tix += 4;
+		}
+		
+		chromattrs[++tix] = 'm';
+		chromattrs[++tix] = 0;
+		putpad(chromattrs);
+		last_chm = chm;
+	}
 }
 
 

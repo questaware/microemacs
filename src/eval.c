@@ -11,7 +11,7 @@
 #include	"etype.h"
 #include	"evar.h"
 #include	"elang.h"
-#include	"h/map.h"
+#include	"map.h"
 #include	"logmsg.h"
 
 
@@ -50,7 +50,7 @@ FALSE, /* EVCWLINE */		  /* actual: mpresf  - Stuff in message line */
 0,     /* EVFCOL */		        /* The left hand offset on the screen */
 0,     /* EVFILEPROF */	      /* The profiles of file types */
 72,    /* EVFILLCOL */		/* not in use */
-1,     /* EVFLICKER */		/* do flicker supression? */
+1,     /* EVFLICKER */		/* do flicker supression (not in use) */
 0,     /* EVGFLAGS */		  /* global control flag */
 0,     /* EVGMODE */ 		  /* global editor mode */
 7,     /* EVHARDTAB */		/* not in use */
@@ -205,7 +205,7 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 //*arg1 = 0;
 			      /* look the function up in the function table */
 	fname[3] = 0;			/* only first 3 chars significant */
-        mkul(0, fname);
+  mkul(0, fname);
 	fnamemap.srch_key = fname;
 	fnum = binary_const(&fnamemap, funcs);
 	if (fnum < 0)
@@ -414,10 +414,7 @@ Pascal binary(key, tval, tlength)
 static Map_t evmap = mk_const_map(T_DOMSTR, 0, envars);
 
 
-#if S_HPUX == 0 || 1
- const
-#endif
-       char *Pascal gtenv(const char * vname)
+const char *Pascal gtenv(const char * vname)
  			/* name of environment variable to retrieve */
 {
 	         int ix = 0;
@@ -490,8 +487,7 @@ static Map_t evmap = mk_const_map(T_DOMSTR, 0, envars);
 	  when EVWINTITLE:return curbp->b_fname;		// getconsoletitle();
 #endif
 
-	  when EVFLICKER: 
-	  case EVDEBUG:   
+	  when EVDEBUG:   
 	  case EVSTATUS:  
 	  case EVDISCMD:  
 	  case EVDISINP:  
@@ -510,7 +506,7 @@ static Map_t evmap = mk_const_map(T_DOMSTR, 0, envars);
 #undef result
 }
 
-char *Pascal fixnull(char * s)/* Don't return NULL pointers! */
+const char *Pascal fixnull(const char * s)/* Don't return NULL pointers! */
 	
 {
   return s == NULL ? "" : s;
@@ -532,10 +528,9 @@ char * Pascal trimstr(char * s, int * from)/* trim whitespace off string */
 
 
 
-int Pascal findvar(char * var)/* find a variables type and name */
+static int Pascal findvar(const char * var)/* find a variables type and name */
 	
-{
-	register int vtype;	/* type to return */
+{	register int vtype;	/* type to return */
 
 fvar:	vtype = -1;
 	switch (var[0])
@@ -555,8 +550,7 @@ fvar:	vtype = -1;
 		      }
 		    }				/* indirect operator? */
 	  when '&': 
-	      var[4] = 0;
-		    if (strcmp(&var[1], "ind") == 0)
+		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')
 		    {			  /* grab token, and eval it */
 		      execstr = token(execstr, var, NVSIZE+1);
 		      getval(&var[0], var);
@@ -568,7 +562,7 @@ fvar:	vtype = -1;
 
 
 
-int Pascal set_var(char var[NVSIZE+1], char * value)	/* set a variable */
+int Pascal set_var(const char var[NVSIZE+1], char * value)	/* set a variable */
 					/* name of variable to fetch */
 					/* value to set variable to */
 {
@@ -646,6 +640,23 @@ int Pascal setvar(int f, int n)	/* set a variable */
 	                        set_var(var, &var[cc+1]);
 }
 
+/*
+ * Set current column.
+ */
+static
+ int Pascal setccol(int pos)
+												/* position to set cursor */
+{
+	int llen = llength(curwp->w_dotp);
+	int offs;
+	for (offs = -1; ++offs < llen; )
+	{ curwp->w_doto = offs;
+		if (getccol() >= pos)
+			break;
+	}	
+
+	return TRUE;
+}
 
 
 int Pascal svar(int var, char * value)	/* set a variable */
@@ -670,7 +681,8 @@ int Pascal svar(int var, char * value)	/* set a variable */
 #if S_WIN32
 //    when EVWINTITLE: setconsoletitle( value );
 #endif
-	    when EVHARDTAB:	 curbp->b_tabsize = val;
+	    when EVHARDTAB:	 tabsize = val;
+                  	   curbp->b_tabsize = val;
 	                     upwind();
 	    when EVPAGELEN:	 cc = newdims(term.t_ncol, val);
 	    when EVCURWIDTH: cc = newdims(val, term.t_nrowm1+1);
@@ -734,7 +746,6 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  				  		    setktkey(&hooks[hookix], BINDFNC, value);
 
 	    when EVHSCROLL: lbound = 0;
-	    case EVFLICKER:	
 	    case EVDEBUG:	
 	    case EVSTATUS:	
 	    case EVDISCMD:	

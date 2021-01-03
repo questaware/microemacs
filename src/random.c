@@ -59,16 +59,14 @@ Pascal showcpos(int f, int n)
 	curwp->w_line_no = predlines;
 {	int ecol = getccol();
 	curwp->w_doto = savepos;
-#define ratio savepos
 	if (numchars != 0)
-	{ ratio = (100L*predchars) / numchars;
+	{ int ratio = (100L*predchars) / numchars;
 
 		mlwrite(TEXT60,
 /*							"Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x" */
 						predlines, numlines, getccol(), ecol,
 						predchars, numchars, ratio, cch);
 	}
-#undef ratio
 	return (int)numchars;
 }}}
 
@@ -142,20 +140,6 @@ int Pascal getccol()
 	}
 	return col;
 }
-/*
- * Set current column.
- */
-int Pascal setccol(int pos)
-												/* position to set cursor */
-{
-	int llen = llength(curwp->w_dotp);
-
-	curwp->w_doto = pos < llen ? llen : pos;
-	curwp->w_doto = getccol();
-																								/* set us at the new position */
-	return curwp->w_doto >= pos;
-}
-
 
 #if FLUFF
 /* Twiddle the two characters on either side of dot. If dot is at the end of
@@ -191,7 +175,7 @@ Pascal twiddle(int f, int n)
  * its line splitting meaning. The character is always read, even if it is
  * inserted 0 times, for regularity. Bound to "C-Q"
  */
-Pascal quote(int f, int n)
+int Pascal quote(int f, int n)
 
 { if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
@@ -209,21 +193,17 @@ Pascal quote(int f, int n)
  * done in this slightly funny way because the tab (in ASCII) has been turned
  * into "C-I" (in 10 bit code) already. Bound to "C-I".
  */
-Pascal settabsize(int f, int n)
+int Pascal settabsize(int f, int n)
 
-{ if (n < 0)
-		return FALSE;
-	if (n != 1)
-	{ stabsize = n;
-		return TRUE;
-	}
-	return !stabsize ? linsert(1, '\t')
-									 : linsert(stabsize - (getccol() % stabsize), ' ');
+{ int tabsz = curbp->b_tabsize;
+  int ct = tabsz - (getccol() % tabsz);
+
+	return ct <= 0 ? OK : linsert(ct,	' ');
 }
 
 #if 		AEDIT
 
-Pascal detabline()
+int Pascal detabline()
 
 { curwp->w_doto = 0;		/* start at the beginning */
 

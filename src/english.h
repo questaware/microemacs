@@ -17,7 +17,7 @@ extern /*const*/ char TEXT79[];
 extern /*const*/ char TEXT94[];
 extern /*const*/ char TEXT99[];
 extern /*const*/ char TEXT23[];
-/*const*/ char * TEXT64a[3];
+extern /*const*/ char * TEXT64a[3];
 #endif
 
 #define TEXT119 TEXT99
@@ -96,9 +96,9 @@ extern /*const*/ char TEXT23[];
 #define	TEXT78	"No pattern set"
 #define	TEXT80	"Search"
 #define	TEXT81	"Reverse search"
-#define	TEXT84  "Replace"
-#define	TEXT86  "with"
-#define	TEXT85	"Query replace"
+#define	TEXT82  "Replace"
+#define	TEXT83	"Query replace"
+#define	TEXT84  "with"
 #define	TEXT87	"Replace '"
 #define	TEXT88	"' with '"
 #define	TEXT89	"Aborted!"
@@ -205,7 +205,7 @@ extern /*const*/ char TEXT23[];
 #define	TEXT200	"[Calling DCL]\r\n"
 #define	TEXT201	"[Not available yet under VMS]"
 #define	TEXT202	"Terminal type not 'vt52'or 'z19' !"
-#define	TEXT203	"Window number out of range"
+#define	TEXT203	
 #define	TEXT204	"Cannot delete window"
 #define	TEXT205	"Cannot split a %d line window"
 #define	TEXT206	"Only one window"

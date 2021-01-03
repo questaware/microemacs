@@ -307,9 +307,9 @@ typedef struct	WINDOW {
 	struct	WINDOW *w_wndp; 	/* Next window			*/
 	struct	BUFFER *w_bufp; 	/* Buffer displayed in window	*/
 	struct	LINE *w_linep;		/* Top line in the window	*/
-  struct  MARKS mrks;
+        struct  MARKS mrks;
 	struct	LINE *w_dotp;		/* Line containing "."		*/
-	short	       w_doto; 		/* offset for "."; isomorphism ends */
+	short	w_doto; 		/* offset for "."; isomorphism ends */
 	unsigned int w_line_no;		/* Lpos_t isomorphism ends      */
 	char	w_toprow;		/* Origin 0 top row of window	*/
 	char	w_ntrows;		/* # of rows in window inc MLine*/
@@ -335,7 +335,7 @@ typedef struct	BUFFER {
 	struct	BUFFER *b_bufp; 	/* Link to next BUFFER		*/
 	struct	LINE *b_baseline;	/* Link to the header LINE	*/
 	struct	LINE *b_wlinep;		/* Link top LINE in last window */
-        struct  MARKS mrks;
+  struct  MARKS mrks;
 	struct	LINE *b_dotp;		/* Link to "." LINE structure	*/
 	short	b_doto; 		/* offset of "."; isomorphism ends */
 	short   b_luct;			/* last use count		*/ 
@@ -375,9 +375,9 @@ typedef struct	{
 typedef struct	LINE {
 	struct LINE * l_fp;		/* Link to the next line	*/
 	struct LINE * l_bp;		/* Link to the previous line	*/
-	short	l_used; 		    /* Used size			*/
-  unsigned char l_spare;/* spare space */
-	char  l_props;
+	short	l_used;         		/* Used size			*/
+  unsigned char l_spare; 		/* spare space */
+	char    l_props;
 	char	l_text[1];		/* A bunch of characters.	*/
 }	LINE;
 

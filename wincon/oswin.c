@@ -30,7 +30,8 @@
 #define O_RDONLY _O_RDONLY
 #endif
 
-extern int input_timeout (int filedes, unsigned int secs, unsigned int usecs);
+extern char *getenv();
+extern void ClearScreen(void);
 
 #define MLIX 3
 
@@ -46,7 +47,7 @@ static int oldbut;	/* Previous state of mouse buttons */
 int g_chars_since_shift;
 int timeout_secs;
 
-static void flagerr(const char * fmt)
+void flagerr(const char * fmt)
 
 { DWORD ec = GetLastError();
   mlwrite(fmt, ec);
@@ -580,12 +581,11 @@ void flush_typah()
 
 #define KBRD 7
 
-extern HANDLE  g_ConsOut;                   /* Handle to the console */
 extern CONSOLE_SCREEN_BUFFER_INFO csbiInfo;  /* Orig Console information */
 extern CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
 
-static HANDLE g_ConsIn;
-static HWND   g_origwin = NULL;
+HANDLE g_ConsIn;
+//static HWND g_origwin = NULL;
 
 static int g_got_ctrl = false;
 
@@ -616,36 +616,44 @@ BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
   return true;
 }
 
-void cls()
-               /* get the number of character cells in the current buffer */
-{ 
-  CONSOLE_SCREEN_BUFFER_INFO csbi; /* to get buffer info */
 
-  HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-  BOOL bSuccess = GetConsoleScreenBufferInfo( hConsole, &csbi );
-  if (bSuccess)
-  { DWORD dwConSize = csbi.dwSize.X * csbi.dwSize.Y;
-    DWORD cCharsWritten;
-	  COORD coordScreen;  							/* here's where we'll home the cursor */
-    coordScreen.Y = term.t_nrowm1+1;
-    coordScreen.X = 0;
-    bSuccess = FillConsoleOutputCharacter(hConsole, (TCHAR) ' ',
-                                          dwConSize,coordScreen, &cCharsWritten);
-  }
-}
 
+void Pascal MySetCoMo()
+
+{
+//char buf[80];
+//sprintf(buf, "RowM1 %d Col %d", term.t_nrowm1, term.t_ncol);
+//mbwrite(buf);
+
+  SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+	HANDLE h = CreateFile("CONIN$",
+                        GENERIC_READ | GENERIC_WRITE,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        &sa,
+                        OPEN_EXISTING,
+                        0, NULL); // ignored
+	if(h == INVALID_HANDLE_VALUE || !SetStdHandle(STD_INPUT_HANDLE, h))
+    flagerr("SCCFSHErr %d");
+
+	setMyConsoleIP();
+
+  SetConsoleCtrlHandler(MyHandlerRoutine, true);
 #if 0
+{ HWND mwh = GetForegroundWindow();
+  if (mwh == NULL)
+    flagerr("MwHerr %d");
 
-static void homes()
-
-{	const COORD coordScreen = { 0, 0 };  /* here's where we'll home the cursor */
-	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	(void)SetConsoleCursorPosition( hConsole, coordScreen ); /* doesnt work */
-	Sleep(10);
+{ Cc cc = SetWindowPos(mwh, HWND_TOP, 10,10,
+//        	 ((GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2),
+//	         ((GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2), 
+        	   					 0, 0, SWP_NOSIZE /*| SWP_NOACTIVATE*/); 
+  if (cc == 0)
+    flagerr("SwPerr %d");
+}}
+#endif
+//g_origwin = GetForegroundWindow();
 }
 
-#endif
 
 /*
 typedef struct _WINDOWPLACEMENT { 
@@ -658,74 +666,22 @@ typedef struct _WINDOWPLACEMENT {
 } WINDOWPLACEMENT; 
 */
 
-void setMyConsoleIP()
 
-{ g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
-  if (g_ConsIn < 0)					                    /* INVALID_HANDLE_VALUE */
-    flagerr("Piperr %d");
 
-/* SetStdHandle( STD_INPUT_HANDLE, g_ConsIn ); */
-  if (0 == SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT/*|ENABLE_PROCESSED_INPUT*/))
-    flagerr("PipeC %d");
+int ttsystem(const char * cmd)
+
+{ Cc cc = system(cmd);
+	setMyConsoleIP();
+	return cc;
 }
 
-
-
-void Pascal MySetCoMo()
-
-{ RECT rc; 
-  SMALL_RECT sr;
-  COORD sz;
-  if (term.t_nrowm1 >= csbiInfoO.dwSize.Y)
-    term.t_nrowm1 = csbiInfoO.dwSize.Y - 1;
-  if (term.t_ncol > csbiInfoO.dwSize.X)
-    term.t_ncol = csbiInfoO.dwSize.X;
-   
-  sr.Left = 0+0;
-  sr.Top = 0+3;
-  sr.Right = 0+term.t_ncol-1;
-  sz.X = term.t_ncol;
-  sr.Bottom = 0+term.t_nrowm1-3/* say */;
-  sz.Y = term.t_nrowm1+1;
-
-  g_origwin = GetForegroundWindow();
- 
-  GetWindowRect(g_origwin, &rc); 
-
-  FreeConsole();
-  AllocConsole();
-
-  g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
-
-  if (SetConsoleScreenBufferSize(g_ConsOut, sz) == 0)
-    flagerr("SCSBerr %d");
-  if (SetConsoleWindowInfo(g_ConsOut, true, &sr) == 0)
-    flagerr("SCWIEerr %d");
-
-  //SetConsoleTitle("Debug Window");
-
-  setMyConsoleIP();
-
-  SetConsoleCtrlHandler(MyHandlerRoutine, true);
-
-{ HWND mwh = GetForegroundWindow();
-  if (mwh == NULL)
-    flagerr("MwHerr %d");
-
-{ Cc cc = SetWindowPos(mwh, HWND_TOP, 10,10,
-//        	 ((GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2),
-//	         ((GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2), 
-        	   					 0, 0, SWP_NOSIZE /*| SWP_NOACTIVATE*/); 
-  if (cc == 0)
-    flagerr("SwPerr %d");
-}}}
 
 
 /*
  * Read a character from the terminal, performing no editing and doing no echo
  * at all. Also mouse events are forced into the input stream here.
  */
-Pascal ttgetc()
+int Pascal ttgetc()
 
 {
 #if GOTTYPAH
@@ -734,7 +690,7 @@ Pascal ttgetc()
 		g_eaten_char = -1;
 		if (c != 1000000)
 			return c;
-		(void)input_timeout(0,0,100000);
+		(void)millisleep(100);
 	}
 #endif
 
@@ -797,13 +753,17 @@ Pascal ttgetc()
 			if (totalwait == 0 && timeout_secs > 0)
 			{ exit(2);
 			}
-			(void)input_timeout(0,0,40000);
+			(void)millisleep(40);
       continue;
     }
 
 //  SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
-    if (!ReadConsoleInput(g_ConsIn, &rec, (DWORD)1, &actual) || actual < 1)
-    { (void)input_timeout(0,0,40000);
+		cc = ReadConsoleInput(g_ConsIn, &rec, (DWORD)1, &actual);
+		if (!cc || actual < 1)
+    { DWORD errn = GetLastError();
+			mlwrite("Errors %d %d %d ", cc, actual, errn);
+			mbwrite(lastmesg);
+			millisleep(40);
 	    continue;
 		}
 
@@ -999,10 +959,15 @@ int platformId = -1;
 #endif
 
 
+//#if _MSC_VER < 1900
+#undef VS_CHAR8
+#define VS_CHAR8 1
+//#endif 
+
 HANDLE CreateF(char * filenm, DWORD gen, DWORD share, SECURITY_ATTRIBUTES * sb,
 							 DWORD cmd, BOOL temp)
 {
-#if _MSC_VER < 1900
+#if VS_CHAR8
 	char * nm = filenm;
 #else
 	wchar_t buf[512];
@@ -1024,7 +989,7 @@ HANDLE CreateRetry(char * filenm)
 	HANDLE Hdl;
 	int ct = 2;
 
-#if _MSC_VER < 1900
+#if VS_CHAR8
 	char * nm = filenm;
 #else
 	wchar_t buf[512];
@@ -1128,7 +1093,7 @@ WinLaunchProgram(char *cmd, int flags, char *inFile, char *outFile, char *outErr
 		meSuInfo.dwFlags |= STARTF_USESHOWWINDOW ;
 	}
 {
-#if _MSC_VER < 1900
+#if VS_CHAR8
 	char * cmd_ = cmd;
 #else
 	wchar_t buf[1000];
@@ -1352,7 +1317,7 @@ C 	else
 			if (s == 0)
 				mbwrite("DuptoSEf");
 		}
-		cls();
+		ClearScreen();
 
 #ifdef _WIN32s
 C		char curDir[1024];
@@ -1391,7 +1356,7 @@ C		error error
 	/*mbwrite(cp);*/
 		loglog1("CrePre %s", compSpecName);
 	{
-#if _MSC_VER < 1900
+#if VS_CHAR8
 		char * app = NULL;
 		char * csn = compSpecName;
 #else
@@ -1545,13 +1510,11 @@ static Cc Pascal usehost(wh, line)
 	}
 	/* write(0, "\n", 1);*/
 	sgarbf = TRUE;
-	cc = system(line);	/* wrapper to execprg() */
+	cc = ttsystem(line);	/* wrapper to execprg() */
 #if MOUSE
 	ttopen();
 #endif
 	tcapopen();
-	if (0 == SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT/*|ENABLE_PROCESSED_INPUT*/))
-		Beep(1400, 200);
 	
 	ttcol = 0;				 /* otherwise we shall not see the message */
 				 /* if we are interactive, pause here */
@@ -1576,8 +1539,8 @@ static Cc Pascal usehost(wh, line)
 int pipefilter(wh)
 	 char 	 wh;
 {
-				char prompt[2];
  static int bix;
+				char prompt[2];
  				char 	 bname [10];
 				char	 pipeInFile[NFILEN];
 				char	 pipeOutFile[NFILEN];
@@ -1591,7 +1554,7 @@ int pipefilter(wh)
 		return resterr();
 
 { int sysRet;
-	int s;
+	Cc cc;
 	prompt[0] = wh;
 	wh -= '@';											
 	if (wh != 0 && wh != '!'-'@' && (curbp->b_flag & MDVIEW)) /* disallow if*/
@@ -1606,22 +1569,21 @@ int pipefilter(wh)
 			
 		if (line[0] == '%' || line[0] == '\'')
 		{ char sch;
-			for (s = 0; line[++s] != 0 && isalpha(line[s]); )
+      int ix;
+			for (ix = 0; line[++ix] != 0 && isalpha(line[ix]); )
 				;
 
-			sch = line[s];
-			line[s] = 0;
+			sch = line[ix];
+			line[ix] = 0;
 
 		{ const char * val = gtusr(line+1);
-			line[s] = sch;
+			line[ix] = sch;
 
 			if (val != NULL && strcmp(val,"ERROR") != 0)
 			{ 
-				strcat(strcpy(pipeInFile,val),line+s);
+				strcat(strcpy(pipeInFile,val),line+ix);
 				strcpy(line,pipeInFile);
-#if 0
-				mbwrite(line);
-#endif
+//			mbwrite(line);
 			}
 		}}
 	}
@@ -1632,9 +1594,9 @@ int pipefilter(wh)
 	{ BUFFER * bp = bfind(bname, FALSE, 0);
 		if (bp != null) 					/* try to make sure we are off screen */
 		{ BUFFER * sbp = curbp;
-			s = orwindmode(0, 1);
+			cc = orwindmode(0, 1);
 			curbp = sbp;
-			if (s > 0)
+			if (cc > 0)
 				onlywind(FALSE, 1);
 														 /* get rid of the existing command buffer */
 			if (bp == curbp)
@@ -1675,17 +1637,17 @@ int pipefilter(wh)
 /*mbwrite(line);*/
 	tcapmove(term.t_nrowm1, 0);
 
-	s = 0;
+	cc = 0;
 	if			(wh == 'E' -'@')
-		s |= LAUNCH_STDERROUT;
+		cc |= LAUNCH_STDERROUT;
 	else if (wh == 'e' -'@')
 	{ wh = 'E';
-		s |= LAUNCH_STDIN;
+		cc |= LAUNCH_STDIN;
 	}  
-	s = WinLaunchProgram(line, s, filnam1, filnam2, filnam3,&sysRet EXTRA_ARG);
+	cc = WinLaunchProgram(line, cc, filnam1, filnam2, filnam3,&sysRet EXTRA_ARG);
 
-	loglog1("Unlaunched %d", s);
-	if (!s)
+	loglog1("Unlaunched %d", cc);
+	if (!cc)
 		sysRet = -1;
 																 /* did the output file get generated? */
 {/*int fid = open(tmpnam, O_RDONLY);
@@ -1708,7 +1670,7 @@ int pipefilter(wh)
 		upmode();
 																	/* and get rid of the temporary file */
 	}
-	s = FALSE;
+	cc = FALSE;
 	if (wh == '!'-'@')
 	{ FILE * ip = fopen(filnam2, "rb");
 		if (ip != NULL)
@@ -1726,19 +1688,19 @@ int pipefilter(wh)
 				sgarbf = TRUE;
 			}
 			fclose(ip);
-			s = TRUE;
+			cc = TRUE;
 		}
 	}
 	else													/* on failure, escape gracefully */ 		
 	{ char * sfn = curbp->b_fname;
 		curbp->b_fname = null;
-		s = readin(filnam2, FALSE);
+		cc = readin(filnam2, FALSE);
 		curbp->b_fname = sfn; 							/* restore name */
 		curbp->b_flag |= BFCHG; 		/* flag it as changed */
-//	if (wh == 'E' - '@')
-//		s = readin(filnam3, -1);
+    if (filnam3 != null)
+  	  cc = readin(filnam3, -1);
 	}
-	if (sysRet != 0 || !s)
+	if (sysRet != 0 || !cc)
 		mlwrite(TEXT3); 							/* "[Execution failed]" */
 /*else																						
 		mbwrite("ExecSucc");*/
@@ -1748,7 +1710,7 @@ int pipefilter(wh)
 	unlink(filnam2);
 //if (wh == 'E' - '@')
 //	unlink(filnam3);
-	return s != FALSE;
+	return cc != FALSE;
 }}}}
 
 	/* Pipe a one line command into a window
@@ -1907,12 +1869,12 @@ void ClipPasteEnd()
 
 
 
-void Pascal mbwrite(char const * msg)
+void Pascal mbwrite(const char * msg)
 
 {
 #if S_WIN32
 		char * em_ = "Emacs";
-#if _MSC_VER < 1900
+#if VS_CHAR8
 		char * m = (char*)msg;
 		char * em = em_;
 #else
@@ -1984,18 +1946,20 @@ void Pascal mbwrite2(const char * diag, const char * msg)
 
 #endif
 
+#if 0
+
 void Pascal SetParentFocus()
 
 { 
 	if (g_origwin != NULL)
 	{ HWND mwh = GetForegroundWindow();
-		if (mwh != NULL)
-			mwh = GetParent(mwh);
+		g_origwin = mwh;
+		if (g_origwin != NULL)
+			mwh = GetParent(g_origwin);
 		if (mwh == NULL)
-			Beep(1500, 200);
+			flagerr("SPF %d");
 		else
 			SetActiveWindow(mwh);
 	}
-/*else
-		Beep(1500, 200);*/
 }
+#endif

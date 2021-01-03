@@ -276,7 +276,7 @@ int Pascal nextarg(const char * prompt, char * buffer, int size)
 
 
 
-int common_return(BUFFER * bp)
+static int common_return(BUFFER * bp)
 	
 {	if (bp == NULL)
 	{ mlwrite(TEXT113);				/*	"Can not create macro" */
@@ -294,18 +294,14 @@ int common_return(BUFFER * bp)
 int Pascal storemac(int f, int n)
 	/* int n;		** macro number to use */
 {
-	if (f == FALSE)
-	{ mlwrite(TEXT111);/* must have a numeric argument to this function */
+	if (f == FALSE || ! in_range(n, 1,40))
+	{ mlwrite(f == FALSE ? TEXT111		/* must have a numeric argument */
+											 : TEXT112);
 /*			"No macro specified" */
-	  return FALSE;
-	}
-					/* range check the macro number */
-	if (! in_range(n, 1,40))
-	{ mlwrite(TEXT112);
 /*			"Macro number out of range" */
 	  return FALSE;
 	}
-			        
+
 	return common_return(bmfind(TRUE, n));	/*set up the new macro buffer */
 }
 
@@ -358,8 +354,7 @@ int Pascal execporb(int isp, int n)
 	  return FALSE;
 	}
 					/* and now execute it as asked */
-	cc = dobuf(bp,n);
-	return cc;
+	return dobuf(bp,n);
 }
 
 /*	execbuf:	Execute the contents of a buffer of commands	*/
@@ -806,23 +801,20 @@ BUFFER * dofilebuff;
 
 static int Pascal dofile(const char * fname)
 				/* file name to execute */
-{
-	   BUFFER *cb = curbp;	   /* temp to hold current buf while we read */
-
-  register int cc;			/* results of various calls */
-	   char bname[NBUFN];		/* name of buffer */
+{ char bname[NBUFN];		/* name of buffer */
 
   makename(bname, fname); 		/* derive the name of the buffer */
   unqname(bname); 			/* make sure we don't stomp things */
-{ BUFFER *dfb = bfind(bname, TRUE, 0);
+{ BUFFER *scb = curbp;	   /* temp to hold current buf while we read */
+  BUFFER *dfb = bfind(bname, TRUE, 0);
   if (dfb == NULL) 			   /* get the needed buffer */
     return FALSE;
 
   curbp = dfb;			/* make this one current */
   curbp->b_flag = MDVIEW;	/* mark the buffer as read only */
 				/* and try to read in the file to execute */
-  cc = readin(fname, FALSE);
-  curbp = cb;			/* restore the current buffer */
+{ Cc cc = readin(fname, FALSE);
+  curbp = scb;			/* restore the current buffer */
   if (cc != TRUE)
     return cc;
 							/* go execute it! */
@@ -835,10 +827,10 @@ static int Pascal dofile(const char * fname)
   }
   dofilebuff = dfb;
   return cc;
-}}
+}}}
 
-					/* execute the startup file */
-int Pascal startup(char * sfname, int n)
+					                        /* execute the startup file */
+int Pascal startup(const char * sfname)
 	/*  sfname   ** name of startup file ("" if default) */
 {
 	register int cc;
@@ -853,10 +845,7 @@ int Pascal startup(char * sfname, int n)
 	   return 13;
 	}
 						/* otherwise, execute it */
-	while (n-- > 0 && (cc = dofile(fspec)) == TRUE)
-	  ;	        
-
-	return cc;
+	return dofile(fspec);
 }
 
 
@@ -866,10 +855,9 @@ int Pascal execfile(int f, int n)	/* execute a series of commands in a file */
 { 
         char ebuffer[65];
 	register int cc = mlreply(TEXT129, ebuffer, sizeof(ebuffer)-1);
-	if (!cc)
 /*			      "File to execute: " */
-	  return cc;
+
 					   /* look up the path for the file */
-	return startup(ebuffer, n);
+	return !cc ? cc : startup(ebuffer);
 }
 

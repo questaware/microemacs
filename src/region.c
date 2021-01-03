@@ -178,7 +178,7 @@ int to_kill_buff(int wh, int n)
 
 /* Append all of the characters in the region to the n.th kill buffer. 
  * Don't move dot at all. 
- * Bound to "M-W".
+ * Bound to "^XC".
  */
 int copyregion(int f, int n)
 
@@ -188,7 +188,7 @@ int copyregion(int f, int n)
 
 /* Copy all of the characters in the current word to the n.th kill buffer.
  * Don't move dot at all. 
- * Bound to "M-C".
+ * Bound to "A-W".
  */
 int copyword(int f, int n)
 
@@ -216,7 +216,7 @@ Pascal lowerregion(int f, int n)
  * redisplay is done in all buffers. Bound to
  * "C-X C-U".
  */
-Pascal upperregion(int f, int n)
+int Pascal upperregion(int f, int n)
 
 { return doregion(2 + false);
 }
@@ -242,7 +242,7 @@ int Pascal reglines()
  * Move "." to the start, and kill the characters into the n.th kill buffer.
  * Not Bound.
  */
-Pascal killregion(int f, int n)
+int Pascal killregion(int f, int n)
 
 {	if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
 	  return rdonly();		/* we are in read only mode	*/

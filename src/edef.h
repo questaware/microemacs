@@ -107,7 +107,7 @@ extern char nulls[];
 #define NUMFLAGS  4
 
 #define BFINVS	0x01		/* Internal invisable buffer	*/
-#define BFCHG	0x02		/* Changed since last write	*/
+#define BFCHG	  0x02		/* Changed since last write	*/
 #define	BFTRUNC	0x04		/* buffer was truncated when read */
 #define	BFNAROW	0x08		/* buffer has been narrowed	*/
 
@@ -117,7 +117,7 @@ extern char nulls[];
 #define MDSTT   0x0010
 #define MDWRAP	0x0010		/* word wrap			*/
 #define	MDCMOD	0x0020		/* C indentation and fence match*/
-#define	MDMS	0x0040		/* File to have CRLF		*/
+#define	MDMS		0x0040		/* File to have CRLF		*/
 #define	MDEXACT	0x0080		/* Exact matching for searches	*/
 #define	MDVIEW	0x0100		/* read-only buffer		*/
 #define MDOVER	0x0200		/* overwrite mode		*/
@@ -135,8 +135,9 @@ extern char nulls[];
 #define BCCOMT  0x02		/* c style comments */
 #define BCPRL   0x04		/* perl style comments */
 #define BCFOR   0x08		/* fortran style comments */
-#define BCSQL   0x10            /* sql style comments */
+#define BCSQL   0x10    /* sql style comments */
 #define BCPAS   0x20		/* pascal style comments */
+#define BCML    0x40    /* Markup language */
 
 
 /*	Macro argument token types			*/
@@ -157,7 +158,7 @@ extern char nulls[];
  * Modes of working
  */
 					
-#define MD_KEEP_MACROS 1	/* keep macro befers when failing */
+#define MD_KEEP_MACROS 1	/* keep macro buffers when failing */
 #define MD_KEEP_CR     2	/* keep CR in files */
 #define MD_NO_MMI      4	/* no man machine interface */
 
@@ -259,7 +260,6 @@ NOSHARE extern int gfcolor;		/* global forgrnd color (white) */
 NOSHARE extern int gbcolor;		/* global backgrnd color (black)*/
 NOSHARE extern int mpresf;		/* Stuff in message line	*/
 NOSHARE extern int vtrow;		/* Row location of SW cursor	*/
-NOSHARE extern int vtcol;		/* Column location of SW cursor */
 NOSHARE extern int ttinit;		/* => ttrow is wrong */
 NOSHARE extern int ttrow;		/* Row location of HW cursor	*/
 NOSHARE extern int ttcol;		/* Column location of HW cursor */
