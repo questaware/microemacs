@@ -28,14 +28,14 @@ in a directory on the path.
 
 ###Examples <h3>
 
-dir | e
-e README.md
-e -bRM.mm README.md
-demote-buffer
-fetch-file
-word-search
-goto-matching-fence
-search-incls
-find-tag
+ * dir | e
+ * e README.md
+ * e -bRM.mm README.md
+ * demote-buffer
+ * fetch-file
+ * word-search
+ * goto-matching-fence
+ * search-incls
+ * find-tag
 
 
