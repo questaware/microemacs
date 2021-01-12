@@ -165,16 +165,14 @@ int Pascal ffwopen(int mode, char * fn)
  */
 int Pascal ffputline(char buf[], int nbuf)
 	
-{
-	register int i = -1;
-#if	CRYPT
+{	int i = -1;
 
+#if	CRYPT
 	if (curbp->b_flag & MDCRYPT)
 	{ while (++i < nbuf)
-	  { char c[1]; 	/* character to translate */
-	    c[0] = buf[i];
-	    ucrypt(&c[0], 1);
-	    putc(c[0], g_ffp);
+	  { char c = buf[i];
+	    ucrypt(&c, 1);
+	    putc(c, g_ffp);
 	  }
 	} 
 	else
@@ -184,7 +182,6 @@ int Pascal ffputline(char buf[], int nbuf)
 	    putc(buf[i], g_ffp);
 #else
 	  fwrite (&buf[0], 1, nbuf, g_ffp);
-
 #endif
 
 	if (g_crlfflag)

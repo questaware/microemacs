@@ -31,7 +31,7 @@ int Pascal arith(int, int);
 int Pascal addnewbind(int c, int (Pascal *func)(int, int));
 char * Pascal allocate(unsigned nbytes);
 char * Pascal callocate(unsigned nbytes);
-void Pascal customise_buf(BUFFER * bp,const char * fn);
+void Pascal customise_buf(BUFFER * bp);
 char * Pascal duplicate(const char * src);
 void cls(void);
 BUFFER *Pascal bfind(const char * bname, int cflag, int bflag);
@@ -123,8 +123,11 @@ int Pascal risearch(int, int);
 void Pascal rpl_all(LINE*, LINE*, int, int, int);
 int Pascal scan_for_sl(LINE * lp);
 int Pascal scanner(int, int);
+#if S_WIN32
+void setMyConsoleIP(void);
+#endif
 void Pascal setconsoletitle(char * title);
-int Pascal settabsize(int, int);
+int Pascal handletab(int, int);
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);
@@ -424,7 +427,7 @@ int Pascal swbuffer(BUFFER*);
 void Pascal tcapopen();
 int Pascal toggmode(int, int);
 int Pascal togmod(int, int);
-int Pascal ttsystem(const char *);
+int Pascal ttsystem(const char *, const char *);
 int Pascal ttclose();
 int Pascal ttflush();
 int Pascal ttgetc();
@@ -439,7 +442,6 @@ void Pascal tcapeeop();
 void Pascal tcaprev(int st);
 #endif
 void       tcapchrom(short);
-int Pascal tcapcres(char *);
 int Pascal tcapbeep(void);
 int Pascal tcapbeep();
 #if MOUSE || S_MSDOS == 0
@@ -460,6 +462,7 @@ int Pascal getboard();
 int Pascal egaopen();
 int Pascal egaclose();
 int Pascal fnclabel();
+long unsigned int thread_id(void);
 #if FLUFF
 int Pascal twiddle(int,int);
 #endif
@@ -563,4 +566,8 @@ Char * Pascal LFN_to_8dot3(int dir/* 1 to 8.3; else 2*/, int up,
 
 int TermThreadView(int cc);
 void Pascal SetParentFocus(void);
+
+#define FILE_INS  1
+#define FILE_REST 2
+#define FILE_LOCK 4
 

@@ -81,12 +81,12 @@ LINE *Pascal mk_line(const char * src, int sz, int lsrc)
 
 
 
-void Pascal ibefore(LINE * tline, LINE * sline)
+void Pascal ibefore(LINE * tline, LINE * new_line)
 
-{ sline->l_fp = (Lineptr)tline;
-  sline->l_bp = tline->l_bp;
-  lback(sline)->l_fp = sline;
-  tline->l_bp = (Lineptr)sline;
+{ new_line->l_fp = (Lineptr)tline;
+  new_line->l_bp = tline->l_bp;
+  lback(new_line)->l_fp = new_line;
+  tline->l_bp = (Lineptr)new_line;
 }
 
 void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
@@ -295,7 +295,7 @@ int Pascal linsert(int n, char c)
 { int ins = n;
   if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
     return rdonly();		/* we are in read only mode	*/
-/*if (! (curbp->b_flag & BFCHG)	&& discmd)
+/*if (! (curbp->b_flag & BFCHG)	&& g_discmd)
     TTbeep();		
 */
   if (c == '\n')
@@ -449,7 +449,7 @@ int Pascal ldelchrs(Int n, int tokill)
     return rdonly();              /* we are in read only mode     */
 
   inhibit_scan += 1;
-/* if (! (curbp->b_flag & BFCHG) && discmd)
+/* if (! (curbp->b_flag & BFCHG) && g_discmd)
      TTbeep();             
 */
   while (n > 0)

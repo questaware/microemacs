@@ -187,18 +187,26 @@ int Pascal quote(int f, int n)
 	return linsert(n, (char)c);
 }}
 
-/* Set tab size if given non-default argument (n <> 1).  Otherwise, insert a
- * tab into file.  If given argument, n, of zero, change to hard tabs.
- * If n > 1, simulate tab stop every n-characters using spaces. This has to be
- * done in this slightly funny way because the tab (in ASCII) has been turned
- * into "C-I" (in 10 bit code) already. Bound to "C-I".
- */
-int Pascal settabsize(int f, int n)
 
-{ int tabsz = curbp->b_tabsize;
-  int ct = tabsz - (getccol() % tabsz);
+  /* If given an argument then if > 0 set softtab on 
+                          else if < 0 set softtab off else toggle it
+     Otherwise if softtab is on then expand the tab and insert spaces.
+   */
+int Pascal handletab(int f, int n)
 
-	return ct <= 0 ? OK : linsert(ct,	' ');
+{ int tabsz_ = curbp->b_tabsize;
+  int tabsz = tabsz_ == 0 ? 1 : tabsz_;
+  unsigned char mode = curbp->b_mode;
+
+  if (f)
+  { curbp->b_mode = n < 0 ? mode & ~ BSOFTTAB :
+                    n > 0 ? mode |   BSOFTTAB :
+                            mode ^ BSOFTTAB;
+    return OK;
+  }
+
+	return mode & BSOFTTAB ? linsert(tabsz - (getccol() % tabsz),' ')
+                         : linsert(1,'\t');
 }
 
 #if 		AEDIT
@@ -411,7 +419,7 @@ Pascal cinsert()				/* insert a newline and indentation for C */
 	*cptr = schar;
 																			
 	if (offset >= 0)												/* one more tab for a brace */
-		settabsize(FALSE, 1);
+		handletab(FALSE, 1);
 
 	return TRUE;
 }}
@@ -662,7 +670,7 @@ Pascal adjustmode(int kind, int global) /* change the editor mode status */
 				curbp->b_flag = md;
 #if CRYPT
 			if (x == MDCRYPT)
-			{ char ** k = g_gmode & MDCRYPT ? &ekey : &curbp->b_key;
+			{ char ** k = g_gmode & MDCRYPT ? &g_ekey : &curbp->b_key;
 				if ((md & MDCRYPT) && *k == null)
 				{ setekey(k);
 					curbp->b_flag |= BFCHG;

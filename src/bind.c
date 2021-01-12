@@ -28,7 +28,7 @@
 /*		(((ktp)->k_code & NOTKEY) == 0) */
 
 extern char *getenv();
-extern char * invokenm;
+extern char * g_invokenm;
 extern char * homedir;
 
 /*
@@ -47,7 +47,7 @@ static KEYTAB keytab[NBINDS+1] =
 	{CTRL|'B',	BINDFNC, backchar},
 	{CTRL|'E',	BINDFNC, gotoeol},
 	{CTRL|'H',	BINDFNC, backdel},
-	{CTRL|'I',	BINDFNC, settabsize},
+	{CTRL|'I',	BINDFNC, handletab},
 	{CTRL|'J',	BINDFNC, indent},
 	{CTRL|'K',	BINDFNC, killtext},
 	{CTRL|'L',	BINDFNC, refresh},
@@ -415,7 +415,7 @@ int Pascal getechockey(int yn)
 { char outseq[20];
   int c = getckey(yn);
 					/* change it to something printable */
-  if (discmd)
+  if (g_discmd)
   { mlwrite("\001 ");
     ostring(cmdstr(&outseq[0], c));
   }
@@ -629,14 +629,14 @@ unsigned int Pascal getckey(int mflag)
 
 void Pascal flook_init(char * cmd)
 
-{ invokenm = strdup(cmd);
+{ g_invokenm = strdup(cmd);
 
-  if (invokenm[0] == '"')
-  { ++invokenm;
-    invokenm[strlen(invokenm)-1] = 0;
+  if (g_invokenm[0] == '"')
+  { ++g_invokenm;
+    g_invokenm[strlen(g_invokenm)-1] = 0;
   }
 { char * sp;
-  for (sp = invokenm; *sp != 0 && *sp != ' '; ++sp)
+  for (sp = g_invokenm; *sp != 0 && *sp != ' '; ++sp)
     if (*sp == '\\')
       *sp = '/';
 
@@ -839,8 +839,8 @@ const char * Pascal flook(char wh, const char * fname)
 	  return NULL;
 	}
 #if S_VMS
-  if (invokenm != NULL && strlen(invokenm)+strlen(fname) < sizeof(fspec))
-  { strcpy(fspec, invokenm);
+  if (g_invokenm != NULL && strlen(g_invokenm)+strlen(fname) < sizeof(fspec))
+  { strcpy(fspec, g_invokenm);
     for (path = fspec-1; *++path != 0 && *path != ']'; )
       ;
     if (*path != 0)
@@ -850,8 +850,8 @@ const char * Pascal flook(char wh, const char * fname)
     }
   }
 #else
-	if (fname != invokenm)
-  { if (fex_path(flook('E', invokenm), fname))
+	if (fname != g_invokenm)
+  { if (fex_path(flook('E', g_invokenm), fname))
 	    return fspec;
 	}
 #endif

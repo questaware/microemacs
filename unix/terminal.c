@@ -412,9 +412,15 @@ void tcapkopen()
 }
 
 
-int Pascal ttsystem(const char * cmd)
+int Pascal ttsystem(const char * cmd, const char * data)
 
-{ Cc cc = system(cmd);
+{ Cc cc;
+  if (data == NULL)
+    cc = system(cmd);
+  else
+  { cc = OK; 
+  }
+
   return cc;
 }
 
@@ -429,7 +435,7 @@ int Pascal get1key(); /* forward */
 
 
 int g_chars_since_shift; /* these do not work in unix */
-int timeout_secs = 0;
+int g_timeout_secs = 0;
 
 int Pascal ttgetc()
 
@@ -773,13 +779,6 @@ void tcaprev(state)		/* change reverse video status */
   if (seq != NULL)
     putpad(seq);
   tc_state &= ~M_BOLD;
-}
-
-
-int tcapcres(char * src)	/* change screen resolution */
-
-{
-  return TRUE;
 }
 
 

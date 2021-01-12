@@ -248,11 +248,11 @@ char *Pascal token(char * src_, char * tok, int size)
 
 int Pascal macarg(char * tok) /* get a macro line argument */
 				/* buffer to place argument */
-{       int sclexec = g_clexec;
-        g_clexec = TRUE;
-   
+{ int sclexec = g_clexec;
+  g_clexec = TRUE;
+
 {	int res = nextarg(null, tok, NSTRING);
-        g_clexec = sclexec;
+  g_clexec = sclexec;
 	return res;      
 }}
 
@@ -707,8 +707,12 @@ int Pascal debug(BUFFER* bp, char * eline)
 	register KEYTAB *key;		/* ptr to a key entry */
 	static char track[NSTRING] = "";/* expression to track value of */
 	       char temp[NSTRING];
+	int oldcmd = g_discmd;
+	int oldinp = g_disinp;
 	
 dbuild: /* Build the information line to be presented to the user */
+	g_discmd = oldcmd;
+	g_disinp = oldinp;
 
 	strcpy(outline, "<<<");
 					/* display the tracked expression */
@@ -723,7 +727,8 @@ dbuild: /* Build the information line to be presented to the user */
 						     /* and lastly the line */
 			    eline, ">>>", null);
 						/* write out the debug line */
-dinput: outline[term.t_ncol - 1] = 0;
+dinput: 
+  outline[term.t_ncol - 1] = 0;
 	ostring(outline);
 	update(TRUE);
 						   /* and get the keystroke */
@@ -735,56 +740,52 @@ dinput: outline[term.t_ncol - 1] = 0;
 	else if (c == abortc) 
 	  return FALSE;
 	else 
-	{ int oldcmd = discmd;		        
-	  int oldinp = disinp;
+	{ int oldcmd = g_discmd;		        
+	  int oldinp = g_disinp;
 	  int oldstatus = cmdstatus;
 	  
 	  switch (c)
 	  { case '?': strcpy(outline, TEXT128);     /* list commands */
 		        
 /*"(e)val exp, (c/x)ommand, (t)rack exp, (^G)abort, <SP>exec, <META> stop debug"*/
-		      goto dinput;
+      		      goto dinput;
 
-	    case 'c': discmd = TRUE;			/* execute statement */
-		      disinp = TRUE;
-		      execcmd(FALSE, 1);
-		      discmd = oldcmd;
-		      disinp = oldinp;
-		      goto dbuild;
+	    case 'c': g_discmd = TRUE;			/* execute statement */
+      		      g_disinp = TRUE;
+      		      execcmd(FALSE, 1);
+      		      goto dbuild;
 
-	    case 'x': discmd = TRUE;		/* execute extended command */
-		      disinp = TRUE;
-		      namedcmd(FALSE, 1);
-		      cmdstatus = oldstatus;
-		      discmd = oldcmd;
-		      disinp = oldinp;
-		      goto dbuild;
+	    case 'x': g_discmd = TRUE;		/* execute extended command */
+      		      g_disinp = TRUE;
+      		      namedcmd(FALSE, 1);
+      		      cmdstatus = oldstatus;
+      		      goto dbuild;
 
 	    case 'e': strcpy(temp, "set %track ");   /* evaluate expresion */
-		      discmd = TRUE;
-		      disinp = TRUE;
-					getstring(&temp[11], NSTRING, "Exp: ");
-		      discmd = oldcmd;
-		      disinp = oldinp;
-		      docmd(temp);
-		      cmdstatus = oldstatus;
-		      concat(&temp[0], " = [", gtusr("track"), "]", null);
-		      mlforce(temp);
-		      c = getkey();
-		      goto dinput;
+      		      g_discmd = TRUE;
+      		      g_disinp = TRUE;
+      					getstring(&temp[11], NSTRING, "Exp: ");
+      		      g_discmd = oldcmd;
+      		      g_disinp = oldinp;
+      		      docmd(temp);
+      		      cmdstatus = oldstatus;
+      		      concat(&temp[0], " = [", gtusr("track"), "]", null);
+      		      mlforce(temp);
+      		      c = getkey();
+      		      goto dinput;
 
-	    case 't': discmd = TRUE;			/* track expresion */
-		      disinp = TRUE;
-		      getstring(&temp[0], NSTRING, "Exp: ");
-		      discmd = oldcmd;
-		      disinp = oldinp;
-		      concat(&track[0], "set %track ", temp, null);
-		      goto dbuild;
+	    case 't': g_discmd = TRUE;			/* track expresion */
+      		      g_disinp = TRUE;
+      		      getstring(&temp[0], NSTRING, "Exp: ");
+      		      g_discmd = oldcmd;
+      		      g_disinp = oldinp;
+      		      concat(&track[0], "set %track ", temp, null);
+      		      goto dbuild;
 
 	    case ' ': break;			      /* execute a statement */
 		        
 	    default: TTbeep();				/* illegal command */
-		     goto dbuild;
+      		     goto dbuild;
 	  }
 	}
 	return TRUE;
@@ -810,10 +811,10 @@ static int Pascal dofile(const char * fname)
   if (dfb == NULL) 			   /* get the needed buffer */
     return FALSE;
 
-  curbp = dfb;			/* make this one current */
+  curbp = dfb;			      /* make this one current */
   curbp->b_flag = MDVIEW;	/* mark the buffer as read only */
-				/* and try to read in the file to execute */
-{ Cc cc = readin(fname, FALSE);
+				                  /* and try to read in the file to execute */
+{ Cc cc = readin(fname, 0);
   curbp = scb;			/* restore the current buffer */
   if (cc != TRUE)
     return cc;
@@ -821,7 +822,7 @@ static int Pascal dofile(const char * fname)
   cc = dobuf(dfb,1);
   if (cc == TRUE &&
       dfb->b_nwnd == 0)
-		    /* not displayed, remove the now unneeded buffer and exit */
+            		    /* not displayed, remove the now unneeded buffer and exit */
   { zotbuf(dfb);
     dfb = NULL;
   }

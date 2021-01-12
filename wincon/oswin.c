@@ -10,8 +10,6 @@
 #include   <windows.h>
 #include   <process.h>
 
-#include	"winpipe.h"
-
 #include  "estruct.h"
 
 #include  "../src/edef.h"
@@ -21,7 +19,6 @@
 #include	"../src/elang.h"
 #include	"../src/logmsg.h"
 
-#include <process.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,6 +34,8 @@ extern void ClearScreen(void);
 
 extern char lastline[MLIX+1][NSTRING];
 
+#define P_AWAIT_PROMPT 1
+
 			/* The Mouse driver only works with typeahead defined */
 #if	MOUSE
 static int mexist;	/* is the mouse driver installed? */
@@ -45,7 +44,7 @@ static int oldbut;	/* Previous state of mouse buttons */
 #endif
 
 int g_chars_since_shift;
-int timeout_secs;
+int g_timeout_secs;
 
 void flagerr(const char * fmt)
 
@@ -54,6 +53,30 @@ void flagerr(const char * fmt)
   Beep(1200, 2000);
   ttgetc();
 }
+
+void ErrorMessage(const char *str)  //display detailed error info
+
+#if _DEBUG
+{	LPVOID msg;
+  FormatMessage(
+              FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+              NULL,
+              GetLastError(),
+              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+              (LPTSTR) &msg,
+              0,
+              NULL
+               );
+  mlwrite("%s: %s\n",str,msg);
+	mbwrite(lastmesg);
+  LocalFree(msg);
+}
+#else
+{ char buf[100];
+	flagerr(strcat(strcpy(buf,str)," %d"));
+}
+#endif
+
 
 #if 0
 /*
@@ -620,12 +643,7 @@ BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
 
 void Pascal MySetCoMo()
 
-{
-//char buf[80];
-//sprintf(buf, "RowM1 %d Col %d", term.t_nrowm1, term.t_ncol);
-//mbwrite(buf);
-
-  SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+{ SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
 	HANDLE h = CreateFile("CONIN$",
                         GENERIC_READ | GENERIC_WRITE,
                         FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -665,17 +683,6 @@ typedef struct _WINDOWPLACEMENT {
     RECT  rcNormalPosition; 
 } WINDOWPLACEMENT; 
 */
-
-
-
-int ttsystem(const char * cmd)
-
-{ Cc cc = system(cmd);
-	setMyConsoleIP();
-	return cc;
-}
-
-
 
 /*
  * Read a character from the terminal, performing no editing and doing no echo
@@ -732,7 +739,7 @@ int Pascal ttgetc()
      setMyConsoleIP();
   }
 
-{	int totalwait = timeout_secs;
+{	int totalwait = g_timeout_secs;
 /*int cRecords = 0;
 	PeekConsoleInput(g_hConIn, &ir, 1, &cRecords);*/
 
@@ -748,12 +755,10 @@ int Pascal ttgetc()
       { g_got_ctrl = false;
         return (int)(CTRL | 'C');
       }
-			totalwait -= 1;
 
-			if (totalwait == 0 && timeout_secs > 0)
-			{ exit(2);
-			}
-			(void)millisleep(40);
+			if (--totalwait == 0)
+				exit(2);
+
       continue;
     }
 
@@ -761,9 +766,8 @@ int Pascal ttgetc()
 		cc = ReadConsoleInput(g_ConsIn, &rec, (DWORD)1, &actual);
 		if (!cc || actual < 1)
     { DWORD errn = GetLastError();
-			mlwrite("Errors %d %d %d ", cc, actual, errn);
+			mlwrite("Error %d %d %d ", cc, actual, errn);
 			mbwrite(lastmesg);
-			millisleep(40);
 	    continue;
 		}
 
@@ -815,10 +819,6 @@ int Pascal ttgetc()
   }
 }}
 
-#define NEW_PIPE 2
-
-#if NEW_PIPE == 2
-
 #define LAUNCH_BUFFERNM      0x0001      /* Do not use the comspec    */
 #define LAUNCH_SILENT        0x0002      /* Do not use the comspec    */
 #define LAUNCH_NOCOMSPEC     0x0004      /* Do not use the comspec    */
@@ -834,45 +834,44 @@ int Pascal ttgetc()
 #define LAUNCH_STDIN         0x2000
 #define LAUNCH_STDERROUT     0x4000
 
+#if CREATE_NEW_PROCESS_GROUP != LAUNCH_SYSTEM
+error error
+#endif
 
-char * mkTempName (/*out*/char *buf, char *name, char *ext)
+static char * mkTempName (/*out*/char *buf, const char *name)
 {
 #ifdef _CONVDIR_CHAR
  #define DIRY_CHAR _CONVDIR_CHAR
 #else
  #define DIRY_CHAR DIRSEPCHAR
 #endif
-	static char *tmpDir = NULL ;
+	static const char *tmpDir = NULL ;
 				 char c2[2];
-				 char * td = tmpDir;
+	const  char * td = tmpDir != NULL ? tmpDir : (char *)getenv("TEMP");
 
 	c2[0] = c2[1] = 0;
 
 	if (td == NULL)
-	{	td = (char *)getenv("TEMP");
-		if (td != NULL)
-		{
-			if (td[strlen(td)-1] != DIRY_CHAR)
-				c2[0] = DIRY_CHAR;
-		}
-	  else
 #if (defined _DOS) || (defined _WIN32)
 						/* the C drive : better than ./ as ./ could be on a CD-Rom etc */
-			td = "c:\\" ;
+		td = "c:\\" ;
 #else
-			td = "./" ;
+		td = "./" ;
 #endif
-		}
-		tmpDir = td;
-		concat(buf,td,c2,"me",int_asc(_getpid()),name,ext,0);
+	else
+		if (td[strlen(td)-1] != DIRY_CHAR)
+			c2[0] = DIRY_CHAR;
+	
+	tmpDir = td;
+	concat(buf,td,c2,"me",int_asc(_getpid()),name,0);
 
-		return &buf[strlen(buf)];
+	return &buf[strlen(buf)];
 }
 
 
 static char * mkTempCommName(/*out*/char *filename, char *basename)
 {
-	char *ss = mkTempName(filename,basename,NULL) - 3;
+	char *ss = mkTempName(filename,basename) - 3;
 	int ch;
 	
 	for (ch = 'A'-1 ; ++ch <= 'Z'  && !fexist(filename); )
@@ -947,41 +946,14 @@ again:
 }
 #endif
 
-int platformId = -1;
-
-#define COMMAND_FILE				 "stdout.~~~"
-#define DUMMY_STDIN_FILE		 "stdin.~~~" 
-
-#if MEOPT_IPIPES
-#define EXTRA_ARG ,NULL
-#else
-#define EXTRA_ARG
-#endif
-
-
 //#if _MSC_VER < 1900
 #undef VS_CHAR8
 #define VS_CHAR8 1
 //#endif 
 
-HANDLE CreateF(char * filenm, DWORD gen, DWORD share, SECURITY_ATTRIBUTES * sb,
-							 DWORD cmd, BOOL temp)
-{
-#if VS_CHAR8
-	char * nm = filenm;
-#else
-	wchar_t buf[512];
-  wchar_t * nm = char_to_wchar(filenm, 512, buf);
-#endif
-	DWORD sh = share != 0 					? share :
-						 gen == GENERIC_WRITE ? FILE_SHARE_WRITE :
-																		FILE_SHARE_READ;
-	DWORD attr = temp ? FILE_ATTRIBUTE_TEMPORARY : FILE_ATTRIBUTE_NORMAL;
-	return CreateFile(nm,gen,sh,sb,
-											cmd,attr,NULL);
-}
+#define DUMMY_STDIN_FILE		 "stdin.~~~" 
 
-HANDLE CreateRetry(char * filenm)
+HANDLE CreateF(char * filenm)
 
 { int gen = GENERIC_WRITE;
 	int share = FILE_SHARE_WRITE;
@@ -989,19 +961,14 @@ HANDLE CreateRetry(char * filenm)
 	HANDLE Hdl;
 	int ct = 2;
 
-#if VS_CHAR8
-	char * nm = filenm;
-#else
-	wchar_t buf[512];
-  wchar_t * nm = char_to_wchar(filenm, 512, buf);
-#endif
-
+	(void)mkTempName(filenm, DUMMY_STDIN_FILE);
+	
 	for (; ;)
-	{	Hdl = CreateFile(nm,gen,share,NULL,
+	{	Hdl = CreateFile(filenm,gen,share,NULL,
 											cmd,FILE_ATTRIBUTE_NORMAL,NULL);
 		if (--ct == 0)
 			break;
-		if (Hdl >= 0) 					/*INVALID_HANDLE_VALUE*/
+		if (Hdl >= 0) 					/* VALID_HANDLE_VALUE */
 			CloseHandle(Hdl);
 
 		gen = GENERIC_READ;
@@ -1012,470 +979,386 @@ HANDLE CreateRetry(char * filenm)
 	return Hdl;
 }
 
-
-/*
- * WinLaunchProgram
- * Launches an external program using the DOS shell.
- *
- * Returns TRUE if all went well, FALSE if wait cancelled and FAILED if
- * failed to launch.
- *
- * Cmd is the command string to launch.
- *
- * DOSApp is TRUE if the external program is a DOS program to be run
- * under a DOS shell. If DOSApp is FALSE, the program is launched
- * directly as a Windows application. In that case, the InFile parameter
- * is ignored, and the value of the OutFile parameter is used only to
- * determine if the program should be monitored. the text of the string
- * referenced by OutFile is irrelevant.
- *
- * InFile is the name of the file to pipe into stdin (if NULL, nothing
- * is piped in)
- *
- * OutFile is the name of the file where stdout is expected to be
- * redirected. If it is NULL or an empty string, stdout is not redirected
- *
- * If Outfile is NULL, LaunchPrg returns immediately after starting the
- * DOS box.
- *
- * If OutFile is not NULL, the external program is monitored.
- * LaunchPrg returns only when the external program has terminated or
- * the user has cancelled the wait (in which case LaunchPrg returns
- * FALSE).
- *
- * NOTE: Jon 14/05/97:
- *
- * Encountering problems with utilies such as 'grep' locking up the system,
- * this occurs when the command line has been goofed up by the user (me in
- * this case) and forgot to add some files as arguments. grep then takes it's
- * input from 'stdin'. If stdin is NULL (as was the case) then grep hangs
- * since there is no 'stdin', even worse we seem to kill off a windows .dll
- * from which we can never recover and grep never works again.
- *
- * To get round this problem create a empty file as the stdin input file,
- * utilities such as grep then have a source of stdin, which will immediatly
- * terminate safely. The stdin file is deleted once the command has been
- * executed.
- */
-#define meBUF_SIZE_MAX 300					/* Buffer for the command line */
-
-int
-							/* flags: LAUNCH_SYSTEM, LAUNCH_SHELL */
-WinLaunchProgram(char *cmd, int flags, char *inFile, char *outFile, char *outErr,
-								 int *sysRet
-#if MEOPT_IPIPES
-								,meIPipe *ipipe
-#endif
-								)
-{
-	PROCESS_INFORMATION mePInfo ;
-	STARTUPINFO meSuInfo ;
-	char	cmdLine[meBUF_SIZE_MAX+102];			 /* Buffer for the command line */
-	char	dummyInFile[NFILEN] ; 						 /* Dummy input file */
-	char	pipeOutFile[NFILEN] ; 						 /* Pipe output file */
-	int 	status = 1;
-#ifndef _WIN32s
-	HANDLE inHdl, outHdl, dumHdl ;
+#if _DEBUG
+#define NULL_OP stdout
 #else
-	char *endOfComString = NULL;						 /* End of the com string */
-	static int pipeStderr = 0;
-	if (pipeStderr == 0)
-		pipeStderr = getenv("ME_PIPE_STDERR") != NULL ? 1 : -1 ;
+#define NULL_OP NULL
 #endif
-																	/*set the startup window size*/
-	memset(&mePInfo, 0, sizeof (PROCESS_INFORMATION));
-	memset(&meSuInfo, 0, sizeof (STARTUPINFO));
-	meSuInfo.cb = sizeof(STARTUPINFO);
 
-	/*if ((flags & LAUNCH_SHOWWINDOW) == 0)*/  /* always 0 */
-	{ 						/*Only a shell needs to be visible, hide the rest*/
-		meSuInfo.wShowWindow = SW_HIDE;
-		meSuInfo.dwFlags |= STARTF_USESHOWWINDOW ;
-	}
-{
-#if VS_CHAR8
-	char * cmd_ = cmd;
-#else
-	wchar_t buf[1000];
-	LPTSTR cmd_ = char_to_wchar(cmd, 1000, buf);
-//meSuInfo.pipeOutFile = NULL;
+
+#define WL_IHAND 1
+#define WL_SHELL 2
+#define WL_AWAIT_PROMPT 4
+#define WL_HOLD  8
+#define WL_CNC   CREATE_NEW_CONSOLE
+#define WL_CNPG	 CREATE_NEW_PROCESS_GROUP
+#if WL_CNC <= WL_HOLD || WL_CNPG <= WL_HOLD
+error error
 #endif
-	meSuInfo.lpTitle = cmd_;
-//meSuInfo.hStdInput	= INVALID_HANDLE_VALUE ;
-//meSuInfo.hStdOutput = INVALID_HANDLE_VALUE ;
-//meSuInfo.hStdError	= INVALID_HANDLE_VALUE ;
+#define WL_SPAWN   0x1000
+#define WL_SHOWW	 0x2000
+#define WL_NOIHAND 0x4000
 
-	dummyInFile[0] = 0;
+static int
+																						/* flags: above */
+WinLaunch(Cc *sysRet, int flags,
+					const char *app, const char * ca, 
+          const char * in_data, HANDLE ip, const char *outfile // char *outErr,
+				  
+				 )
+{ char buff[1024];           //i/o buffer
+	const char * fapp = app == NULL ? NULL : flook('P', app);
+	
+	if      (fapp != NULL)					// never use comspec
+		app = fapp;
+	else if (flags & WL_SHELL)
+	{	const char * comSpecName = (char*)getenv("COMSPEC");
+		if (comSpecName == NULL)
+			comSpecName = "cmd.exe";
 
-	if (platformId < 0)
-	{
-		OSVERSIONINFO os;
-		os.dwOSVersionInfoSize = sizeof(os);
-		GetVersionEx(&os);
-		platformId = os.dwPlatformId;
-		if (platformId == VER_PLATFORM_WIN32_NT)
-			platformId = 0;
-	}
-																						/* Get the comspec */
-	/*if ((flags & LAUNCH_NOCOMSPEC) == 0)*/	/* always 0 */
-{ char * compSpecName = (char*)getenv("COMSPEC");
-	if (compSpecName == NULL)
-																					 /* If no COMSPEC setup the default */
-		compSpecName = platformId == 0 ? "cmd.exe"
-																	 : "command.com";
+		if (ca == NULL)
+		{ app = NULL;
+			ca = comSpecName;
+		}
+		else									/* Create the command line */
+		{ int len = strlen(concat(buff," /c \"", app == NULL ? "" : app,0));
+			char * dd = buff+len;
+			char ch;
+			char prev = 'A';
+			const char * ss = ca;
+			if (len+strlen(ss) >= sizeof(buff))
+				return -1;
 
-	if ((flags & LAUNCH_SHELL) == 0)	 /* Create the command line */
-	{ register
-		char c2 ;
-		char * ss;
-		char delim;
-		char * dd = cmdLine;
-		concat(dd,compSpecName," /c ",0);
-		compSpecName = dd;
-
-	{ int len = strlen(dd);
-		dd += len;
-#ifdef _WIN32s
-		endOfComString = dd;						/* End of the COM string */
-#endif
-		if (platformId == 0)
-			*dd++ = '"';
-
-		ss = cmd ;
-		if (len+strlen(ss) >= meBUF_SIZE_MAX+99)
-			return FALSE ;
-
-		delim = *ss;
-		if (delim != '"')
-			delim = ' ' ;
-
-		while ((c2=*ss++))
-		{ if (c2 == delim && ss > cmd+1)
-				delim = 0;																		/* always 0 */
-			if (c2 == '/' && delim != 0 /* &&!(flags & LAUNCH_LEAVENAMES)*/)
-				c2 = '\\';
+			for (; (ch = *ss++); prev = ch)
+			{	if (ch == '/' && 										// &&!(flags & LAUNCH_LEAVENAMES)
+					  (in_range(toupper(prev), 'A','Z')
+				  || in_range(prev, '0', '9')
+					||					prev == '_'  || prev == ' '))
+					ch = '\\';
 		
-			if (c2 == '"')
-				*dd++ = '\\';
-			*dd++ = c2;
-		}
+				if (ch == '"')
+					*dd++ = '\\';
+				*dd++ = ch;
+			}
 
-		*dd = 0;
-		dd[1] = 0;
-
-		if (platformId == 0 /*&&!(flags & LAUNCH_NOCOMSPEC)*/)
 			*dd = '"';
-							/*If its a system call we don't care about input or output*/
-#if 0
-C 	if (flags & LAUNCH_SYSTEM)
-C 	{
-#ifndef _WIN32s
-C 		if (platformId == VER_PLATFORM_WIN32_WINDOWS)
-C 		{
-C 					/* For some reason Win98 shell-command start-up path is incorrect
-C 					 * unless a dummy input file is used, no idea why but doing the
-C 					 * following (taken from above) works! */
-C 			error error
-C 																						/* Re-open the file for reading */
-C 			meSuInfo.hStdInput = CreateRetry(dummyInFile);
-C 			if (meSuInfo.hStdInput < 0) 	/* INVALID_HANDLE_VALUE */
-C 			{
-C 					DeleteFile(dummyInFile) ;
-C 					CloseHandle(meSuInfo.hStdOutput) ;
-C 					return FALSE;
-C 			}
-C 			meSuInfo.dwFlags |= STARTF_USESTDHANDLES ;
-C 		}
-#endif
-C 	}
-C 	else
-#endif
-		{ SECURITY_ATTRIBUTES sbuts ;
-			sbuts.nLength = sizeof(SECURITY_ATTRIBUTES) ;
-			sbuts.lpSecurityDescriptor = NULL ;
-			sbuts.bInheritHandle = TRUE ;
-/*
-			if ((flags & LAUNCH_FILTER) && 0) 	 //this facility not used here
-			{ 
-#ifdef _WIN32s
-				strcat (cmdLine, " <");
-				strcat (cmdLine, inFile);
-				if (outFile != NULL)
-				{ strcat (cmdLine, " >");
-					strcat (cmdLine, outFile);
-				}
-#else
-				if((meSuInfo.hStdInput=CreateFile(inFile,GENERIC_READ,FILE_SHARE_READ,&sbuts,
-																					OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
-					return FALSE ;
-				if((meSuInfo.hStdOutput=CreateFile(outFile,GENERIC_WRITE,FILE_SHARE_READ,&sbuts,
-																					 OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
-				{ CloseHandle(meSuInfo.hStdInput) ;
-					return FALSE ;
-				}
-
-				if (outErr == NULL)
-				{ if (CreatePipe(&meSuInfo.hStdError,&h,&sbuts,0) != 0)
-						CloseHandle(h) ;
-				}
-				else if((meSuInfo.hStdError=CreateFile(outErr,GENERIC_WRITE,FILE_SHARE_READ,&sbuts,
-																							 OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL)) == INVALID_HANDLE_VALUE)
-				{ CloseHandle(meSuInfo.hStdError) ;
-					return FALSE ;
-				}
-#endif
-			}
-			else 
-*/
-					 if (flags & LAUNCH_IPIPE)						 /*this facility not used here*/
-			{
-																					/* Its an IPIPE so create the pipes */
-				if (CreatePipe(&meSuInfo.hStdInput,&inHdl,&sbuts,0) == 0)
-					return FALSE ;
-				if (CreatePipe(&outHdl,&meSuInfo.hStdOutput,&sbuts,0) == 0)
-				{
-					CloseHandle(meSuInfo.hStdInput) ;
-					status = 0;
-				}
-				else
-					status = -1;
-			}
-			else
-			{ 				/* Under Windows 95 (and I assume win32s) if there is no
-								 * standard input then create an empty file as stdin. This
-								 * allows commands such as Grep to not lock up when they
-								 * have been mis-typed on the command line with no file.
-								 * Otherwise the grep command hangs on the input stream.
-								 *
-								 * Found that some launched programs return before sub programs
-								 * have finished, this leaves the "stdin.~~~" file locked.
-								 * This is not a problem in this case because the file will be
-								 * empty and we should still be able to open it, so don't fail
-								 * if we fail to create the file, only fail if we fail to open it.
-								 */
-								/* Create a dummy input file to stop the process from locking up.
-								 *
-								 * Construct the dummy input file */
-									 /* if an output file name is given, use it, else create one*/
-				dumHdl = 0;
-
-				if (outFile == NULL)
-					outFile = mkTempCommName(pipeOutFile,COMMAND_FILE) ;
-
-#ifdef _WIN32s
-				strcat (cmdLine, pipeStderr > 0 ? " >& " : " > ");
-				strcat (cmdLine, outFile);
-#else
-				meSuInfo.hStdOutput = CreateF(outFile,GENERIC_WRITE,0,&sbuts,
-																			CREATE_ALWAYS,1);
-				if			(meSuInfo.hStdOutput < 0)
-					status = 0;
-#endif
-				else if (inFile != NULL)
-				{ 
-					dumHdl = CreateF(inFile,GENERIC_READ,0,NULL,OPEN_ALWAYS,0);
-					/*mbwrite(inFile);*/
-				}
-				else if ((flags & LAUNCH_STDIN) == 0)
-				{	(void)mkTempName(dummyInFile, DUMMY_STDIN_FILE,NULL);
-					dumHdl = CreateRetry(dummyInFile);
-				}
-				
-				if			(dumHdl == 0)
-					;
-				else if (dumHdl < 0)
-				{ //DeleteFile(dummyInFile) ;
-					CloseHandle(meSuInfo.hStdOutput) ;
-					status = 0;
-				}
-				else 
-				{ meSuInfo.hStdInput = dumHdl;
-					if (outErr != NULL)
-					{ meSuInfo.hStdError = CreateF(outErr,GENERIC_WRITE,0, /*FILE_SHARE_READ*/
-																				 &sbuts,
-																				 OPEN_ALWAYS,0);
-						if (meSuInfo.hStdError < 0)
-							status = 0;
-					}
-					else if (flags & LAUNCH_STDERROUT)
-						status = -1;
-				}
-			}
-#ifndef _WIN32s
-			meSuInfo.dwFlags |= STARTF_USESTDHANDLES ;
-#endif
+			dd[1] = 0;
+			ca = buff;
+			app = comSpecName;
 		}
-	}}
+	}
+	
+	if (app != NULL && ca != NULL && ca[0] != ' ')
+		return -1000;
 
-	if (status != 0)
-	{ if (status < 0)					/* Duplicate stdout=>stderr, dont care if this fails*/
+{ int use_data = ip != 0 || in_data != NULL;
+	HANDLE newstdin = ip;								//pipe handles
+  HANDLE newstdout = 0;
+  HANDLE write_stdin = 0;
+  HANDLE read_stdout = 0;
+  STARTUPINFO si;
+//SECURITY_DESCRIPTOR sd;               //security information for pipes
+  PROCESS_INFORMATION pi;
+  SECURITY_ATTRIBUTES sa;
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.lpSecurityDescriptor = NULL;
+  sa.bInheritHandle = TRUE;         //allow inheritable handles
+
+	sgarbf = TRUE;
+//memset(&pi, 0, sizeof(pi));
+	memset(&si, 0, sizeof(si));
+	si.cb = sizeof(si);
+
+	if (flags & WL_SHOWW)
+	{ si.dwFlags |= STARTF_USESHOWWINDOW;
+	  si.wShowWindow = SW_SHOWNORMAL;
+	}
+
+	if (flags & WL_SPAWN)
+	{	if (CreatePipe(&read_stdout,&newstdout,&sa,0))  //create stdout pipe
+			; // mbwrite("Created RSO");
+		else
+	  {	ErrorMessage("CreatePipe");
+	   	return -1001;
+	  }
+	
+		if (CreatePipe(&newstdin,&write_stdin,&sa,0))   //create stdin pipe
+			; // mbwrite("Created WSO");
+		else
+		{	ErrorMessage("CreatePipe");
+		 	CloseHandle(newstdout);
+		 	CloseHandle(read_stdout);
+	 	 	return -1000;
+  	}
+
+// 	GetStartupInfo(&si);      //set startupinfo for the spawned process
+		si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+	  si.wShowWindow = SW_HIDE;
+	  si.hStdOutput = newstdout;
+	  si.hStdError = newstdout;     //set the new handles for the child process
+	  si.hStdInput = newstdin;
+//  si.lpTitle = "Emsub";
+#if 0
+		if (si.hStdOutput != 0)
 		{	HANDLE cur_proc = GetCurrentProcess();
 								 
-			BOOL s = DuplicateHandle(cur_proc,meSuInfo.hStdOutput,
-															 cur_proc,&meSuInfo.hStdError,0,TRUE,
+			BOOL s = DuplicateHandle(cur_proc,si.hStdOutput,
+															 cur_proc,&si.hStdError,0,TRUE,
 															 DUPLICATE_SAME_ACCESS) ;
-			if (s == 0)
-				mbwrite("DuptoSEf");
 		}
-		ClearScreen();
+	  // mbwrite("IHAND");
+#endif	  
+	  flags |= WL_IHAND;
+	}
+	else
+	{	if (si.hStdInput <= 0 && !use_data && (flags & WL_NOIHAND) == 0)
+		{ char	dummyInFile[NFILEN] ; 						 /* Dummy input file */
+			newstdin = CreateF(dummyInFile);
+			si.hStdInput = newstdin;
+		}
+		if (si.hStdOutput <= 0 && outfile)
+		{	
+			newstdout = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sa,
+																CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
+			si.hStdOutput = newstdout;
+			if (si.hStdOutput < 0)
+				mbwrite("CFOut Failed");
+		}
+		if (si.hStdInput > 0 || si.hStdOutput > 0)
+			si.dwFlags |= STARTF_USESTDHANDLES;
+	}
 
-#ifdef _WIN32s
-C		char curDir[1024];
-C		char cmd [1024];
-C		char batname [1024];
-C		FILE *fp;
-C
-C		if (endOfComString == NULL)
-C			compSpecName = cmd;
-C		else					 /*Get the current directory in the 32-bit world*/
-C		{ strcpy(curDir,".:\ncd "
-C			_getcwd (curDir+6, sizeof(curDir)-6);
-C
-C			(void)mkTempName(batname,"", ".bat"); /*Create a BAT file to hold the cmd*/
-C
-C			if ((fp = fopen (batname, "w")) == NULL)
-C				compSpecName = NULL;
-C			else
-C			{ curDir[0] = curDir[6];
-C				strcat(strcat(strcat(curDir,"\n"),endOfComString),"\n");
-C				fputs(curDir,fp);
-C				fclose (fp);
-C												 /* Append the command to run the exec file to 
-C														the end of the command string */
-C				strcpy (endOfComString, batname);
-C			}
-C		}
-C		status = compSpecName == NULL ? 0 :
-C														  SynchSpawn (compSpecName,/*SW_HIDE*/SW_SHOWNORMAL);
-C														/* Correct the status from the call */
-C		if (status != 1)
-C			status = 0;
-C			
-C		error error
-#else 																												/* ! _WIN32s */
-	/*mbwrite(cp);*/
-		loglog1("CrePre %s", compSpecName);
+//mbwrite(app == NULL ? "<no app>" : app);
+//mbwrite(ca == NULL ? "<no args>" : ca);
+//mbwrite(int_asc((int)si.hStdOutput));
+															  //spawn the child process
+  if (!CreateProcess(app,
+                     (char*)ca,
+                     NULL,NULL,
+										 (flags & WL_IHAND),
+                		 flags & (WL_CNPG+WL_CNC),
+                     NULL,NULL,&si,&pi))
+  { ErrorMessage("CreateProcess");
+    if (newstdin != 0) CloseHandle(newstdin);
+    if (newstdout != 0) CloseHandle(newstdout);
+    if (read_stdout != 0) CloseHandle(read_stdout);
+    if (write_stdin != 0) CloseHandle(write_stdin);
+    return -1002;
+  }
+  
+	CloseHandle(pi.hThread);
+
+{	DWORD exit = 0;  			//process exit code
+  DWORD bread;  //bytes read
+  DWORD avail;  //bytes available
+  int got_ip = 0;
+  int clamp = 4;
+  int iter = 0;
+  int end = 0;
+	int sct = 6;
+ 	int sentz = 0;
+
+	if (!(flags & WL_SPAWN))
 	{
-#if VS_CHAR8
-		char * app = NULL;
-		char * csn = compSpecName;
-#else
-		wchar_t abuf[256], cbuf[256];
-		LPTSTR app = NULL;
-		LPTSTR csn = char_to_wchar(compSpecName, 256, abuf);
-#endif
-													 /* start the process and get a handle on it */
-		status = CreateProcess(app,
-													 csn,
-													 NULL,NULL,
-													 !(flags & LAUNCH_SHELL),
-											 /*(flags & LAUNCH_DETACHED) ? DETACHED_PROCESS : CREATE_NEW_CONSOLE,*/
-													 CREATE_NEW_CONSOLE,
-													 NULL,
-													 NULL,
-													 &meSuInfo,
-													 &mePInfo);
-		if (status)
-		{
-			status = TRUE ;
-#if 0
-											/* this causes problems for win95 ipipes on network drives*/
-			WaitForSingleObject(GetCurrentProcess(), 50);
-			WaitForInputIdle(mePInfo.hProcess, 5000);
-#endif
-			CloseHandle(mePInfo.hThread);
+//  int ct = 200000;
+		for (;;)
+		{ DWORD procStatus = WaitForSingleObject(pi.hProcess, 200);
+			if (procStatus == WAIT_TIMEOUT)
+			{ // millisleep(100);
+//			if (--ct >= 0)
+				if (!typahead() /* && (TTbreakFlag != 0)*/) 
+					continue;
+			}
+		{ Cc cc = (procStatus != WAIT_FAILED);
+			if (cc)
+			{ cc = GetExitCodeProcess(pi.hProcess,&exit);
+			  if (cc == 0)
+			  	flagerr("GECP %d");
+				else
+				{//mbwrite("Exitting");
+					break;
+				}
+			}
+		}}
+		//mbwrite("Exit Whole");
+	}
+	else 
+	{ char fbuff[512];
+		char lbuff[512];
+		const char * ipstr = in_data == NULL ? "" : in_data;
+  	FILE * op = outfile == NULL ? NULL_OP : fopen(outfile, "w");
+  	int append_nl = *ipstr != 0;
+		
+		if (read_stdout == 0)
+		{ mbwrite("Int Err");
+			return -1;
+		}
 
-									/* Ipipes need the process handle and we dont wait for it */
-			if ((flags & LAUNCH_IPIPE) == 0)
-			{
-									 /* For shells close the process handle but dont wait for it */
-				if ((flags & LAUNCH_SHELL) == 0)
-				{
-															 /* Wait for filter, system, pipe process to end */
-					loglog1("Wait For %d", mePInfo.hProcess);
-					for (;;)
-					{ DWORD procStatus = WaitForSingleObject(mePInfo.hProcess, 200);
-						if (procStatus == WAIT_TIMEOUT)
-						{
-							if (!typahead() /* && (TTbreakFlag != 0)*/) 
-								continue;
-						}
-						status = (procStatus != WAIT_FAILED);
-													/* If we're interested in the result, get it */
-						if (sysRet != NULL)
-							GetExitCodeProcess(mePInfo.hProcess,sysRet) ;
-						break;
+	  for(;;++iter)      //main program loop
+	  { (void)millisleep(250);
+	  { Cc cc = PeekNamedPipe(read_stdout,buff,1023,&bread,&avail,NULL);
+		  if      (cc == 0)
+	  	 	flagerr("PNP %d");
+	  	else
+	  	{	//mbwrite(int_asc(avail+10000));
+	                        //check to see if there is any data to read from stdout
+		  	if (bread != 0)
+	  		{ int done = 0;
+	  			buff[bread] = 0;
+//  			mbwrite(buff);
+	    	  while (done < (int)avail)
+	    	  {	cc = ReadFile(read_stdout,buff,1023,&bread,NULL);
+					  if (cc == 0)
+	  				{	flagerr("PNP %d");
+	    	 			break;
+	    	 		}
+	    	 		if (bread == 0)
+	    	 			break;
+	    		  done += bread;
+	    		  buff[bread] = 0;
+						got_ip = 1;
+	  		    if (op != NULL)
+	  		      fputs(buff, op);
+//					printf("In: %s",buff);
+	   			}
+	   		}
+			}
+	  	cc = GetExitCodeProcess(pi.hProcess,&exit); //while the process is running
+	    if (cc == 0)
+	    {	flagerr("GECP %d");
+	    	if (--clamp <= 0)
+	    		break;
+	    }
+	    else if (exit != STILL_ACTIVE)
+	    { //mbwrite(int_asc(exit));
+	      break;
+	    }
+
+			if (sentz && iter > 10)		// 4 seconds
+			{ if (--sentz <= 0)
+				{ --sentz;
+					break;
+				}
+				continue;
+			}
+
+			//mbwrite("Testing");
+
+	    if ((flags & WL_AWAIT_PROMPT) && !got_ip && !_kbhit())
+	      continue;
+
+			//mbwrite("Getting");
+
+			if (*ipstr == 0)
+	    {	if (ip != 0)
+		    { int rct;
+		    	cc = ReadFile(ip,fbuff,sizeof(fbuff)-1,&rct,NULL);
+					if (cc == 0)
+						ip = 0;
+					else
+					{ ipstr = fbuff;
+						fbuff[rct] = 0;
 					}
 				}
-										/* Close the process */
-				CloseHandle (mePInfo.hProcess);
 			}
-		}
-									/* Close the file handles */
-		if (meSuInfo.hStdInput > 0)
-			CloseHandle(meSuInfo.hStdInput);
-		if (meSuInfo.hStdOutput > 0)
-			CloseHandle(meSuInfo.hStdOutput);
-		if (meSuInfo.hStdError > 0)
-			CloseHandle(meSuInfo.hStdError);
-#endif /* WIN32s */
+		{	int sl = *ipstr;
+			if (sl != 0)
+	    { char * ln = lbuff-1;
+	    	--ipstr;
+	      while (*++ipstr != 0 && *ipstr != '\r' && *ipstr != '\n')
+	        *++ln = *ipstr;
 
-#if MEOPT_IPIPES
-		if (flags & LAUNCH_IPIPE)
-		{
-			if (!status)
-			{
-				CloseHandle(inHdl);
-				CloseHandle(outHdl);
-			}
-			else
-			{ ipipe->pid = 1 ;
-				ipipe->rfd = outHdl ;
-				ipipe->outWfd = inHdl ;
-				ipipe->process = mePInfo.hProcess ;
-				ipipe->processId = mePInfo.dwProcessId ;
-						
-						/* attempt to create a new thread to wait for activity,
-						 * this is because windows pipes are crap and doing a Wait on
-						 * them fails. so us poor programmers have to jump through lots
-						 * of hoops just to make Bils crap usable, and what really hurts
-						 * is that after doing so every non-programmer thinks Bills stuff
-						 * is wonderful! Sometimes the world sucks.
-						 * Set the childActive event to manual so we can do the global
-						 * MsgWait and then after its Set do a SingleWait on each reset
-						 * those that are set.
-						 */
-				ipipe->threadContinue = NULL ;
-				ipipe->thread = NULL ;
-				if(!(ipipe->childActive=CreateEvent(NULL, TRUE, FALSE, NULL))||
-					 !(ipipe->threadContinue=CreateEvent(NULL, FALSE, FALSE, NULL)))
-					;
-				else
-#ifndef USE_BEGINTHREAD
-					ipipe->thread = CreateThread(NULL,0,childActiveThread,ipipe,0,&ipipe->threadId) ;
-#else 							 
-				{ unsigned long thread=_beginthread(childActiveThread,0,ipipe);
-					if (thread != -1)
-						ipipe->thread = (HANDLE) thread ;
+				if (*ipstr == '\r' && ipstr[1] == '\n')
+					++ipstr;
+	      if (*ipstr != 0)
+	      	*++ln = *ipstr++;
+	      else
+	      {	*++ln = '\n';
+	      	//mbwrite("Ends");
+	      }
+	      sl = ln + 1 - lbuff;
+		    if (sl > 1)
+		   	{ if      (lbuff[sl-1] == 'Z' - '@')
+		   			sentz = 8;
+		    	else if (lbuff[sl-1] != '\n' && append_nl)
+			    { lbuff[sl++] = '\n';
+				   	append_nl = 0;
+	  	  	}
 				}
+	    }
+	    
+	    if (sl == 0 && sentz == 0)
+	    { sentz = 8;
+	    	lbuff[sl++] = 'Z' -'@';
+	      //mbwrite("Z");
+	    }
+#if 0
+	    --sct;
+			if (sct >= 0)
+		  {	char sch = lbuff[sl];
+		    lbuff[sl] = 0;
+		  	mlwrite("Sending %d %x %s",sl, lbuff[sl-1], lbuff);
+				mbwrite(lastmesg);
+		    lbuff[sl] = sch;
+		  }
 #endif
-			}
-		}
-#endif
-	}}
-	if (dummyInFile[0] != 0)													
-		DeleteFile(dummyInFile);	/* Delete the dummy stdin file if there is one. */
+	    cc = WriteFile(write_stdin,lbuff,sl,&bread,NULL); //send it to stdin
+	    if (cc == 0)
+		  	ErrorMessage("WriteFile");
+//	  else
+//	  {	mlwrite("Sent %d",bread);
+//			mbwrite(lastmesg);
+//		}		  
 
-	return status ;
+			lbuff[0] = 0;						// Conceal data
+			lbuff[1] = 0;
+			lbuff[2] = 0;
+    }}}
+		if (op != NULL_OP)
+			fclose(op);
+	}
+  
+//printf("Exitted %d\n", exit);
+  
+  CloseHandle(pi.hProcess);
+  CloseHandle(newstdin);            //clean stuff up
+  CloseHandle(newstdout);
+  CloseHandle(read_stdout);
+  CloseHandle(write_stdin);
+	setMyConsoleIP();
+
+  *sysRet = sentz < 0 ? -1 : (Cc)exit;
+  return sentz < 0 ? -1 : OK;
 }}}
 
 
-#ifdef _DOS
-#define AM_DOS 1
-#else
-#define AM_DOS 0
-#endif
 
+
+int ttsystem(const char * cmd, const char * data)
+
+{ Cc cc;
+  if (data == NULL)
+  { cc = system(cmd);
+		setMyConsoleIP();
+	}
+  else
+  { char app[140];
+    strpcpy(app, cmd, sizeof(app));
+  { char * t = app - 1;
+    while (*++t != 0 && *t != ' ' && *t != '\t')
+      ;
+	  *t = 0;
+//  if (*(cmd + (t-app)) != ' ')
+//   	mbwrite("No space");
+  { Cc rc = WinLaunch(&cc, WL_SPAWN+WL_CNC+WL_AWAIT_PROMPT,
+  										app, cmd+(t-app),
+  										data,null,null);
+    if (rc != OK)
+      cc = rc;
+  }}}
+
+	return cc;
+}
 
 /*
  * Create a subjob with a copy of the command intrepreter in it. When the
@@ -1485,54 +1368,12 @@ C		error error
  */
 int spawncli (int f, int n)
 {
-	int rc;
-	return WinLaunchProgram(NULL, LAUNCH_SHELL, NULL, NULL, NULL, &rc EXTRA_ARG);
+  Cc rc;
+	return WinLaunch(&rc, WL_SHELL+WL_CNPG+WL_NOIHAND,   // +WL_SHOWW,
+										NULL, NULL, NULL, NULL, NULL);
+//return WinLaunchProgram(NULL, LAUNCH_SHELL, NULL, NULL, NULL, &rc EXTRA_ARG);
 }
-#endif
 
-#if NEW_PIPE == 0
-
-static Cc Pascal usehost(wh, line)
-	char	 wh;
-	char *	 line;
-{
-	int cc;
-	if (!g_clexec)
-	{
-		tcapmove(term.t_nrowm1, 0); 					/* Seek to last line. 	*/
- /* mlwrite(""); */
- /* tcapclose(); */
- /* ttputc('\n'); */
-#if S_WIN32
-		tcapeeol();
-		ttputc('\n');
-#endif
-	}
-	/* write(0, "\n", 1);*/
-	sgarbf = TRUE;
-	cc = ttsystem(line);	/* wrapper to execprg() */
-#if MOUSE
-	ttopen();
-#endif
-	tcapopen();
-	
-	ttcol = 0;				 /* otherwise we shall not see the message */
-				 /* if we are interactive, pause here */
-	if (!g_clexec)
-	{ int ch;
-		mlwrite(cc == 0 ? TEXT188 : "[Failed]");
-/*						 "[End]" */
-		while ((ch = ttgetc()) != '\r' && ch != ' ')
-			;
-		mlerase();
-	}
-
-	return cc;
-}
-
-#endif
-
-
 	/* Pipe a one line command into a window
 	 * Bound to ^X @ or ^X #
 	 */
@@ -1540,21 +1381,22 @@ int pipefilter(wh)
 	 char 	 wh;
 {
  static int bix;
-				char prompt[2];
  				char 	 bname [10];
 				char	 pipeInFile[NFILEN];
 				char	 pipeOutFile[NFILEN];
+				char	 app[80];
 //			char	 pipeEFile[NFILEN];
-				char * filnam1 = NULL;
-				char * filnam3 = NULL;
+				char * fnam1 = NULL;
+//			char * fnam3 = NULL;
 							
 				char line[NSTRING+2*NFILEN+100];			 /* command line send to shell */
 
 	if (restflag) 					/* don't allow this command if restricted */
 		return resterr();
 
-{ int sysRet;
+{ Cc sysRet;
 	Cc cc;
+	char prompt[2];
 	prompt[0] = wh;
 	wh -= '@';											
 	if (wh != 0 && wh != '!'-'@' && (curbp->b_flag & MDVIEW)) /* disallow if*/
@@ -1581,9 +1423,7 @@ int pipefilter(wh)
 
 			if (val != NULL && strcmp(val,"ERROR") != 0)
 			{ 
-				strcat(strcpy(pipeInFile,val),line+ix);
-				strcpy(line,pipeInFile);
-//			mbwrite(line);
+				strcpy(line,strcat(strcpy(pipeInFile,val),line+ix));
 			}
 		}}
 	}
@@ -1607,55 +1447,66 @@ int pipefilter(wh)
 	}}
 	else if (wh == '#'-'@') 						 /* setup the proper file names */
 	{ 			
-		filnam1 = mkTempCommName(pipeInFile,"si");
+		fnam1 = mkTempCommName(pipeInFile,"si");
 
-		if (writeout(filnam1) != TRUE)		/* write it out, checking for errors */
+		if (writeout(fnam1) != TRUE)		/* write it out, checking for errors */
 		{ mlwrite(TEXT2);
 																			/* "[Cannot write filter file]" */
 			return FALSE;
 		}
-#if 0
-		strcat(&line[0], "<");
-		strcat(&line[0], filnam1);
-#endif
 	}
-{ char * filnam2 = mkTempCommName(pipeOutFile,"so") ;
-	loglog1("Launch Out %s", filnam2);
-#if 0
-	strcat(&line[0], ">");
-	strcat(&line[0], filnam2);			/* WinLaunchProgram cannot cope */
 
-	if (wh == 'E' - '@')
-	{ 
-		filnam3 = mkTempCommName(pipeEFile,"se") ;
-#if 0
-		strcat(&line[0], " 2>");
-		strcat(&line[0], filnam3);		/* WinLaunchProgram cannot cope */
-#endif
-	}
-#endif
-/*mbwrite(line);*/
 	tcapmove(term.t_nrowm1, 0);
 
-	cc = 0;
-	if			(wh == 'E' -'@')
+{	HANDLE ip = fnam1 == NULL ? 0
+														: CreateFile(fnam1,GENERIC_READ,FILE_SHARE_READ,NULL,
+																				 OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+
+//char * fnam2 = wh == '!' - '@' ? NULL : mkTempCommName(pipeOutFile,"so");
+	char * fnam2 = mkTempCommName(pipeOutFile,"so");
+	char * s = line;
+
+	app[0] = 0;
+
+	if  (wh == '#'-'@' || wh == '@'-'@')
+	{	int sz = sizeof(app)- 1;
+		char * t = app -1;
+		for (--s; --sz >= 0 && *++s != 0 && *s != ' '; )
+			*++t = *s;
+		*++t = 0;
+	}
+
+	cc = WL_IHAND + WL_HOLD;
+
+	if      (wh == '#'-'@')
+		cc |= WL_SPAWN+WL_CNC;
+	else if	(wh <= 0)					// %@
+		cc |= WL_SHELL;
+#if 0
+	else if (wh == 'E' -'@')
 		cc |= LAUNCH_STDERROUT;
 	else if (wh == 'e' -'@')
 	{ wh = 'E';
 		cc |= LAUNCH_STDIN;
-	}  
-	cc = WinLaunchProgram(line, cc, filnam1, filnam2, filnam3,&sysRet EXTRA_ARG);
-
-	loglog1("Unlaunched %d", cc);
-	if (!cc)
+	}
+#endif
+	cc = WinLaunch(&sysRet, cc,
+								 app[0] == 0 ? NULL : app, s, NULL, ip, fnam2);
+	if (cc != OK)
+	{	if (cc == -1)
+			mbwrite("Gave up");
 		sysRet = -1;
-																 /* did the output file get generated? */
-{/*int fid = open(tmpnam, O_RDONLY);
+	}
+
+	if (ip != 0)
+		CloseHandle(ip);
+																 
+{/*int fid = open(tmpnam, O_RDONLY);			// did the output file get generated?
 	if (fid < 0)
 		return FALSE;
 	close(fid);
 */
-	if (/*sysRet == OK && */ wh == 0) 			/* '@' */
+	if (/*sysRet == OK && */ wh == '@'-'@')
 	{ BUFFER * bp = bfind(bname, TRUE, 0);
 		if (bp == NULL)
 			return FALSE;
@@ -1672,7 +1523,7 @@ int pipefilter(wh)
 	}
 	cc = FALSE;
 	if (wh == '!'-'@')
-	{ FILE * ip = fopen(filnam2, "rb");
+	{ FILE * ip = fopen(fnam2, "rb");
 		if (ip != NULL)
 		{ char * ln;
 			while ((ln = fgets(&line[0], NSTRING+NFILEN*2-1, ip))!=NULL)
@@ -1694,22 +1545,22 @@ int pipefilter(wh)
 	else													/* on failure, escape gracefully */ 		
 	{ char * sfn = curbp->b_fname;
 		curbp->b_fname = null;
-		cc = readin(filnam2, FALSE);
+		cc = readin(fnam2, 0);
 		curbp->b_fname = sfn; 							/* restore name */
 		curbp->b_flag |= BFCHG; 		/* flag it as changed */
-    if (filnam3 != null)
-  	  cc = readin(filnam3, -1);
+//  if (fnam3 != null)
+// 	  cc = readin(fnam3, FILE_INS);
 	}
 	if (sysRet != 0 || !cc)
 		mlwrite(TEXT3); 							/* "[Execution failed]" */
 /*else																						
 		mbwrite("ExecSucc");*/
 																	/* get rid of the temporary files */
-	if (filnam1 != NULL)
-		unlink(filnam1);							
-	unlink(filnam2);
+	if (fnam1 != NULL)
+		unlink(fnam1);							
+	unlink(fnam2);
 //if (wh == 'E' - '@')
-//	unlink(filnam3);
+//	unlink(fnam3);
 	return cc != FALSE;
 }}}}
 
@@ -1749,7 +1600,6 @@ Pascal execprg(int f, int n)
 }
 
 #if 0
-X
 X 			/* return a system dependant string with the current time */
 Xchar *Pascal timeset()
 X
@@ -1933,12 +1783,9 @@ void Pascal mbwrite2(const char * diag, const char * msg)
 {
 #if S_WIN32
 		int len = strlen(diag) + strlen(msg) + 3;
-		char * t = malloc(len);
-
-		strcat(strcpy(t,diag),msg);
+		char * t = strcat(strcpy(malloc(len),diag),msg);
 
 		mbwrite(t);
-
 		free(t);
 }
 #endif

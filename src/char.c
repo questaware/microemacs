@@ -29,10 +29,6 @@ char * concat(char * tgt, ...)
 { char * s;
   tgt[0] = 0;
 
-#if S_HPUX
-  nullproc();		/* just in case compiler doesnt use the stack */
-#endif
-
   while ((s = get_arg(char *, ap)) != null)
     strcat(tgt, s);
 
@@ -42,24 +38,17 @@ char * concat(char * tgt, ...)
 
 char * Pascal strpcpypfx(char * t_, const char * s_, int n_, char term)
 
-{ register short n;
-  register char ch;
-  register const char * s = s_;
-  register char * t = t_;
-#if 0
-  for (n = n_;
-       --n > 0 && (ch = *s++) != 0 && ch != term;
-      )
-    *t++ = ch;
-  
-  *t = 0;
-#else
+{ short n;
+  char ch;
+  const char * s = s_;
+  char * t = t_;
+
   for (n = -1; ++n < n_ && (ch = s[n]) != 0 && ch != term;
       )
     t[n] = ch;
   
   t[n] = 0;
-#endif
+
   return t_;
 }
 

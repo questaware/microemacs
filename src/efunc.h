@@ -142,7 +142,7 @@ NOSHARE const NBIND names[] = {
 	{"goto-matching-fence",	getfence},
 #endif
 	{"grow-window",					enlargewind},
-	{"handle-tab",					settabsize},
+	{"handle-tab",					handletab},
 	{"help",								help},
 	{"hunt-backward",				backhunt},
 	{"hunt-forward",				forwhunt},

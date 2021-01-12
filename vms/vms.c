@@ -838,7 +838,7 @@ X sgarbf = TRUE;
 X s &= 1;
 X
 X /* on failure, escape gracefully */
-X if (!s || (readin(filnam2,FALSE) == FALSE)) 
+X if (!s || (readin(filnam2,0) == FALSE)) 
 X {
 X 	mlwrite(TEXT3);
 X/* 										 "[Execution failed]" */
@@ -958,7 +958,7 @@ int filter(int f, int n)
 	{
 		usehost(strcat(&line[0]," <"FILNAM1" >"FILNAM2), FALSE);
 						/* on failure, escape gracefully */
-		s = readin(filnam2,FALSE);
+		s = readin(filnam2,0);
 		unlink(filnam1);				/* and get rid of the temporary file */
 		unlink(filnam2);
 	}

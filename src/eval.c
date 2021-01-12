@@ -584,9 +584,9 @@ int Pascal set_var(const char var[NVSIZE+1], char * value)	/* set a variable */
 		/* if $debug == TRUE, every assignment will echo a statment to
 							that effect here. */
 	if (macbug && (strcmp(var, "%track") != 0))
-	{ ++discmd;
+	{ ++g_discmd;
 	  mlwrite("(%s <- %s)", var, value);
-    --discmd;
+    --g_discmd;
 	  update(TRUE);
 	        
 	  if (getkey() == abortc) /* and get the keystroke to hold the output */
@@ -681,8 +681,10 @@ int Pascal svar(int var, char * value)	/* set a variable */
 #if S_WIN32
 //    when EVWINTITLE: setconsoletitle( value );
 #endif
-	    when EVHARDTAB:	 tabsize = val;
-                  	   curbp->b_tabsize = val;
+	    when EVHARDTAB:	 if (val > 0)
+                       { tabsize = val;
+                  	     curbp->b_tabsize = val;
+                       }
 	                     upwind();
 	    when EVPAGELEN:	 cc = newdims(term.t_ncol, val);
 	    when EVCURWIDTH: cc = newdims(val, term.t_nrowm1+1);
@@ -852,10 +854,10 @@ char *Pascal getval(char * tgt, char * token)
 	{ case TKNUL:   return "";
 	  case TKARG:			/* interactive argument */
 						getval(&token[0], &token[1]);
-		      { int sdc = discmd;	/* echo it always! */
-						discmd = TRUE;
+		      { int sdc = g_discmd;	/* echo it always! */
+						g_discmd = TRUE;
 						cc = getstring(&tgt[0], NSTRING, token);
-						discmd = sdc;
+						g_discmd = sdc;
 						if (cc == ABORT)
 						  return getvalnull;
 						return tgt;
@@ -1004,7 +1006,7 @@ void Pascal mkdes()
 
 Pascal desvars(int f, int n)
 
-{ register int uindex = curbp->b_tabsize;   /* index into uvar table */
+{ int uindex = curbp->b_tabsize;   /* index into uvar table */
         
   openwindbuf(TEXT56);
   curbp->b_tabsize = uindex;

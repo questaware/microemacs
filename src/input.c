@@ -351,12 +351,12 @@ int  getcmd()
  */
 int  mlyesno(char * prompt)
 
-{ register int  c = discmd;		/* input character */
+{ int  c = g_discmd;		/* input character */
   
-  discmd = TRUE;
+  g_discmd = TRUE;
 						/* " [y/n]? " */
   mlwrite("%s%s", prompt, TEXT162, null);
-  discmd = c;
+  g_discmd = c;
 							/* get the response */
   c = getcmd();   /* getcmd() lets us check for anything that might */
 			  /* generate a 'y' or 'Y' in case use screws up */
@@ -562,12 +562,12 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 	  
 { int llix = -1;
   int llcol = -1;
-  register int c;             /* current input character */
-           int fulllen = 0;    /* maximum buffer position */
-  register int cpos = 0;
-           char * autostr = "";
+  int c;             /* current input character */
+  int fulllen = 0;    /* maximum buffer position */
+  int cpos = 0;
+  char * autostr = "";
 #if S_MSDOS == 0
-	   int twid = FALSE;
+	int twid = FALSE;
 #endif
 	int redo = 0;
 
@@ -735,7 +735,7 @@ getliteral:
       buf[cpos] = ch;
       
 #if S_MSDOS
-      if (disinp <= 0)
+      if (g_disinp <= 0)
 				ch = '*';
       mybuf[0] = ch;
       mybuf[1] = 0;
@@ -799,7 +799,7 @@ char * complete(char * prompt, char * defval, int type, int maxlen)
   int cc = getstr(gs_buf, NSTRING-2, plen, type);
   (void)cursor_on_off(scoo);
   return cc == FALSE && defval ? defval :
-         cc == ABORT	       ? null   : gs_buf;
+         cc == ABORT	         ? null   : gs_buf;
 }
 #endif
 }
@@ -841,7 +841,7 @@ char * gtfilename(char * prompt)
 
 void  outstring(const char * s) /* output a string of input characters */
 
-{ if (disinp > 0)
+{ if (g_disinp > 0)
     mlputs(s);
 }
 
@@ -849,7 +849,7 @@ void  outstring(const char * s) /* output a string of input characters */
 void  ostring(const char * s)	/* output a string of output characters */
 
 {
-  if (discmd)
+  if (g_discmd)
     mlputs(s);
 }
 

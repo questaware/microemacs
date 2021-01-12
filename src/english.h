@@ -22,14 +22,14 @@ extern /*const*/ char * TEXT64a[3];
 
 #define TEXT119 TEXT99
 
-#define	TEXT1	"[Starting new CLI]"
-#define	TEXT2	"[Cannot write filter file]"
-#define	TEXT3	"[Execution failed]"
-#define	TEXT4	"Shell variable TERM not defined!"
-#define	TEXT5	"Terminal type not 'vt100'!"
-#define	TEXT6	"\r\n[End]"
-#define	TEXT7	"Line to GOTO: "
-#define	TEXT9	"Mark %d set"
+#define	TEXT1	  "[Starting new CLI]"
+#define	TEXT2	  "[Cannot write filter file]"
+#define	TEXT3	  "[Execution failed]"
+#define	TEXT4	  "Shell variable TERM not defined!"
+#define	TEXT5	  "Terminal type not 'vt100'!"
+#define	TEXT6	  "\r\n[End]"
+#define	TEXT7	  "Line to GOTO: "
+#define	TEXT9	  "Mark %d set"
 #define	TEXT10	"Mark %d removed"
 #define	TEXT11	"No mark %d here"
 #define	TEXT12	"Help file not found"
@@ -110,6 +110,8 @@ extern /*const*/ char * TEXT64a[3];
 #define	TEXT97	"%%Missing ]"
 #define	TEXT98	"No fill column set"
 #define	TEXT100	"Words %D Chars %D Lines %d Avg chars/word %f"
+#define TEXT101 "Password? "
+#define TEXT102 "Only one save allowed"
 #define	TEXT103	"[Saving %s]\n"
 #define	TEXT104	"Modified buffers exist. Leave anyway"
 #define	TEXT105	"%%Macro already active"
@@ -205,7 +207,7 @@ extern /*const*/ char * TEXT64a[3];
 #define	TEXT200	"[Calling DCL]\r\n"
 #define	TEXT201	"[Not available yet under VMS]"
 #define	TEXT202	"Terminal type not 'vt52'or 'z19' !"
-#define	TEXT203	
+#define	TEXT203	"Nothing there"
 #define	TEXT204	"Cannot delete window"
 #define	TEXT205	"Cannot split a %d line window"
 #define	TEXT206	"Only one window"
@@ -223,5 +225,6 @@ extern /*const*/ char * TEXT64a[3];
 #define TEXT219 "Hit a mark, %d done" 
 #define TEXT220 "Interrupted"
 #define TEXT221 "Write to RO file?"
+#define TEXT222 "No Password"
 
 

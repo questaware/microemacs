@@ -71,8 +71,9 @@
       -x    Keep ^M characters in files being editted/viewed
       -z    select the newset file matching the pattern
       @filename   Name of the startup file; can be relative to emacs diry.
-      filename   Filenames may be specified with patterns using *,?
-      The first filename may be followed by :<linenumber>
+      filename    Filenames may be specified with patterns using *,?
+                  Any file name may be **user**@**host**:**file**
+                  The first filename may be followed by :**linenumber**
 
   *Fundamentals*
    The current position can be set as a (zero) mark by the set-mark command. 
@@ -213,21 +214,27 @@ execute-procedure        M-^E Execute named, not numbered macro
 execute-program          ^X$  Execute an OS command in the current task
 exit-emacs               ^X^C
                          A-3
-fetch-file                    The current line contains args <tab> password.
+fetch-file                    The current line contains args <tab> password <tab> opt.
                               The text of args following '/' is the file name.
-                              The command cmd is from the environment variable scp.
-                              The default is c:\bin\pscp.
-                              Executes command cmd -pw password args $(TEMP)/fname.
+                              If opt is present this means the file is not encrypted.
+                              The command cmd is from the environment variable scp;
+                              It must include the option for the password.
+                              The default is c:\bin\pscp -pw.
+                              Executes command cmd password args $(TEMP)/fname.
                               This command is permitted to fail.
-                              If the current file is encrypted then the same 
-                              key decrypts $(TEMP)/fname.
+                              If opt and the current file is encrypted then
+                              the same key decrypts $(TEMP)/fname.
                               The result is in a new buffer.
                               If the command succeeded then save-file saves the file
-                              by the command cmd -pw password $(TEMP)/fname args 
+                              by the command cmd -pw password $(TEMP)/fname args.
+                              Only one save is allowed and obliterates keys/passwords.
 fill-paragraph           M-Q
 filter-buffer            ^X#  Write the buffer to a temp, execute a command
                          ^X\       reading the contents, read in the output.
                          ^X|
+                               In Windows if the command has suffix .exe and
+                               can be found on the path do not use cmd.exe
+                               otherwise use cmd.exe
 find-file                ^X^F Read a file into a buffer, new if unique in name
 find-tag                 M-FN> Searches all files named tags up from the directory
                                of the file in the buffer.
@@ -333,6 +340,9 @@ set-fill-column          ^XF  For use in word processing
 set-mark                 M- 
                          M-.
 shell-command            ^X!  Execute an OS command in a new task
+                               In Windows if the command has suffix .exe and
+                               can be found on the path do not use cmd.exe
+                               otherwise use cmd.exe
                          A-6
 shrink-window            ^X^Z
 source                   M-^S execute-file

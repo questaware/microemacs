@@ -29,6 +29,12 @@ CONSOLE_SCREEN_BUFFER_INFO csbiInfo;   /* Console information */
 #define BG_GRAY (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE)
 
 
+long unsigned int thread_id(void)
+
+{ return GetCurrentThreadId();
+}
+
+
 void ClearScreen( void )
 {
           DWORD    dummy;
@@ -66,6 +72,7 @@ int argc__ = 2;
 #if VS_CHAR8
 #define SC_CHAR char
 #define SC_WORD WORD
+
 #else
 #define SC_CHAR wchar_t
 #define SC_WORD DWORD
@@ -98,8 +105,7 @@ wchar_t * char_to_wchar(char const * src, int sz, wchar_t * tgt)
 
 int main(int argc, char * argv[])
 
-{
-	SC_CHAR modulename[129];
+{	SC_CHAR modulename[129];
 	HINSTANCE hInstance = GetModuleHandle(NULL);	 // Grab An Instance For Window
 	GetModuleFileName(hInstance, modulename, sizeof(modulename)-1);
 
@@ -108,12 +114,13 @@ int main(int argc, char * argv[])
 	(void)wchar_to_char(modulename);
 #endif
 	flook_init(modulename);
-
-    /* Get display screen information & clear the screen.*/
+										    /* Get display screen information & clear the screen.*/
 	g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
 
+#if 0
   if (SetConsoleMode(g_ConsOut, ENABLE_PROCESSED_OUTPUT) == 0)
     flagerr("SCMO %d");
+#endif
 
 	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
 //GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfoO );
@@ -129,25 +136,6 @@ int main(int argc, char * argv[])
   /*CloseHandle( g_ConsOut );*/
 }
 
-#if 0
-
-int	cfcolor = C_WHITE;		/* current forground color */
-int	cbcolor = C_BLACK;		/* current background color */
-extern const short ctrans_[];		/* ansi to ibm color translation table */
-
-/* editor variable: cmt_colour;		   comment colour in ibm */
-
-
-#if	COLOR
-
-void Pascal tcapbfcol(color)	/* set the current output color */
-	unsigned int color;
-{ cbcolor = ctrans_[color>>8];
-  cfcolor = ctrans_[color & 0xf];
-}
-#endif
-#endif
-
 
 void Pascal setconsoletitle(char * title)
 
@@ -160,6 +148,7 @@ void Pascal setconsoletitle(char * title)
 	swprintf(buf, 100, L"%S", title == null ? "" : title);
 #endif
   SetConsoleTitle( title == NULL ? "" : txt);
+#undef txt
 }
 
 
@@ -185,8 +174,7 @@ void setMyConsoleIP()
 
 void Pascal tcapsetsize(int wid, int dpth)
 
-{ int ct = 1;
-//DWORD mode;
+{//DWORD mode;
   COORD size;
   size.X = wid;
   size.Y = dpth;
@@ -195,13 +183,13 @@ void Pascal tcapsetsize(int wid, int dpth)
 
 //GetConsoleMode(g_ConsOut, &mode);
 //mode &= ~ENABLE_WRAP_AT_EOL_OUTPUT;
-{ HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
-  SetConsoleMode(consin, ENABLE_WINDOW_INPUT);
+{// HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
+ // SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 
   GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
 	// set the screen buffer to be big enough
 
-  while (--ct >= 0 && csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top < dpth)
+  if (csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top < dpth)
   { int rc;
 //  mlwrite("%d Ws %d Cp %d MWS %d dpth %d", ct, csbiInfo.dwSize.Y, 
 //                                csbiInfo.dwCursorPosition.Y,
@@ -298,15 +286,10 @@ void Pascal tcapeeol()
 
 void Pascal tcapeeop()
 
-{ register int row;
+{ int row;
 /* awaitgap(); */
   for (row = term.t_nrowm1+1; --row >= 0; )
     tcapbeeol(row, 0);
-}
-
-int Pascal tcapcres(char * res) /* change screen resolution */
-
-{ return OK;
 }
 
 #if 0
@@ -321,15 +304,15 @@ void Pascal tcapscreg(row1, row2)
 
 void Pascal ttscupdn(n)                  /* direction the window moves */
         int   n;   
-{ COORD doo;
-  SMALL_RECT rect;
-  CHAR_INFO ci;
-  rect.Right = csbiInfo.dwSize.X;
-  rect.Bottom = csbiInfo.dwSize.Y;
-  rect.Top = 0;
-  rect.Left = 0;
+{ CHAR_INFO ci;
+	SMALL_RECT rect;
+	COORD doo;
   doo.Y = 0;
   doo.X = 0;
+  rect.Top = 0;
+  rect.Left = 0;
+  rect.Right = csbiInfo.dwSize.X;
+  rect.Bottom = csbiInfo.dwSize.Y;
   
   if (n < 0)
     rect.Top += n;
@@ -368,8 +351,8 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
   { if (ch != '\b')
     { col += 1; 
       if (col >= csbiInfo.dwSize.X)
-      { int sd = discmd;
-      	discmd = 0;
+      { int sd = g_discmd;
+      	g_discmd = 0;
 				mlwrite("Row %d Col %d Lim %d", ttrow, col, csbiInfo.dwSize.X);
 				mbwrite(lastmesg);
 				return;
@@ -400,8 +383,7 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 
 int Pascal tcapbeep()
 
-{ 
-  Beep( 500, 250 /*millisecs*/);
+{ Beep( 500, 250 /*millisecs*/);
 //mbwrite("BEEP\n");
   return OK;
 }
@@ -429,9 +411,8 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 	unsigned long n_out;
 	WORD attr = color;
 
-	COORD 		Coords;
-
-	register int col;
+	COORD Coords;
+	int col;
 
 	Coords.Y = row;
 			 

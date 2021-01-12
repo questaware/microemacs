@@ -49,7 +49,7 @@ btk execute-macro-1 
   !if &not $status
     !force next-buffer
   !endif
-  !if &not $status
+  !if &or &not $status &seq $cbufname %mybuf
     !force exit-emacs
   !endif
   !force delete-buffer %mybuf

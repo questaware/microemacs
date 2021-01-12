@@ -27,8 +27,10 @@ in a directory on the path.
 ###Examples <h3>
 
  * dir | e
+ * e .
  * e README.md
- * e -bRM.mm README.md
+ * e guest@computer:shared/file.txt
+ * e -b.mm README.md
  * demote-buffer
  * fetch-file
  * word-search

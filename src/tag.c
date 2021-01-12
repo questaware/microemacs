@@ -303,7 +303,7 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
  * Note file must be an array meBUF_SIZE_MAX big
  */
 static Bool
-findTagSearch(const char * fromfile, const char *key, char *tagline, int tlsz)
+findTagSearch(const char * fromfile, const char *key, char *tagline)
 {
     static char tagf[] = "../tags";
            char * tagFile;
@@ -336,8 +336,7 @@ findTagSearch(const char * fromfile, const char *key, char *tagline, int tlsz)
 		int sl_tl = strlen(tagline);
 		g_tagLastFile = malloc(sl_tf+sl_tl+260*2);
 		strcpy(g_tagLastFile,tagFile);
-		g_tagLastName = g_tagLastFile+sl_tf+260;
-		strcpy(g_tagLastName,tagline);
+		g_tagLastName = strcpy(g_tagLastFile+sl_tf+260, tagline);
 		return true;
       }
       else	  /* continue search. Ascend tree by getting the directory path */
@@ -353,6 +352,7 @@ findTagSearch(const char * fromfile, const char *key, char *tagline, int tlsz)
     }}
     
     MLWRITE(g_tagLastFile != null ? "No More Tags" : "[tag %s not in tagfiles]", key);
+	g_tagLastName = NULL;
     return false;
 }
 
@@ -376,7 +376,7 @@ int main(int argc, char * argv[])
 	char tagline[1025];
     strcpy(tagline, "NOVAL");
     
-    while (findTagSearch(".", tag, tagline, sizeof(tagline-1)) && --clamp >= 0)
+    while (findTagSearch(".", tag, tagline) && --clamp >= 0)
 	{	char * tl = tagline+strlen(tagline);
 		while (*++tl != 0 && isspace(*tl))
 		  ;
@@ -398,7 +398,7 @@ findTagExec(const char tag[])
     char fullfilename[256+1];
     char * fn = curbp->b_fname == NULL ? "." : curbp->b_fname;
     
-    if (!findTagSearch(fn, tag, tagline, sizeof(tagline)-1))
+    if (!findTagSearch(fn, tag, tagline))
         return false ;
     
     file = skipspaces(tagline + strlen(tagline) + 1, tagline+1024);
@@ -446,10 +446,9 @@ findTagExec(const char tag[])
 
     strpcpy(tagline,pat,1024);
 
-	if (ss[0] == 0)
-	{ strpcpy(pat, tag, sizeof(pat)-20);
-	  strcat(pat, "[^A-Za-z0-9_]");
-	}
+	if (ss[0] == 0)	
+	    strcat(strpcpy(pat, tag, sizeof(pat)-20), "[^A-Za-z0-9_]");
+	
 	else			/* look for the end '/' or '?' - start at the end and look backwards */
 	{	dd = ss + strlen(ss) ;
 	    while (--dd != ss)
@@ -458,25 +457,16 @@ findTagExec(const char tag[])
 	        break ;
 	      }
 		    
-		dd = pat;
+		dd = pat - 1;
 		
 		while ((cc=*ss++) != 0 && dd - pat < sizeof(pat) - 3)
 		{
-			if (cc == '\\')
-	    	{   *dd++ = '\\' ;
-	        	*dd++ = *ss++ ;
-	    	}
-	    	else
-	    	{/*	if (cc == '[' || cc == '*' || cc == '+' ||
-				    cc == '.' || cc == '?' || cc == '$')
-					*dd++ = '\\' ;*/
-				*dd++ = cc ;
-			}
+			*++dd = cc ;
+			if (cc == '\\')         // What was intended here? double backslash?
+	    	    *++dd = '\\' ;
 		}
 	
-		if (dd[-1] == '$')
-		    (--dd)[-1] = '$';
-		*dd = 0 ;
+		*++dd = 0 ;
 	}
 
     mcstr(MDMAGIC);

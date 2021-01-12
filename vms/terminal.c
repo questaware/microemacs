@@ -818,13 +818,6 @@ tcaprev(int state)		/* change reverse video status */
 }
 
 
-tcapcres(char * src)	/* change screen resolution */
-
-{
-	return TRUE;
-}
-
-
 spal(int dummy) /* change palette string */
 
 {

@@ -9,7 +9,7 @@ CPP_PROJ=/nologo /W3 /O1 /Os /Og /Oy /GF $(C_FLG) /D "WIN32" /D "WIN32_LEAN_AND_
 RSC=rc.exe
 
 LINK32=cl.exe
-LINK32_FLAGS= /Fm $(C_FLG) /Fe.\e.exe
+LINK32_FLAGS=/nologo /Fm $(C_FLG) /Fe
 
 else
 
@@ -18,7 +18,7 @@ CPP=cl.exe
 CPP_PROJ=/nologo /YX /Yd /W3 /Zi /MDd /Od /I "../src" /D WIN32_LEAN_AND_MEAN /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /c 
 RSC=rc.exe
 LINK32=link
-LINK32_FLAGS=/nologo /debug /out:e.exe
+LINK32_FLAGS=/nologo /debug /out:
 
 endif
 
@@ -79,7 +79,13 @@ sleep.obj
 
 e.exe : $(LINK32_OBJS)
 	spath -a $(LINK32)
-	$(LINK32) $(LINK32_FLAGS) $(LINK32_OBJS)  winmm.lib kernel32.lib user32.lib
+	$(LINK32) $(LINK32_FLAGS)./e.exe $(LINK32_OBJS)  winmm.lib kernel32.lib user32.lib
+
+testpipe.exe : testpipe.obj sleep.obj
+	$(LINK32) $(LINK32_FLAGS)./testpipe.exe testpipe.obj sleep.obj winmm.lib kernel32.lib user32.lib
+
+testshell.exe : testshell.obj
+	$(LINK32) $(LINK32_FLAGS)./testshell.exe testshell.obj sleep.obj winmm.lib kernel32.lib user32.lib
 
 clean :
 	-rm *.obj

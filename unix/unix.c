@@ -13,6 +13,7 @@
 #include  <termio.h>
 #include  <time.h>
 #include  <unistd.h>
+#include  <pthread.h>
 #include  <sys/select.h>
 #include  <sys/time.h>
 #undef CTRL
@@ -119,6 +120,12 @@ void printf()
 }
 
 #endif
+
+
+long unsigned int thread_id(void)
+
+{ return pthread_self();
+}
 
 				/* must be int for signal() */
 void tidyup(int n)
@@ -561,7 +568,7 @@ int filter(int f, int n)
   else
   { usehost(strcat(line," </tmp/fltinp >/tmp/fltout"), FALSE);
 					  /* on failure, escape gracefully */
-    cc = readin(filnam2,FALSE);
+    cc = readin(filnam2,0);
     unlink(filnam1);			  /* and get rid of the temporary file */
     unlink(filnam2);
   }

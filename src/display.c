@@ -334,7 +334,7 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 	lp->l_props = 0;			/* restored below */
 
 	while (--len >= 0)
-	{	char c = *++str;
+	{	int c = *++str;
 
 		if (vtc >= term.t_ncol)
 			tgt[term.t_ncol - 1] = (short)(CHROM_OFF+'$');
@@ -401,12 +401,13 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 				         ((str[-1] > ' ' || len > 2 && str[(c==str[1])+1] > ' ')))
 				{ if      (str[-1] == '\\')
 				    --vtc;
-				  else if (mode & Q_IN_CMT+Q_IN_CMT0)
+				  else if (mode & Q_IN_CMT0+Q_IN_CMT)
 				  { if (c == markupterm[0] && (markupterm[1] == 0 || markupterm[1] == c))
 				    { str += markupterm[1] != 0;
               len -= markupterm[1] != 0;
 				      chrom_on = 1;
 				      chrom_nxt = CHROM_OFF;
+				      mode &= ~(Q_IN_CMT0+Q_IN_CMT);
 				      continue;
 				    }
 				  }
@@ -1272,7 +1273,7 @@ void Pascal mlout(char c)
 	}
 	else
 	{ 
-		if (discmd < 0)
+		if (g_discmd < 0)
 		{  fmtstr[(fmtstr_ix++) & 0x7f] = c;
 			 return;
 		}
@@ -1281,8 +1282,8 @@ void Pascal mlout(char c)
 			return;
 		lastmesg[ttcol] = c;
 	}
-	if (discmd > 0)
-	{ int notused = discmd;
+	if (g_discmd > 0)
+	{ int notused = g_discmd;
 		lastmesg[ttcol+1] = 0;
 		
 		ttputc(/*(char)*/c);
@@ -1363,7 +1364,7 @@ void Pascal mlputf(int s)
 int mlwrite(const char * fmt, ...)
 {
 		Bool scoo;
-		int sdiscmd = discmd;
+		int sdiscmd = g_discmd;
  register int ch;
 #define fmtch '%'
 
@@ -1373,7 +1374,7 @@ int mlwrite(const char * fmt, ...)
 	mlputli_width = 0;
 	fmtstr_ix = 0;
 
-	if (discmd == 0)
+	if (g_discmd == 0)
 		return 0;
 
 	scoo = cursor_on_off(false);
@@ -1405,7 +1406,7 @@ int mlwrite(const char * fmt, ...)
 			switch (ch+'0')
 			{  case 'w': TTflush();
 									 millisleep(4800);
-				 when '>': discmd = -1;
+				 when '>': g_discmd = -1;
 				 when 'x': radix += 6;
 				 case 'd': radix += 2;
 				 case 'c': 
@@ -1435,7 +1436,7 @@ int mlwrite(const char * fmt, ...)
 	TTflush();
 #endif
 	mpresf = TRUE;
-	if (discmd < 0)
+	if (g_discmd < 0)
 	{ fmtstr[(fmtstr_ix & 0x7f)] = 0; 	/* terminate lastmesg[] */
 		(void)linstr(fmtstr);
 		loglog1("mlw %s", fmtstr);
@@ -1450,8 +1451,8 @@ int mlwrite(const char * fmt, ...)
 		loglog1("mlw %s", lastmesg);
 	}
 		
-	ch = discmd;
-	discmd = sdiscmd;
+	ch = g_discmd;
+	g_discmd = sdiscmd;
 	(void)cursor_on_off(scoo);
 	return ch < 0 ? fmtstr_ix : ttcol;				/* Number of characters */
 }
@@ -1462,16 +1463,16 @@ int mlwrite(const char * fmt, ...)
 		*/
 void Pascal mlforce(const char * s)
 
-{ int oldcmd = discmd;
-	discmd = TRUE;
-	if (gflags & MD_NO_MMI)
-		discmd = FALSE;
+{ int oldcmd = g_discmd;
+	g_discmd = TRUE;
+//if (gflags & MD_NO_MMI)
+//	g_discmd = FALSE;
 #if S_BORLAND
 	mlwrite(const_cast<char *>(s));
 #else
 	mlwrite(s);
 #endif
-	discmd = oldcmd;
+	g_discmd = oldcmd;
 }
 
 

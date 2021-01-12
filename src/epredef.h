@@ -90,13 +90,13 @@ extern NOSHARE int predefvars[];
 #define keyct   predefvars[EVKEYCT]
 #define tabsize	 predefvars[EVHARDTAB]
 //#define stabsize predefvars[EVSOFTTAB]
-#define hjump	   predefvars[EVHJUMP]
+#define hjump	     predefvars[EVHJUMP]
 #define cmt_colour predefvars[EVCMTCOL]
-//#define flickcode  predefvars[EVFLICKER]
+//#define flickcode predefvars[EVFLICKER]
 #define macbug	   predefvars[EVDEBUG]
 #define cmdstatus  predefvars[EVSTATUS]
-#define discmd	   predefvars[EVDISCMD]  /* 0 : nowt, -1 record only */
-#define disinp	   predefvars[EVDISINP]
+#define g_discmd	 predefvars[EVDISCMD]  /* 0 : nowt, -1 record only */
+#define g_disinp	 predefvars[EVDISINP]
 #define modeflag   predefvars[EVMODEFLAG]
 #define sscroll    predefvars[EVSSCROLL]
 #define ssave      predefvars[EVSSAVE]

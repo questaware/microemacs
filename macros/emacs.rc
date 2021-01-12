@@ -1,12 +1,3 @@
-2 handle-tab
-
-15 store-macro
-  insert-string "F	"
-!endm
-
-btk execute-macro-15 A-Q
-
-
 set $discmd 0
 set $sscroll TRUE
 set $col1ch 1
@@ -50,7 +41,7 @@ btk execute-macro-1 
   !if &not $status
     !force next-buffer
   !endif
-  !if &not $status
+  !if &or &not $status &seq %mybuf $cbufname
     !force exit-emacs
   !endif
   !force delete-buffer %mybuf
@@ -136,7 +127,7 @@ btk execute-macro-9 A-C
 
 10 store-macro 		; do line
 ; set %oo @&cat "key " $lastkey
-  !if &equ $lastkey 50
+  !if &equ $lastkey 2098
     next-line
   !endif
   execute-macro
@@ -145,6 +136,7 @@ btk execute-macro-9 A-C
   !endif
 !endm
 
+btk end-macro A-FNx
 btk execute-macro-10 FN2
 btk execute-macro-10 FN^2
 
@@ -155,7 +147,7 @@ btk execute-macro-10 FN^2
 
 btk execute-macro-11 ^D
 
-;12 store-macro		; Not in use
+; 12 store-macro		; Not in use
 
 13 store-macro         ; expand macros
   !if &equ $uarg 0
@@ -175,6 +167,13 @@ btk execute-macro-13 M-I
 btk execute-macro-14 FNC
 btk yank M-FNC
 
+15 store-macro
+  set %scp "pscp -P 2202 -pw "
+;  insert-string "F	"
+!endm
+
+btk execute-macro-15 A-Q
+
 16 store-macro		; eow, bol or bof
 ; set %oo @&cat "key " $lastkey
   !if &equ  $lastkey 60
@@ -191,7 +190,8 @@ btk yank M-FNC
   !endif
 !endm
 
-btk execute-macro-16 FN<
+btk beginning-of-line FN<
+btk search-incls     M-FN<
 btk execute-macro-16 M-FND
 
 ;btk end-of-line FN>
@@ -216,9 +216,9 @@ btk backward-word FN0
 btk next-word FN:
 btk end-of-line FN;
 
-btk forward-character ^L
+btk redraw-display ^L
 
-btk clear-and-redraw M-^[
+btk clear-and-redraw M-^L
 
 18 store-macro       ; 
 ;  set %oo @&cat "key " $lastkey
@@ -273,8 +273,10 @@ btk save-file ^XA-S
 btk select-buffer ^XB
 btk next-buffer M-FN;
 btk last-buffer M-FN9
-btk move-window-down  M-FNN
-btk move-window-up  M-FNP
+btk move-window-down A-FNN
+btk move-window-up   A-FNP
+btk next-window     M-FNN
+btk previous-window M-FNP
 btk find-tag M-FN>
 
 btk help A-1               ; SNA like
@@ -292,4 +294,4 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".sql=^4.h=2.c=2.cpp=2"
+set $fileprof ".sql=^4.h=2.c=2.cpp=2.py=2"

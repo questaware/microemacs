@@ -35,8 +35,7 @@ int Pascal hidebuffer(int f, int n)
 
 int Pascal nextbuffer(int f, int n)  /* switch to the next buffer in the buffer list */
 
-{
-	if (f == FALSE)
+{	if (f == FALSE)
 		n = 1;
 
 {	register BUFFER *bp = NULL;	/* current eligible buffer */
@@ -48,18 +47,37 @@ int Pascal nextbuffer(int f, int n)  /* switch to the next buffer in the buffer 
 	return (int)bp;
 }}
 
+#if _DEBUG
+
+void scan_buf_lu()
+
+{ BUFFER *bp;
+	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+		if ((bp->b_flag & BFINVS) == 0)
+		{ int x = bp->b_luct;
+		  char bname[100];
+		  strcpy(bname, bp->b_bname);
+		}
+}
+
+#endif
+
+
 
 int g_top_luct;
-
 
 int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 
 { BUFFER *bp;
 	BUFFER *bestbp= NULL;
-  BUFFER * topbp = NULL;
+  BUFFER * maxbp = NULL;
   short tgtlu = curbp->b_luct - 1;
 	short bestlu = -1;
 	short toplu = -1;
+
+#if _DEBUG
+  scan_buf_lu();
+#endif
 
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
 		if ((bp->b_flag & BFINVS) == 0)
@@ -67,31 +85,28 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 			if (lu == 0)
 				continue;
 
-      if      (lu <= tgtlu)
-      { if (lu == tgtlu)
-          break;
-        if (lu > bestlu)
-	  		{ bestbp = bp;
-		  		bestlu = lu;
-			  }
-        bestbp = bp;
+      if (lu > toplu)
+      { toplu = lu;
+        maxbp = bp;
       }
-      else if (lu >= toplu)
-			{ topbp = bp;
-				toplu = lu;
+      if (lu <= tgtlu && lu > bestlu)
+	  	{	bestbp = bp;
+		  	bestlu = lu;
+        if (lu == tgtlu)
+          break;
 			}
     }
 
-  if (bp == NULL)
-  	bp = bestbp != NULL ? bestbp : topbp;
+  if (bestbp == NULL && maxbp != NULL)
+  	bestbp = maxbp;
 
-	if (bp == NULL || bp == curbp)
+	if (bestbp == NULL)
 		return FALSE;
 
-  tgtlu = bp->b_luct;
-	(void)swbuffer(bp);
+  bestlu = bestbp->b_luct;
+	(void)swbuffer(bestbp);
+	bestbp->b_luct = bestlu;
   --g_top_luct;
-  bp->b_luct = tgtlu;
 	return TRUE;
 }
 
@@ -113,12 +128,11 @@ int Pascal topluct()	/* calculate top luct */
 
 Pascal swbuffer(BUFFER * bp_) /* make buffer BP current */
 	
-{
-	register BUFFER *bp = bp_;
-	register WINDOW *wp;
+{	BUFFER *bp = bp_;
+	WINDOW *wp;
 
 	if (g_gmode & MDCRYPT && bp->b_key == NULL)
-//			if (ekey != null)
+//if (g_ekey != null)
 		setekey(&bp->b_key);
 
 	if (bp->b_langprops & BCFOR)
@@ -134,7 +148,7 @@ Pascal swbuffer(BUFFER * bp_) /* make buffer BP current */
 	curbp = bp; 			/* Switch. */
 	if (!(bp->b_flag & BFACTIVE) && bp->b_fname != null)/*buffer not active yet*/
 	{
-		readin(bp->b_fname, TRUE);
+		readin(bp->b_fname, FILE_LOCK);
 		curwp->w_flag |= WFFORCE;
 	}
 	if (bp->b_nwnd < 0)
@@ -187,8 +201,8 @@ BUFFER *Pascal getdefb()	/* get the default buffer for a use or kill */
  */
 int Pascal usebuffer(int f, int n)
 {
-	register BUFFER *bp = getdefb();	/* temporary buffer pointer */
-					/* get the buffer name to switch to */
+	BUFFER *bp = getdefb();	/* temporary buffer pointer */
+                					/* get the buffer name to switch to */
 				
 	bp = getcbuf(TEXT24, bp ? bp->b_bname : "main", TRUE);
 /*					"Use buffer" */
@@ -216,32 +230,78 @@ int Pascal usebuffer(int f, int n)
  */
 int Pascal killbuffer(int f, int n)
 
-{ register BUFFER * bp = getdefb(); /* ptr to buffer to dump */
-								/* get the buffer name to kill */
-	bp = getcbuf(TEXT26, bp ? bp->b_bname : "main", TRUE);
-				/*				 "Kill buffer" */
+{ BUFFER * nxt_bp = getdefb();
+					                    			/* get the buffer name to kill */
+	BUFFER * bp = getcbuf(TEXT26, nxt_bp ? nxt_bp->b_bname : "main", TRUE);
+				             /* "Kill buffer" */
 #if S_WIN32
 #if GOTTYPAH
 	flush_typah();
 #endif
 #endif
 
-	while (bp != NULL) /* once only */
-	{
-		if (bp == curbp)
-		{ 
-			if (bp->b_nwnd <= 0 || bp->b_bufp == NULL && lastbuffer(0, 1) == TRUE)
-				;
-			else
-				nextbuffer(0, 1);
-			break;
-		}
-		
-		return zotbuf(bp);
+	return bp->b_nwnd > 0 && bp == curbp && nextbuffer(0, 1) == (int)NULL ? ABORT
+                                                                        : zotbuf(bp);
+}
+
+
+
+static void init_buf(BUFFER * bp, LINE * lp)
+
+{	bp->b_doto = 0;
+	bp->b_remote = NULL;
+/*bp->b_fcol = 0;*/
+	bp->b_dotp		 = lp;
+	bp->b_baseline = lp;
+	bp->b_wlinep	 = lp;
+	lp->l_fp = (Lineptr)lp;
+	lp->l_bp = (Lineptr)lp;
+  lp->l_props 	 = L_IS_HD;
+}
+
+
+/*
+ * This routine blows away all of the text in a buffer.
+ * If the buffer is marked as changed then we ask if it is ok;
+ * The window chain is nearly always wrong if this gets called; 
+ * the caller must arrange for the updates that are required. 
+ * Return TRUE if everything looks good.
+ */
+int Pascal bclear(BUFFER * bp_)
+	
+{ LINE * 	lp;
+	LINE * 	nlp;
+	BUFFER * bp = bp_;
+	int 	 s;
+
+	if ((bp->b_flag & (BFINVS+BFCHG)) == BFCHG /* Not scratch buffer.  */
+							 /* Something changed 	 */
+	 && (s=mlyesno(TEXT32)) != TRUE)
+/*					"Discard changes" */
+		return s;
+
+	memset((char *)&bp->mrks, 0, sizeof(MARKS));
+	for (nlp = lforw(bp->b_baseline); 
+			((lp = nlp)->l_props & L_IS_HD) == 0; )
+	{ nlp = lforw(lp);
+		free((char*)lp);
 	}
 
-	return ABORT;
-}
+/*loglog1("Rebaseline %x", lp); */
+
+	init_buf(bp, lp);
+	bp->b_flag &= ~BFCHG; 		/* Not changed		*/
+
+{ WINDOW * wp;
+	for (wp = wheadp; wp != NULL; wp = (wp)->w_wndp)
+		if (wp->w_bufp == bp)
+		{ wp->w_dotp = bp->b_baseline;
+			wp->w_doto = 0;
+			memset(&wp->mrks, 0, sizeof(MARKS));
+		}
+	resetlcache();
+	return TRUE;
+}}
 
 
 
@@ -392,20 +452,6 @@ Pascal anycb()
 }
 
 
-static void init_buf(BUFFER * bp, LINE * lp)
-
-{	bp->b_doto = 0;
-	bp->b_remote = NULL;
-/*bp->b_fcol = 0;*/
-	bp->b_dotp		 = lp;
-	bp->b_baseline = lp;
-	bp->b_wlinep	 = lp;
-	lp->l_fp = (Lineptr)lp;
-	lp->l_bp = (Lineptr)lp;
-  lp->l_props 	 = L_IS_HD;
-}
-
-
 #define BCDEF (BINDENT+BCCOMT)
 #define BPRL	(BINDENT+BCPRL)
 
@@ -425,20 +471,17 @@ BUFFER *Pascal bfind(const char * bname,
 												"for","fre","inc","pre","f",  "sql","pas","md"};
 	const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL, BCDEF, BCDEF,
                   			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
-	register BUFFER *bp;
-	register LINE *lp;
-					 int cc = -1;
-				
-			/* find the place in the list to insert this buffer */
-	register BUFFER * sb = backbyfield(&bheadp, BUFFER, b_bufp);
+			 int cc = -1;
+                      			/* find the place in the list to insert this buffer */
+	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_bufp);
 
 	for (; sb->b_bufp != NULL; sb = sb->b_bufp) 
 	{ cc = strcmp(sb->b_bufp->b_bname, bname);
 #if 0
-{ 	FILE *track = fopen("emacs.log", "a");
+  { FILE *track = fopen("emacs.log", "a");
 		fprintf(track, "Cmp %d %s %s\n", cc, sb->b_bufp->b_bname, bname);
 		fclose(track);
-}
+  }
 #endif	
 		if (cc >= 0)
 			break;
@@ -452,7 +495,8 @@ BUFFER *Pascal bfind(const char * bname,
 	if (cflag == FALSE)
 		return null;
 
-	bp = (BUFFER *)aalloc(sizeof(BUFFER)+strlen(bname)+2);
+{ LINE *lp;
+	BUFFER *bp = (BUFFER *)aalloc(sizeof(BUFFER)+strlen(bname)+2);
 	if (bp == NULL)
 		return NULL;
 
@@ -468,13 +512,12 @@ BUFFER *Pascal bfind(const char * bname,
 						/* and set up the other buffer fields */
 		 /*bp->b_flag |= BFACTIVE; ** very doubtful !!! */
 	bp->b_flag = bflag | g_gmode;
-	bp->b_tabsize = tabsize;		/* default tab size is 8 */
+	bp->b_tabsize = tabsize <= 0 ? 8 : tabsize;		/* default tab size is 8 */
 
 	bp->b_bufp = sb->b_bufp;    /* insert it */
 	sb->b_bufp = bp;
-	strcpy(bp->b_bname, bname);
-	
-	for (cc = strlen(bname); --cc > 0 && bname[cc] != '.'; )
+
+	for (cc = strlen(strcpy(bp->b_bname, bname)); --cc > 0 && bname[cc] != '.'; )
 		;
 
 	bname += cc + 1;
@@ -487,51 +530,8 @@ BUFFER *Pascal bfind(const char * bname,
 	  	}
 
 	return bp;
-}
-
-/*
- * This routine blows away all of the text in a buffer.
- * If the buffer is marked as changed then we ask if it is ok;
- * The window chain is nearly always wrong if this gets called; 
- * the caller must arrange for the updates that are required. 
- * Return TRUE if everything looks good.
- */
-int Pascal bclear(BUFFER * bp_)
-	
-{
-	register LINE * 	lp;
-					 LINE * 	nlp;
-	register BUFFER * bp = bp_;
-	int 	 s;
-
-	if ((bp->b_flag & (BFINVS+BFCHG)) == BFCHG /* Not scratch buffer.  */
-							 /* Something changed 	 */
-	 && (s=mlyesno(TEXT32)) != TRUE)
-/*					"Discard changes" */
-		return s;
-
-	memset((char *)&bp->mrks, 0, sizeof(MARKS));
-	for (nlp = lforw(bp->b_baseline); 
-			((lp = nlp)->l_props & L_IS_HD) == 0; )
-	{ nlp = lforw(lp);
-		free((char*)lp);
-	}
-
-/*loglog1("Rebaseline %x", lp); */
-
-	init_buf(bp, lp);
-	bp->b_flag &= ~BFCHG; 		/* Not changed		*/
-
-{ WINDOW * wp;
-	for (wp = wheadp; wp != NULL; wp = (wp)->w_wndp)
-		if (wp->w_bufp == bp)
-		{ wp->w_dotp = bp->b_baseline;
-			wp->w_doto = 0;
-			memset(&wp->mrks, 0, sizeof(MARKS));
-		}
-	resetlcache();
-	return TRUE;
 }}
+
 
 
 Pascal unmark(int f, int n) /* unmark the current buffers change flag */

@@ -48,7 +48,7 @@ NOSHARE int g_numcmd = NCMDS;	/* number of bindable functions */
 NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
 NOSHARE int g_nosharebuffs = FALSE; /* never allow different files in the same buffer */
 
-NOSHARE char *ekey = NULL;		/* global encryption key	*/
+NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
 NOSHARE char *execstr = NULL;		/* pointer to string to execute */
 NOSHARE int g_execlevel = 0;	/* execution IF level		*/
 NOSHARE int gfcolor = 7;		/* global forgrnd color (white) */
@@ -145,7 +145,7 @@ Map_t namemap = mk_const_map(T_DOMSTR, 0, names);
 #define GOOD	0
 #endif
 
-char * invokenm;
+char * g_invokenm;
 char * homedir;
 
 
@@ -154,7 +154,7 @@ char * homedir;
 extern char lastline[MLIX+1][NSTRING];
 extern int  ll_ix;
 
-extern int timeout_secs;
+extern int g_timeout_secs;
 extern int macro_last_pos;
 
 
@@ -174,8 +174,8 @@ void Pascal dcline(int argc, char * argv[])
 	homedir = getenv("HOME");
 	if (homedir == NULL)
 		homedir = "";
-	if (invokenm == NULL)
-		invokenm = argv[0];
+	if (g_invokenm == NULL)
+		g_invokenm = argv[0];
 
 { register BUFFER *bp;
 	register int	carg; 		 /* current arg to scan */
@@ -212,11 +212,8 @@ void Pascal dcline(int argc, char * argv[])
 #if CRYPT 				
 				when 'K': /* -k<key> for code key */
 					if (filev[2] != 0)
-						ekey = mkkey(&filev[2]);
-//				if (ekey[0])
+						g_ekey = strdup(&filev[2]);
 					g_gmode |= MDCRYPT;
-//				else
-//					g_gmode &= ~MDCRYPT;
 #endif						
 				when 'R': /* -r restrictive use */
 					restflag = TRUE;
@@ -246,9 +243,9 @@ void Pascal dcline(int argc, char * argv[])
 				when 'V': /* -v for View File */
 					genflag |= MDVIEW; /* 0x100 */
 				when 'Z': g_newest = 1;
-				when 'W': timeout_secs = atoi(&filev[2]);
-									if (timeout_secs == 0)
-										timeout_secs = 900;			/* 15 minutes */
+				when 'W': g_timeout_secs = atoi(&filev[2]);
+									if (g_timeout_secs == 0)
+										g_timeout_secs = 900;			/* 15 minutes */
 			}
 		else if (filev[0]== '@')
 			startfile = &filev[1];
@@ -259,17 +256,23 @@ void Pascal dcline(int argc, char * argv[])
 				del_svn = 6;
 #endif
 		  if (filev[1] != 0)
-			for ( filev = (filev+2); *filev != 0; ++filev)
-			{
+		  { int ignore = 1;
+		  
+  			for ( filev = (filev+2); *filev != 0; ++filev)
+  			{
 #ifdef USE_SVN
-				if (*filev == '@')
-					del_svn = filev - argv[0] + 1000;
+  				if (*filev == '@')
+  					del_svn = filev - argv[0] + 1000;
 #endif
-			  if (*filev == ':' && filev - argv[0] > del_svn)
-			  { *filev = 0;
-					gline = atoi(filev+1);
-					break;
-			  }
+  				if (*filev == '@')
+  				  ignore = 2;
+
+  			  if (*filev == ':' && --ignore <= 0 && filev - argv[0] > del_svn)
+  			  { *filev = 0;
+  					gline = atoi(filev+1);
+  					break;
+  			  }
+  			}
 			}
 
 		  filev = argv[0];
@@ -281,11 +284,11 @@ void Pascal dcline(int argc, char * argv[])
 					--sl;
 				if (del_svn < 1000)
 				{ concat(spareline,"svncone ",filev," tmpdir", null);
-				  ttsystem(spareline);
+				  ttsystem(spareline, NULL);
 				  concat(spareline,"tmpdir/",&filev[sl+1], null);
 				  filev = spareline;
 				  concat(lastline[1],"copy ",filev," .", null);
-				  ttsystem(lastline[1]);
+				  ttsystem(lastline[1], NULL);
 				  del_svn = 1 - g_newest;
 				}
 				else
@@ -296,7 +299,7 @@ void Pascal dcline(int argc, char * argv[])
 				}
 		  }
 #endif
-		  if			(genflag & 2)
+		  if (genflag & 2)									// look along path
 		  { filev = (char *)flook(0, filev);
 				if (filev == null)
 					filev = argv[0];
@@ -359,7 +362,7 @@ void Pascal dcline(int argc, char * argv[])
 #ifdef _WINDOWS
 		mbwrite(startfile);
 #else
-		discmd = 1;
+		g_discmd = 1;
 		mlwrite(startfile);
 #endif
 	}
@@ -373,7 +376,7 @@ void Pascal dcline(int argc, char * argv[])
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
 	{ bp->b_flag |= g_gmode;
 	  if (bp->b_fname != NULL)
-	  	customise_buf(bp,bp->b_fname);
+	  	customise_buf(bp);
 	}
 
 	swbuffer(firstbp);
@@ -535,7 +538,7 @@ int main(int argc, char * argv[])
 #ifdef USE_SVN
 	if (del_svn)
 	{ 
-		ttsystem("rmdir /s/q tmpsvndir");
+		ttsystem("rmdir /s/q tmpsvndir", NULL);
 	}
 #endif
 #if CLEAN
@@ -839,7 +842,7 @@ Pascal quit(int f, int n)
 
 	if (status)
 	{ tcapmove(term.t_nrowm1, 0);
-		discmd = true;
+		g_discmd = true;
 #if S_MSDOS
 		if (ttrow != term.t_nrowm1)
 			mlwrite("\n\n");

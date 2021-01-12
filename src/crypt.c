@@ -2,6 +2,7 @@
 		written by Dana Hoggatt and Daniel Lawrence
 */
 #include	<stdio.h>
+#include	<string.h>
 #include	<stdlib.h>
 #include	"estruct.h"
 #include	"edef.h"
@@ -30,37 +31,26 @@ static int Pascal mod95(register int val)
 		val += 95;
 	return val;
 }
-
 #endif
-
-char * Pascal mkkey(const char * init)
-
-{ Char * res = malloc(strlen(init)+1);
-  return strcpy(res, init);
-}
-
-
 
 				/* reset encryption key of current buffer */
 int Pascal setekey(char * * key_ref)
 	
-{
-	char mykey[NPAT]; 	/* new encryption string */
+{	char mykey[NPAT]; 	/* new encryption string */
 	char * key = *key_ref;   
-	int odisinp = disinp;
-	disinp = -1; 				/* turn command input echo off */
+	int odisinp = g_disinp;
+	g_disinp = -1; 				/* turn command input echo off */
 
-			     /* get the string to use as an encrytion string */
+	                		     /* get the string to use as an encrytion string */
 {	
   int cc = key != null ? TRUE : mlreply(TEXT33, mykey, NPAT - 1);
-//int cc = key != null ? TRUE : getstring(mykey, NPAT - 1, TEXT33);
-																	/*			 "Encryption Key: " */
+																	 /* "Encryption Key: " */
 	if (cc == TRUE)
   { if (key == null)
 		{ mlwrite(" ");									/* clear it off the bottom line */
 			key = mykey;
 			if (mykey[0] == 0)
-				key = ekey;
+				key = g_ekey;
 			else
 			{ // char msg[30];
 			  extern int g_chars_since_shift;
@@ -72,12 +62,12 @@ int Pascal setekey(char * * key_ref)
 //		  mbwrite(msg);
 			}
 		}
-		*key_ref = mkkey(key);
+		*key_ref = strdup(key);
 		initcrypt(*key_ref, strlen(key));
 //	if (key != mykey && key != ekey)		/* not shared */ leakage allowed
 //		free(key);
 	}
-	disinp = odisinp;
+	g_disinp = odisinp;
 	return cc;
 }}
 
@@ -189,35 +179,33 @@ int Pascal setuekey(int f, int n)/* reset encryption key of current buffer */
  *
  **********/
 
-static Int key_ = 0;	/* 29 bit encipherment key */
-static int salt = 0;	/* salt to spice up key with */
+static Int g_key_ = 0;	/* 29 bit encipherment key */
+static int g_salt = 0;	/* salt to spice up key with */
 
 
 int Pascal ucrypt(char * bptr, int len)
-				/* buffer of characters to be encrypted */
-				/* number of characters in the buffer */
-{
-	register int cc;	/* current character being considered */
-	register int key = key_;
+                    	    		  	/* buffer of characters to be encrypted */
+                      		    		/* number of characters in the buffer */
+{ int key = g_key_;
 
 	while (len--)		/* for every character in the buffer */
-	{ cc = *bptr;		
+	{ int cc = *bptr;		
 				/* only encipher printable characters */
 	  if (cc >= ' ' && cc <= '~')
 	  {
 	      /* Feed the upper few bits of the key back into itself.
-		 This ensures that the starting key affects the entire message.
-		 Use effort here to prevent the key from exceeding 29 bits.
-		 This is so the autokey calculation in a later statement won't 
-		 overflow making the key go negative. 
-		 Machine behavior in these cases tends not to be portable.  */
+      		 This ensures that the starting key affects the entire message.
+      		 Use effort here to prevent the key from exceeding 29 bits.
+      		 This is so the autokey calculation in a later statement won't 
+      		 overflow making the key go negative. 
+      		 Machine behavior in these cases tends not to be portable.  */
 
 	    key = (key & 0x1FFFFFFFl) ^ ((key >> 29) & 0x3l);
 
 	     /**  Down-bias the character, perform a Beaufort encipherment, and 
-		  up-bias the character again.	We want key to be positive  
-		  so the left shift here will be more portable and the 
-		  mod95() faster   **/
+      		  up-bias the character again.	We want key to be positive  
+      		  so the left shift here will be more portable and the 
+      		  mod95() faster   **/
 #if 0
 	    cc = mod95((int)(key % 95) - (cc - ' ')) + ' ';
 #else
@@ -228,43 +216,43 @@ int Pascal ucrypt(char * bptr, int len)
 	    while (cc >= 950)
 	      cc -= 950;
 	    while (cc >= 95)
-              cc -= 95;
+        cc -= 95;
 	    while (cc < 0)
 	      cc += 95;
 	      
 	    cc = cc + ' ';
 #endif
 	     /**  the salt spices up the key a little bit, helping to obscure 
-		  any patterns in the clear text, particularly when all the 
-		  characters (or long sequences of them) are the same.	We do 
-		  not want the salt to go negative, or it will affect the key 
-		  too radically.  It is always a good idea to chop off cyclics 
-		  to prime values.  **/
+      		  any patterns in the clear text, particularly when all the 
+      		  characters (or long sequences of them) are the same.	We do 
+      		  not want the salt to go negative, or it will affect the key 
+      		  too radically.  It is always a good idea to chop off cyclics 
+      		  to prime values.  **/
 
-	    if (++salt >= 20857)	/* prime modulus */
-	      salt = 0;
+	    if (++g_salt >= 20857)	/* prime modulus */
+	      g_salt = 0;
 
 	     /**  our autokey (a special case of the running key) is being 
-		  generated by a weighted checksum of clear text, cipher 
-		  text, and salt.
+      		  generated by a weighted checksum of clear text, cipher 
+      		  text, and salt.
 
-		  I had to allow the older broken key calculation to let us 
-		  decrypt old files.  I hope to take this out eventually.**/
+      		  I had to allow the older broken key calculation to let us 
+      		  decrypt old files.  I hope to take this out eventually.**/
 
-	    key += key + (cc ^ *bptr) + salt;
+	    key += key + (cc ^ *bptr) + g_salt;
 	  }
 	  *bptr++ = cc; 		/* put character back into buffer */
 	}
-	key_ = key;
+	g_key_ = key;
 	return OK;
 }
 
 
-void Pascal initcrypt(register char *bptr, register unsigned len)
+void Pascal initcrypt(char *bptr, unsigned len)
 			/* buffer of characters to be encrypted */
 			/* number of characters in the buffer */
-{ key_ = 0;	/* set the new key */
-  salt = 0;	/* set the new salt */
+{ g_key_ = 0;	/* set the new key */
+  g_salt = 0;	/* set the new salt */
   ucrypt(bptr, len);
 }
 
