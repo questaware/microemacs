@@ -12,4 +12,4 @@ vp :
 db:
 	dumpbin /headers e.exe
 sb:
-	editbin /stack:0x200000,0x2000 e.exe
+	editbin /bind /largeaddressaware:no /stack:0x20000,0x2000 /heap:2000000 e.exe

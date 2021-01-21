@@ -22,7 +22,8 @@
 #include	"msdir.h"
 #include	"logmsg.h"
 
-extern int   g_crlfflag;
+extern int    g_crlfflag;
+extern char * g_fline;					/* from fileio.c */
 
 /*extern int sp_langprops;			** inherited */
 
@@ -328,32 +329,7 @@ int Pascal viewfile(int f, int n)	/* visit a file in VIEW mode */
 }}
 
 #if CRYPT == 0
-# define resetkey()
-#else
-
-
-static void Pascal cryptremote()
-
-{ char remote_key[100];                    // Security by obscurity?
-  strcpy(remote_key, int_asc((int)(thread_id() & 0x7fffffff)));
- 	initcrypt(remote_key, strlen(remote_key));
-  ucrypt(curbp->b_remote, strlen(curbp->b_remote));
-}
-
-static void Pascal resetkey()	/* reset the encryption key if needed */
-
-{ if (curbp->b_flag & MDCRYPT)
-  {
-    if (curbp->b_key == NULL)
-      curbp->b_key = g_ekey;
-    if (setekey(&curbp->b_key) == TRUE)
-    { char * key = curbp->b_key;
-      int sl = strlen(key);
-      initcrypt(key, sl);	      /* de-encrypt it */
-      initcrypt(key, sl);	      /* re-encrypt it...seeding it to start */
-    }
-  }	  
-}
+# define resetkey(x)
 #endif
 
 
@@ -418,16 +394,12 @@ BUFFER * get_remote(BUFFER * bp_, const char * pw, const char * cmdbody,
   if (cc == 0)
     return NULL;
 
-{ int pwlen = strlen(pw);
-	int clen = strlen(concat(fullcmd, cmdnm, /*pw,*/" ", cmdbody," ",0));
+{ int clen = strlen(concat(fullcmd, cmdnm, /*pw,*/" ", cmdbody," ",0));
 	char * tmp = (char *)getenv("TEMP");
+	if (tmp == NULL)
+		tmp = "./";
 
-#if 0
-  Cc cc = ttsystem(strcat(strcat(strcat(fullcmd,tmp == NULL ? "./" : tmp),"/"),rnm+1));
-#else
-  Cc cc = ttsystem(strcat(strcat(strcat(fullcmd,tmp == NULL ? "./" : tmp),"/"),rnm+1),
-                   pw);
-#endif
+  cc = ttsystem(strcat(strcat(strcat(fullcmd,tmp),"/"),rnm+1), pw);
   if (cc != OK)
 	{ mbwrite((const char*)concat(fullcmd, cmdnm," Fetch failed ",int_asc(cc), 0));
     return NULL;
@@ -439,13 +411,13 @@ BUFFER * get_remote(BUFFER * bp_, const char * pw, const char * cmdbody,
 {	BUFFER * bp = bp_ != NULL ? bp_ : bufflink(fullcmd+clen, g_clexec);
 	if (bp != NULL)
   { 
-  	bp->b_remote = strdup(fullcmd);		// allow leak
+  	bp->b_remote = strdup(fullcmd);								// allow leak
     bp->b_key = inherit_props ? curbp->b_key : NULL;
     if (bp->b_key != NULL)
     	bp->b_flag |= MDCRYPT;
   }
 
-// memset(&fullcmd[strlen(cmdnm)],'*', pwlen);
+//memset(&fullcmd[strlen(cmdnm)],'*', pwlen);
   if (popup)
     mbwrite(fullcmd);
 
@@ -533,10 +505,10 @@ int Pascal readin(char const * fname, int props)
       while (*++s != 0)
         if (*s == ' ')
           fname = s + 1;
+      fname = strdup(fname);     					// allow leak
+//    cryptremote(tbp->b_remote);
     }
   }
-
-	resetkey();				/* set up for decryption */
 
   if (cc == FIOSUC)
     cc = ffropen(fname);
@@ -588,7 +560,7 @@ int Pascal readin(char const * fname, int props)
   char spareline[257];
 #endif
 	if (diry)
-	{ sfline = fline;
+	{ sfline = g_fline;
     msd_init(fname, "", MSD_DIRY | MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
 	  curbp->b_flag |= MDDIR;
 	}
@@ -598,17 +570,17 @@ int Pascal readin(char const * fname, int props)
 	while (TRUE)
   { LINE *lp1;
 	  if (diry)
-	  { fline = msd_nfile(&fno);
-	    if (fline == NULL)
+	  { g_fline = msd_nfile(&fno);
+	    if (g_fline == NULL)
 	      break;
 	     
 	    /*mlreply(fline, spareline+200, 60);*/
 #if S_MSDOS && S_WIN32 == 0
-	    fline = LFN_to_8dot3(LFN_from_83, 1, fline, &spareline[0]);
+	    g_fline = LFN_to_8dot3(LFN_from_83, 1, g_fline, &spareline[0]);
 #endif
-			if (fline[0] == '.' && fline[1] == '/')
-				fline = fline + 2;
-	    len = strlen(fline);
+			if (g_fline[0] == '.' && g_fline[1] == '/')
+				g_fline = g_fline + 2;
+	    len = strlen(g_fline);
 	  }
 	  else 
 	  { cc = ffgetline(&len);
@@ -616,11 +588,11 @@ int Pascal readin(char const * fname, int props)
 	      break;
 #if 0
       if ((paren.in_mode & 0x3f) && len > 2)
-        fline[0] = 'A' + (paren.in_mode & 0x3f);
+        g_fline[0] = 'A' + (paren.in_mode & 0x3f);
 #endif
 	  }
 	  
-	  lp1 = mk_line(fline,len,len);
+	  lp1 = mk_line(g_fline,len,len);
 	  if (lp1 == NULL
 #if 0
 	       || (nline & 0x3ff) == 0 && typahead() && (getkey() & CTRL)
@@ -642,7 +614,7 @@ int Pascal readin(char const * fname, int props)
 	  curbp->b_flag |= MDMS;
 
 	if (diry)
-	  fline = sfline;
+	  g_fline = sfline;
 	else
 	  ffclose();				/* Ignore errors. */
 }
@@ -666,9 +638,7 @@ out:
 	}
 	else
 	{ WINDOW * wp;
-#if S_MSDOS == 0
-	  tcapkopen();	/* open the keyboard again */
-#endif
+	  tcapkopen();								/* open the keyboard again (Unix only) */
 	  curbp->b_flag |= BFACTIVE;	/* code added */
 //  swb_luct = topluct() + 1;
 //  curbp->b_luct = swb_luct;
@@ -697,9 +667,6 @@ out:
 	  }
 	  lp = lforw(lp);
 	}
-
-  if (curbp->b_remote != NULL)
-    cryptremote();
 
 	return cc != FIOERR && cc != FIOFNF;	/* False if error.	*/
 }}}}
@@ -796,13 +763,13 @@ int Pascal filesave(int f, int n)
 	  }
   { char * fn = curbp->b_fname;
     if (curbp->b_remote != NULL)
-    { fn = curbp->b_remote;
+		{	fn = curbp->b_remote;
       if (*fn == 0)
 		  { mlwrite(TEXT102);
 		  	return FALSE;
 		  }
+//		cryptremote(fn);									// read it
 
-      cryptremote();
 #if _DEBUG
       mbwrite(curbp->b_remote);
 #endif
@@ -818,24 +785,23 @@ int Pascal filesave(int f, int n)
 
 		  if (curbp->b_remote != NULL)
 		  { char cmd[3*NFILEN+1];
-		    char cmd_[3*NFILEN+1];
 
-        mlwrite(TEXT148);
 				strcpy(cmd, curbp->b_remote);
 
-			{	char * s = &cmd[strlen(cmd)];
+			{	char * s = &cmd[strlen(cmd)];				// remote file
 			  while (--s > cmd && *s != ' ')
 			    ;
-			  *s = 0;
+			  *s++ = 0;
   
-			{	char * ss = s;
+			{	char * ss = s;											// file here
 			  while (--ss > cmd && *ss != ' ')
 			    ;
-			  *ss = 0;
+			  *ss++ = 0;
 		    
 //			mbwrite(cmd_);                  Security concerns
 
-			{ int cc = ttsystem(concat(cmd_,cmd, " ", s+1, " ", ss+1, NULL), NULL);
+		  { char cmd_[3*NFILEN+1];
+				int cc = ttsystem(concat(cmd_,cmd, " ", s, " ", ss, NULL), NULL);
 			  if (cc != 0)
 			  { mlwrite(TEXT155);
 			  	rc = FALSE;
@@ -846,6 +812,7 @@ int Pascal filesave(int f, int n)
 			  sgarbf = TRUE;
 		  }}}}
 		}
+//  cryptremote(curbp);							// reencrypt it
 		return rc;
   }}}
 
@@ -882,6 +849,11 @@ int Pascal writeout(const char * fn)
   int nline;	  /* number of lines written */
   int sp;		    /* offset into tname */
 	char tname[NSTRING];	/* temporary file name */
+
+	if (curbp->b_mode & BCRYPT2)
+	{ mlwrite(TEXT223);
+		return FALSE;
+	}
 				        /* let a user macro get hold of things */
 	execkey(&writehook, FALSE, 1);
           				 
@@ -909,7 +881,8 @@ int Pascal writeout(const char * fn)
 }
 #endif
 #endif
-	resetkey();
+	if (curbp->b_flag & MDCRYPT)
+		resetkey(&curbp->b_key);
 	     /* turn off ALL keyboard translation in case we get a dos error */
 	tcapkclose();
     						   /* Perform Safe Save..... */
@@ -925,10 +898,8 @@ int Pascal writeout(const char * fn)
 	}
 
 	if (cc <= 0)									/* if the open failed.. clean up and abort */
-	{ mlwrite(TEXT155);		/*			"Cannot open file for writing" */
-#if S_MSDOS
-		tcapkopen();
-#endif
+	{ mlwrite(TEXT155);		/*	"Cannot open file for writing" */
+		tcapkopen();								// Unix only
 		return FALSE;
 	}
 
@@ -975,9 +946,7 @@ int Pascal writeout(const char * fn)
 		io_message(mesg, FIOSUC, nline);
 				/*	"[Wrote 999 line" */
 	}
-#if S_MSDOS
-	tcapkopen();			/* reopen the keyboard, and return our status */
-#endif
+	tcapkopen();						/// reopen the keyboard (Unix only)
 	return cc == FIOSUC;
 }
 
@@ -1020,6 +989,8 @@ int Pascal fetchfile(int f, int n)
 {	int len = lp->l_used > 2*NFILEN ? 2*NFILEN : lp->l_used;
 	char cmdline[2*NFILEN+1];
 	((char*)memcpy(cmdline, (char*)lp->l_text, len))[len] = 0;
+	if (curbp->b_mode & BCRYPT2)
+		double_crypt(cmdline, len);
 
 //mbwrite(cmd);
 	
@@ -1051,6 +1022,8 @@ int Pascal fetchfile(int f, int n)
   }
 
 { BUFFER * bp = get_remote(NULL, pw, cmdline, encrypt, f);
+
+	memset(cmdline, 0, len);
   if (bp == NULL)
     return -1;
                           // If the fetch failed continue with any file from last time
@@ -1061,4 +1034,3 @@ int Pascal fetchfile(int f, int n)
 
 	return gotobob(1,0);
 }}}}}
-

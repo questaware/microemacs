@@ -1,16 +1,9 @@
-
-//#include <windows.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <conio.h>
 #include <process.h>
-
-//err err;
-
 #include <windows.h>
-
-//more err;
 
 #include "estruct.h"
 #include "../src/edef.h"
@@ -19,6 +12,7 @@
 
 extern void flagerr(const char * fmt);
 
+int			g_proc_hand;
 HANDLE  g_ConsOut;                   /* Handle to the console */
 
 CONSOLE_SCREEN_BUFFER_INFO csbiInfo;   /* Console information */
@@ -26,12 +20,12 @@ CONSOLE_SCREEN_BUFFER_INFO csbiInfo;   /* Console information */
 //CONSOLE_CURSOR_INFO        ccInfo;
 
 
-#define BG_GRAY (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE)
+#define BG_GREY (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE)
 
 
 long unsigned int thread_id(void)
 
-{ return GetCurrentThreadId();
+{ return g_proc_hand * 29 + GetCurrentThreadId();
 }
 
 
@@ -40,7 +34,7 @@ void ClearScreen( void )
           DWORD    dummy;
     const COORD    Home = { 0, 0 };
     int len = csbiInfo.dwSize.X * csbiInfo.dwSize.Y;
-    FillConsoleOutputAttribute( g_ConsOut, BG_GRAY, len, Home, &dummy );
+    FillConsoleOutputAttribute( g_ConsOut, BG_GREY, len, Home, &dummy );
     FillConsoleOutputCharacter( g_ConsOut, ' ',     len, Home, &dummy );
 }
 
@@ -114,6 +108,11 @@ int main(int argc, char * argv[])
 	(void)wchar_to_char(modulename);
 #endif
 	flook_init(modulename);
+
+{ HANDLE proc_hand = GetCurrentProcess();
+	g_proc_hand = (int)proc_hand;
+	SetProcessWorkingSetSize(proc_hand, (SIZE_T)-1, (SIZE_T)-1);
+
 										    /* Get display screen information & clear the screen.*/
 	g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
 
@@ -125,16 +124,16 @@ int main(int argc, char * argv[])
 	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
 //GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfoO );
 
-	SetConsoleTextAttribute(g_ConsOut, BG_GRAY);
+	SetConsoleTextAttribute(g_ConsOut, BG_GREY);
 		 
 	ClearScreen();
-//SetConsoleTextAttribute(g_ConsOut, BG_GRAY);
+//SetConsoleTextAttribute(g_ConsOut, BG_GREY);
 
 	main_(argc, argv);
 
  /* tcapclose(); */
   /*CloseHandle( g_ConsOut );*/
-}
+}}
 
 
 void Pascal setconsoletitle(char * title)
@@ -156,20 +155,6 @@ void Pascal setconsoletitle(char * title)
 
 // { return consoletitle;
 // }
-
-extern HANDLE g_ConsIn;
-
-void setMyConsoleIP()
-
-{ g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
-  if (g_ConsIn < 0)					                    /* INVALID_HANDLE_VALUE */
-    flagerr("Piperr %d");
-
-/* SetStdHandle( STD_INPUT_HANDLE, g_ConsIn ); */
-  if (0 == SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT))
-    flagerr("PipeC %d");
-}
-
 
 
 void Pascal tcapsetsize(int wid, int dpth)
@@ -208,7 +193,7 @@ void Pascal tcapsetsize(int wid, int dpth)
 
 static Bool  g_cursor_on = true;
 static COORD g_oldcur;
-static WORD  g_oldattr = BG_GRAY;
+static WORD  g_oldattr = BG_GREY;
 
 
 
@@ -243,7 +228,7 @@ void Pascal tcapmove(int row, int col)
       { attr = attr_;
       }
   
-{ WORD MyAttr = row == term.t_mrowm1 ? BG_GRAY
+{ WORD MyAttr = row == term.t_mrowm1 ? BG_GREY
                         					 : window_bgfg(curwp) | BACKGROUND_INTENSITY;
   DWORD  Dummy;
   COORD  Coords;
@@ -322,7 +307,7 @@ void Pascal ttscupdn(n)                  /* direction the window moves */
   }
 
   ci.Char.AsciiChar = ' ';
-  ci.Attributes = BG_GRAY;
+  ci.Attributes = BG_GREY;
     
   if (ScrollConsoleScreenBufferA( g_ConsOut, &rect, null, doo, &ci) == 0)
     tcapbeep();
@@ -395,6 +380,7 @@ void Pascal tcapopen()
   int pwid = csbiInfo.srWindow.Right -csbiInfo.srWindow.Left+1;
 
   newdims(pwid, plen);
+	setMyConsoleIP();
 }
 
 
@@ -414,8 +400,6 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 	COORD Coords;
 	int col;
 
-	Coords.Y = row;
-			 
 	for (col = -1; ++col < sclen; )
 	{ cuf[col] = attr;
 		if (outstr[col] & 0xff00)
@@ -439,7 +423,8 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 	buf[++col] = 0;
 	cuf[col] = 0;
 	Coords.X = 0;
-
+	Coords.Y = row;
+			 
 	WriteConsoleOutputCharacter( g_ConsOut, buf, sclen, Coords, &n_out );
 { int cc = WriteConsoleOutputAttribute( g_ConsOut, cuf, sclen, Coords, &n_out);
 	if (cc == 0 || n_out != sclen)

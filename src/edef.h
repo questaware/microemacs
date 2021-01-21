@@ -124,13 +124,14 @@ extern char nulls[];
 #define MDMAGIC	0x0400		/* regular expresions in search */
 #define	MDCRYPT	0x0800		/* encrytion mode active	*/
 #define	MDASAVE	0x1000		/* auto-save mode		*/
-#define MDSRCHC 0x2000          /* search comments also */
+#define MDSRCHC 0x2000    /* search comments also */
 
-#define BSRCH    0x2000         /* currently searching this buffer */
+#define BSRCH    0x2000   /* currently searching this buffer */
 #define MDDIR    0x4000		/* this file is a directory	*/
 #define BFACTIVE 0x8000		/* this buffer is active */
 
 #define BSOFTTAB 0x01
+#define BCRYPT2	 0x02
 
 				/* language properties */
 #define BINDENT	0x01		/* Auto indent */
@@ -213,8 +214,8 @@ typedef struct MARKS
  * the full blown redisplay is just too expensive to run for every input
  * character.
  */
-typedef struct	WINDOW {
-	struct	WINDOW *w_wndp; 	/* Next window			*/
+typedef struct	WINDOW
+{	struct	WINDOW *w_wndp; 	/* Next window			*/
 	struct	BUFFER *w_bufp; 	/* Buffer displayed in window	*/
 	struct	LINE *w_linep;		/* Top line in the window	*/
   struct  MARKS mrks;
@@ -232,6 +233,8 @@ typedef struct	WINDOW {
 }	WINDOW;
 
 
+typedef char * CRYPTKEY;
+
 /* Text is kept in buffers. A buffer header, described below, exists for every
  * buffer in the system. The buffers are kept in a big list, so that commands
  * that search for a buffer by name can find the buffer header. There is a
@@ -241,8 +244,8 @@ typedef struct	WINDOW {
  * the header line in "b_linep"	Buffers may be "Inactive" which means the files associated with them
  * have not been read in yet. These get read in at "use buffer" time.
  */
-typedef struct	BUFFER {
-	struct	BUFFER *b_bufp; 	/* Link to next BUFFER		*/
+typedef struct	BUFFER
+{	struct	BUFFER *b_bufp; 	/* Link to next BUFFER		*/
 	struct	LINE *b_baseline;	/* Link to the header LINE	*/
 	struct	LINE *b_wlinep;		/* Link top LINE in last window */
   struct  MARKS mrks;
@@ -256,11 +259,11 @@ typedef struct	BUFFER {
 	unsigned char b_mode;	    /* Flags and modes (extra) */
 	unsigned char b_tabsize;	/* size of hard tab		*/
 #if	CRYPT
-	char *  b_key;	                /* current encrypted key */
+	CRYPTKEY b_key;
 #endif
-	char *  b_fname;		/* malloc'd and owned by BUFFER */
-	char *	b_remote;		/* remote command 		*/
-	char	  b_bname[1]; 		/* Buffer name			*/
+	char *  b_fname;					/* malloc'd and owned by BUFFER */
+	char *	b_remote;					/* remote command 		*/
+	char	  b_bname[1]; 			/* Buffer name			*/
 }	BUFFER;
 				/* for compatibility: */
 #define b_linep b_baseline
@@ -384,7 +387,7 @@ NOSHARE extern int g_clexec;	/* command line execution flag	*/
 NOSHARE extern int g_numcmd;	/* number of bindable functions */
 NOSHARE extern int g_nosharebuffs;  /* never allow different files in the same buffer */
 
-NOSHARE extern char *g_ekey;		/* global encryption key	*/
+NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
 NOSHARE extern char *execstr;		/* pointer to string to execute */
 NOSHARE extern char golabel[];		/* current line to go to	*/
 NOSHARE extern int g_execlevel;		/* execution IF level		*/

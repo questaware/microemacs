@@ -91,7 +91,7 @@ int lock(fname)
 	if (locker == NULL)	/* we win */
 	  return TRUE;
 						/* file failed...abort */
-	if (strncmp(locker, TEXT175, 4) == 0)
+	if (strcmp_right(locker, TEXT175) == 0)
 	{
 /*                          "LOCK" */
 	  lckerror(locker);

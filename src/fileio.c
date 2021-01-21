@@ -37,6 +37,10 @@
 
 /*int confd = 0;*/
 
+char * g_fline = NULL;			/* dynamic return line */
+static 
+unsigned int g_flen = 0;		/* space available for chars */
+
 static FILE *g_ffp;		/* File pointer, all functions. */
 static int g_eofflag;		/* end-of-file flag */
 int g_crlfflag;
@@ -110,9 +114,9 @@ int Pascal ffropen(const char * fn)
  */
 int Pascal ffclose()
 
-{ if (fline)		/* free this since we do not need it anymore */
-  { free(fline);
-    fline = NULL;
+{ if (g_fline)		/* free this since we do not need it anymore */
+  { free(g_fline);
+    g_fline = NULL;
   }
 
 {	Cc cc = g_ffp == NULL ? OK : fclose(g_ffp);
@@ -207,14 +211,14 @@ int Pascal ffputline(char buf[], int nbuf)
 int Pascal ffgetline(int * len_ref)
 	
 {	register int c; 	/* current character read */
-	register int i = -1; 	/* current index into fline */
+	register int i = -1; 	/* current index into g_fline */
 
 	if (g_eofflag)			/* if we are at the end...return it */
 	  return FIOEOF;
-					/* dump fline if it ended up too big */
+											/* dump g_fline if it ended up too big */
   if (g_flen > NSTRING)
 	  g_flen = 0;
-							/* read the line in */
+											/* read the line in */
 	*len_ref = 0;
 	do
 	{ c = getc(g_ffp);		    /* if it's longer, get more room */
@@ -236,18 +240,18 @@ int Pascal ffgetline(int * len_ref)
 	  { char * tmpline = (char*)malloc(g_flen+NSTRING+1);
 	    if (tmpline == NULL)
 	      return FIOMEM;
-	    if (fline != null)
-	    { memcpy(tmpline, fline, g_flen);
-	      free(fline);
+	    if (g_fline != null)
+	    { memcpy(tmpline, g_fline, g_flen);
+	      free(g_fline);
 	    }
-	    fline = tmpline;
+	    g_fline = tmpline;
 	    g_flen += NSTRING;
 	  }}
-	  fline[i] = c;
+	  g_fline[i] = c;
 	} while (c != EOF && c != '\n');
 
 	*len_ref = i;
-	fline[i] = 0;
+	g_fline[i] = 0;
 				/* test for any errors that may have occured */
 	if (c == EOF)
 	{ if (ferror(g_ffp))
@@ -263,7 +267,10 @@ int Pascal ffgetline(int * len_ref)
 					/* terminate and decrypt the string */
 #if	CRYPT
 	if (curbp->b_flag & MDCRYPT)
-	  ucrypt(fline, strlen(fline));
+	{	ucrypt(g_fline, i);
+		if (curbp->b_mode & BCRYPT2)
+			double_crypt(g_fline, i);
+	}
 #endif
 	return FIOSUC;
 }
@@ -276,76 +283,104 @@ int Pascal ffgetline(int * len_ref)
 
 int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	
-{ register 			 char * t = tgt;
-  register const char * s = src;
-  register char ch;
-       int got_star = 0;
+{ int got_star = 0;
+  const char * s = src;
+  			char * t;
+  			char ch;
+  
+  if (*s == '.' && s[1] == '/')
+  { s += 2;
+   	while (*s == '/')
+   		++s;
+   	*tgt++ = '.';
+   	*tgt++ = '/';
+  }
 
-  while (t < &tgt[NFILEN])
+  t = tgt;
+
+  while (t < &tgt[NFILEN-2])
   { ch = *s++;
     *t++ = ch;
     *t = 0;
 
     if (ch == 0)
       break;
-    if (ch == '\\')
-      ch = '/';
 
     if      (ch == '*')
       got_star = MSD_DIRY;
-    else if (ch == '/')
-    { t -= 4;
-      if (t >= tgt)
-      { if (strcmp(t+1, "/./") == 0)		/* /./ -> / */
-        { t += 2;
-          continue;
-        }
-        if (strcmp(t, "/../") == 0 && t[-1] != '.')	/* take out dir/.. */
-        { for (; --t >= tgt && *t != '/'; )
-            ;
-          t += 1;
-          continue;
-        }
-      }
-      t += 4;
-    }
+    else if (ch == '/' || ch == '\\')
+    {	t[-1] = '/';
+    { int dif = (t - tgt) + 4;
+      if (dif >= 0)
+      { if (t[-2] == '.')
+      	{ if (t[-3] == '/')			// "/./"
+	        { t -= 2;
+	          continue;
+	        }
+      		if (dif > 0 && t[-5] != '.' && t[-4] == '/' && t[-3] == '.') // "x/../"
+	        { for (; --t >= tgt && *t != '/'; )
+	            ;
+	          t += 1;
+	          continue;
+	        }
+      	} 
+			}
+    }}
   }
-  
-  #define cwd_ s
+{
 #if S_WIN32 && S_BORLAND == 0 && S_CYGWIN == 0
-  cwd_ = _getcwd(tmp, NFILEN);
+  const char * cwd_ = _getcwd(tmp, NFILEN);
 #else
-  cwd_ = getcwd(tmp, NFILEN);
+  const char * cwd_ = getcwd(tmp, NFILEN);
 #endif
   if (cwd_ == null)
     cwd_ = "/";
+	
 { const Char * cwdend = &cwd_[strlen(cwd_)];
   const Char * cw = cwdend;
+  int num_dirs = 0;
   t = tgt;
 
   while (*strmatch("../", t) == 0 && cw >= cwd_)
-  { tgt += 3;						  /* target forward */
-    while (--cw >= cwd_ && *cw != '/' && *cw != '\\') /* cwd backward */
+  { t += 3;						  											 /* target forward */
+    while (--cw >= cwd_ && *cw != DIRSEPCHAR)	 /* cwd backward */
       ;
-  }
 
-  if (cw < cwdend)
-  { const Char * ncw = strmatch(cw+1, t);
-    if ((*ncw == 0 || *ncw == '\\' || *ncw == '/') && t[ncw - cw - 1] == '/')
-    { s = t;					/* both go down the same */
-      
-      for ( ; ++cw <= ncw && t > tgt; )	/* you have to think it out!*/
-      { ++s;
-        if (*cw == 0 || *cw == '\\' || *cw == '/')
-          t -= 3;
-      }
-      strcpy(t, s);
-    }
-  }
+		++num_dirs;
+	}
 
+{ int root = cw < cwd_;
+
+	if (num_dirs > 0)
+	{	int deduct = -1;
+		for (; --num_dirs >= 0; )
+		{	const Char * ncw = strmatch(cw+1, t);
+	    if ((*ncw != 0 && *ncw != DIRSEPCHAR) || t[ncw - cw - 1] != '/')
+	    	break;
+	    
+			deduct += 3;
+			t = &t[ncw - cw];
+			while (*++cw != 0 && *cw != DIRSEPCHAR)
+				;
+		}
+
+		if (deduct >= 0)
+		{ char * tt = tgt - 1;
+			char * s;
+			if (root)
+				*++tt = '/';
+				
+			for (s = tgt + deduct; *++s != 0 && (*s == '.' || *s == '/'); )
+				*++tt = *s;
+
+			if (*t == '/')
+				++t;
+			strcpy(tt+1, t);
+		}
+	}
+		
   return got_star;
-}}
-
+}}}}
 
 
 

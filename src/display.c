@@ -162,8 +162,8 @@ void Pascal scroll_vscr()
  */
 void Pascal vtinit()
 
-{ 	register int i;
-		register VIDEO *vp;
+{ 	int i;
+		VIDEO *vp;
 
 /*	if (gflags & MD_NO_MMI)
 			return; */
@@ -592,6 +592,7 @@ void Pascal modeline(WINDOW * wp)
 	tline.lc.l_text[cpix] = ')'; 
 	tline.lc.l_text[cpix+3] = ' ';
   tline.lc.l_text[cpix+1] = tline.lc.l_text[0];
+  cpix += 4;
 
 { const char * s = bp->b_fname;
 	const char * fn = s;
@@ -604,7 +605,7 @@ void Pascal modeline(WINDOW * wp)
 		if (strcmp(s+1,bp->b_bname) != 0)
 			s = NULL;
 
-		strpcpy(&tline.lc.l_text[cpix+4], fn, NLINE - 4 - cpix);
+		strpcpy(&tline.lc.l_text[cpix], fn, NLINE - 4 - cpix);
 
 		cpix = strlen(tline.lc.l_text)+1;
 		tline.lc.l_text[cpix-1] = ' ';
@@ -978,9 +979,9 @@ int Pascal upscreen(int f, int n)
 int Pascal reframe(WINDOW * wp)
 
 {
-	register LINE *lp;			 /* search pointer */
-	register LINE *rp;			 /* reverse search pointer */
-	register int i; 			 /* general index/# lines to scroll */
+	LINE *lp;			 /* search pointer */
+	LINE *rp;			 /* reverse search pointer */
+	int i; 			 /* general index/# lines to scroll */
 
 	int nlines = wp->w_ntrows;
 	int centre = wp->w_force;
@@ -1076,9 +1077,9 @@ int Pascal window_bgfg(WINDOW * wp)
 void Pascal updall(WINDOW * wp, int all)
 	
 { 	
-	register LINE *lp = wp->w_linep;
-	register int	sline = wp->w_toprow;
-	register int	zline = sline + wp->w_ntrows;
+	LINE *lp = wp->w_linep;
+	int	sline = wp->w_toprow;
+	int	zline = sline + wp->w_ntrows;
 			
 	int color = window_bgfg(wp);
 	int cmt_clr = ((color & 0x70) | (cmt_colour & 7)) << 8;
@@ -1137,21 +1138,21 @@ void Pascal updallwnd(int reload)
 void Pascal updateline(int row)
 	 /* row;		** row of screen to update */
 {
-	register short *ph1 = &pscreen[row]->v_text[0];
+	short *ph1 = &pscreen[row]->v_text[0];
 
 	struct VIDEO *vp1 = vscreen[row]; /* virtual screen image */
 
-	register short *cp1 = &vp1->v_text[0];
-	register short *cp9 = &cp1[term.t_ncol];
-					 short *cpend = cp9-1;
-					 short prechrom = vp1->v_color << 8;
-					 int bg = (vp1->v_flag & VFML) == 0 ? 0x7000
-												: (prechrom & 0x7000);
-					 int postchrom = CHROM_OFF;
-					 int revreq = vp1->v_flag & VFREQ;		/* reverse video flags */
-					 int caution = ((revreq ^ pscreen[row]->v_flag) & VFREQ) ||
-												vp1->v_color != pscreen[row]->v_color 		||
-												(vp1->v_flag & VFML) != 0;
+	short *cp1 = &vp1->v_text[0];
+	short *cp9 = &cp1[term.t_ncol];
+	short *cpend = cp9-1;
+	short prechrom = vp1->v_color << 8;
+	int bg = (vp1->v_flag & VFML) == 0 ? 0x7000
+																		 : (prechrom & 0x7000);
+	int postchrom = CHROM_OFF;
+	int revreq = vp1->v_flag & VFREQ;		/* reverse video flags */
+	int caution = ((revreq ^ pscreen[row]->v_flag) & VFREQ) ||
+										vp1->v_color != pscreen[row]->v_color 		||
+										(vp1->v_flag & VFML) != 0;
 
 	vp1->v_flag &= ~(VFCHG+VFREQ/*+VFML*/);/* flag this line is unchanged */
 	pscreen[row]->v_flag = vp1->v_flag;
@@ -1272,8 +1273,7 @@ void Pascal mlout(char c)
 		ttcol -= 2;
 	}
 	else
-	{ 
-		if (g_discmd < 0)
+	{ if (g_discmd < 0)
 		{  fmtstr[(fmtstr_ix++) & 0x7f] = c;
 			 return;
 		}
@@ -1305,7 +1305,7 @@ static int mlputli_width;
 void Pascal mlputs(const char * s)
 
 {
-	register char ch;
+	char ch;
 
 	while ((ch = *s++) != 0)
 	{ mlout(ch); 
@@ -1325,7 +1325,7 @@ static void Pascal mlputli(Int l, int r)
 
 {
 	static char hexdigits[] = "0123456789ABCDEF";
-		register Int q;
+		Int q;
 
 		if (l < 0)
 		{ l = -l;
@@ -1365,7 +1365,7 @@ int mlwrite(const char * fmt, ...)
 {
 		Bool scoo;
 		int sdiscmd = g_discmd;
- register int ch;
+    int ch;
 #define fmtch '%'
 
  va_list ap;

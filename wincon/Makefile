@@ -87,6 +87,9 @@ testpipe.exe : testpipe.obj sleep.obj
 testshell.exe : testshell.obj
 	$(LINK32) $(LINK32_FLAGS)./testshell.exe testshell.obj sleep.obj winmm.lib kernel32.lib user32.lib
 
+boldbug.exe : boldbug.obj
+	$(LINK32) $(LINK32_FLAGS)./boldbug.exe boldbug.obj
+
 clean :
 	-rm *.obj
 	-rm *.pch

@@ -900,7 +900,7 @@ WORDPRO	./mtgdi/BUILD.H
 WORDPRO	./wincon/BUILD.H
 WRAP_MEM	./mtgdi/BUILD.H
 WRAP_MEM	./wincon/BUILD.H
-WinLaunchProgram	./wincon/oswin.c
+WinLaunch	./wincon/oswin.c
 WinMain	./wincon/useful.c
 Wp_Close	./wincon/winpipe.c
 Wp_CloseWrite	./wincon/winpipe.c
@@ -1064,6 +1064,7 @@ copyregion	./src/region.c
 copyword	./src/region.c
 cpix	./src/display.c
 cryptflag	./src/epredef.h
+cryptremote	./src/crypt.c
 ct	./src/sinc.c
 ctlxe	./src/main.c
 ctlxlp	./src/main.c
@@ -1371,6 +1372,7 @@ macrotokey	./src/bind.c
 main	./src/main.c
 main	./src/tag.c
 main	./wincon/msemacs.c
+main_	./src/main.c
 maindef	./src/main.c
 makename	./src/file.c
 malloc	./mtgdi/estruct.h
@@ -1551,7 +1553,7 @@ repl_bfname	./src/buffer.c
 replaces	./src/search.c
 reposition	./src/window.c
 res	./src/eval.c
-resetkey	./src/file.c
+resetkey	./src/crypt.c
 resetlcache	./src/display.c
 resize	./src/window.c
 rest_l_offs	./src/search.c
@@ -1675,6 +1677,7 @@ text	./src/file.c
 tgetc	./src/input.c
 tgt	./src/search.c
 thischar	./src/word.c
+thread_id	./wincon/msemacs.c
 tidyup	./unix/unix.c
 timeset	./unix/unix.c
 timeset	./wincon/oswin.c
@@ -1706,6 +1709,8 @@ ttopen	./unix/terminal.c
 ttopen	./wincon/oswin.c
 ttputc	./unix/unix.c
 ttscupdn	./unix/terminal.c
+ttsystem	./wincon/oswin.c
+ttsystem	./unix/unix.c
 twiddle	./src/random.c
 typahead	./unix/unix.c
 typahead	./wincon/oswin.c
@@ -1755,7 +1760,7 @@ when	./src/sinc.c
 widen	./src/region.c
 window_bgfg	./src/display.c
 wordcount	./src/word.c
-wordmatch	./src/char.c
+wordmatch	./src/random.c
 wordsearch	./src/search.c
 wpopup	./src/window.c
 wraphook	./src/edef.h

@@ -226,5 +226,6 @@ extern /*const*/ char * TEXT64a[3];
 #define TEXT220 "Interrupted"
 #define TEXT221 "Write to RO file?"
 #define TEXT222 "No Password"
+#define TEXT223 "Cannot save .e2"
 
 

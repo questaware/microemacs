@@ -76,6 +76,17 @@ char * Pascal strpcpy(char * t_, const char * s_, int n_)
 
 /* ################# string match routines ##################### */
 
+int strcmp_right(const char * left, const char * right)
+
+{ char ch;
+	--right;
+	--left;
+	for (;(ch = *++right) != 0 && ch == *++left; )
+		;
+
+	return ch;
+}
+
 char bad_strmatch;
 
 const char * Pascal com_match(const char * t_, const char * s_, int mask)

@@ -1124,7 +1124,7 @@ int Pascal wordsearch(int f, int n)
 				len = sizeof(buff) - 1;
       
       if (s[0] == buff[0])
-        if (strncmp(buff,s,ix) == 0)
+        if (strcmp_right(s,buff) == 0)
         { 
           while (ixx < len && 
                  (isalpha(s[ixx]) || isdigit(s[ixx]) || s[ixx] == '_'))

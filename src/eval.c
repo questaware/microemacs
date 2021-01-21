@@ -108,7 +108,7 @@ char * incldirs;
 
 Pascal varinit()	/* initialize the user variable list */
 
-{ register int i;
+{ int i;
   for (i = MAXVARS; --i >= 0;)
     uv[i].u_name[0] = 0;
 }
@@ -120,7 +120,7 @@ Pascal varinit()	/* initialize the user variable list */
 
 Pascal varclean()	/* initialize the user variable list */
 
-{ register int i;
+{ int i;
 
   for (i = MAXVARS - 1; i >= 0; --i)
     if (uv[i].u_name[0] != 0)
@@ -140,14 +140,13 @@ char *Pascal mkul(int wh, char * str)	/* make a string lower or upper case */
 				/* 0 => lower */
 				/* string to upper case */
 {
-	register char *sp = str;
-	register char ch;
+	char *sp = str;
+	char ch;
 	
 	for ( ;(ch = *sp) != 0; ++sp)
 	  *sp = wh ? toupper(ch) : tolower(ch);
 	return str;
 }
-
 
 
 
@@ -196,7 +195,7 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 	
 {
 		 int fnum;
-	register int iarg1;
+	int iarg1;
 		 int  iarg2;
 		 int  arglen;
 		 char * arg1 = &result[stktop];
@@ -356,7 +355,7 @@ int uv_vnum;
 const char *Pascal gtusr(char * vname)	/* look up a user var's value */
 																				/* name of user variable to fetch */
 {
-	register int vnum;	/* ordinal number of user var */
+	int vnum;	/* ordinal number of user var */
 
 			/* scan the list looking for the user var name */
 	for (vnum = MAXVARS; --vnum >= 0 && uv[vnum].u_name[0] != 0; )
@@ -391,8 +390,8 @@ Pascal binary(key, tval, tlength)
 	char *(Pascal *tval)(); /* ptr to function to fetch table value */
 	int tlength;		/* length of table to search */
 {
-	register int l = 0;	  /* set current search limit as entire list */
-	register int u = tlength - 1;
+	int l = 0;	  /* set current search limit as entire list */
+	int u = tlength - 1;
 							/* get the midpoint! */
 	while (u >= l)
 	{ int i = (l + u) >> 1;
@@ -418,7 +417,7 @@ const char *Pascal gtenv(const char * vname)
  			/* name of environment variable to retrieve */
 {
 	         int ix = 0;
-	register int vnum;		/* ordinal number of var refrenced */
+	int vnum;		/* ordinal number of var refrenced */
 #define res vnum
  extern char deltaf[NSTRING];
 #define result (&deltaf[NSTRING / 2])   /* leave beginning for extra safety */
@@ -516,7 +515,7 @@ const char *Pascal fixnull(const char * s)/* Don't return NULL pointers! */
 char * Pascal trimstr(char * s, int * from)/* trim whitespace off string */
 			/* string to trim */
 {
-	register char *sp = &s[*from];
+	char *sp = &s[*from];
         
 	while (--sp >= s && *sp <= ' ')
 	  *sp = 0;
@@ -530,7 +529,7 @@ char * Pascal trimstr(char * s, int * from)/* trim whitespace off string */
 
 static int Pascal findvar(const char * var)/* find a variables type and name */
 	
-{	register int vtype;	/* type to return */
+{	int vtype;	/* type to return */
 
 fvar:	vtype = -1;
 	switch (var[0])
@@ -604,7 +603,8 @@ int Pascal set_var(const char var[NVSIZE+1], char * value)	/* set a variable */
 int Pascal setvar(int f, int n)	/* set a variable */
 	/* int n;	** numeric arg (can overide prompted value) */
 {
-  register int cc;
+	char ch;
+  int cc;
 	char var[2*NSTRING+1];	/* name of variable to fetch */
 	     var[0] = 0;
 					/* first get the variable to set.. */
@@ -613,19 +613,17 @@ int Pascal setvar(int f, int n)	/* set a variable */
 /*				 "Variable to set: " */
 	  if (cc != TRUE)
 	    return ABORT;
-	  for (cc = -1; var[++cc] != 0 && var[cc] != ' ' && var[cc] != '='; )
-	    ;
 	} 
 	else				/* grab token and skip it */
 	{ execstr = token(execstr, var, NVSIZE + 1);
-	  cc = strlen(var);
 	}
-	if (var[cc] == 0)
-	  var[cc+1] = 0;
-	else
-	  var[cc] = 0;
-					/* get the value for that variable */
-	if 	(f == TRUE)
+
+  for (cc = -1; (ch = var[++cc]) != 0 &&
+							 (g_clexec || ch != ' ' && ch != '='); )
+    ;
+	var[cc+(var[cc] == 0)] = 0;
+														/* get the value for that variable */
+	if 	    (f == TRUE)
 	  strcpy(&var[cc+1], int_asc(n));
 	else if (var[cc+1] == 0)
 	{ if (mlreply(TEXT53, &var[cc+1], NSTRING-cc+1) != TRUE)
@@ -662,7 +660,7 @@ static
 int Pascal svar(int var, char * value)	/* set a variable */
 
 {
-  register int cc = TRUE;
+  int cc = TRUE;
   int vnum = var & 0x7ff;
 
   if (var == (TKENV << 11) + EVINCLD)
@@ -706,14 +704,13 @@ int Pascal svar(int var, char * value)	/* set a variable */
 			 	  						 }
 				  						 curbp->b_flag = hookix;
 	    when EVCBUFNAME: curwp->w_flag |= WFMODE;
-				return FALSE; /* strpcpy(curbp->b_bname, value, NBUFN); */
+											 return FALSE; /* strpcpy(curbp->b_bname, value, NBUFN); */
 	    when EVCFNAME:	 repl_bfname(curbp, value);
 				               curwp->w_flag |= WFMODE;
 //	  when EVSRES:	   cc = TTrez(value);
 	    when EVFILEPROF: hookix = strlen(value)+1;
 	    	               free(g_file_prof);
-				               g_file_prof = malloc(hookix);
-				               strcpy(g_file_prof,value);
+				               g_file_prof = strcpy(malloc(hookix),value);
 				
 	    when EVCURCHAR:	 ldelchrs(1L, FALSE);	/* delete 1 char */
 			                 linsert(1, (char)val);
@@ -772,11 +769,9 @@ int Pascal svar(int var, char * value)	/* set a variable */
 
 
 
-int Pascal stol(char * val)	/* convert a string to a numeric logical */
+int Pascal stol(char * val)					/* convert a string to a numeric logical */
 {
-        
-  return val[0] == 'T' || atoi(val) != 0;	/* check for logical values */
-	 
+  return val[0] == 'T' || atoi(val) != 0;	/* check for logical values */	 
 }
 
 
@@ -786,18 +781,11 @@ int Pascal stol(char * val)	/* convert a string to a numeric logical */
 char *Pascal int_asc(int i)
 			/* integer to translate to a string */
 {
-#if S_MSDOS && S_CYGWIN == 99
-  static char result[INTWIDTH*2+2];
-	memset(&result, ' ', INTWIDTH); 
-
-
- return itoa(i, &result[INTWIDTH], 10);
-#else
   static char result[INTWIDTH+2];
 	memset(&result, ' ', INTWIDTH); 
 
-{	register char *sp = &result[INTWIDTH+1];
-	register int v = i;		/* sign of resulting number */
+{	char *sp = &result[INTWIDTH+1];
+	int v = i;		/* sign of resulting number */
 
 	if (v < 0)
 	  v = -v;
@@ -812,13 +800,12 @@ char *Pascal int_asc(int i)
 	  *(--sp) = '-';		/* and install the minus sign */
 
 	return sp;
-#endif
 }}
 
 int Pascal gettyp(char * token)	/* find the type of a passed token */
 
 {
-	register char c = *token;	/* first char in token */
+	char c = *token;	/* first char in token */
         
 	if (c >= '0' && c <= '9')	/* a numeric literal? */
 	  return TKLIT;
@@ -847,7 +834,7 @@ char *Pascal getval(char * tgt, char * token)
 {
 	int blen = NSTRING;
 #define cc blen
- register BUFFER *bp;			/* temp buffer pointer */
+ BUFFER *bp;			/* temp buffer pointer */
           int typ = gettyp(token);
 
 	switch (typ)
@@ -932,11 +919,10 @@ int Pascal sindex(char * source, char * pattern) /* find pattern within source *
 	/* char *source;	* source string to search */
 	/* char *pattern;	* string to look for */
 {
-	register char *sp;
+	char *sp;
 
 	for (sp = source; *sp; ++sp)
-	{ register int ix;
-	  
+	{ int ix;  
 	  for (ix = -1; pattern[++ix] != 0 && myeq(pattern[ix], sp[ix]); )
 	    ;
 	    						/* was it a match? */
@@ -954,8 +940,8 @@ char *Pascal xlat(char * srctgt, char * lookup, char * trans)
 	/* char *lookup;	* characters to translate */
 	/* char *trans;		* resulting translated characters */
 {
-	register char *sp;	/* pointer into source table */
-	register char *lp;	/* pointer into lookup table */
+	char *sp;	/* pointer into source table */
+	char *lp;	/* pointer into lookup table */
 
 	for (sp = srctgt; *sp; ++sp)
 	{ for (lp = lookup; *lp; ++lp)
@@ -1027,36 +1013,32 @@ Pascal desvars(int f, int n)
 
 #if	DEBUGM
 
-
 int Pascal dispvar(int f, int n)	/* display a variable's value */
 	/* int n;		** numeric arg (can overide prompted value) */
 {
-	register int cc;
 	char var[NVSIZE+1];	/* name of variable to fetch */
 	char val[NSTRING];
 
-				/* first get the variable to display.. */
+												/* first get the variable to display.. */
 	if (g_clexec == FALSE)
-  { cc = getstring(&var[0], NVSIZE+1, TEXT55);
-/*				 "Variable to display: " */
+  { int cc = getstring(&var[0], NVSIZE+1, TEXT55);
+																/* "Variable to display: " */
 	  if (cc != TRUE)
 	    return cc;
 	} 
-	else		/* macro line argument */
-	{		/* grab token and skip it */
+	else																/* macro line argument */
+	{																		/* grab token and skip it */
 	  execstr = token(execstr, var, NVSIZE + 1);
 	}
-					/* check the legality, find the var */
-	
+														/* check the legality, find the var */
 	if (findvar(var) < 0)
 	{ mlwrite(TEXT52, var);
-/*			"%%No such variable as '%s'" */
+					/*	"%%No such variable as '%s'" */
 	  return FALSE;
 	}
 				        
 	mlwrite("%s = %s", var, getval(val, var));
-	update(TRUE);
-	return TRUE;
+	return update(TRUE);
 }
 
 #endif
@@ -1068,7 +1050,7 @@ int Pascal dispvar(int f, int n)	/* display a variable's value */
 
 Pascal desfunc(int f, int n)
 
-{	register int uindex;	/* index into funcs table */
+{	int uindex;	/* index into funcs table */
 
 	openwindbuf(TEXT211);
 						  /* build the function list */

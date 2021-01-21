@@ -220,14 +220,15 @@ fetch-file                    The current line contains args <tab> password <tab
                               The command cmd is from the environment variable scp;
                               It must include the option for the password.
                               The default is c:\bin\pscp -pw.
-                              Executes command cmd password args $(TEMP)/fname.
+                              Executes command cmd args $(TEMP)/fname.
                               This command is permitted to fail.
                               If opt and the current file is encrypted then
                               the same key decrypts $(TEMP)/fname.
                               The result is in a new buffer.
                               If the command succeeded then save-file saves the file
-                              by the command cmd -pw password $(TEMP)/fname args.
-                              Only one save is allowed and obliterates keys/passwords.
+                              by the command cmd password $(TEMP)/fname args.
+															The remote passord must be typed again.
+                              Only one save is allowed and obliterates keys.
 fill-paragraph           M-Q
 filter-buffer            ^X#  Write the buffer to a temp, execute a command
                          ^X\       reading the contents, read in the output.

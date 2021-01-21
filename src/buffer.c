@@ -131,10 +131,6 @@ Pascal swbuffer(BUFFER * bp_) /* make buffer BP current */
 {	BUFFER *bp = bp_;
 	WINDOW *wp;
 
-	if (g_gmode & MDCRYPT && bp->b_key == NULL)
-//if (g_ekey != null)
-		setekey(&bp->b_key);
-
 	if (bp->b_langprops & BCFOR)
 		bp->b_flag &= ~MDEXACT;
 			 /* let a user macro get hold of things...if he wants */
@@ -148,6 +144,10 @@ Pascal swbuffer(BUFFER * bp_) /* make buffer BP current */
 	curbp = bp; 			/* Switch. */
 	if (!(bp->b_flag & BFACTIVE) && bp->b_fname != null)/*buffer not active yet*/
 	{
+		bp->b_flag |= g_gmode & MDCRYPT;
+		if (bp->b_flag & MDCRYPT)
+			resetkey(&bp->b_key);													/* set up for decryption */
+
 		readin(bp->b_fname, FILE_LOCK);
 		curwp->w_flag |= WFFORCE;
 	}
@@ -249,7 +249,7 @@ int Pascal killbuffer(int f, int n)
 static void init_buf(BUFFER * bp, LINE * lp)
 
 {	bp->b_doto = 0;
-	bp->b_remote = NULL;
+//bp->b_remote = NULL;
 /*bp->b_fcol = 0;*/
 	bp->b_dotp		 = lp;
 	bp->b_baseline = lp;
@@ -520,14 +520,21 @@ BUFFER *Pascal bfind(const char * bname,
 	for (cc = strlen(strcpy(bp->b_bname, bname)); --cc > 0 && bname[cc] != '.'; )
 		;
 
-	bname += cc + 1;
   if (cc > 0)
+  {	bname += cc + 1;
+
+	  if (toupper(bname[0]) == 'E' &&
+	  		bname[1] == '2' &&
+	  		bname[2] == 0)
+			bp->b_mode |= BCRYPT2;
+  
   	for (cc = upper_index(nm)+1; --cc >= 0; )
 	  	if (*strmatch(nm[cc], bname) == 0 && bad_strmatch == 0)
 		  {
 			  bp->b_langprops = fm[cc];
   			break;
 	  	}
+	}
 
 	return bp;
 }}

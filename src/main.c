@@ -91,8 +91,6 @@ const char falsem[] = "FALSE";		/* false litereal		*/
 NOSHARE char palstr[49] = "";		/* palette string		*/
 NOSHARE char lastmesg[LFSTR] = ""; 	/* last message posted		*/
 NOSHARE int(Pascal *lastfnc)(int, int);/* last function executed	*/
-NOSHARE char *fline = NULL;		/* dynamic return line		*/
-NOSHARE unsigned int g_flen = 0;	/* current length of fline	*/
 NOSHARE int eexitflag = FALSE;	/* EMACS exit flag		*/
 NOSHARE int eexitval = 0; 	/* and the exit return value	*/
 /*NOSHARE int nclicks = 0;		** cleared on any non-mouse event*/
@@ -169,21 +167,20 @@ int Pascal editloop(int c_); /* forward */
 
 void Pascal dcline(int argc, char * argv[])
 
-{
-	set_var("$incldirs", getenv("INCLUDE"));
+{	set_var("$incldirs", getenv("INCLUDE"));
 	homedir = getenv("HOME");
 	if (homedir == NULL)
 		homedir = "";
 	if (g_invokenm == NULL)
 		g_invokenm = argv[0];
 
-{ register BUFFER *bp;
-	register int	carg; 		 /* current arg to scan */
-		 char * startfile = EMACSRC;	/* startup file */
-		 BUFFER *firstbp = NULL;	/* ptr to first buffer in cmd line */
-		 int gline = 0; 	 /* line to goto at start or 0 */
-	register int genflag = 0;
-	char * def_bname = "main";
+{ BUFFER *bp;
+	int	carg; 		 					/* current arg to scan */
+	char * startfile = EMACSRC;	/* startup file */
+	BUFFER *firstbp = NULL;	/* ptr to first buffer in cmd line */
+	int gline = 0; 	 				/* line to goto at start or 0 */
+	int genflag = 0;
+	const char * def_bname = "main";
 	int nopipe = -1;
 
 	char * filev;
@@ -212,7 +209,7 @@ void Pascal dcline(int argc, char * argv[])
 #if CRYPT 				
 				when 'K': /* -k<key> for code key */
 					if (filev[2] != 0)
-						g_ekey = strdup(&filev[2]);
+						g_ekey = strdup(&filev[2]);			// visible from command line args
 					g_gmode |= MDCRYPT;
 #endif						
 				when 'R': /* -r restrictive use */
@@ -252,7 +249,7 @@ void Pascal dcline(int argc, char * argv[])
 		else			/* Process an input file */
 		{
 #ifdef USE_SVN
-      if (strncmp(filev,"https://svn.",12) == 0)
+      if (strcmp_right(filev,"https://svn.") == 0)
 				del_svn = 6;
 #endif
 		  if (filev[1] != 0)
@@ -496,8 +493,7 @@ int emacs(int argc, char * argv[])
 int main(int argc, char * argv[])
 #endif
 	
-{
-	namemap.curr_mult -= 1; 			/* last entry not wanted */
+{	namemap.curr_mult -= 1; 										/* last entry not wanted */
 	namemap.curr_len -= sizeof(names[0]); 			/* last entry not wanted */
 #if defined(_DEBUG) || LOGGING_ON
 	log_init("emacs.log", 300000, 0);

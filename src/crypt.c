@@ -32,62 +32,7 @@ static int Pascal mod95(register int val)
 	return val;
 }
 #endif
-
-				/* reset encryption key of current buffer */
-int Pascal setekey(char * * key_ref)
-	
-{	char mykey[NPAT]; 	/* new encryption string */
-	char * key = *key_ref;   
-	int odisinp = g_disinp;
-	g_disinp = -1; 				/* turn command input echo off */
-
-	                		     /* get the string to use as an encrytion string */
-{	
-  int cc = key != null ? TRUE : mlreply(TEXT33, mykey, NPAT - 1);
-																	 /* "Encryption Key: " */
-	if (cc == TRUE)
-  { if (key == null)
-		{ mlwrite(" ");									/* clear it off the bottom line */
-			key = mykey;
-			if (mykey[0] == 0)
-				key = g_ekey;
-			else
-			{ // char msg[30];
-			  extern int g_chars_since_shift;
-
-				if (g_chars_since_shift < 10000)
-					strcat(mykey,int_asc(g_chars_since_shift));
-
-//			strcat(strcat(strcpy(msg, int_asc(g_chars_since_shift)), " Css "), mykey);
-//		  mbwrite(msg);
-			}
-		}
-		*key_ref = strdup(key);
-		initcrypt(*key_ref, strlen(key));
-//	if (key != mykey && key != ekey)		/* not shared */ leakage allowed
-//		free(key);
-	}
-	g_disinp = odisinp;
-	return cc;
-}}
-
-
-
-int Pascal setuekey(int f, int n)/* reset encryption key of current buffer */
-
-{	int cc = setekey(&curbp->b_key);
-	if (cc == TRUE)
-		curbp->b_flag |= MDCRYPT;
-	else
-		curbp->b_flag &= ~MDCRYPT;
-/*if (f)*/
-  curbp->b_flag |= BFCHG;
-//mbwrite("CRYPT");
-	upmode();
-	return TRUE;
-}
 /**********
- *
  *	ucrypt - in place encryption/decryption of a buffer
  *
  *	(C) Copyright 1986, Dana L. Hoggatt
@@ -179,17 +124,17 @@ int Pascal setuekey(int f, int n)/* reset encryption key of current buffer */
  *
  **********/
 
-static Int g_key_ = 0;	/* 29 bit encipherment key */
-static int g_salt = 0;	/* salt to spice up key with */
+int g_key_ = 0;	/* 29 bit encipherment key */
+int g_salt = 0;	/* salt to spice up key with */
 
 
-int Pascal ucrypt(char * bptr, int len)
+int Pascal ucrypt(char * cptr, int len)
                     	    		  	/* buffer of characters to be encrypted */
                       		    		/* number of characters in the buffer */
 { int key = g_key_;
 
 	while (len--)		/* for every character in the buffer */
-	{ int cc = *bptr;		
+	{ int cc = *cptr;		
 				/* only encipher printable characters */
 	  if (cc >= ' ' && cc <= '~')
 	  {
@@ -239,25 +184,124 @@ int Pascal ucrypt(char * bptr, int len)
       		  I had to allow the older broken key calculation to let us 
       		  decrypt old files.  I hope to take this out eventually.**/
 
-	    key += key + (cc ^ *bptr) + g_salt;
+	    key += key + (cc ^ *cptr) + g_salt;
 	  }
-	  *bptr++ = cc; 		/* put character back into buffer */
+	  *cptr++ = cc; 		/* put character back into buffer */
 	}
 	g_key_ = key;
 	return OK;
 }
 
 
-void Pascal initcrypt(char *bptr, unsigned len)
+static
+ void Pascal initcrypt(int wh, char *cptr, unsigned len)
 			/* buffer of characters to be encrypted */
 			/* number of characters in the buffer */
-{ g_key_ = 0;	/* set the new key */
-  g_salt = 0;	/* set the new salt */
-  ucrypt(bptr, len);
+{ g_key_ = wh * thread_id();
+	g_salt = 0;
+  ucrypt(cptr, len);
+}
+
+
+void Pascal double_crypt(char * cptr, int len)
+
+{	char ch;
+	int fix;
+	
+	for (fix = -1; (ch = cptr[++fix]) != 0 && ch != 9; )
+		;
+		
+	if (ch != 0)
+	{ int sl = strlen(cptr);
+		++fix;
+		initcrypt(0, cptr, fix);
+		initcrypt(0, cptr, fix);
+	  g_key_ += thread_id();
+		ucrypt(cptr+fix,sl-fix); 
+	}
+}
+
+
+#if 0
+
+void Pascal cryptremote(char * remote)
+
+{ if (remote != NULL)
+	{	char remote_key[100];                    // Security by obscurity?
+  	strcpy(remote_key, int_asc((int)(thread_id())));
+ 		initcrypt(1, remote_key, strlen(remote_key));
+  	ucrypt(remote, strlen(remote));
+  }
+}
+
+#endif
+
+#define got_key(p) (*p != NULL)
+
+																/* reset encryption key of current buffer */
+int Pascal setekey(CRYPTKEY * key_ref)
+	
+{	int cc = got_key(key_ref);
+
+	if (!cc)
+	{	char mykey[NPAT]; 					/* new encryption string */
+		int stt = strlen(strcpy(mykey, int_asc(thread_id())));
+	{	int odisinp = g_disinp;
+		g_disinp = -1; 							/* turn command input echo off */
+		cc = mlreply(TEXT33, mykey+stt, NPAT - 15);
+		g_disinp = odisinp;
+		mlwrite(" ");								/* clear it off the bottom line */
+		if (cc == TRUE)
+		{	if (mykey[stt] == 0)
+				strpcpy(mykey+stt, g_ekey, NPAT-15);
+			else
+			{ extern int g_chars_since_shift;
+
+				if (g_chars_since_shift < 10000)
+					strcat(mykey,int_asc(g_chars_since_shift));
+			}
+
+		  initcrypt(0, mykey, strlen(mykey)); /* re-encrypt it, seeding it to start */
+			*key_ref = strdup(mykey);
+		}
+	}}
+	return cc;
+}
+
+
+
+int Pascal setuekey(int f, int n)/* reset encryption key of current buffer */
+
+{	int cc = setekey(&curbp->b_key);
+	if (cc == TRUE)
+		curbp->b_flag |= MDCRYPT;
+	else
+		curbp->b_flag &= ~MDCRYPT;
+/*if (f)*/
+  curbp->b_flag |= BFCHG;
+//mbwrite("CRYPT");
+	upmode();
+	return TRUE;
+}
+
+
+
+void Pascal resetkey(CRYPTKEY * key_ref)	/* reset the encryption key if needed */
+
+{	if (!got_key(key_ref))
+    *key_ref = g_ekey;
+  if (setekey(key_ref) == TRUE)
+  { char * key = strdup(*key_ref);
+    int sl  = strlen(key);
+    int tl = strlen(int_asc(thread_id()));
+		initcrypt(0, key, sl);	      					/* de-encrypt */
+		initcrypt(0, key+tl, sl-tl);						/* re-encrypt, seeding it to start */
+		free(key);
+  }
 }
 
 #else
-nocrypt()
+void resetkey(char ** key_ref)
 {
 }
 #endif

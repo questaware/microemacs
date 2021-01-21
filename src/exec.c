@@ -420,14 +420,14 @@ int Pascal dobuf(BUFFER * bp, int iter)
 {	int cc = TRUE;
 
   while (--iter >= 0 && cc == TRUE)
-	{ register LINE *lp;	/* pointer to line to execute */
+	{ LINE *lp;						/* pointer to line to execute */
 		int dirnum;					/* directive index */
 		int linlen;					/* length of line to execute */
 		char *einit;				/* initial value of eline */
 		register char *eline;/* text of line to execute */
 		char tkn[NSTRING];	/* buffer to evaluate an expresion in */
 #if	LOGFLG
-		FILE *fp;		/* file handle for log file */
+		FILE *fp;						/* file handle for log file */
 #endif
   	WHBLOCK *whlist = NULL; /* ptr to !WHILE list */
 		WHBLOCK *scanner = NULL;/* ptr during scan */
@@ -458,7 +458,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	    	scanner = whtemp;
 	  	}
 												/* if it is an endwhile directive, record the spot.. */
-		  if (strncmp(&eline[1], &dname[DENDWHILE][0], 4) == 0)
+		  if (strcmp_right(&eline[1], &dname[DENDWHILE][0]) == 0)
 		  { if (scanner == NULL)
 	 	    { 			/* %%mismatched !ENDWHILE in %s */
 	 	    	goto failexit;
@@ -525,7 +525,7 @@ failexit:
 		  if (*eline == '!')								/* Find out which directive this is */
 		  {
 		    for (dirnum = NUMDIRS; --dirnum >= 0; )
-		      if (strncmp(eline+1, dname[dirnum], strlen(dname[dirnum])) == 0)
+		      if (strcmp_right(eline+1, dname[dirnum]) == 0)
 						break;
 																				/* and bitch if it's illegal */
 		    if (dirnum < 0)
@@ -619,8 +619,7 @@ failexit:
 						  for (glp = bp->b_baseline; 
 						      ((glp=lforw(glp))->l_props & L_IS_HD) == 0; )
 						    if (*glp->l_text == '*' &&
-										strncmp(&glp->l_text[1], 
-							         golabel, strlen(golabel))==0)
+										strcmp_right(&glp->l_text[1],golabel) == 0)
 						    { lp = glp;
 						      goto onward;
 						    }

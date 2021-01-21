@@ -16,9 +16,7 @@
 #define S_AMIGA	0			/* AmigaDOS			*/
 #define S_MSDOS	1			/* MS-DOS			*/
 #define S_OS2	0			/* Microsoft or IBM OS/2	*/
-#define S_BSD	0			/* UNIX BSD 4.2 and ULTRIX	*/
 #define S_UNIX5	0			/* UNIX system V		*/
-#define	S_XENIX	0			/* IBM-PC SCO XENIX		*/
 #define	S_SUN	0			/* SUN v4.0			*/
 #define	S_HPUX	0			/* HPUX HP 9000 minicomputer	*/
 #define S_VMS	0			/* VAX/VMS			*/
@@ -26,22 +24,15 @@
 #define S_WIN32 1
 #define S_BORLAND 0
 
-#define NONDIR  0                       /* ndir.h is dirent.h           */
-#define USE_UBAR 0
-#define GOTTYPAH 1
+#define NONDIR  	0                     /* ndir.h is dirent.h           */
+#define USE_UBAR  0
+#define GOTTYPAH  1
+#define HIDECRYPT 1
 
 /*	Compiler definitions			*/
 /*	[Set one of these!!]			*/
 #define UNIX	0	/* a random UNIX compiler */
-#define MWC	0	/* Mark Williams C */
-#define	ALCYON	0	/* ALCYON Atari ST compiler */ 
-#define LATTICE 0	/* Lattice 2.14 through 3.0 compilers */
-#define AZTEC	0	/* Aztec C 3.20e */
 #define MSC	1	/* MicroSoft C compile version 3 & 4 & 5.1 */
-#define XMSC    0       /* Xenix MicroSoft C */
-#define TURBO	0	/* Turbo C/MSDOS */
-#define DTL	0	/* DataLight C v3.12 */
-#define	DGC	0	/* Data General AOS/VS C... */
 
 /*#ifndef __STDC__
 #define __STDC__ 1

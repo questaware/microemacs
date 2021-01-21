@@ -377,8 +377,8 @@ void Pascal tcapopen()
 	}
 
 #if FTRACE
-        if (ftrace == 0)
-          ftrace = fopen("/tmp/pjsbind", "w");
+  if (ftrace == 0)
+    ftrace = fopen("/tmp/pjsbind", "w");
 #endif
 //      use_named_str(null, null);
 	in_init();
