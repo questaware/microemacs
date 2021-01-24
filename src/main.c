@@ -46,20 +46,18 @@ extern int overmode;			/* from line.c */
 /* initialized global definitions */
 NOSHARE int g_numcmd = NCMDS;	/* number of bindable functions */
 NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
-NOSHARE int g_nosharebuffs = FALSE; /* never allow different files in the same buffer */
+NOSHARE int g_nosharebuffs = FALSE; /* dont allow different files in same buffer*/
 
 NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
 NOSHARE char *execstr = NULL;		/* pointer to string to execute */
 NOSHARE int g_execlevel = 0;	/* execution IF level		*/
-NOSHARE int gfcolor = 7;		/* global forgrnd color (white) */
-NOSHARE int gbcolor = 0;		/* global backgrnd color (black)*/
+NOSHARE int g_colours = 7;		/* (backgrnd (black)) * 256 + foreground (white) */
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
 NOSHARE int vtrow = 0;		/* Row location of SW cursor	*/
 NOSHARE int ttrow = HUGE; 	/* Row location of HW cursor	*/
 NOSHARE int ttcol = HUGE; 	/* Column location of HW cursor */
 NOSHARE int lbound = 0;		/* leftmost column of current line
 					   being displayed		*/
-NOSHARE int reptc = CTRL | 'U';	/* current universal repeat char*/
 NOSHARE int abortc = CTRL | 'G';	/* current abort command char	*/
 NOSHARE int sterm = CTRL | 'M';	/* search terminating character */
 
@@ -67,15 +65,8 @@ static
 NOSHARE int g_prefix = 0;	/* currently pending prefix bits */
 NOSHARE int prenum = 0;		/*     "       "     numeric arg */
 
-const char cname[][9] = {		/* names of colors		*/
-	"BLACK", "RED", "GREEN", "YELLOW", "BLUE",
-	"MAGENTA", "CYAN", "GREY",
-	"GRAY", "LRED", "LGREEN", "LYELLOW", "LBLUE",
-	"LMAGENTA", "LCYAN", "WHITE"};
-	
 char highlight[64] = "hello";
 
-NOSHARE int cryptflag = FALSE;		/* currently encrypting?	*/
 NOSHARE int restflag = FALSE;	    /* restricted use?		*/
 NOSHARE int g_newest = 0;         /* choose newest file           */
 //#define USE_SVN
@@ -84,7 +75,9 @@ NOSHARE int del_svn = 0;
 #else
 #define del_svn 0
 #endif
+#if WRAP_MEM
 NOSHARE Int envram = 0l;		/* # of bytes current in use by malloc */
+#endif
 const char errorm[] = "ERROR";		/* error literal		*/
 const char truem[] = "TRUE";		/* true literal 		*/
 const char falsem[] = "FALSE";		/* false litereal		*/
@@ -454,7 +447,7 @@ void Pascal edinit()
 			break;
 		curbp->b_nwnd++;		/* mark us as more in use */
 #endif
-			/*curbp->b_flag = gmode;*/
+	/*curbp->b_flag = gmode;*/
 
 		wheadp =
 		curwp = (WINDOW *) aalloc(sizeof(WINDOW)); /* First window	*/
@@ -462,8 +455,7 @@ void Pascal edinit()
 			break;
 
 #if COLOR
-							/* initalize colors to global defaults */
-		curwp->w_color = gbcolor * 256 + gfcolor;
+		curwp->w_color = g_colours;		// initalize colors to global defaults
 #endif
 		return;
 	} while (1);
@@ -740,6 +732,8 @@ int Pascal editloop(int c_)
 		c += '0';
 	}
 #if 0
+X#define  reptc CTRL | 'U'
+												 /* current universal repeat char*/
 X if (c == reptc) 			 /* ^U, start argument	 */
 X { f = TRUE;
 X 	n = 4;				/* with argument of 4 */

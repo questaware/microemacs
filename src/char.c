@@ -89,30 +89,39 @@ int strcmp_right(const char * left, const char * right)
 
 char bad_strmatch;
 
-const char * Pascal com_match(const char * t_, const char * s_, int mask)
+const char * Pascal strmatch(const char * t_, const char * s_)
 
-{ register int tix = 0;
-  register const char * s = s_;
-  register char ch;
+{ int tix = 0;
+  const char * s = s_;
+  char ch;
 
 #if CHARCODE != ASCII
-  if (mask == 0x20)
-    for (; *s != 0 && (ch = t_[tix]) != 0 && toupper(ch) == toupper(*s); ++s)
-      ++tix;
-  else 
+  for (; *s != 0 && (ch = t_[tix]) != 0 && toupper(ch) == toupper(*s); ++s)
+    ++tix;
+#else 
+  for (; *s != 0 && (ch = t_[tix]) != 0 && (ch | 0x20) == (*s | 0x20); ++s)
+    ++tix;
 #endif
-    for (; *s != 0 && (ch = t_[tix]) != 0 && (ch | mask) == (*s | mask); ++s)
-      ++tix;
   bad_strmatch = *s;
   return &t_[tix];
 }
 
+#if S_MSDOS == 0
 
-const char * Pascal strmatch(const char * t_, const char * s_)
+const char * Pascal strsame(const char * t_, const char * s_)
 
-{ return com_match(t_, s_, 0x20);
+{ int tix = 0;
+  const char * s = s_;
+  char ch;
+
+  for (; *s != 0 && (ch = t_[tix]) != 0 && ch == *s; ++s)
+    ++tix;
+
+  bad_strmatch = *s;
+  return &t_[tix];
 }
 
+#endif
 
 #if	DIACRIT
 

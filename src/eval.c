@@ -434,7 +434,9 @@ const char *Pascal gtenv(const char * vname)
 	  when EVCURCOL:  res = getccol();
 	  when EVCURLINE: res = setcline();
 	  when EVHARDTAB: res = curbp->b_tabsize;
+#if WRAP_MEM
 	  when EVRAM:	    res = (int)(envram >> 10);
+#endif
 	  when EVCURWIDTH:res = term.t_ncol;
 	  when EVCBFLAGS: res = curbp->b_flag;
 	  case EVCMODE:   if (vnum == EVCMODE) res = res >> NUMFLAGS;
@@ -688,7 +690,9 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    when EVCURWIDTH: cc = newdims(val, term.t_nrowm1+1);
 	    when EVCURCOL:	 cc = setccol(val);
 	    when EVCURLINE:	 cc = gotoline(TRUE, val);
+#if WRAP_MEM
 	    when EVRAM:
+#endif
 	    when EVCBFLAGS:	 lchange(WFMODE);
                      /*if (val & BFCHG)
                          mbwrite("EVAL");*/

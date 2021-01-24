@@ -81,6 +81,8 @@ e.exe : $(LINK32_OBJS)
 	spath -a $(LINK32)
 	$(LINK32) $(LINK32_FLAGS)./e.exe $(LINK32_OBJS)  winmm.lib kernel32.lib user32.lib
 
+main.obj : main.c efunc.h
+
 testpipe.exe : testpipe.obj sleep.obj
 	$(LINK32) $(LINK32_FLAGS)./testpipe.exe testpipe.obj sleep.obj winmm.lib kernel32.lib user32.lib
 

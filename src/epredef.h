@@ -121,8 +121,6 @@ extern NOSHARE int predefvars[];
 					/* overloading variables */
 #define xxx	  predefvars[EVREADHK]
 #define g_execlevel predefvars[EVCMDHK]
-#define gfcolor   predefvars[EVCURCOL]
-#define gbcolor   predefvars[EVCURLINE] 
 #define mpresf    predefvars[EVCWLINE]
 #define abortc    predefvars[EVKILL]
 #define sterm     predefvars[EVLANG]

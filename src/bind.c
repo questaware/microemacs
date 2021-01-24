@@ -90,7 +90,7 @@ static KEYTAB keytab[NBINDS+1] =
 	{CTLX|CTRL|'V', BINDFNC, viewfile},
 	{CTLX|'?',	BINDFNC, deskey},
 	{CTLX|'!',	BINDFNC, spawn},
-	{CTLX|'$',	BINDFNC, execprg},
+//{CTLX|'$',	BINDFNC, spawn},
 	{CTLX|'#',	BINDFNC, filter},
 	{CTLX|'=',	BINDFNC, showcpos},
 	{CTLX|'(',	BINDFNC, ctlxlp},
@@ -507,13 +507,13 @@ Pascal unbindkey(int f, int n)
 
 int Pascal append_keys(const char * name, const BUFFER * addr, const char * filt)
 
-{          char outseq[80];
-  register KEYTAB * ktp;
-           int c;
+{ char outseq[80];
+  KEYTAB * ktp;
+  int c;
 #if	APROP
-	register const char *sp;
+	const char *sp;
 
-	for (sp = name-1; *++sp != 0 && *com_match(filt, sp, 0) != 0; )
+	for (sp = name-1; *++sp != 0 && *strmatch(filt, sp) != 0; )
 	   ;
 	if (*sp == 0)
 		return 1;
@@ -820,9 +820,8 @@ const char * Pascal flook(char wh, const char * fname)
 	        line[0] = 0;
 	        while (--line > &fspec[1] && *line != '/')
 	          ;
-	          
 #if	S_MSDOS | S_OS2
-		 	       /* msdos isn't case sensitive */
+		 	       																		/* msdos isn't case sensitive */
 	        if (*strmatch(fname, line+1) == 0 && bad_strmatch == 0)
 #else
 	        if (strcmp(fname, line+1) == 0)

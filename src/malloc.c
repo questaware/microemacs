@@ -9,7 +9,6 @@
 
 #if WRAP_MEM
 
-
 #undef	malloc
 #undef  calloc
 #undef  strdup

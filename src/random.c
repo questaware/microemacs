@@ -150,8 +150,8 @@ int Pascal getccol()
  */
 Pascal twiddle(int f, int n)
 
-{	register LINE 	*dotp = curwp->w_dotp;
-	register int		doto = curwp->w_doto;
+{	register LINE *dotp = curwp->w_dotp;
+	register int	 doto = curwp->w_doto;
 
 	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
@@ -210,24 +210,23 @@ int Pascal handletab(int f, int n)
 }
 
 #if 		AEDIT
-
+/*
 int Pascal detabline()
 
-{ curwp->w_doto = 0;		/* start at the beginning */
-
-	while (true)
-	{ register int offs = curwp->w_doto;
-		if (offs >= llength(curwp->w_dotp))
-			break;
-			
-		if (lgetc(curwp->w_dotp, offs) == '\t')
-		{ lputc(curwp->w_dotp, offs, ' ');
-			insspace(TRUE, curbp->b_tabsize - (offs % curbp->b_tabsize) - 1);
+{ LINE * dotp = curwp->w_dotp;
+	int    llen = llength(dotp);
+	int 	 tabsz = curbp->b_tabsize;
+	int    offs;
+	
+	for (offs = -1; ++offs < llen)
+		if (lgetc(dotp, offs) == '\t')
+		{ lputc(dotp, offs, ' ');
+			insspace(TRUE, tabsz - (offs % tabsz) - 1);
 		}
-		forwchar(FALSE, 1);
-	}
+
 	return OK;
 }
+*/
 
 int do_entab = 0;
 
@@ -239,39 +238,48 @@ Pascal detab(int f, int n) /* change tabs to spaces */
 	if (f == FALSE)
 		n = reglines();
 
-{ register int fspace;								/* pointer to first space of a run */
-	register int ccol;									/* current cursor column */
-					 int inc = n > 0 ? 1 : -1;	/* increment to next line [sgn(n)] */
-					 int tbsz = curbp->b_tabsize;
+{	int inc = n > 0 ? 1 : -1;				/* increment to next line [sgn(n)] */
+	int tbsz = curbp->b_tabsize;
 
 	for (; n; n -= inc)
-	{ detabline();									/* advance/or back to the next line */
-		if (do_entab)
-		{ 												/* now, entab the resulting spaced line */
-			curwp->w_doto = 0;						/* start at the beginning */
-			fspace = -1;									/* entab the entire current line */
-			ccol = 0;
-			while (true)
-			{ 														/* see if it is time to compress */
-				if (fspace >= 0 && ccol >= nextabp(fspace,tbsz))
-				{ if (ccol - fspace >= 2)
-					{ backchar(TRUE, ccol - fspace);
-						ldelchrs((Int)(ccol - fspace), FALSE);
-						linsert(1, '\t'); 			
-					}
-					fspace = -1;
-				}
-				if (curwp->w_doto >= llength(curwp->w_dotp))
-					break;
-																						/* get the current character */
-				if (lgetc(curwp->w_dotp, curwp->w_doto) != ' ')
-					fspace = -1;
-				else
-					if (fspace < 0)
-						fspace = ccol;
-				ccol++;
-				forwchar(FALSE, 1);
+	{ LINE * dotp = curwp->w_dotp;
+		int    llen = llength(dotp);
+		int 	 tabsz = curbp->b_tabsize;
+		char ch;
+		int    offs;											/* detab line */
+		for (offs = -1; ++offs < llen; )
+			if ((ch = lgetc(dotp, offs)) == '\t')
+			{ int ins_ct = tabsz - (offs % tabsz) - 1;
+				lputc(dotp, offs, ' ');
+				curwp->w_doto = offs;
+				insspace(TRUE, ins_ct);
+				dotp = curwp->w_dotp;
+				offs += ins_ct;
 			}
+
+		if (do_entab)											/* entab the resulting spaced line */
+		{ int tab_ct = 0;
+			int sp_ct = 0;
+			int incol;
+			int outcol = -1;
+			for (incol = -1; ++incol < llen; )
+			{ 
+				if (incol - tab_ct == tabsz)
+				{ tab_ct += tabsz;
+					if ((sp_ct - 1) > 0)
+					{ outcol -= sp_ct;
+						dotp->l_text[++outcol] = '\t';
+					}
+					
+					sp_ct = 0;
+				}
+			{	int ch = dotp->l_text[incol];
+				dotp->l_text[++outcol] = ch;
+				++sp_ct;
+				if (ch != ' ')
+					sp_ct = 0;
+			}}
+			dotp->l_used = outcol+1;
 		}
 														/* advance/or back to the next line */
 		forwline(TRUE, inc);
@@ -570,11 +578,21 @@ Pascal killtext(int f, int n)
 	return ldelchrs(chunk, TRUE);
 }}
 
-Pascal adjustmode(int kind, int global) /* change the editor mode status */
+static
+const char cname[][9] = {		/* names of colors		*/
+	"BLACK", "RED", "GREEN", "YELLOW", "BLUE",
+	"MAGENTA", "CYAN", "GREY",
+	"GRAY", "LRED", "LGREEN", "LYELLOW", "LBLUE",
+	"LMAGENTA", "LCYAN", "WHITE"};
+
+#define NCOLORS 16
+	
+static 
+int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 				/* int kind;		** 0 = delete, 1 = set, 2 = toggle */
 				/* int global;	** true = global flag,	false = current buffer flag */
 {
-	register int status;						/* error return on input */
+	int status;											/* error return on input */
 	char cbuf[NPAT];								/* buffer to recieve mode name into */
 
 	concat(&cbuf[0], global ? TEXT62 : TEXT63,
@@ -593,12 +611,12 @@ Pascal adjustmode(int kind, int global) /* change the editor mode status */
 	mlerase();
 
 	if (!global)
-	{ if (*strmatch("CHGD", cbuf) == 0)
+	{ if (strcmp_right(cbuf, "CHGD") == 0)
 		{ curbp->b_flag &= ~BFCHG;
 			upmode();
 			return TRUE;
 		}
-		if (*strmatch("INVS", cbuf) == 0)
+		if (strcmp_right(cbuf, "INVS") == 0)
 		{ if			(kind == 0)
 				curbp->b_flag &= ~BFINVS;
 			else if (kind == 1)
@@ -608,55 +626,42 @@ Pascal adjustmode(int kind, int global) /* change the editor mode status */
 			return TRUE;
 		}
 	}
-
-{	register int index;
+{	int iter;
+	int index = -1;
 	int bestmatch = 0;
-#define iter status
-	int bestiter;
 	int ix = NUMMODES;							/* loop index */
 	
-	for (iter = 2; --iter >= 0; )
-	{ 														/* test it first against the modes we know */
-																/* then test it against the colours we know */
-		for (; --ix >= 0;)
-		{ int best = 10;
+	for (iter = 2; --iter >= 0 && index < 0; )	/* test against the modes */
+	{	for (; --ix >= 0;)												/* then against the colours */
+		{ int best = 0;
 			const char * goal = iter > 0 ? mdname[ix] : cname[ix];
-			const char * sm= strmatch(goal, cbuf);
-			if (*sm > ' ')
-			{ best = sm - goal;
-				if (best <= bestmatch)
-					continue;
+			int match = strmatch(goal, cbuf) - goal;
+			if (match < bestmatch)
+				continue;
+			if (match == bestmatch)
+			{	index = -1;
+				continue;
 			}
-			bestmatch = best;
-			bestiter = iter;
-			index = ix;
+
+			bestmatch = match;
+			index = iter * 1024 + ix;		// big => mode
 		}
 		ix = NCOLORS;
 	}
 		
-	if (bestmatch > 0)
-	{ if (bestiter == 0)
-		{
+	if (index >= 0)
+	{ if (index < NCOLORS)
+		{ 
 #if COLOR
-			if (in_range(cbuf[0], 'A', 'Z'))
-				if (global)
-					gfcolor = index;
-				else
-				{ curwp->w_color &= 0xff00;
-					curwp->w_color |= index;
-				}
-			else
-				if (global)
-					gbcolor = index;
-				else
-				{ curwp->w_color &= 0xff;
-					curwp->w_color |= index << 8;
-				}
+			int mask = in_range(cbuf[0], 'A', 'Z') ? 0xff00 : 0xff;
+			int * t = global ? &g_colours : &curwp->w_color;
+			*t &= mask;
+			*t |= (mask & 1 ? index << 8 : index);
 			curwp->w_flag |= WFCOLR;
 #endif
 		}
 		else
-		{ int x = (MDSTT << index); 	/* finding a match, we process it */
+		{ int x = (MDSTT << (index-1024)); 			/* finding a match, we process it */
 			int md = global ? g_gmode : curbp->b_flag;
 			if			(kind == 0)
 					md &= ~x;

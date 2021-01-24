@@ -445,17 +445,15 @@ static int comp_name(char * name, int cpos, int wh)
 			/* command containing the current name to complete */
 			/* ptr to position of next character to insert */
 {
-         int trash;
-register int i;                             /* index into strings */
-         int comflag = FALSE;   /* was there a completion at all? */
+	int trash;
+	int i;															/* index into strings */
+	int comflag = FALSE;   							/* was there a completion at all? */
 
             /* start attempting completions, one character at a time */
   for ( ; cpos < NSTRING; ++cpos)
   { Bool match = false;
-    BUFFER *bp = bheadp;                /* trial buffer to complete */
-
-                                                   /* First the initialisers */
-    register int curbind = g_numcmd;
+    BUFFER *bp = bheadp;                		/* trial buffer to complete */
+    int curbind = g_numcmd;
 
     if (wh == CMP_FILENAME)
     {   

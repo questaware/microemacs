@@ -227,9 +227,9 @@ typedef struct	WINDOW
 	char	w_force;		/* If NZ, forcing row.		*/
 	char	w_flag; 		/* Flags.			*/
 #if	COLOR
-	int     w_color;		/* current colors		*/
+	int   w_color;		/* current colors		*/
 #endif
-	int	w_fcol; 		/* first column displayed	*/
+	int		w_fcol; 		/* first column displayed	*/
 }	WINDOW;
 
 
@@ -383,27 +383,23 @@ extern int g_got_uarg;
 extern int g_got_search;
 
 /* initialized global external declarations */
-NOSHARE extern int g_clexec;	/* command line execution flag	*/
 NOSHARE extern int g_numcmd;	/* number of bindable functions */
-NOSHARE extern int g_nosharebuffs;  /* never allow different files in the same buffer */
+NOSHARE extern int g_clexec;	/* command line execution flag	*/
+NOSHARE extern int g_nosharebuffs;  /* dont allow different files in same buffer */
 
 NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
 NOSHARE extern char *execstr;		/* pointer to string to execute */
 NOSHARE extern char golabel[];		/* current line to go to	*/
 NOSHARE extern int g_execlevel;		/* execution IF level		*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
-NOSHARE extern int  g_numcmd;		/* number of bindable functions */
-NOSHARE extern const NBIND names[];	/* name to function table	*/
-NOSHARE extern int gfcolor;		/* global forgrnd color (white) */
-NOSHARE extern int gbcolor;		/* global backgrnd color (black)*/
+extern const NBIND names[];	/* name to function table	*/
+NOSHARE extern int g_colours;		/* backgrnd (black*256) + foreground (white) */
 NOSHARE extern int mpresf;		/* Stuff in message line	*/
 NOSHARE extern int vtrow;		/* Row location of SW cursor	*/
 NOSHARE extern int ttinit;		/* => ttrow is wrong */
 NOSHARE extern int ttrow;		/* Row location of HW cursor	*/
 NOSHARE extern int ttcol;		/* Column location of HW cursor */
-NOSHARE extern int lbound;		/* leftmost column of current line
-					   being displayed		*/
-NOSHARE extern int reptc;		/* current universal repeat char*/
+NOSHARE extern int lbound;		/* leftmost col of current line being displayed*/
 NOSHARE extern int abortc;		/* current abort command char	*/
 NOSHARE extern int sterm;		/* search terminating character */
 

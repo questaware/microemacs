@@ -188,7 +188,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 	  			continue;
 				} 
 				else
-				{ if      (create || g_nosharebuffs)
+				{ if (create || g_nosharebuffs)
 				  { if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
 	            break;
 	        }
@@ -335,16 +335,18 @@ int Pascal viewfile(int f, int n)	/* visit a file in VIEW mode */
 
 BUFFER * Pascal gotfile(const char * fname)
 					/* file name to find */
-{ const int mode = S_MSDOS | S_OS2 ? 0x20 : -1;
-												/* msdos isn't case sensitive */
-	BUFFER *bp;
-
+{ BUFFER *bp;
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
 	  if ((bp->b_flag & BFINVS) == 0 && bp->b_fname != null)
-	  { const char * t = com_match(fname, bp->b_fname, mode);
+	  { 
+#if S_MSDOS | S_OS2
+																							/* msdos isn't case sensitive */
+			const char * t = strmatch(fname, bp->b_fname);
 	  	if (*t == 0 && bad_strmatch == 0)
-		  {
-//  		mlwrite(TEXT135);
+#else
+			if (strcmp(fname, bp->b_fname) == 0)
+#endif
+		  {//mlwrite(TEXT135);
             /* "[Old buffer]" */
 				return bp;
 			}
@@ -370,7 +372,7 @@ BUFFER * get_remote(BUFFER * bp_, const char * pw, const char * cmdbody,
 		;
 
   if (rnm <= cmdbody)
-    rnm = "Xremotefile";
+    return NULL;
 
   if (cmdnm == NULL || strcmp(cmdnm,"ERROR")==0)
     cmdnm = "c:\\bin\\pscp.exe ";

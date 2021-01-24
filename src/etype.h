@@ -207,8 +207,6 @@ int Pascal clrmes(int, int);
 char * Pascal cmdstr(char *, int);
 int Pascal copyregion(int, int);
 int Pascal copyword(int, int);
-extern char bad_strmatch;
-const char * Pascal com_match(const char *, const char *, int);
 int Pascal ucrypt(char *, int);
 #if CRYPT == 0
 #define cryptremote(X)
@@ -245,7 +243,6 @@ int Pascal entab(int, int);
 int Pascal execbuf(int, int);
 int Pascal execcmd(int, int);
 int Pascal execfile(int, int);
-int Pascal execprg(int, int);
 int Pascal execproc(int, int);
 int Pascal fetchfile(int, int);
 short execprog();
@@ -426,7 +423,9 @@ int Pascal storemac(int, int);
 int Pascal storeproc(int, int);
 int strcmp_right(const char *, const char *);
 int Pascal strinclude(const char *, const char *);
+extern char bad_strmatch;
 const char * Pascal strmatch(const char *, const char *);
+const char * Pascal strsame(const char *, const char *);
 extern char * Pascal strpcpy(char * tgt, const char * src, int mlen);
 char * Pascal strpcpypfx(char *, const char *, int, char);
 int Pascal swapmark(int, int);

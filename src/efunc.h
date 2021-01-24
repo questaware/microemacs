@@ -10,8 +10,8 @@ static const char irsrchm[] = "reverse-incremental-search";
 #define ISRCHM_OFFS 8
 #endif
 
-NOSHARE const NBIND names[] = {
-	{"abort-command",				ctrlg},
+NOSHARE const NBIND names[] = 
+{	{"abort-command",				ctrlg},
 	{"add-global-mode",			setgmode},
 	{"add-mode",						setmod},
 #if	APROP
@@ -122,7 +122,6 @@ NOSHARE const NBIND names[] = {
 #if	NMDPROC
 	{"execute-procedure",		execproc},
 #endif
-	{"execute-program",			execprg},
 	{"exit-emacs",					quit},
 	{"fetch-file",					fetchfile},
 #if	WORDPRO

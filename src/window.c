@@ -332,7 +332,7 @@ int Pascal splitwind(int f, int n)
 	memcpy(wp, curwp, sizeof(WINDOW));
 #if 0
 	wp->w_force = 0;
-	wp->w_color = gbcolor * 256 + gfcolor;/* set colors of the new window */
+	wp->w_color = g_colours;								/* set colors of the new window */
 #endif
 	ntrd = getwpos() - 1 - ntru;
 

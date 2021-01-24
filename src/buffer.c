@@ -529,7 +529,7 @@ BUFFER *Pascal bfind(const char * bname,
 			bp->b_mode |= BCRYPT2;
   
   	for (cc = upper_index(nm)+1; --cc >= 0; )
-	  	if (*strmatch(nm[cc], bname) == 0 && bad_strmatch == 0)
+	  	if (strcmp_right(nm[cc], bname) == 0)
 		  {
 			  bp->b_langprops = fm[cc];
   			break;

@@ -341,7 +341,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
   int num_dirs = 0;
   t = tgt;
 
-  while (*strmatch("../", t) == 0 && cw >= cwd_)
+  while (strcmp_right(t, "../") == 0 && cw >= cwd_)
   { t += 3;						  											 /* target forward */
     while (--cw >= cwd_ && *cw != DIRSEPCHAR)	 /* cwd backward */
       ;
@@ -354,7 +354,12 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	if (num_dirs > 0)
 	{	int deduct = -1;
 		for (; --num_dirs >= 0; )
-		{	const Char * ncw = strmatch(cw+1, t);
+		{	const Char * ncw;
+#if S_WIN32
+			ncw = strmatch(cw+1, t);				// MSDOS is not case sensitive
+#else
+		 	ncw = strsame(cw+1, t);
+#endif
 	    if ((*ncw != 0 && *ncw != DIRSEPCHAR) || t[ncw - cw - 1] != '/')
 	    	break;
 	    

@@ -200,7 +200,6 @@ struct SREGS {
 #define NPAT	128			/* # of bytes, pattern		*/
 #define HUGE	1000			/* Huge number			*/
 #define	NLOCKS	100			/* max # of file locks active	*/
-#define	NCOLORS	16			/* number of supported colors	*/
 #define	KBLOCK	250			/* sizeof kill buffer chunks	*/
 #define	NBLOCK	16			/* line block chunk size	*/
 #define	NVSIZE	10			/* max #chars in a var name	*/

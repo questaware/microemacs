@@ -23,7 +23,7 @@ extern /*const*/ char * TEXT64a[3];
 #define TEXT119 TEXT99
 
 #define	TEXT1	  "[Starting new CLI]"
-#define	TEXT2	  "[Cannot write filter file]"
+#define	TEXT2	  "Int Err 1"
 #define	TEXT3	  "[Execution failed]"
 #define	TEXT4	  "Shell variable TERM not defined!"
 #define	TEXT5	  "Terminal type not 'vt100'!"

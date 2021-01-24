@@ -461,14 +461,6 @@ int spawn(int f, int n)
   return gen_spawn(f, n, "!", line);
 }
 
-/* Run an external program with arguments. When it returns, wait for a single
- * character to be typed, mark the screen as garbage so a full repaint is done.
- * Bound to "C-X $".
- */
-int execprg(int f, int n)
-
-{ return spawn(f, n);
-}
 
 
 /* Pipe a one line command into a window
