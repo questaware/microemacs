@@ -292,12 +292,11 @@ union REGS {
 
 #define TTopen		ttopen
 #define	TTclose		tcapclose
-#define	tcapkclose()
 #define	TTgetc		(*term.t_getchar)
 #define	TTputc		ttputc
 #define	TTflush()	ttflush()
 #define	TTeeol		tcapeeol
-#define	TTeeop		tcapeeop
+#define	TTeeop		tcapepage
 #define	TTbeep		tcapbeep
 #define	TTrev(x)	tcaprev(x)
 //#define TTrez		tcapcres

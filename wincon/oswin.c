@@ -28,7 +28,6 @@
 #endif
 
 extern char *getenv();
-extern void ClearScreen(void);
 
 #define MLIX 3
 
@@ -46,18 +45,10 @@ static int oldbut;	/* Previous state of mouse buttons */
 int g_chars_since_shift;
 int g_timeout_secs;
 
-int flagerr(const char * fmt)
 
-{ DWORD ec = GetLastError();
-  mlwrite(fmt, ec);
-  tcapbeep();
-  ttgetc();
-  return ec;
-}
+int flagerr(const char *str)  //display detailed error info
 
-int ErrorMessage(const char *str)  //display detailed error info
-
-{
+{	DWORD ec = GetLastError();
 #if _DEBUG
 	LPVOID msg;
   FormatMessage(
@@ -71,12 +62,13 @@ int ErrorMessage(const char *str)  //display detailed error info
                );
   mlwrite("%s: %s\n",str,msg);
   LocalFree(msg);
-	mbwrite(NULL);
-	return -1;
 #else
-	char buf[100];
-	return -flagerr(strcat(strcpy(buf,str)," %d"));
+{	char buf[100];
+  mlwrite(strcat(strcpy(buf,str)," %d"), ec);
+}
 #endif
+	mbwrite(NULL);
+	return -(int)ec;
 }
 
 
@@ -619,7 +611,7 @@ void setMyConsoleIP()
 
 { g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
   if (g_ConsIn < 0)					                    /* INVALID_HANDLE_VALUE */
-    flagerr("Piperr %d");
+    flagerr("Piperr");
 
   (void)SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);	// Allowed to fail
 }
@@ -635,7 +627,7 @@ void Pascal MySetCoMo()
                         OPEN_EXISTING,
                         0, NULL); // ignored
 	if(h == INVALID_HANDLE_VALUE || !SetStdHandle(STD_INPUT_HANDLE, h))
-    flagerr("SCCFSHErr %d");
+    flagerr("SCCFSHErr");
 
 	setMyConsoleIP();
 
@@ -643,14 +635,14 @@ void Pascal MySetCoMo()
 #if 0
 { HWND mwh = GetForegroundWindow();
   if (mwh == NULL)
-    flagerr("MwHerr %d");
+    flagerr("MwHerr");
 
 { Cc cc = SetWindowPos(mwh, HWND_TOP, 10,10,
 //        	 ((GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2),
 //	         ((GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2), 
         	   					 0, 0, SWP_NOSIZE /*| SWP_NOACTIVATE*/); 
   if (cc == 0)
-    flagerr("SwPerr %d");
+    flagerr("SwPerr");
 }}
 #endif
 //g_origwin = GetForegroundWindow();
@@ -826,7 +818,8 @@ int Pascal ttgetc()
 error error
 #endif
 
-static char * mkTempName (/*out*/char *buf, const char *name)
+
+static char * mkTempCommName(/*out*/char *filename, char *suffix)
 {
 #ifdef _CONVDIR_CHAR
  #define DIRY_CHAR _CONVDIR_CHAR
@@ -851,31 +844,18 @@ static char * mkTempName (/*out*/char *buf, const char *name)
 			c2[0] = DIRY_CHAR;
 	
 	tmpDir = td;
-	concat(buf,td,c2,"me",int_asc(_getpid()),name,0);
-
-	return &buf[strlen(buf)];
-}
-
-
-static char * mkTempCommName(/*out*/char *filename, char *basename)
-{
-	char *ss = mkTempName(filename,basename) - 3;
+	
+{	char *ss = concat(filename,td,c2,"me",int_asc(_getpid()),suffix,0);
+	int tail = strlen(ss) - 3;
 	int iter = 25;
 	
-	while (--iter >= 0 && !fexist(filename))
+	while (--iter >= 0 && fexist(ss))
 	{
-		HANDLE hdl = CreateFile(filename,GENERIC_READ,FILE_SHARE_READ,NULL,
-													  OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-		if (hdl >= 0) 			/*INVALID_HANDLE_VALUE*/
-		{  CloseHandle(hdl);
-			 break ;
-		}
-		ss[0] = 'A' + 24 - iter;				// File in use?
-		ss[1] = '~';
-		ss[2] = 0;
+		ss[tail] = 'A' + 24 - iter;				// File should not exist anyway
+		ss[tail+1] = '~';
 	}
 	return filename;
-}
+}}
 
 #ifdef _WIN32s
 error error
@@ -959,13 +939,12 @@ error error
 #define WL_SHOWW	 0x2000
 #define WL_NOIHAND 0x4000
 
-static int
-																						/* flags: above */
-WinLaunch(Cc *sysRet, int flags,
-					const char *app, const char * ca, 
-          const char *in_data, const char *infile, const char *outfile 
+static																						/* flags: above */
+Cc WinLaunch(Cc *sysRet, int flags,
+						 const char *app, const char * ca, 
+          	 const char *in_data, const char *infile, const char *outfile 
           	 // char *outErr
-				 )
+						)
 { char buff[1024];           //i/o buffer
 	const char * fapp = NULL;
 	if (app != NULL)
@@ -997,11 +976,11 @@ WinLaunch(Cc *sysRet, int flags,
 				return -1;
 
 			for (; (ch = *ss++); prev = ch)
-			{	if (ch == '/' && 										// &&!(flags & LAUNCH_LEAVENAMES)
-					  (in_range(toupper(prev), 'A','Z')
-				  || in_range(prev, '0', '9')
-					||					prev == '_'  || prev == ' '))
-					ch = '\\';
+			{// if (ch == '/' && 										// &&!(flags & LAUNCH_LEAVENAMES)
+			 //	  (in_range(toupper(prev), 'A','Z')
+			 // || in_range(prev, '0', '9')
+			 //	||					prev == '_'  || prev == ' '))
+			 //		ch = '\\';
 		
 				if (ch == '"')
 					*dd++ = '\\';
@@ -1044,8 +1023,7 @@ WinLaunch(Cc *sysRet, int flags,
 							  
 	if (!(flags & WL_SPAWN))
 	{ if ((flags & WL_NOIHAND) == 0)
-		{	si.hStdInput = // infile == NULL ? CreateF(dummyInFile)
-										 CreateFile(infile == NULL ? "nul" : infile,
+		{	si.hStdInput = CreateFile(infile == NULL ? "nul" : infile,
 										 						GENERIC_READ,FILE_SHARE_READ,NULL,
 																OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 		}
@@ -1060,10 +1038,10 @@ WinLaunch(Cc *sysRet, int flags,
 	}
 	else
 	{	if (!CreatePipe(&read_stdout,&newstdout,&sa,0))  //create stdout pipe
-	  	return -1000 + ErrorMessage("CreatePipe");
+	  	return -1000 + flagerr("CreatePipe");
 	
 		if (!CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
-			wcc = -2000 + ErrorMessage("CreatePipe");
+			wcc = -2000 + flagerr("CreatePipe");
 		else
 		{ // mbwrite("Created WSO");
 
@@ -1110,7 +1088,7 @@ WinLaunch(Cc *sysRet, int flags,
                 					flags & (WL_CNPG+WL_CNC),
                     			NULL,NULL,&si,&pi))
 	{	pi.hProcess = 0;
-  	wcc = -3000 + ErrorMessage("CreateProcess");
+  	wcc = -3000 + flagerr("CreateProcess");
   }
 	else
 	{	CloseHandle(pi.hThread);
@@ -1123,14 +1101,14 @@ WinLaunch(Cc *sysRet, int flags,
 				if (procStatus == WAIT_TIMEOUT)
 				{ // millisleep(100);
 //			if (--ct >= 0)
-					if (!typahead() /* && (TTbreakFlag != 0)*/) 
+ 					if (!_kbhit() /* && (TTbreakFlag != 0)*/) 
 						continue;
 				}
 			{ Cc cc = (procStatus != WAIT_FAILED);
 				if (cc)
 				{ cc = GetExitCodeProcess(pi.hProcess,&exit);
 				  if (cc == 0)
-				  	flagerr("GECP %d");
+				  	flagerr("GECP");
 					else
 					{//mbwrite("Exitting");
 						break;
@@ -1165,13 +1143,13 @@ WinLaunch(Cc *sysRet, int flags,
 		  	delay = std_delay;
 		  {	Cc cc = PeekNamedPipe(read_stdout,buff,2,&bread,&avail,NULL);
 			  if (!cc)
-		  	 	flagerr("PNP %d");
+		  	 	flagerr("PNP");
 				if (bread == 0)
 		  	{ 
 	  			if (exit == STILL_ACTIVE)
 					{ cc = GetExitCodeProcess(pi.hProcess,&exit); //while process exists
 				    if 			(!cc)
-				    {	flagerr("GECP %d");
+				    {	flagerr("GECP");
 				    	if (--clamp <= 0)
 				    		break;
 				    }
@@ -1186,7 +1164,7 @@ WinLaunch(Cc *sysRet, int flags,
 	    	  while (done < avail)
 	    	  {	cc = ReadFile(read_stdout,buff+done,1023-done,&bread,NULL);
 					  if (cc == 0)
-	  				{	flagerr("PNP %d");
+	  				{	flagerr("PNP");
 	    	 			break;
 	    	 		}
 	    		  done += bread;
@@ -1268,11 +1246,11 @@ WinLaunch(Cc *sysRet, int flags,
 #endif
 		    cc = WriteFile(write_stdin,l.buf+bwrote,sl,&bwrote,NULL); //send to stdin
 		    if (cc == 0)
-			  	wcc = -4000 + ErrorMessage("WriteFile");
+			  	wcc = -4000 + flagerr("WriteFile");
 			  else
 			  {	if (sl - bwrote > 0)
 				  {	l.buf[sl] = 0;
-			  		strpcpy(l.buf, l.buf+bwrote, sizeof(l.buf));
+			  		strpcpy(l.buf, l.buf+bwrote, sizeof(l.buf));	// overlapping copy
 			  	}
 			  	bwrote = sl - bwrote;
 //		  	mlwrite("Sent %d",bread);
@@ -1306,7 +1284,6 @@ WinLaunch(Cc *sysRet, int flags,
 
 
 
-
 int ttsystem(const char * cmd, const char * data)
 
 { Cc cc;
@@ -1316,8 +1293,8 @@ int ttsystem(const char * cmd, const char * data)
 	}
   else
   { char app[140];
-    strpcpy(app, cmd, sizeof(app));
-  { char * t = app - 1;
+    
+		char * t = strpcpy(app, cmd, sizeof(app)) - 1;
     while (*++t != 0 && *t != ' ' && *t != '\t')
       ;
 	  *t = 0;
@@ -1326,7 +1303,7 @@ int ttsystem(const char * cmd, const char * data)
   	cc = WinLaunch(&cc, WL_SPAWN+WL_CNC+WL_AWAIT_PROMPT,
   										app, cmd+(t-app),
   										data,null,null);
-  }}
+  }
 
 	return cc;
 }
@@ -1400,9 +1377,8 @@ int pipefilter(wh)
 	}
 
 	if (wh == '@'-'@')
-	{ strcat(strcpy(bname,"_cmd"),int_asc(++bix)); /* get the command to pipe in */
-													/* get rid of the command output buffer if it exists */
-	{ BUFFER * bp = bfind(bname, FALSE, 0);
+	{ 
+		BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), FALSE, 0);
 		if (bp != null) 					/* try to make sure we are off screen */
 		{ BUFFER * sbp = curbp;
 			cc = orwindmode(0, 1);
@@ -1410,12 +1386,10 @@ int pipefilter(wh)
 			if (cc > 0)
 				onlywind(FALSE, 1);
 														 /* get rid of the existing command buffer */
-			if (bp == curbp)
-				nextbuffer(0,0);
 			if (zotbuf(bp) != TRUE)
 				return FALSE;
 		}
-	}}
+	}
 	else if (wh == '#'-'@') 						 /* setup the proper file names */
 	{ 			
 		fnam1 = mkTempCommName(pipeInFile,"si");
@@ -1431,7 +1405,7 @@ int pipefilter(wh)
 {	char * fnam2 = mkTempCommName(pipeOutFile,"so");
 	char * s = line;
 
-	tcapmove(term.t_nrowm1, 0);
+//tcapmove(term.t_nrowm1, 0);
 
 	app[0] = 0;
 
@@ -1580,46 +1554,66 @@ X#endif
 
 // Clipboard Functions
 
-HANDLE	m_hClipData;
+int g_cliplife = CLIP_LIFE;
 
-//Char * ClipRef()
+static HANDLE	g_hClipData;
 
-//{
-//	if (m_lpData != NULL)
-//		return m_lpData;
-//	
-//	return m_hData == NULL ? NULL : (m_lpData = (char*)GlobalLock(m_hData));
-//}
+static int g_clix = 0;
 
+DWORD WINAPI ClipThread(void * data);
 
-Cc ClipSet(char * src)
+Cc ClipSet(char * data)
 
-{ Int len = strlen(src);
+{ int thread = ((unsigned int)data & 0xc0000000) == 0xc0000000; // top of mem?
+	char * src = thread ? NULL : data;
+	int len = src == NULL ? 0 : strlen(src);
 	HWND mwh = GetTopWindow(NULL);
 	if (mwh == NULL)
 		return -1;
 
-{	HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
-	if (!m_hData)  
-		return -1;
+	if (thread)
+	{	millisleep(g_cliplife * 1000);
 
-{	char * m_lpData = (char*)GlobalLock(m_hData);
-	if (m_lpData == NULL)
-		return -1;
-	
-	strcpy(&m_lpData[0], src);
-	GlobalUnlock(m_hData);
+//	if (mwh != GetTopWindow(NULL))
+//		return -1;
+
+		if (-(int)data != g_clix)
+			return 0;
+	}
 
 	if (OpenClipboard(mwh))
-	{ 								/* Clear the current contents of the clipboard, and set
-										 * the data handle to the new string.*/
+	{	
 		EmptyClipboard();
-		SetClipboardData(CF_TEXT, m_hData);
+		if (len != 0)
+
+		{	HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
+			if (!m_hData)  
+				return -1;
+
+		{	char * m_lpData = (char*)GlobalLock(m_hData);
+			if (m_lpData == NULL)
+				return -1;
+
+			strcpy(&m_lpData[0], src);
+			SetClipboardData(CF_TEXT, m_hData);
+			GlobalUnlock(m_hData);
+		}}
 		CloseClipboard();
 	}
-	return OK;
-}}}
 
+#if 1
+	if (!thread && g_cliplife != 0)
+  {	HANDLE thread = CreateThread(NULL, 0, ClipThread, (void*)-(++g_clix),0,NULL);
+  }
+#endif
+	return OK;
+}
+
+
+DWORD WINAPI ClipThread(void * data)
+
+{ return ClipSet(data);
+}
 
 #if 0
 
@@ -1651,9 +1645,9 @@ char * ClipPasteStart()
 { HWND mwh = GetTopWindow(NULL);
 	if (mwh != NULL &&
 			OpenClipboard(mwh))
-	{ m_hClipData = GetClipboardData(CF_TEXT);
-		if (m_hClipData)
-			return (char *)GlobalLock(m_hClipData);
+	{ g_hClipData = GetClipboardData(CF_TEXT);
+		if (g_hClipData)
+			return (char *)GlobalLock(g_hClipData);
 	}
 
 	loglog("PasteFailed");
@@ -1665,15 +1659,12 @@ char * ClipPasteStart()
 void ClipPasteEnd()
 
 { 
-	if (m_hClipData)
-	{ GlobalUnlock(m_hClipData);
-		m_hClipData = NULL;
+	if (g_hClipData)
+	{ GlobalUnlock(g_hClipData);
+		g_hClipData = NULL;
 	}
 	CloseClipboard();
 }
-
-
-
 
 void Pascal mbwrite(const char * msg)
 
@@ -1760,7 +1751,7 @@ void Pascal SetParentFocus()
 		if (g_origwin != NULL)
 			mwh = GetParent(g_origwin);
 		if (mwh == NULL)
-			flagerr("SPF %d");
+			flagerr("SPF");
 		else
 			SetActiveWindow(mwh);
 	}

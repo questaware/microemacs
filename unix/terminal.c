@@ -757,7 +757,7 @@ void Pascal tcapeeol()
 }
 
 
-void Pascal tcapeeop()
+void Pascal tcapepage()					// erase display
 
 { tcapmove(0, 0);
   putpad(captbl[K_ED].p_seq);
@@ -893,6 +893,17 @@ void Pascal ttscupdn(int n)
     }
   }
 }
+
+
+void Pascal mbwrite(const char * src)
+
+{ int sd = g_discmd;
+	g_discmd = 1;
+	mlwrite(src);
+	g_discmd = sd;
+	(void)ttgetc();
+}
+
 
 #if	FLABEL
 fnclabel(f, n)		/* label a function key */

@@ -683,7 +683,7 @@ int Pascal spawn(int f, int n)
 /*					 "\r\n\n[End]" */
 		tgetc();
 #if S_VMS
-		tcapeeop();
+		tcapepage();
 #endif
 	}
 	sgarbf = TRUE;

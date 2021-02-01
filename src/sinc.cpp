@@ -821,7 +821,7 @@ int Sinc::srchdeffile(const char * fname, char * str, int depth)
   	
 {
  static const char * dinc[] = { "define", "include", };
- static const char incldr[] = "$incldirs";
+ static char incldr[] = "$incldirs";
 
   Paren_t sparen = paren;
   char lbuf[SLEN+2];

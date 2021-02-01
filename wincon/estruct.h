@@ -283,13 +283,12 @@ struct SREGS {
 /*#define TTopen	ttopen*/
 #define	TTclose		tcapclose
 #define tcapkopen()
-#define	tcapkclose()
 #define	TTgetc		(*term.t_getchar)
 #define	TTputc		ttputc
 #define	TTflush()		
 #define	TTsetcol(col)
 #define	TTeeol		tcapeeol
-#define	TTeeop		tcapeeop
+#define	TTeeop		tcapepage
 #define	TTbeep		tcapbeep
 #define	tcaprev(x)	/* not used in MSDOS */
 //#define TTrez		tcapcres
@@ -312,5 +311,3 @@ struct SREGS {
 #define chmod _chmod
 
 #endif
-
-/*#include "jstruct.h"*/

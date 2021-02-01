@@ -19,7 +19,6 @@ Char * ClipRef(void);
 Cc ClipSet(char * src);
 char * ClipPasteStart(void);
 void ClipPasteEnd(void);
-Cc ClipDelete(void);
 
 /*extern int atoi(char * s);*/
 
@@ -67,7 +66,7 @@ char *Pascal gtfilename(char *);
        char *Pascal gtusr(char*);
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
-char * Pascal io_message(char *, int, int);
+void init_fncmatch(void);
 char *Pascal int_asc(int);
 #if S_HPUX == 0 || 1
  const
@@ -81,7 +80,7 @@ BUFFER * Pascal bmfind(int, int);
 int Pascal pipefilter(char);
 BUFFER * Pascal prevele(BUFFER*, BUFFER*);
 char *Pascal timeset();
-char *Pascal token(char * src_, char * tok, int size);
+char *Pascal token(const char * src_, char * tok, int size);
 const char *Pascal transbind(char *);
 char * Pascal trimstr(char * s, int * from);
 char *Pascal xlat(char *, char *, char *);
@@ -95,6 +94,7 @@ int Pascal echochar(int,int);
 int Pascal myeq(int, int);
 int Pascal ernd(void);
 int Pascal execkey(KEYTAB *, int, int);
+int Pascal execporb(int isp, int n);
 #if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
 int Pascal fexist(const char *);
 #else
@@ -131,7 +131,7 @@ int Pascal handletab(int, int);
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);
-int Pascal set_var(const char *, char *);
+int Pascal set_var(char *, char *);
 int Pascal sindex(char *, char *);
 int Pascal stol(char * s);
 int Pascal svar(int, char *);
@@ -143,7 +143,6 @@ int Pascal topluct();
 int Pascal uneat();
 LINE *Pascal mk_line(const char *, int, int);
 LINE *Pascal mouseline();
-int Pascal adjustmode(int, int);
 int Pascal anycb();
 int Pascal apro(int, int);
 int Pascal backchar(int, int);
@@ -159,46 +158,6 @@ void Pascal blankpage(void);
 int Pascal bktoshell(int, int);
 int Pascal buildlist(const char * mstring);
 int Pascal capword(int, int);
-int Pascal cbuf1(int, int);
-int Pascal cbuf10(int, int);
-int Pascal cbuf11(int, int);
-int Pascal cbuf12(int, int);
-int Pascal cbuf13(int, int);
-int Pascal cbuf14(int, int);
-int Pascal cbuf15(int, int);
-int Pascal cbuf16(int, int);
-int Pascal cbuf17(int, int);
-int Pascal cbuf18(int, int);
-int Pascal cbuf19(int, int);
-int Pascal cbuf2(int, int);
-int Pascal cbuf20(int, int);
-int Pascal cbuf21(int, int);
-int Pascal cbuf22(int, int);
-int Pascal cbuf23(int, int);
-int Pascal cbuf24(int, int);
-int Pascal cbuf25(int, int);
-int Pascal cbuf26(int, int);
-int Pascal cbuf27(int, int);
-int Pascal cbuf28(int, int);
-int Pascal cbuf29(int, int);
-int Pascal cbuf3(int, int);
-int Pascal cbuf30(int, int);
-int Pascal cbuf31(int, int);
-int Pascal cbuf32(int, int);
-int Pascal cbuf33(int, int);
-int Pascal cbuf34(int, int);
-int Pascal cbuf35(int, int);
-int Pascal cbuf36(int, int);
-int Pascal cbuf37(int, int);
-int Pascal cbuf38(int, int);
-int Pascal cbuf39(int, int);
-int Pascal cbuf4(int, int);
-int Pascal cbuf40(int, int);
-int Pascal cbuf5(int, int);
-int Pascal cbuf6(int, int);
-int Pascal cbuf7(int, int);
-int Pascal cbuf8(int, int);
-int Pascal cbuf9(int, int);
 int Pascal cex(int, int);
 int Pascal chk_k_range(int);
 int Pascal cinsert();
@@ -220,7 +179,6 @@ int Pascal ctlxrp(int, int);
 int Pascal ctoec(int);
 int Pascal ctrlg(int, int);
 Bool Pascal cursor_on_off(Bool on);
-void Pascal dcline(int, char **);
 int Pascal debug(BUFFER*,char*);
 int Pascal delbword(int, int);
 int Pascal delfword(int, int);
@@ -325,14 +283,10 @@ int Pascal lowerword(int, int);
 int Pascal macarg(char * tok);
 int Pascal macrotokey(int, int);
 int main_(int argc, char * argv[]);
-#if S_WIN32
 void Pascal mbwrite(const char *);
-#else
-#define mbwrite(m)
-#endif
 void Pascal mcclear();
 int Pascal meta(int, int);
-Cc Pascal mlerase();
+void Pascal mlerase();
 void Pascal mlforce(const char *);
 void Pascal mlout(char);
 void Pascal mlputf(int);
@@ -443,7 +397,7 @@ void Pascal tcapscreg(int, int);
 
 void Pascal tcapmove(int, int);
 void Pascal tcapeeol();
-void Pascal tcapeeop();
+void Pascal tcapepage();
 #ifndef tcaprev
 void Pascal tcaprev(int st);
 #endif
@@ -458,9 +412,6 @@ void Pascal ttopen();
 int Pascal tcapclose(int lvl);
 #ifndef tcapkopen
 void Pascal tcapkopen();
-#endif
-#ifndef tcapkclose
-int Pascal tcapkclose();
 #endif
 void Pascal tcapbfcol(unsigned int color);
 int Pascal scinit();

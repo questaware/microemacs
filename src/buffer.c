@@ -209,7 +209,7 @@ int Pascal usebuffer(int f, int n)
 	if (!bp)
 		return ABORT;
 				/* make it invisable if there is an argument */
-	if (f == TRUE)
+	if (f != FALSE)
 		bp->b_flag |= BFINVS;
 
 	return swbuffer(bp);
@@ -240,8 +240,8 @@ int Pascal killbuffer(int f, int n)
 #endif
 #endif
 
-	return bp->b_nwnd > 0 && bp == curbp && nextbuffer(0, 1) == (int)NULL ? ABORT
-                                                                        : zotbuf(bp);
+	return bp->b_nwnd > 0 && bp == curbp && nextbuffer(0,1) == 0 ? ABORT
+                                                               : zotbuf(bp);
 }
 
 
@@ -513,6 +513,7 @@ BUFFER *Pascal bfind(const char * bname,
 		 /*bp->b_flag |= BFACTIVE; ** very doubtful !!! */
 	bp->b_flag = bflag | g_gmode;
 	bp->b_tabsize = tabsize <= 0 ? 8 : tabsize;		/* default tab size is 8 */
+	bp->b_color = g_colours;
 
 	bp->b_bufp = sb->b_bufp;    /* insert it */
 	sb->b_bufp = bp;

@@ -52,7 +52,7 @@ LINK32_OBJS= \
 basic.obj bind.obj buffer.obj \
 char.obj crypt.obj \
 display.obj \
-eval.obj exec.obj execasm.obj \
+eval.obj exec.obj \
 file.obj fileio.obj \
 input.obj isearch.obj \
 line.obj \

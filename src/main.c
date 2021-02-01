@@ -25,11 +25,11 @@
 #include	"estruct.h"	/* global structures and defines */
 #include	"edef.h"	/* global definitions */
 #include	"etype.h"	/* variable prototype definitions */
-#include	"efunc.h"	/* function declarations and name table */
 #include	"elang.h"	/* human language definitions */
 #include	"epredef.h"
 #include	"build.h"
 #include	"map.h"
+#include	"msdir.h"
 #include	"logmsg.h"
 
 
@@ -44,14 +44,12 @@ extern char * getenv();
 extern int overmode;			/* from line.c */
 
 /* initialized global definitions */
-NOSHARE int g_numcmd = NCMDS;	/* number of bindable functions */
-NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
 NOSHARE int g_nosharebuffs = FALSE; /* dont allow different files in same buffer*/
+NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
 
-NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
 NOSHARE char *execstr = NULL;		/* pointer to string to execute */
 NOSHARE int g_execlevel = 0;	/* execution IF level		*/
-NOSHARE int g_colours = 7;		/* (backgrnd (black)) * 256 + foreground (white) */
+NOSHARE int g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
 NOSHARE int vtrow = 0;		/* Row location of SW cursor	*/
 NOSHARE int ttrow = HUGE; 	/* Row location of HW cursor	*/
@@ -71,13 +69,14 @@ NOSHARE int restflag = FALSE;	    /* restricted use?		*/
 NOSHARE int g_newest = 0;         /* choose newest file           */
 //#define USE_SVN
 #ifdef USE_SVN
-NOSHARE int del_svn = 0;
+ NOSHARE int del_svn = 0;
 #else
-#define del_svn 0
+ #define del_svn 0
 #endif
 #if WRAP_MEM
-NOSHARE Int envram = 0l;		/* # of bytes current in use by malloc */
+ NOSHARE Int envram = 0l;		/* # of bytes current in use by malloc */
 #endif
+
 const char errorm[] = "ERROR";		/* error literal		*/
 const char truem[] = "TRUE";		/* true literal 		*/
 const char falsem[] = "FALSE";		/* false litereal		*/
@@ -119,13 +118,10 @@ NOSHARE int lastdir = 0;
 
 #if	DEBUGM
 				/* vars needed for macro debugging output*/
-NOSHARE char outline[NSTRING];	/* global string to hold debug line text */
+ NOSHARE char outline[NSTRING];	/* global string to hold debug line text */
 #endif
 
-
-Map_t namemap = mk_const_map(T_DOMSTR, 0, names);
-
-				/* increase the default stack space */
+NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
 
 /*	make VMS happy...	*/
 
@@ -149,7 +145,7 @@ extern int g_timeout_secs;
 extern int macro_last_pos;
 
 
-int Pascal editloop(int c_); /* forward */
+void Pascal editloop(int c_); /* forward */
 
 
 //void Pascal load_pat(const char * src);
@@ -158,6 +154,7 @@ int Pascal editloop(int c_); /* forward */
 
 /*	Process a command line.   May be called any time.	*/
 
+static
 void Pascal dcline(int argc, char * argv[])
 
 {	set_var("$incldirs", getenv("INCLUDE"));
@@ -168,23 +165,20 @@ void Pascal dcline(int argc, char * argv[])
 		g_invokenm = argv[0];
 
 { BUFFER *bp;
-	int	carg; 		 					/* current arg to scan */
 	char * startfile = EMACSRC;	/* startup file */
-	BUFFER *firstbp = NULL;	/* ptr to first buffer in cmd line */
+	BUFFER * firstbp = NULL;	/* ptr to first buffer in cmd line */
 	int gline = 0; 	 				/* line to goto at start or 0 */
 	int genflag = 0;
 	const char * def_bname = "main";
-	int nopipe = -1;
-
-	char * filev;
+	int nopipe = 1;
+	int	carg;
 						/* Parse a command line */
 #if S_MSDOS && 0
 	for (carg = argc; --carg > 0; )
 		clean_arg(argv[carg]);
 #endif
 	for (carg = argc; --carg > 0; )
-	{ filev = (++argv)[0];
-
+	{ char * filev = (++argv)[0];
 		if			(filev[0] == '-')
 			switch (toupper(filev[1]))
 			{ 			/* Process Startup macros */
@@ -225,7 +219,7 @@ void Pascal dcline(int argc, char * argv[])
 					ll_ix = 0;
 
 				when 'B': def_bname = filev+2;
-					genflag |= 0x8000;
+					genflag |= BFACTIVE;
 				when 'P': /* -p for search $PATH */
 					genflag |= 2;
 //			when 'T': /* -T for search directory structure */
@@ -301,10 +295,8 @@ void Pascal dcline(int argc, char * argv[])
 				if (firstbp == NULL)
 				{ if (genflag & BFACTIVE)
 				  { zotbuf(bp);
-						bp = bufflink(def_bname, TRUE /*|(genflag & 16)*/);
-						if (bp == NULL)
-					  	mbwrite(def_bname);
-						else
+						bp = bufflink(def_bname, 1 | MSD_DIRY);
+						if (bp != NULL)													// safe against out of memory 
 						{ bp->b_flag |= (genflag & MDVIEW);
 					  	repl_bfname(bp, filev);
 						}
@@ -314,7 +306,7 @@ void Pascal dcline(int argc, char * argv[])
 		  }
 		  lastline[0][0] = 0;
 		}
-	}
+	} // loop
 
 	if (firstbp == null)
 	{ 				/* if there are any files to read, read the first one! */
@@ -346,15 +338,10 @@ void Pascal dcline(int argc, char * argv[])
 			startfile = "Error in .rc file%w%w";
 		}
 		else
-		{ startfile = "No .rc file";
-			carg=13;
+		{	carg = 13;
+			startfile = "No .rc file";
 		}
-#ifdef _WINDOWS
 		mbwrite(startfile);
-#else
-		g_discmd = 1;
-		mlwrite(startfile);
-#endif
 	}
 	else
 	{ if (genflag & 4)
@@ -365,6 +352,7 @@ void Pascal dcline(int argc, char * argv[])
 																								/* we now have the .rc file */
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
 	{ bp->b_flag |= g_gmode;
+		bp->b_color = g_colours;
 	  if (bp->b_fname != NULL)
 	  	customise_buf(bp);
 	}
@@ -372,7 +360,7 @@ void Pascal dcline(int argc, char * argv[])
 	swbuffer(firstbp);
 
 #ifndef _WINDOWS
-  tcapeeop();
+  tcapepage();
 #endif
   ttopen();
   tcapkopen();    /* open the keyboard */
@@ -413,55 +401,6 @@ void Pascal dcline(int argc, char * argv[])
 }}
 
 
-static int meexit(int status)
-			/* return status of emacs */
-{
-	eexitval = status;
-	eexitflag = TRUE; /* flag a program exit */
-			/* and now.. we leave and let the main loop kill us */
-#if S_WIN32 && 0
-	SetParentFocus();
-#endif
-	return OK;
-}
-
-/* Initialize all of the buffers and windows. The buffer name is passed down
- * as an argument, because the main routine may have been told to read in a
- * file by default, and we want the buffer name to be right.
- */
-void Pascal edinit()
-
-{ 				/* initialize some important globals */
-	register KEYTAB * hpp;
-	for (hpp = &hooks[6]; --hpp >= &hooks[0]; )
-	  hpp->k_ptr.fp = nullproc;
-
-	do
-	{ 
-		BUFFER * blistp = bfind("[List]", TRUE, BFINVS); /* Buffer list buffer */
-		if (blistp == NULL)
-			break;
-#if 0
-		curbp = bfind("main", TRUE, 0); 	/* First buffer 	*/
-		if (curbp == NULL)
-			break;
-		curbp->b_nwnd++;		/* mark us as more in use */
-#endif
-	/*curbp->b_flag = gmode;*/
-
-		wheadp =
-		curwp = (WINDOW *) aalloc(sizeof(WINDOW)); /* First window	*/
-		if (curwp==NULL)
-			break;
-
-#if COLOR
-		curwp->w_color = g_colours;		// initalize colors to global defaults
-#endif
-		return;
-	} while (1);
-	meexit(1);
-}
-
 /*	This is the primary entry point that is used by command line
 	invocation, and by applications that link with microemacs in
 	such a way that each invocation of Emacs is a fresh environment.
@@ -484,16 +423,14 @@ int emacs(int argc, char * argv[])
 #else
 int main(int argc, char * argv[])
 #endif
-	
-{	namemap.curr_mult -= 1; 										/* last entry not wanted */
-	namemap.curr_len -= sizeof(names[0]); 			/* last entry not wanted */
+{
 #if defined(_DEBUG) || LOGGING_ON
 	log_init("emacs.log", 300000, 0);
 	loglog("***************Started***************");
 #endif
 //char ch  = ttgetc();
+	init_fncmatch();
 	vtinit();
-	edinit(); 		/* Buffers, windows */
 #if CALLED
 	varinit();		/* user variables */
 #endif
@@ -502,24 +439,33 @@ int main(int argc, char * argv[])
 #endif
 	tcapopen(); 	/* open the screen AGAIN ! */
 
+{	KEYTAB * hpp;
+	for (hpp = &hooks[6]; --hpp >= &hooks[0]; )
+	  hpp->k_ptr.fp = nullproc;
+
+	wheadp =
+	curwp = (WINDOW *) aalloc(sizeof(WINDOW)); /* First window	*/
+
 				/* Process command line and let the user edit */
 	(void)dcline(argc, argv);
+	do
+	{ lastflag = 0; 								/* Fake last flags.*/
 
-	while (!eexitflag)
-	{ 
-		lastflag = 0; 	/* Fake last flags.*/
-
-					/* execute the "command" macro...normally null*/
+																	/* execute the "command" macro, normally null*/
 		execkey(&cmdhook, FALSE, 1);	/* used to push/pop lastflag */
 				
 		update(FALSE);		/* Fix up the screen	*/
 
 	{ int	c = getkey(); 	/* get the next command from the keyboard */
 
-		eexitval = editloop(c);
+		editloop(c);
 	}}
+	while (!eexitflag);
 
-#if S_WIN32 == 0
+#if S_WIN32
+	ClipSet(NULL);
+//tcapbeeol(-1,0);
+#else
 	tcapclose(0);
 #endif
 
@@ -532,11 +478,8 @@ int main(int argc, char * argv[])
 #if CLEAN
 	clean();
 #endif
-#if S_WIN32 && 0
-	ClearScreen();
-#endif
 	return eexitval;
-}
+}}
 
 #if CLEAN
 /*
@@ -617,7 +560,7 @@ static int Pascal execute(int c, int f, int n)
 	if		 (key->k_code != 0) /* if keystroke is bound to a function..do it*/
 	{ thisflag = 0;
 	
-		status = execkey(key, f, n);
+		status = execkey(key, f, n);			// f is 0 or any other value
 	}
 	else if (!in_range(c, ' ', 0xFF)) /* Self inserting.	*/
 	{  /*  TTbeep();*/
@@ -672,21 +615,16 @@ int g_got_search = FALSE;
 	arrange to be able to call this from a macro, you will have
 	invented the "recursive-edit" function.
 */
-int Pascal editloop(int c_)
+void Pascal editloop(int c_)
 
-{ 	 int f; 	/* default flag */
-	register int n; 	/* numeric repeat count */
-	register int mflag; /* negative flag on repeat */
-	register int c = c_;
+{ int f; 	/* default flag */
+	int n; 	/* numeric repeat count */
+	int c = c_;
 
 					/* if there is something on the command line, clear it */
 	if (mpresf != FALSE)
 	{ mlerase();
 		update(FALSE);
-#if CLRMSG
-		if (c == ' ') 		/* ITS EMACS does this	*/
-			return 0;
-#endif
 	}
 					/* override the arguments if prefixed */
 	if (g_prefix)
@@ -710,8 +648,9 @@ int Pascal editloop(int c_)
 	if ((c & META) && ((unsigned)((c & 0xff) - '0') <= 9 || (c & 0xff) == '-')
 								 && getbind(c)->k_code == 0)
 	{ n = 0;		/* start with a zero default */
-		f = TRUE; 	/* there is a # arg */
-		mflag = 1;		/* current minus flag */
+		f = 1; 		/* there is a # arg */
+							/* current minus flag */
+#define mflag f
 		c &= ~META; 	/* strip the META */
 		while (true)
 		{ c -= '0';
@@ -730,59 +669,10 @@ int Pascal editloop(int c_)
 		}
 		n *= mflag;
 		c += '0';
+#undef mflag
 	}
-#if 0
-X#define  reptc CTRL | 'U'
-												 /* current universal repeat char*/
-X if (c == reptc) 			 /* ^U, start argument	 */
-X { f = TRUE;
-X 	n = 4;				/* with argument of 4 */
-X 	mflag = 0;			/* that can be discarded. */
-X 	mlwrite("Arg: 4");
-X 	while (true)
-X 	{ c = getkey();
-X 		if			(c == reptc)
-X 			if ((n > 0) == ((n*4) > 0))
-X 				n *= 4;
-X 			else
-X 				n = 1;
-X 		/* If dash, and start of argument string, set arg.
-X 		 * to -1.  Otherwise, insert it.		 */
-X 		else if (c == '-')
-X 		{ if (mflag)
-X 				break;
-X 			n = 0;
-X 			mflag = -1;
-X 		}
-X 		/* If first digit entered, replace previous argument
-X 		 * with digit and set sign.  Otherwise, append to arg.*/
-X 		else
-X 		{ c -= '0';
-X 			if ((unsigned)c > 9)
-X 			{ c += '0';
-X 				break;
-X 			}
-X 			if (!mflag)
-X 			{ n = 0;
-X 				mflag = 1;
-X 			}
-X 			n = 10 * n + c;
-X 		}
-X 		mlwrite("Arg: %d", (mflag >=0) ? n : (n ? -n : -1));
-X 	}
-X 	/* Make arguments preceded by a minus sign negative and change
-X 	 * the special argument "^U -" to an effective "^U -1".
-X 	 */
-X 	if (mflag < 0)
-X 	{ if (n == 0)
-X 			n++;
-X 		n = -n;
-X 	}
-X }
-#endif				
 				/* and execute the command */
 	execute(c, f, n);
-	return OK;
 }
 
 
@@ -794,9 +684,9 @@ X }
 Pascal quickexit(int f, int n)
 
 {
-	register BUFFER *bp;		/* scanning pointer to buffers */
-	register BUFFER *oldcb = curbp; /* original current buffer */
-	register int status;
+	BUFFER *bp;		/* scanning pointer to buffers */
+	BUFFER *oldcb = curbp; /* original current buffer */
+	int status;
 
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp) 
 	{
@@ -823,34 +713,27 @@ Pascal quickexit(int f, int n)
  */
 Pascal quit(int f, int n)
 
-{ 
-	register int status = TRUE;
+{ int status = TRUE;
 						/* Argument forces it.	*/
 	if (! f && anycb())
 				/* All buffers clean or user says it's OK. */
 		status = mlyesno(TEXT104);
-
+								/* "Modified buffers exist. Leave anyway" */
 	if (status)
 	{ tcapmove(term.t_nrowm1, 0);
-		g_discmd = true;
-#if S_MSDOS
-		if (ttrow != term.t_nrowm1)
-			mlwrite("\n\n");
-#else
-	/*tcapeeol();*/
-#endif
-/*					 "Modified buffers exist. Leave anyway" */
+//	g_discmd = true;
+
 #if FILOCK
 		if (lockrel() != TRUE)
-		{ mlwrite("\n\n");
-			f = 1;
+		{ f = 1;
 			n = 1;
 		}
 #endif
 #if S_WIN32 == 0
 		tcapclose(0);
 #endif
-		meexit(f ? n : GOOD);
+		eexitval = f ? n : GOOD;
+		eexitflag = TRUE; /* flag a program exit */
 	}
 	return status;
 }
@@ -899,15 +782,15 @@ int Pascal cex(int f, int n)	/* set ^X prefixing pending */
 int Pascal uniarg(int f, int n) /* set META prefixing pending */
 
 { char buff[NSTRING+2];
-	univct = n;
 
 	if (g_clexec)
 	{ if (mlreply("", &buff[0], NSTRING) != TRUE)
 			return ABORT;
 						
-		univct = atoi(buff);
+		n = atoi(buff);
 	}
 
+	univct = n;
 	g_got_uarg = TRUE;
 	return TRUE;
 }

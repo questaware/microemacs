@@ -1101,6 +1101,7 @@ doit_forward	./src/sinc.c
 dolhello	./src/dolock.c
 dolock	./src/dolock.c
 doregion	./src/region.c
+double_crypt	./src/crypt.c
 dspram	./src/malloc.c
 dup	./wincon/estruct.h
 ecco	./unix/terminal.c
@@ -1254,6 +1255,7 @@ gtenv	./src/eval.c
 gtfilename	./src/input.c
 gtfun	./src/eval.c
 gtusr	./src/eval.c
+handletab	./src/random.c
 help	./src/bind.c
 hidebuffer	./src/buffer.c
 hjump	./src/epredef.h

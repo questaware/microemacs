@@ -866,7 +866,7 @@ void Pascal updline(int force)
 	if (sgarbf != FALSE)
 	{  
 	 /*tcapmove(0, 0);		** Erase the screen. */
-		 tcapeeop();			/* Erase-page clears the message area. */
+		 tcapepage();			 /* Erase-page, also clears the message area. */
 		 mpresf = FALSE;		 
 	}
 #endif
@@ -1067,8 +1067,12 @@ int Pascal reframe(WINDOW * wp)
 
 int Pascal window_bgfg(WINDOW * wp)
 
-{
-	return (trans((wp->w_color >>8) & 0x7)<< 4) | trans(wp->w_color & 7);
+{ BUFFER * bp = wp->w_bufp;
+  int clr = bp == NULL ? g_colours : bp->b_color;
+  
+	return (trans((clr >> 4) & 0x7)<< 4) | trans(clr & 7);
+
+//return (trans((wp->w_color >>8) & 0x7)<< 4) | trans(wp->w_color & 7);
 }
 
 
@@ -1350,13 +1354,13 @@ void Pascal mlputf(int s)
 			/* scaled integer to output */
 {
 	int integ = s / 100;
-	int f = s - integ * 100;	/* fractional portion of number */
+	int frac = s - integ * 100;	/* fractional portion of number */
 
 	mlputli(integ, 10);
 	mlout('.');
-	integ = f / 10;
+	integ = frac / 10;
 	mlout((char)('0' + integ));
-	mlout((char)('0' + (f - integ * 10)));
+	mlout((char)('0' + (frac - integ * 10)));
 } 			
 
 #define get_arg(type,ap) va_arg(ap, type)
@@ -1480,10 +1484,9 @@ void Pascal mlforce(const char * s)
  * is not considered to be part of the virtual screen. It always works
  * immediately; the terminal buffer is flushed via a call to the flusher.
  */
-Cc Pascal mlerase()
+void Pascal mlerase()
 
 {
 	mlwrite("");
 	mpresf = FALSE;
-	return OK;
 }

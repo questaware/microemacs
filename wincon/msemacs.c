@@ -12,7 +12,6 @@
 
 extern void flagerr(const char * fmt);
 
-int			g_proc_hand;
 HANDLE  g_ConsOut;                   /* Handle to the console */
 
 CONSOLE_SCREEN_BUFFER_INFO csbiInfo;   /* Console information */
@@ -25,18 +24,38 @@ CONSOLE_SCREEN_BUFFER_INFO csbiInfo;   /* Console information */
 
 long unsigned int thread_id(void)
 
-{ return g_proc_hand * 29 + GetCurrentThreadId();
+{ return (int)GetCurrentProcess() + 29 * GetCurrentThreadId();
 }
 
 
-void ClearScreen( void )
-{
-          DWORD    dummy;
-    const COORD    Home = { 0, 0 };
-    int len = csbiInfo.dwSize.X * csbiInfo.dwSize.Y;
-    FillConsoleOutputAttribute( g_ConsOut, BG_GREY, len, Home, &dummy );
-    FillConsoleOutputCharacter( g_ConsOut, ' ',     len, Home, &dummy );
+int Pascal tcapbeeol(int row, int col) /* erase to eol or whole page */
+
+{ DWORD     Dummy;
+  int sz = csbiInfo.dwSize.X-col;
+	if (row < 0)
+	{ row = 0;
+	  sz *= csbiInfo.dwSize.Y;
+	}
+{ COORD     Coords;
+  Coords.Y = row;
+  Coords.X = col;
+  
+  FillConsoleOutputCharacter(g_ConsOut, ' ',sz,Coords,&Dummy );
+  return OK;
+}}
+
+
+void Pascal tcapeeol()
+
+{ tcapbeeol(ttrow, ttcol);
 }
+
+
+void Pascal tcapepage()
+
+{ tcapbeeol(-1,0);
+}
+
 
 #if 0
 
@@ -108,12 +127,10 @@ int main(int argc, char * argv[])
 	(void)wchar_to_char(modulename);
 #endif
 	flook_init(modulename);
+																							// reduces memory but slows startup
+	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
 
-{ HANDLE proc_hand = GetCurrentProcess();
-	g_proc_hand = (int)proc_hand;
-	SetProcessWorkingSetSize(proc_hand, (SIZE_T)-1, (SIZE_T)-1);
-
-										    /* Get display screen information & clear the screen.*/
+											      /* Get display screen information, clear the screen.*/
 	g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
 
 #if 0
@@ -126,14 +143,14 @@ int main(int argc, char * argv[])
 
 	SetConsoleTextAttribute(g_ConsOut, BG_GREY);
 		 
-	ClearScreen();
+	tcapepage();
 //SetConsoleTextAttribute(g_ConsOut, BG_GREY);
 
-	main_(argc, argv);
+	return main_(argc, argv);
 
- /* tcapclose(); */
-  /*CloseHandle( g_ConsOut );*/
-}}
+ /*tcapclose(); */
+ /*CloseHandle( g_ConsOut );*/
+}
 
 
 void Pascal setconsoletitle(char * title)
@@ -160,35 +177,50 @@ void Pascal setconsoletitle(char * title)
 void Pascal tcapsetsize(int wid, int dpth)
 
 {//DWORD mode;
-  COORD size;
+	if (wid < 0)
+		wid = -wid;
+	else
+	{	int decw = csbiInfo.dwSize.X - wid;
+		int decd = csbiInfo.dwSize.Y - dpth;
+		if (decd < 0)
+			decd = 0;
+		if (decw < 0)
+			decw = 0;
+		
+		if (decw > 0 || decd > 0)
+			tcapsetsize(-(csbiInfo.dwSize.X - decw - 1), csbiInfo.dwSize.Y - decd - 1);
+	}
+{
+#if 0
+	int rc = Console.SetWindowSize(wid, dpth);
+#if _DEBUG
+  if (rc == 0)
+    flagerr("SCWI %d");
+#endif
+#else
+ 	SMALL_RECT rect = { 0, 0, wid - 1, dpth-1 };
+	COORD size;
   size.X = wid;
   size.Y = dpth;
-  
-  SetConsoleScreenBufferSize( g_ConsOut, size);
 
-//GetConsoleMode(g_ConsOut, &mode);
-//mode &= ~ENABLE_WRAP_AT_EOL_OUTPUT;
-{// HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
- // SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
+{ int h = g_ConsOut;
+  SetConsoleScreenBufferSize( h, size);
 
-  GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
-	// set the screen buffer to be big enough
+// GetConsoleMode(g_ConsOut, &mode);
+// mode &= ~ENABLE_WRAP_AT_EOL_OUTPUT;
+// HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
+// SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 
-  if (csbiInfo.srWindow.Bottom - csbiInfo.srWindow.Top < dpth)
-  { int rc;
-//  mlwrite("%d Ws %d Cp %d MWS %d dpth %d", ct, csbiInfo.dwSize.Y, 
-//                                csbiInfo.dwCursorPosition.Y,
-//                                csbiInfo.dwMaximumWindowSize.Y, dpth
-//         );
-    csbiInfo.srWindow.Top = 0;
-    csbiInfo.srWindow.Bottom = dpth-1;
-    csbiInfo.dwCursorPosition.Y = dpth - 1;
-    
-    rc = SetConsoleWindowInfo(g_ConsOut, 1, &csbiInfo.srWindow);
-    if (rc == 0)
-      flagerr("SCWI %d");
-  }
-}}
+	GetConsoleScreenBufferInfo( h, &csbiInfo );
+																	// set the screen buffer to be big enough
+#if 1
+{ int rc = SetConsoleWindowInfo(h, 1, &rect);
+  if (rc == 0)
+    flagerr("SCWI %d");
+}
+#endif
+#endif
+}}}
 
 
 static Bool  g_cursor_on = true;
@@ -250,33 +282,6 @@ void Pascal tcapmove(int row, int col)
 
 
 
-int Pascal tcapbeeol(int row, int col) /* erase to the end of the line */
-
-{
-  DWORD     Dummy;
-  COORD     Coords;
-  Coords.Y = row;
-  Coords.X = col;
-  
-  FillConsoleOutputCharacter(g_ConsOut, ' ',csbiInfo.dwSize.X-col,Coords,&Dummy );
-  return OK;
-}
-
-
-void Pascal tcapeeol()
-
-{ tcapbeeol(ttrow, ttcol);
-}
-
-
-void Pascal tcapeeop()
-
-{ int row;
-/* awaitgap(); */
-  for (row = term.t_nrowm1+1; --row >= 0; )
-    tcapbeeol(row, 0);
-}
-
 #if 0
 
 void Pascal tcapscreg(row1, row2)
@@ -327,7 +332,7 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 #endif
 
 /*GetConsoleScreenBufferInfo( g_ConsOut, &ccInfo );*/
-  GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
+	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
   col = csbiInfo.dwCursorPosition.X;
 /* ttcol = col;*/
   ttrow = csbiInfo.dwCursorPosition.Y;
@@ -340,6 +345,7 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
       	g_discmd = 0;
 				mlwrite("Row %d Col %d Lim %d", ttrow, col, csbiInfo.dwSize.X);
 				mbwrite(lastmesg);
+				g_discmd = sd;
 				return;
       }
     }
@@ -374,6 +380,7 @@ int Pascal tcapbeep()
 }
 
 
+
 void Pascal tcapopen()
 
 { int plen = csbiInfo.srWindow.Bottom-csbiInfo.srWindow.Top+1;
@@ -382,7 +389,6 @@ void Pascal tcapopen()
   newdims(pwid, plen);
 	setMyConsoleIP();
 }
-
 
 
 

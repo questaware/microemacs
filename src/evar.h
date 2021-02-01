@@ -18,78 +18,77 @@ UVAR NOSHARE uv[MAXVARS + 1];	/* user variables */
 /*	list of recognized environment variables	*/
 
 NOSHARE const char * envars[] = {
-	"acount",		/* # of chars until next auto-save */
-	"asave",		/* # of chars between auto-saves */
+	"acount",			/* # of chars until next auto-save */
+	"asave",			/* # of chars between auto-saves */
 	"bufhook",		/* enter buffer switch hook */
 	"cbflags",		/* current buffer flags */
 	"cbufname",		/* current buffer name */
-	"cfname",		/* current file name */
+	"cfname",		  /* current file name */
+	"cliplife",		/* life of data in clip board */
 	"cmdhook",		/* command loop hook */
-	"cmode",		/* mode of current buffer */
-	"cmtcolour",		/* Colour used for comments */
-	"col1ch",		/* character selecting first colour */
-	"col2ch",		/* character selecting second colour */
+	"cmode",			/* mode of current buffer */
+	"cmtcolour",	/* Colour used for comments */
+	"col1ch",			/* character selecting first colour */
+	"col2ch",			/* character selecting second colour */
 	"curchar",		/* current character under the cursor */
-	"curcol",		/* current column pos of cursor */
+	"curcol",			/* current column pos of cursor */
 	"curline",		/* current line in file */
-	"curwidth",		/* current screen width */
-	"cwline",		/* current screen line in window */
-	"debug",		/* macro debugging */
+	"cwline",			/* current screen line in window */
+	"debug",			/* macro debugging */
 	"diagflag",		/* diagonal mouse movements enabled? */
-	"discmd",		/* display commands on command line */
-	"disinp",		/* display command line input characters */
+	"discmd",			/* display commands on command line */
+	"disinp",			/* display command line input characters */
 	"exbhook",		/* exit buffer switch hook */
-	"fcol",			/* first displayed column in curent window */
+	"fcol",				/* first displayed column in curent window */
 	"fileprof",		/* profiles for file types */
 	"fillcol",		/* current fill column */
-	"flicker",		/* flicker supression */
-	"gflags",		/* global internal emacs flags */
-	"gmode",		/* global modes */
+	"gflags",			/* global internal emacs flags */
+	"gmode",			/* global modes */
 	"hardtab",		/* current hard tab size */
-	"highlight",		/* highlighting string */
-	"hjump",		/* horizontal screen jump size */
+	"highlight",	/* highlighting string */
+	"hjump",			/* horizontal screen jump size */
 	"hscroll",		/* horizontal scrolling flag */
 	"incldirs",		/* directories to search */
 	"keycount",		/* consecutive times key has been pressed */
-	"kill", 		/* kill buffer (read only) */
+	"kill", 			/* kill buffer (read only) */
 	"language",		/* language of text messages */
 	"lastdir",		/* last direction of search */
 	"lastkey",		/* last keyboard char struck */
 	"lastmesg",		/* last string mlwrite()ed */
-	"line", 		/* text of current line */
-	"lwidth",		/* width of current line */
-	"match",		/* last matched magic pattern */
+	"line", 			/* text of current line */
+	"lwidth",			/* width of current line */
+	"match",			/* last matched magic pattern */
 	"modeflag",		/* Modelines displayed flag */
-	"msflag",		/* activate mouse? */
+	"msflag",			/* activate mouse? */
 	"pagelen",		/* number of lines used by editor */
+	"pagewidth",	/* current screen width */
 	"palette",		/* current palette string */
 	"pending",		/* type ahead pending flag */
-	"popup",		/* popup message */
-	"ram",			/* ram in use by malloc */
+	"popup",			/* popup message */
+	"ram",				/* ram in use by malloc */
 	"readhook",		/* read file execution hook */
-	"region",		/* current region (read only) */
+	"region",			/* current region (read only) */
 	"replace",		/* replacement pattern */
-	"rval", 		/* child process return value */
-	"search",		/* search pattern */
-	"seed", 		/* current random number seed */
-	"softtab",		/* current soft tab size */
-	"sres", 		/* current screen resolution */
-	"ssave",		/* safe save flag */
+	"rval", 			/* child process return value */
+	"search",			/* search pattern */
+	"seed", 			/* current random number seed */
+	"ssave",			/* safe save flag */
 	"sscroll",		/* smooth scrolling flag */
-	"status",		/* returns the status of the last command */
-	"sterm",		/* search terminator character */
-	"term",			/* terminal type */
-	"target",		/* target for line moves */
-	"time",			/* date and time */
-	"uarg",			/* last universal arg */
+	"status",			/* returns the status of the last command */
+	"sterm",			/* search terminator character */
+	"term",				/* terminal type */
+	"target",			/* target for line moves */
+	"time",				/* date and time */
+	"uarg",				/* last universal arg */
+	"usesofttab",	/* expand tabs befoe inserting */
 	"version",		/* current version number */
 	"wintitle",		/* the title on the window */
-	"wline",		/* # of lines in current window */
+	"wline",			/* # of lines in current window */
 	"wraphook",		/* wrap word execution hook */
-	"writehook",		/* write file hook */
-	"xpos", 		/* current mouse X position */
-	"ypos",	 		/* current mouse Y position */
-	"zcmd"			/* last command */
+	"writehook",	/* write file hook */
+	"xpos", 			/* current mouse X position */
+	"ypos",	 			/* current mouse Y position */
+	"zcmd"				/* last command */
 };
 
 #define NEVARS	(sizeof(envars) / sizeof(envars[0]))

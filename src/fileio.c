@@ -42,9 +42,8 @@ static
 unsigned int g_flen = 0;		/* space available for chars */
 
 static FILE *g_ffp;		/* File pointer, all functions. */
-static int g_eofflag;		/* end-of-file flag */
-int g_crlfflag;
 
+int g_crlfflag;
 
 					/* returns old input */
 
@@ -65,7 +64,6 @@ int Pascal ffropen(const char * fn)
 
 { 		      /* g_flen, fline private to ffropen, ffclose, ffgetline */
   g_flen = 0;		/* force ffgetline to realloc */
-  g_eofflag = FALSE;
   g_crlfflag = FALSE;
 
   if (fn != NULL && !(fn[0] == '-' && fn[1] == 0))
@@ -210,33 +208,29 @@ int Pascal ffputline(char buf[], int nbuf)
  */
 int Pascal ffgetline(int * len_ref)
 	
-{	register int c; 	/* current character read */
-	register int i = -1; 	/* current index into g_fline */
-
-	if (g_eofflag)			/* if we are at the end...return it */
-	  return FIOEOF;
-											/* dump g_fline if it ended up too big */
-  if (g_flen > NSTRING)
+{	int c; 							/* current character read */
+	int i = -1; 				/* current index into g_fline */
+											
+  if (g_flen > NSTRING)		/* dump g_fline if it ended up too big */
 	  g_flen = 0;
 											/* read the line in */
 	*len_ref = 0;
 	do
 	{ c = getc(g_ffp);		    /* if it's longer, get more room */
-	  if (c <= 'Z'- '@')
-	  { if (c == '\r')
+//  if (c <= 'Z'- '@')
+//  { if (c == 'Z'- '@')
+//		  continue;
+	    if (c == '\r')
 	    { g_crlfflag = TRUE;
 	      if ((gflags & MD_KEEP_CR) == 0)
-	         continue;
+	        continue;
 	    } 
-	    if (c == 'Z'- '@')
-	      continue;
-	  }
+//  }
 	  if ((unsigned)++i >= g_flen)
 	  {
-#if S_MSDOS
-	    if (g_flen >= 0xfe00)
+	    if (g_flen >= 0xfffe - NSTRING)
 	      return FIOMEM;
-#endif
+
 	  { char * tmpline = (char*)malloc(g_flen+NSTRING+1);
 	    if (tmpline == NULL)
 	      return FIOMEM;
@@ -259,10 +253,6 @@ int Pascal ffgetline(int * len_ref)
 /*				"File read error" */
 	    return FIOERR;
 	  }
-
-	  if (i == 0)
-	    return FIOEOF;
-	  g_eofflag = TRUE;
 	}
 					/* terminate and decrypt the string */
 #if	CRYPT
@@ -272,7 +262,7 @@ int Pascal ffgetline(int * len_ref)
 			double_crypt(g_fline, i);
 	}
 #endif
-	return FIOSUC;
+	return c == EOF ? FIOEOF : FIOSUC;
 }
 
 #endif

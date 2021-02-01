@@ -54,7 +54,11 @@ int Pascal makename(char * bname, const char * fname)
 #endif
 	    cand = s_cp;
 			/* s_cp is pointing to the first real filename char */
+#if	S_VMS
   (void)strpcpypfx(&bname[0], cand, NBUFN, ';');
+#else
+  (void)strpcpy(&bname[0], cand, NBUFN);
+#endif
   return cand - fname;
 }
 
@@ -114,14 +118,14 @@ void Pascal customise_buf(BUFFER * bp)
 
 
 BUFFER * Pascal bufflink(const char * filename, int create)
-															/* create: 1:create, 16:search, 32:dont stay */
+															/* create: 1:create, 16:dont search, 32:dont stay */
 { char bname[NFILEN];
 #if NFILEN < 2 * NBUFN + 30
   error error
 #endif
 #define text (&bname[NBUFN+1])
   char fname[NFILEN];
-  int srch = nmlze_fname(&fname[0], filename, bname);
+  int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
   
 { BUFFER * firstbp = NULL;
   int fno;
@@ -356,7 +360,7 @@ BUFFER * Pascal gotfile(const char * fname)
 }
 
 static 
-BUFFER * get_remote(BUFFER * bp_, const char * pw, const char * cmdbody,
+BUFFER * get_remote(BUFFER * bp, const char * pw, const char * cmdbody,
                      Bool inherit_props, Bool popup)
 { int o_disinp = g_disinp;
   int o_discmd = g_discmd;
@@ -375,7 +379,7 @@ BUFFER * get_remote(BUFFER * bp_, const char * pw, const char * cmdbody,
     return NULL;
 
   if (cmdnm == NULL || strcmp(cmdnm,"ERROR")==0)
-    cmdnm = "c:\\bin\\pscp.exe ";
+    cmdnm = PSCP_CMD;			// "c:\\bbin\\pscp.exe ";
 
   g_clexec = FALSE;
   g_disinp = FALSE;
@@ -396,37 +400,50 @@ BUFFER * get_remote(BUFFER * bp_, const char * pw, const char * cmdbody,
   if (cc == 0)
     return NULL;
 
-{ int clen = strlen(concat(fullcmd, cmdnm, /*pw,*/" ", cmdbody," ",0));
+{	int clen = strlen(concat(fullcmd, cmdnm, /*pw,*/" ", cmdbody," ",0));
 	char * tmp = (char *)getenv("TEMP");
 	if (tmp == NULL)
 		tmp = "./";
 
   cc = ttsystem(strcat(strcat(strcat(fullcmd,tmp),"/"),rnm+1), pw);
   if (cc != OK)
-	{ mbwrite((const char*)concat(fullcmd, cmdnm," Fetch failed ",int_asc(cc), 0));
-    return NULL;
-	}
-    
-//sprintf(diag_p, "EKEY %x %s", curbp, ekey == NULL ? "()" : ekey);
-//mbwrite(diag_p);
+		mbwrite((const char*)concat(fullcmd, cmdnm," Fetch failed ",int_asc(cc), 0));
+  else
+	{//	sprintf(diag_p, "EKEY %x %s", curbp, ekey == NULL ? "()" : ekey);
+	 //	mbwrite(diag_p);
 	
-{	BUFFER * bp = bp_ != NULL ? bp_ : bufflink(fullcmd+clen, g_clexec);
-	if (bp != NULL)
-  { 
-  	bp->b_remote = strdup(fullcmd);								// allow leak
-    bp->b_key = inherit_props ? curbp->b_key : NULL;
-    if (bp->b_key != NULL)
+		if (bp == NULL)
+			bp = bufflink(fullcmd+clen, g_clexec);
+		if (bp != NULL)
+  	{ bp->b_remote = strdup(fullcmd);								// allow leak
+	    bp->b_key = inherit_props ? curbp->b_key : NULL;
+	    if (bp->b_key != NULL)
     	bp->b_flag |= MDCRYPT;
-  }
+	  }
 
-//memset(&fullcmd[strlen(cmdnm)],'*', pwlen);
-  if (popup)
-    mbwrite(fullcmd);
-
+//	memset(&fullcmd[strlen(cmdnm)],'*', pwlen);
+	  if (popup)
+			mbwrite(fullcmd);
+	}
   memset(fullcmd, 0, sizeof(fullcmd));
 	return bp;
-}}}}
+}}}
 
+
+
+extern
+void io_message(const char * txt, int cc, int nline)
+
+{ if (cc > FIOEOF)
+  { txt = cc == FIOMEM ? TEXT142 : TEXT141;
+			/* "OUT OF MEMORY, " */
+			/* "I/O ERROR, " */
+    curbp->b_flag |= BFTRUNC;
+  }
+
+  mlwrite("[%s%d%s%s", txt, nline, TEXT143,
+		 	     nline == 1 ? "]" : "s]");
+}
 
 
 /*	Read file "fname" into the curbp, blowing away any text
@@ -441,7 +458,7 @@ BUFFER * get_remote(BUFFER * bp_, const char * pw, const char * cmdbody,
 int Pascal readin(char const * fname, int props)
 				/* name of file to read */
 			 	/* check for file locks?, -ve => insert */
-{ int ins = props & ~(FILE_REST + FILE_LOCK);
+{	int ins = props & ~(FILE_REST + FILE_LOCK);
 
   if (restflag && (props & FILE_REST))
     return resterr();
@@ -462,13 +479,14 @@ int Pascal readin(char const * fname, int props)
 	fname = LFN_to_8dot3(LFN_to_83, 0, fname, &spareli[0]);
 }
 #endif
+{ BUFFER * bp = curbp;
   if (!ins)
-	{ Cc cc = bclear(curbp);
+	{ Cc cc = bclear(bp);
   	if (cc != TRUE)			/* Changes not discarded */
   	  return cc;
 
-  	curbp->b_flag &= ~(BFINVS|BFCHG);
-  	fname = repl_bfname(curbp, fname);
+  	bp->b_flag &= ~(BFINVS|BFCHG);
+  	fname = repl_bfname(bp, fname);
   	if (fname == null)
   	  return ABORT;
 
@@ -482,7 +500,7 @@ int Pascal readin(char const * fname, int props)
   int diry = FALSE;
 	Cc cc;
 
-{ const char * s = fname-1;
+	const char * s = fname-1;
   const char * rname = NULL;
   int got_at = FALSE;
   while (*++s != 0)
@@ -498,7 +516,7 @@ int Pascal readin(char const * fname, int props)
 	   fname = strpcpy(fnbuff, fname, s - fname);
 	}
 	else
-  { BUFFER * tbp = get_remote(curbp, NULL, fname, FALSE, TRUE);
+  { BUFFER * tbp = get_remote(bp, NULL, fname, FALSE, TRUE);
     cc = tbp == NULL ? -1 : FIOSUC;
     if (cc == FIOSUC) 
     { char * s = tbp->b_remote;
@@ -539,7 +557,6 @@ int Pascal readin(char const * fname, int props)
     goto out;
 
   init_paren("",0);
-	cc = FIOEOF;
 	
 	if (ins)
 	{ 				                          /* back up a line and save the mark here */
@@ -555,53 +572,55 @@ int Pascal readin(char const * fname, int props)
 {	int   len;
 	int   fno;
  	char * sfline = NULL;
-  LINE * nextline = ins == 0 ? curbp->b_baseline : lforw(curwp->w_dotp);
+  LINE * nextline = ins == 0 ? bp->b_baseline : lforw(curwp->w_dotp);
 #if S_MSDOS == 0
 	diry = ffisdiry();
 #elif S_WIN32 == 0
   char spareline[257];
 #endif
 	if (diry)
-	{ sfline = g_fline;
-    msd_init(fname, "", MSD_DIRY | MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
-	  curbp->b_flag |= MDDIR;
+	{ msd_init(fname, "", MSD_DIRY | MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
+	  bp->b_flag |= MDDIR;
 	}
 
 	paren.sdir = 1;
-//sp_langprops = curbp->b_langprops & BCCOMT;*/
-	while (TRUE)
-  { LINE *lp1;
+	cc = FIOSUC;
+//sp_langprops = bp->b_langprops & BCCOMT;*/
+	while (cc == FIOSUC)
+  { char * ln;
+  	LINE *lp1;
 	  if (diry)
-	  { g_fline = msd_nfile(&fno);
-	    if (g_fline == NULL)
+	  { ln = msd_nfile(&fno);
+	    if (ln == NULL)
 	      break;
 	     
 	    /*mlreply(fline, spareline+200, 60);*/
 #if S_MSDOS && S_WIN32 == 0
-	    g_fline = LFN_to_8dot3(LFN_from_83, 1, g_fline, &spareline[0]);
+	    ln  = LFN_to_8dot3(LFN_from_83, 1, ln, &spareline[0]);
 #endif
-			if (g_fline[0] == '.' && g_fline[1] == '/')
-				g_fline = g_fline + 2;
-	    len = strlen(g_fline);
+			if (ln[0] == '.' && ln[1] == '/')
+				ln += 2;
+	    len = strlen(ln);
 	  }
 	  else 
 	  { cc = ffgetline(&len);
-	    if (cc != FIOSUC)
-	      break;
+	  	if (cc != FIOSUC && len == 0)
+	  		break;
+			ln = g_fline;
 #if 0
       if ((paren.in_mode & 0x3f) && len > 2)
-        g_fline[0] = 'A' + (paren.in_mode & 0x3f);
+        ln[0] = 'A' + (paren.in_mode & 0x3f);
 #endif
 	  }
 	  
-	  lp1 = mk_line(g_fline,len,len);
+	  lp1 = mk_line(ln,len,len);
 	  if (lp1 == NULL
 #if 0
 	       || (nline & 0x3ff) == 0 && typahead() && (getkey() & CTRL)
 #endif
 	     )
 	  { cc = FIOMEM;
-	    (void)repl_bfname(curbp, "SHORT");
+	    (void)repl_bfname(bp, "SHORT");
 	    break;
 	  }
 
@@ -613,49 +632,47 @@ int Pascal readin(char const * fname, int props)
 	}
 //curwp->w_dotp = topline;
 	if (g_crlfflag)
-	  curbp->b_flag |= MDMS;
+	  bp->b_flag |= MDMS;
 
-	if (diry)
-	  g_fline = sfline;
-	else
+	if (!diry)
 	  ffclose();				/* Ignore errors. */
 }
-/*		     "Read 999 line" */
-	io_message(ins ==0 ? TEXT140 : TEXT154, cc, nline);
+	io_message(ins >= 0 ? TEXT140 : TEXT154, cc, nline);
+																/* "Read 999 line" */
 out:
 //readin_lines = nline;
-	curbp->b_doto = 0;
+	bp->b_doto = 0;
 
 	if (ins)
 	{    /* advance to the next line and mark the window for changes */
 	/*curwp->mrks.c[0].markp = lforw(curwp->mrks.c[0].markp);
-	  curbp->mrks = curwp->mrks;*/
+	  bp->mrks = curwp->mrks;*/
 /*	curwp->w_dotp = lforw(curwp->w_dotp); */
-	  curbp->b_flag |= BFCHG;		/* we have changed	*/
-	  curbp->b_flag &= ~BFINVS;		/* and are not temporary*/
-	  curbp->b_wlinep = curwp->w_linep;
-	  curbp->b_dotp = curwp->w_dotp;
-	/*curbp->b_fcol = curwp->w_fcol;*/
+	  bp->b_flag |= BFCHG;			/* we have changed	*/
+	  bp->b_flag &= ~BFINVS;		/* and are not temporary*/
+	  bp->b_wlinep = curwp->w_linep;
+	  bp->b_dotp = curwp->w_dotp;
+	/*bp->b_fcol = curwp->w_fcol;*/
 	  curwp->w_flag |= WFHARD | WFMODE;
 	}
 	else
 	{ WINDOW * wp;
 	  tcapkopen();								/* open the keyboard again (Unix only) */
-	  curbp->b_flag |= BFACTIVE;	/* code added */
+	  bp->b_flag |= BFACTIVE;	/* code added */
 //  swb_luct = topluct() + 1;
-//  curbp->b_luct = swb_luct;
-	  curbp->b_dotp = lforw(curbp->b_baseline);
-	  curbp->b_wlinep = curbp->b_dotp;
+//  bp->b_luct = swb_luct;
+	  bp->b_dotp = lforw(bp->b_baseline);
+	  bp->b_wlinep = bp->b_dotp;
 
 	  for (wp = wheadp; wp != NULL; wp=wp->w_wndp)
-	    if (wp->w_bufp == curbp)
-	    { openwind(wp, curbp);
+	    if (wp->w_bufp == bp)
+	    { openwind(wp, bp);
 	      wp->w_flag |= WFMODE|WFHARD;
-	    /*wp->w_fcol = curbp->b_fcol;*/
+	    /*wp->w_fcol = bp->b_fcol;*/
 	    }
   }
 
-{ LINE * lp = curbp->b_dotp;
+{ LINE * lp = bp->b_dotp;
 	int clamp = 2;
 	while (--clamp >= 0)
 	{ if (lp->l_used > 6 &&(lp->l_text[0] == '/' && lp->l_text[1] == '*' ||
@@ -665,12 +682,12 @@ out:
 									     && lp->l_text[4] == 'b' && lp->l_text[5] == ' ')
 	  { int tabw = atoi(lp->l_text+6);
 	    if (in_range(tabw, 2, 16))
-	      curbp->b_tabsize = tabw;
+	      bp->b_tabsize = tabw;
 	  }
 	  lp = lforw(lp);
 	}
 
-	return cc != FIOERR && cc != FIOFNF;	/* False if error.	*/
+	return cc <= FIOEOF;	/* False if error.	*/
 }}}}
 
 
@@ -711,23 +728,23 @@ int Pascal unqname(char * name)			/* make sure a buffer name is unique */
  */
 int Pascal filewrite(int f, int n)
 
-{	register int s;
+{	int cc;
 	char fname[NFILEN];
 
 	if (restflag)		/* don't allow this command if restricted */
 		return resterr();
 
-	if ((s=mlreply(TEXT144, fname, NFILEN)) != TRUE)
+	if ((cc = mlreply(TEXT144, fname, NFILEN)) != TRUE)
 /*		       "Write file: " */
-		return s;
+		return cc;
 
-	s = writeout(fname);
-	if (s == TRUE)
+	cc = writeout(fname);
+	if (cc == TRUE)
 	{	repl_bfname(curbp, fname);
 		curbp->b_flag &= ~BFCHG;
 		upmode();			/* Update mode lines.	*/
 	}
-	return s;
+	return cc;
 }
 
 
@@ -738,34 +755,36 @@ int Pascal filewrite(int f, int n)
  */
 int Pascal filesave(int f, int n)
 
-{   
-#if S_WIN32
-#if GOTTYPAH
-  extern int flush_typah();
-    flush_typah();
-#endif
-#endif
+{	BUFFER * bp = curbp;
 
-  if (curbp->b_flag & MDVIEW)
+  if (bp->b_flag & MDVIEW)
 		return rdonly();
-	if ((curbp->b_flag & BFCHG) == 0)	/* Return, no changes.	*/
+	if ((bp->b_flag & BFCHG) == 0)	/* Return, no changes.	*/
 		return TRUE;
     					/* complain about truncated files */
-  if      ((curbp->b_flag & BFTRUNC) && mlyesno(TEXT146) == FALSE)
+  if      ((bp->b_flag & BFTRUNC) && mlyesno(TEXT146) == FALSE)
 /*			    "Narrowed Buffer..write it out" */
     ;
-  else if ((curbp->b_flag & BFNAROW) && mlyesno(TEXT147) == FALSE)
+  else if ((bp->b_flag & BFNAROW) && mlyesno(TEXT147) == FALSE)
 /*			    "Truncated file..write it out" */
     ;
   else
-	{	if (curbp->b_fname == null)		/* Must have a name.	*/
+  {
+#if S_WIN32
+#if GOTTYPAH
+	  extern int flush_typah();
+    flush_typah();
+#endif
+#endif
+		if (bp->b_fname == null)		/* Must have a name.	*/
 		{	mlwrite(TEXT145);
 	/*			"No file name" */
 			return FALSE;
 	  }
-  { char * fn = curbp->b_fname;
-    if (curbp->b_remote != NULL)
-		{	fn = curbp->b_remote;
+	{	char * fn = bp->b_fname;
+		char * cmd = bp->b_remote;
+    if (cmd != NULL)
+		{	fn = bp->b_remote;
       if (*fn == 0)
 		  { mlwrite(TEXT102);
 		  	return FALSE;
@@ -773,7 +792,7 @@ int Pascal filesave(int f, int n)
 //		cryptremote(fn);									// read it
 
 #if _DEBUG
-      mbwrite(curbp->b_remote);
+      mbwrite(fn);
 #endif
       for (fn = &fn[strlen(fn)]; *--fn != ' '; )
         ;
@@ -782,39 +801,31 @@ int Pascal filesave(int f, int n)
 
   {	int rc = writeout(fn);
 		if (rc == TRUE)
-		{ curbp->b_flag &= ~BFCHG;
+		{ bp->b_flag &= ~BFCHG;
 		  upmode();		/* Update mode lines.	*/
 
-		  if (curbp->b_remote != NULL)
-		  { char cmd[3*NFILEN+1];
-
-				strcpy(cmd, curbp->b_remote);
-
-			{	char * s = &cmd[strlen(cmd)];				// remote file
-			  while (--s > cmd && *s != ' ')
-			    ;
-			  *s++ = 0;
+		  if (cmd != NULL)
+			{	fn[-1] = 0;																				// terminate 1st name
   
-			{	char * ss = s;											// file here
+			{	char * ss = fn;																		// file precedes it
 			  while (--ss > cmd && *ss != ' ')
 			    ;
-			  *ss++ = 0;
+			  *ss = 0;																					// terminate cmd
 		    
-//			mbwrite(cmd_);                  Security concerns
+//			mbwrite(cmd+3*NFILEN);                  					// Security concerns
 
 		  { char cmd_[3*NFILEN+1];
-				int cc = ttsystem(concat(cmd_,cmd, " ", s, " ", ss, NULL), NULL);
+				int cc = ttsystem(concat(cmd_,cmd, " ", fn, " ", ss+1, NULL), NULL);
 			  if (cc != 0)
 			  { mlwrite(TEXT155);
 			  	rc = FALSE;
 			  }
-			  memset(cmd, 0, sizeof(cmd));
-			  memset(cmd_, 0, sizeof(cmd_));
-  			memset(curbp->b_remote, 0, strlen(curbp->b_remote));
+			  memset(cmd_, 0, sizeof(cmd));
+  			memset(cmd, 0, strlen(cmd));
 			  sgarbf = TRUE;
-		  }}}}
+		  }}}
 		}
-//  cryptremote(curbp);							// reencrypt it
+//  cryptremote(bp);							// reencrypt it
 		return rc;
   }}}
 
@@ -851,8 +862,9 @@ int Pascal writeout(const char * fn)
   int nline;	  /* number of lines written */
   int sp;		    /* offset into tname */
 	char tname[NSTRING];	/* temporary file name */
+	BUFFER * bp = curbp;
 
-	if (curbp->b_mode & BCRYPT2)
+	if (bp->b_mode & BCRYPT2)
 	{ mlwrite(TEXT223);
 		return FALSE;
 	}
@@ -883,10 +895,8 @@ int Pascal writeout(const char * fn)
 }
 #endif
 #endif
-	if (curbp->b_flag & MDCRYPT)
-		resetkey(&curbp->b_key);
-	     /* turn off ALL keyboard translation in case we get a dos error */
-	tcapkclose();
+	if (bp->b_flag & MDCRYPT)
+		resetkey(&bp->b_key);
     						   /* Perform Safe Save..... */
               		 /* duplicate original file name, and find where to trunc it */
 	sp = makename(tname, fn);
@@ -900,53 +910,50 @@ int Pascal writeout(const char * fn)
 	}
 
 	if (cc <= 0)									/* if the open failed.. clean up and abort */
-	{ mlwrite(TEXT155);		/*	"Cannot open file for writing" */
-		tcapkopen();								// Unix only
-		return FALSE;
-	}
+		mlwrite(TEXT155);		/*	"Cannot open file for writing" */
+	else
+	{	mlwrite(TEXT148); /* tell us that we're writing */
+					/* "[Writing...]" */
 
-	mlwrite(TEXT148); /* tell us that we're writing */
-/*		"[Writing...]" */
-
-	g_crlfflag = curbp->b_flag & MDMS;
-			/* write the current buffer's lines to the open disk file */
-	lp = curbp->b_baseline; 		/* start at the first line. 		*/
-	cc = OK;
-	nline = 0;					/* track the Number of lines		*/
-	while (((lp = lforw(lp))->l_props & L_IS_HD) == 0)
-	{ if ((cc = ffputline(&lp->l_text[0], llength(lp))) != FIOSUC)
-			break;
-		++nline;
-	}
-		
+		g_crlfflag = bp->b_flag & MDMS;
+												/* write the current buffer's lines to the disk file */
+		lp = bp->b_baseline;
+		cc = OK;
+		nline = 0;					/* track the Number of lines		*/
+		while (((lp = lforw(lp))->l_props & L_IS_HD) == 0)
+		{ if ((cc = ffputline(&lp->l_text[0], llength(lp))) != FIOSUC)
+				break;
+			++nline;
+		}
+			
 #if S_MSDOS & CTRLZ
-	putc(26, ffp);		/* add a ^Z at the end of the file */
+		putc('Z'-'@', ffp);		/* add a ^Z at the end of the file */
 #endif
 
-	cc |= ffclose();
-	if (cc == FIOSUC)
-	{ extern char deltaf[];
-		#define mesg deltaf 
-		mesg[0] = 0;		/* message buffer */
+		cc |= ffclose();
+		if (cc == FIOSUC)
+		{ extern char deltaf[];
+			#define mesg deltaf 
+			mesg[0] = 0;		/* message buffer */
  
 #if S_VMS == 0
-		if (caution)					/* erase original file */
-		{ int cc = unlink(fn);
-			if (cc == 0 && rename(tname, fn) == 0)
-			{ if (! S_MSDOS && fstat_.st_mode != MYUMASK)
-					chmod(fn, fstat_.st_mode & 07777);
+			if (caution)					/* erase original file */
+			{ int cc = unlink(fn);
+				if (cc == 0 && rename(tname, fn) == 0)
+				{ if (! S_MSDOS && fstat_.st_mode != MYUMASK)
+						chmod(fn, fstat_.st_mode & 07777);
+				}
+				else
+				{ concat(&mesg[0], TEXT150, tname, null);
+												/* ", saved as " */
+					cc = FIODEL;		/* failed */
+				}
 			}
-			else
-			{ concat(&mesg[0], TEXT150, tname, null);
-/*							", saved as " */
-				cc = FIODEL;		/* failed */
-			}
-		}
 #endif
-							/* report on status of file write */
-		strcat(&mesg[0], TEXT149);
-		io_message(mesg, FIOSUC, nline);
-				/*	"[Wrote 999 line" */
+																						 /* report on status of file write */
+			io_message(strcat(&mesg[0], TEXT149), FIOSUC, nline);
+															/* "[Wrote 999 line" */
+		}
 	}
 	tcapkopen();						/// reopen the keyboard (Unix only)
 	return cc == FIOSUC;
@@ -983,6 +990,7 @@ int Pascal fetchfile(int f, int n)
 { LINE * lp = curwp->w_dotp;
 	if (lp->l_text == NULL)
 	  lp = lforw(lp);
+
 	if (lp->l_text == NULL)
 	{	mbwrite(TEXT203);       // "Nothing there"
 	 	return FALSE;

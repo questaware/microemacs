@@ -793,7 +793,7 @@ void Pascal tcapeeol()
 }
 
 
-void Pascal tcapeeop()
+void Pascal tcapepage()
 
 { tcapmove(0, 0);
 	putpad(captbl[K_ED].p_seq);

@@ -50,8 +50,14 @@
   ^N  File Name of buffer
   ^S  Search string
   ^W  Chars to eow
-  Arrows    Previous
+  Arrows    Previous, left, right
+	Home
+	End
   .^$*[\    Magic
+
+  Pressing Home at the start of the input moves the cursor to the start of the
+  command line and thus includes the prompt in the string returned.
+  This is useful for the command set %res @"Return this as well:".
 
   *Invocation Arguments*
   Flags may be interleaved with file names
@@ -119,8 +125,9 @@
   The variable $fileprof specifies $hardtab for file suffixes (starting .).
   The presence of a ^ signifies that the mode of operation is not AbC
   Example : set $fileprof ".sql=^4.h=2.c=2.cpp=2.py=2"
-
-  The command handle-tab (bound to C-I) expands a tab BEFORE storing in the text.
+	The variable $softtab when not zero signifies that tabs are expanded before
+  inserting in the buffer; it is stored in each buffer. 
+  The command handle-tab (bound to C-I) with an argument also expands the tab..
 
   *The File Names*
  EMACS decides that two files by different paths are the different.  
@@ -251,7 +258,7 @@ goto-matching-fence      M-^F Goto a matching bracket, parenthesis, etc
                          ^T
 grow-window              ^X^
                          ^XZ
-handle-tab               ^I   See above, takes no argument.
+handle-tab               ^I   See above.
 help                     M-?
                          A-1
 hunt-backward            A-R
@@ -372,21 +379,21 @@ yank                     ^Y Insert the contents of the kill buffer here
 
  None of the macros accepts an argument ESC n.
 
-execute-macro-1          S-FN1  Change case on character
+execute-macro-1          S-FN1  Change case one character
 execute-macro-2          S-FN2  Drop the buffer, %goon: take new one, none: exit
                          M-\
                          M-`
                          ^]
 execute-macro-3          S-FN3  Save buffer then execute-macro-2
                          M-/
-execute-macro-4    ^X^R Drop the current buffer, then find-file
+execute-macro-4          ^X^R Drop the current buffer, then find-file
                          S-FN4
 execute-macro-5          ^N Search in the last direction
                          S-FN5
                          FN1
 execute-macro-6          S-FN6  Toggle msb of character
                          ^^
-execute-macro-7          S-FN7
+execute-macro-7          S-FN7  Search for NN; replace it by %nn+1, increment %nn
                          FN4
 execute-macro-8          FN>  Copy one character from previous line
                          S-FN8
@@ -397,13 +404,16 @@ execute-macro-10         S-FN0  Go down one line then execute-macro
                          FN2
 execute-macro-11         ^D Cut entire line to kill buffer
 execute-macro-13         M-I  Bring in more macros, e.g. in xmacs.rc
-execute-macro-14   FNC  Insert contents of the kill buffer, clear it.
-execute-macro-15   FN5  Compare this file with %otherdrv(/)file
-execute-macro-16   FN<  Beginning of line then file
-execute-macro-17   FN>  End of line then file
-execute-macro-18   M-^] Insert braces, invoked by CONTROL {}
-execute-macro-19         FN^9 Delete to beginning-of-line
-execute-macro-20         ^XB  Select or next buffer
+execute-macro-12
+execute-macro-14         FNC  Insert contents of the kill buffer, clear it.
+execute-macro-15         A-Q  Customise a user variable
+execute-macro-16         M-FND Delete region
+execute-macro-17         FN^P	search backwards for word right of cursor
+                         FN^N	search forwards for word right of cursor
+execute-macro-18
+execute-macro-19         ^O Display command for editting the pipe-command it
+														See above for what Home key does.
+execute-macro-20         ^P search for pw: from eol, copy text to clipboard
 execute-macro-21         
 execute-macro-22         
 execute-macro-23         
@@ -585,6 +595,7 @@ $ypos          Y position on the screen
  -----------------
   (The following functions can be used in .rc files.)
 
+	MONAMIC, RSTR, "@",			/* Prompts for a value using value */
   MONAMIC, RINT, "abs",   /* absolute value of a number */
   DYNAMIC, RINT, "add",   /* add two numbers together */
   DYNAMIC, RSTR, "and",   /* logical and */

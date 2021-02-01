@@ -73,7 +73,7 @@ int Pascal openwindbuf(char * bname)
 /*			"out of memory " */
     return FALSE;
   }
-  if (bclear(curbp) != FALSE)
+  if (bclear(curbp))
   { leavewind(curwp);
     openwind(curwp, curbp);
   
@@ -550,40 +550,29 @@ const static char text209[] = TEXT209;
 int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 
 { // int inr = true;
-  loglog2("newdims X %d Y %d", wid, dpth);
                       					     /* make sure it's in range */
-	if (! in_range(dpth, 3, term.t_mrowm1+1))
-  { logwarn2("Imp Scr Y %d %d", dpth, term.t_mrowm1 + 1);
-	  dpth = 90;
-	/*inr = 0;*/
-	}
-	if (! in_range(wid, 10, term.t_mcol))
-        { loglog2("Imp Scr X %d %d", wid, term.t_mcol);
+	if (! in_range(dpth, 3, 62))
+	  dpth = 62;
+
+	if (! in_range(wid, 10, 134))
 	  wid = 134;
-	/*inr = 0;*/
-	}
 
 	if (term.t_nrowm1 != dpth - 1 ||
 	    term.t_ncol != wid)
-	{
-#if S_MSDOS
-	  tcapeeop();
-#endif
-	  term.t_ncol = wid;
+	{ term.t_ncol = wid;
 	  term.t_margin = wid / 10;
 	  term.t_scrsiz = wid - (term.t_margin * 2);
 		term.t_nrowm1 = dpth - 1;			
 		term.t_mrowm1 = dpth - 1;			
+	  vtinit();
+	  tcapsetsize(wid,dpth);
 #if 0
 	  curwp->w_ntrows = term.t_nrowm1-1;
 #else
-  	  onlywind(FALSE, 1);		/* can only make this work */
+    onlywind(FALSE, 1);		/* can only make this work */
 #endif
 	  orwindmode(WFHARD | WFMOVE | WFMODE, 0);
-	  vtinit();
-	  tcapsetsize(wid,dpth);
-	  tcapmove(0, 0);
-	  tcapeeop();
+	  tcapepage();
 #if S_WIN32
 	{ char buf[35];
 	  mlwrite(strpcpy(&buf[0], lastmesg, 30));

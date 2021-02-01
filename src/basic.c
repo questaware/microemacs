@@ -59,21 +59,6 @@ char * Pascal remallocstr(char * * res_ref, const char * val, int len)
 
 
 
-char * Pascal io_message(char * text, int s, int nline)
-	
-{ if (s != FIOSUC && s != FIOEOF)
-  { text = s == FIOMEM ? TEXT142 : TEXT141;
-			/* "OUT OF MEMORY, " */
-			/* "I/O ERROR, " */
-    curbp->b_flag |= BFTRUNC;
-  }
-
-  mlwrite("[%s%d%s%s", text, nline, TEXT143,
-		 	     nline == 1 ? "]" : "s]");
-  return OK;
-}
-
-
 BUFFER * Pascal prevele(BUFFER * bh, BUFFER * bp)
 
 { register BUFFER * bl = bh;

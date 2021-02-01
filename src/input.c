@@ -169,7 +169,7 @@ int  ctlxrp(int f, int n)
 
 
 
-/* Execute a macro.
+/* Execute a keyboard macro.
  * The command argument is the number of times to loop. Quit as soon as a
  * command gets an error. Return TRUE if all ok, else FALSE.
  */
@@ -678,7 +678,19 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       switch (ch)
       { case (SPEC | 'F'): tpos += 1;
         when (SPEC | 'B'): tpos -= 1;
-        when (SPEC | '<'): tpos = 0;
+        when (SPEC | '<'): 
+        	{ if 			(tpos != 0 || promptlen == 0)
+        			tpos = 0;
+        		else if (gs_type < 0)
+        		{ strpcpy(buf, lastmesg, nbuf);
+							fulllen += promptlen;
+        			promptlen = 0;
+        			cpos = 0;
+				      tcapmove(term.t_nrowm1, 0);
+        			continue;
+        		}
+        	}
+        	
 				when (SPEC | '>'): tpos = fulllen;
         when (SPEC | 'P'):
         case (SPEC | 'N'):	/* up or down arrows */

@@ -14,7 +14,7 @@ int g_c_cmt, g_s_cmt, g_f_cmt, g_p_cmt;
 /*
  * Set fill column to n.
  */
-Pascal setfillcol(int f, int n)
+int Pascal setfillcol(int f, int n)
 
 { fillcol = n;
 	mlwrite(TEXT59,n);
@@ -28,7 +28,7 @@ Pascal setfillcol(int f, int n)
  * column, but the column that would be used on an infinite width display.
  * Normally this is bound to "C-X =".
  */
-Pascal showcpos(int f, int n)
+int Pascal showcpos(int f, int n)
 
 {	register LINE 		*lp;						/* current line */
 	register Int		numchars = 0; 	/* # of chars in file */
@@ -70,7 +70,7 @@ Pascal showcpos(int f, int n)
 	return (int)numchars;
 }}}
 
-Pascal setcline() 			/* get the current line number */
+int Pascal setcline() 			/* get the current line number */
 
 {																 /* starting at the beginning of the buffer */
 					 LINE *tgt = curwp->w_dotp;
@@ -89,10 +89,10 @@ Pascal setcline() 			/* get the current line number */
  * column, return the best choice for the offset. The offset is returned.
  * Used by "C-N" and "C-P".
  */
-Pascal getgoal(LINE * dlp, int offs)
+int Pascal getgoal(LINE * dlp, int offs)
 				
-{ register int	col = 0;
-					 int	dbo;
+{ int	col = 0;
+	int	dbo;
 
 	for (dbo = -1; ++dbo < llength(dlp); )
 	{ register short c = lgetc(dlp, dbo);
@@ -148,7 +148,7 @@ int Pascal getccol()
  * work. This fixes up a very common typo with a single stroke. Normally bound
  * to "C-T". This always works within a line, so "WFEDIT" is good enough.
  */
-Pascal twiddle(int f, int n)
+int Pascal twiddle(int f, int n)
 
 {	register LINE *dotp = curwp->w_dotp;
 	register int	 doto = curwp->w_doto;
@@ -188,9 +188,8 @@ int Pascal quote(int f, int n)
 }}
 
 
-  /* If given an argument then if > 0 set softtab on 
-                          else if < 0 set softtab off else toggle it
-     Otherwise if softtab is on then expand the tab and insert spaces.
+  /* If given an argument then if > 0 expand the tab
+     Otherwise if softtab is on then expand the tab (inserting spaces).
    */
 int Pascal handletab(int f, int n)
 
@@ -198,12 +197,8 @@ int Pascal handletab(int f, int n)
   int tabsz = tabsz_ == 0 ? 1 : tabsz_;
   unsigned char mode = curbp->b_mode;
 
-  if (f)
-  { curbp->b_mode = n < 0 ? mode & ~ BSOFTTAB :
-                    n > 0 ? mode |   BSOFTTAB :
-                            mode ^ BSOFTTAB;
-    return OK;
-  }
+  if (f && n > 0)
+  	mode = BSOFTTAB;
 
 	return mode & BSOFTTAB ? linsert(tabsz - (getccol() % tabsz),' ')
                          : linsert(1,'\t');
@@ -228,9 +223,9 @@ int Pascal detabline()
 }
 */
 
-int do_entab = 0;
+Bool do_entab = 0;
 
-Pascal detab(int f, int n) /* change tabs to spaces */
+int Pascal detab(int f, int n) /* change tabs to spaces */
 
 { if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
@@ -239,34 +234,33 @@ Pascal detab(int f, int n) /* change tabs to spaces */
 		n = reglines();
 
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sgn(n)] */
-	int tbsz = curbp->b_tabsize;
+	int tabsz = curbp->b_tabsize;
 
 	for (; n; n -= inc)
 	{ LINE * dotp = curwp->w_dotp;
-		int    llen = llength(dotp);
-		int 	 tabsz = curbp->b_tabsize;
 		char ch;
 		int    offs;											/* detab line */
-		for (offs = -1; ++offs < llen; )
+		for (offs = -1; ++offs < llength(dotp); )
 			if ((ch = lgetc(dotp, offs)) == '\t')
-			{ int ins_ct = tabsz - (offs % tabsz) - 1;
-				lputc(dotp, offs, ' ');
+			{ lputc(dotp, offs, ' ');
 				curwp->w_doto = offs;
+			{	int ins_ct = tabsz - (offs % tabsz) - 1;
+				offs += ins_ct;
 				insspace(TRUE, ins_ct);
 				dotp = curwp->w_dotp;
-				offs += ins_ct;
-			}
+			}}
 
 		if (do_entab)											/* entab the resulting spaced line */
-		{ int tab_ct = 0;
+		{ do_entab = 0;
+		{ int tab_ct = tabsz;
 			int sp_ct = 0;
 			int incol;
 			int outcol = -1;
-			for (incol = -1; ++incol < llen; )
+			for (incol = -1; ++incol < offs; )
 			{ 
-				if (incol - tab_ct == tabsz)
+				if (incol - tab_ct == 0)
 				{ tab_ct += tabsz;
-					if ((sp_ct - 1) > 0)
+					if (sp_ct > 1)
 					{ outcol -= sp_ct;
 						dotp->l_text[++outcol] = '\t';
 					}
@@ -280,7 +274,7 @@ Pascal detab(int f, int n) /* change tabs to spaces */
 					sp_ct = 0;
 			}}
 			dotp->l_used = outcol+1;
-		}
+		}}
 														/* advance/or back to the next line */
 		forwline(TRUE, inc);
 	}
@@ -291,19 +285,16 @@ Pascal detab(int f, int n) /* change tabs to spaces */
 }}
 
 
-Pascal entab(int f, int n) /* change spaces to tabs where posible */
+int Pascal entab(int f, int n) /* change spaces to tabs where posible */
 
-{
-	do_entab = 1;
-{	int res = detab(f, n);
-	do_entab = 0;
-	return res;
-}}			
+{	do_entab = 1;
+	return detab(f, n);
+}			
 
 /* trim:				trim trailing whitespace from the point to eol
 								with no arguments, it trims the current region
 */
-Pascal trim_white(int f, int n)
+int Pascal trim_white(int f, int n)
 
 {
 	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
@@ -369,15 +360,14 @@ char * Pascal skipspaces(char * s, char * limstr)
  * subcomands failed. Normally bound to "C-J".
  * doesnt work so I replaced it with cinsert semantics -- PJS
  */
-Pascal indent(int f, int n)
+int Pascal indent(int f, int n)
 
 {	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
 	if (n < 0)
 		return FALSE;
-{ 				 char *src = &curwp->w_dotp->l_text[0];
-	register char *eptr = skipspaces(&src[0],
-																	 &src[curwp->w_doto]);
+{ char *src = &curwp->w_dotp->l_text[0];
+	char *eptr = skipspaces(&src[0],&src[curwp->w_doto]);
 	if (lnewline() == FALSE)				/* put in the newline */
 		return FALSE;
 
@@ -392,7 +382,7 @@ Pascal indent(int f, int n)
 
 #if FLUFF
 
-Pascal cinsert()				/* insert a newline and indentation for C */
+int Pascal cinsert()				/* insert a newline and indentation for C */
 
 { register int bracef;				 /* was there a brace at the end of line? */
 	register LINE *lp = curwp->w_dotp;
@@ -420,7 +410,6 @@ Pascal cinsert()				/* insert a newline and indentation for C */
 													/* grab a pointer to text to copy indentation from */
 {	char *cptr = skipspaces(&lp->l_text[0],
 													&lp->l_text[lp->l_used]);
-		
 	char schar = *cptr;
 	*cptr = 0;				
 	linstr(lp->l_text); 							 /* insert this saved indentation */
@@ -437,7 +426,7 @@ Pascal cinsert()				/* insert a newline and indentation for C */
  * and then back up over them. Everything is done by the subcommand
  * processors. They even handle the looping. Normally this is bound to "C-O".
  */
-Pascal openline(int f, int n)
+int Pascal openline(int f, int n)
 
 {	register int		i;
 	register int		s;
@@ -461,7 +450,7 @@ Pascal openline(int f, int n)
 /* Insert a newline. Bound to "C-M". If we are in CMODE, do automatic
  * indentation as specified.
  */
-Pascal ins_newline(int f, int n)
+int Pascal ins_newline(int f, int n)
 {
 	register int s;
 
@@ -495,7 +484,7 @@ Pascal ins_newline(int f, int n)
  * If any argument is present, it kills rather than deletes, to prevent loss
  * of text if typed with a big argument. Normally bound to "C-D".
  */
-Pascal forwdel(int f, int n)
+int Pascal forwdel(int f, int n)
 {
 	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
@@ -519,7 +508,7 @@ Pascal forwdel(int f, int n)
  * forward, this actually does a kill if presented with an argument. Bound to
  * both "RUBOUT" and "C-H".
  */
-Pascal backdel(int f, int n)
+int Pascal backdel(int f, int n)
 {
 				return forwdel(f, -n);
 }
@@ -531,7 +520,7 @@ Pascal backdel(int f, int n)
  * number of newlines. If called with a negative argument it kills to the 
  * n.th kill buffer. Normally bound to "C-K".
  */
-Pascal killtext(int f, int n)
+int Pascal killtext(int f, int n)
 {
 	extern char last_was_yank;
 
@@ -636,6 +625,8 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 		{ int best = 0;
 			const char * goal = iter > 0 ? mdname[ix] : cname[ix];
 			int match = strmatch(goal, cbuf) - goal;
+			if (cbuf[match] != 0)
+				continue;
 			if (match < bestmatch)
 				continue;
 			if (match == bestmatch)
@@ -653,10 +644,10 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 	{ if (index < NCOLORS)
 		{ 
 #if COLOR
-			int mask = in_range(cbuf[0], 'A', 'Z') ? 0xff00 : 0xff;
-			int * t = global ? &g_colours : &curwp->w_color;
+			int mask = in_range(cbuf[0], 'A', 'Z') ? 0xf : 0xf0; // lc is ink
+			int * t = global ? &g_colours : &curbp->b_color;
 			*t &= mask;
-			*t |= (mask & 1 ? index << 8 : index);
+			*t |= index << (4 & mask);
 			curwp->w_flag |= WFCOLR;
 #endif
 		}
@@ -695,38 +686,38 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 }}
 
 
-Pascal delmode(int f, int n)		/* prompt and delete an editor mode */
+int Pascal delmode(int f, int n)		/* prompt and delete an editor mode */
 
 {
 	return adjustmode(0, FALSE);
 }
 
-Pascal setmod(int f, int n) 		/* prompt and set an editor mode */
+int Pascal setmod(int f, int n) 		/* prompt and set an editor mode */
 
 {
 	return adjustmode(1, FALSE);
 }
 
 
-Pascal togmod(int f, int n) 		/* prompt and set an editor mode */
+int Pascal togmod(int f, int n) 		/* prompt and set an editor mode */
 
 {
 	return adjustmode(2, FALSE);
 }
 
-Pascal delgmode(int f, int n) 	/* prompt and delete a global editor mode */
+int	Pascal delgmode(int f, int n) 	/* prompt and delete a global editor mode */
 
 {
 	return adjustmode(0, TRUE);
 }
 
-Pascal setgmode(int f, int n) 	/* prompt and set a global editor mode */
+int Pascal setgmode(int f, int n) 	/* prompt and set a global editor mode */
 
 {
 	return adjustmode(1, TRUE);
 }
 
-Pascal toggmode(int f, int n) 	/* prompt and set a global editor mode */
+int Pascal toggmode(int f, int n) 	/* prompt and set a global editor mode */
 
 {
 	return adjustmode(2, TRUE);
@@ -737,7 +728,7 @@ Pascal toggmode(int f, int n) 	/* prompt and set a global editor mode */
 /*			This function simply clears the message line,
 								mainly for macro usage									*/
 
-Pascal clrmes(int f, int n)
+int Pascal clrmes(int f, int n)
 
 {
 	mlforce("");
@@ -747,7 +738,7 @@ Pascal clrmes(int f, int n)
 /*			This function writes a string on the message line
 								mainly for macro usage									*/
 
-Pascal writemsg(int f, int n)
+int Pascal writemsg(int f, int n)
 
 {
 	char buf[NSTRING];			/* buffer to recieve message into */
@@ -1139,7 +1130,7 @@ int got_f_key(fdcr * fd, int tabsz)
 
 
 																/* the cursor is moved to a matching fence */
-Pascal getfence(int f, int n)
+int Pascal getfence(int f, int n)
 				/* int f, n;		** not used */
 { int tabsz = curbp->b_tabsize;
 	int c_cmt = (curbp->b_langprops & BCCOMT) >> 1;
@@ -1227,7 +1218,7 @@ Pascal getfence(int f, int n)
 			fd.blk_type = toupper(lstr[0]);
 			
 			if (fd.blk_type == 'E' && ch == 'N')   // END DO, END LOOP, etc
-			{ register int ix = len <= 3 ? 0 : lstr[3] == ' ' ? 4 : 3;
+			{ int ix = len <= 3 ? 0 : lstr[3] == ' ' ? 4 : 3;
 
 				if (wordmatch("END",0) == 0)
 					return FALSE;
@@ -1377,8 +1368,8 @@ Pascal getfence(int f, int n)
 				diff = -diff;
 			if (*lstr != '(' && *lstr != ')' && *lstr != '[' && *lstr != ']')
 			if (in_range(diff,1,4) && (offs == 0 ||
-																lp->l_text[offs] != 
-																 lp->l_text[offs-1] ))
+																 lp->l_text[offs] != 
+																  lp->l_text[offs-1] ))
 				TTbeep();
 		}}
 		return TRUE;
@@ -1397,7 +1388,7 @@ beeper:																/* restore the current position */
 /*			Close fences are matched against their partners, and if
 				on screen the cursor briefly lights there 							*/
 
-Pascal fmatch(ch)
+int Pascal fmatch(ch)
 				char ch;				/* fence type to match against */
 {
 	Lpos_t s = *(Lpos_t*)&curwp->w_dotp; /* original line pointer */
@@ -1439,7 +1430,7 @@ Pascal fmatch(ch)
 
 
 																/* increment or decrement a number */
-Pascal arith(int f, int n)
+int Pascal arith(int f, int n)
 				/* int f, n;		** not used */
 { 
 	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
@@ -1452,21 +1443,25 @@ Pascal arith(int f, int n)
 		len = 10;
 	
 	if (len > 0 && in_range(*lstr,'0','9'))
-	{ char buf[11];
+	{	
+		char buf[11];
+		char * t = buf - 1;
 		char * e;
-		for (e = lstr; --len >= 0 && in_range(*e,'0','9'); ++e)
-			;
-		strpcpy(buf,lstr,e - lstr);
-		buf[e - lstr] = 0;
-
-	{	int val = atoi(lstr) + n;
+		for (e = lstr-1; --len >= 0 && in_range(*++e,'0','9');)
+			*++t = *e;
+		*++t = 0;
 		
-		int	olen = e - lstr;
+	{	int val = atoi(buf) + n;
+		int	olen = t - buf;
+#if 1
+		char * src = int_asc(val);
+		len = strlen(src);
+#else
+#define src buf
 		int q,r;
-
-		e = buf;
+		e = buf - 1;
 		if (val < 0)
-		{ *e++ = '-';
+		{ *++e = '-';
 			val = -val;
 		}
 
@@ -1479,19 +1474,19 @@ Pascal arith(int f, int n)
 		while (--len >= 0)
 		{ q = val / rads[len];
 			val = val - q * rads[len];
-			*e++ = '0' + q;
+			*++e = '0' + q;
 		}
-		*e = 0;
-
+		*++e = 0;
 		len = e - buf;
+#endif
+
 		if (len > olen)
 		{ if (s.curoff > 0 && *(lstr-1) == ' ')
-			{ --lstr;
 				forwdel(f, -1);
-			}
 		}
 		forwdel(f,olen);
-		linstr(buf);
+		linstr(src);
+#undef src
 	}}
 
 	return TRUE;

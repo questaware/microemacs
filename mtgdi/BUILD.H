@@ -55,6 +55,7 @@
 
 /*	Debugging options	*/
 #define	RAMSIZE	0	/* dynamic RAM memory usage tracking */
+#define PASSWORDLIFE 40			/* seconds */
 
 /*	Terminal Output definitions		*/
 /*	[Set one of these!!]			*/
@@ -76,7 +77,6 @@
 /*	Configuration options	*/
 
 #define CVMVAS	1	/* arguments to page forward/back in pages	*/
-#define	CLRMSG	0	/* space clears the message line with no insert	*/
 #define	CFENCE	1	/* fench matching in CMODE			*/
 #define	TYPEAH	1	/* type ahead causes update to be skipped	*/
 #define DEBUGM	0	/* $debug triggers macro debugging		*/

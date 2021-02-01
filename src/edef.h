@@ -226,7 +226,7 @@ typedef struct	WINDOW
 	char	w_ntrows;		/* # of rows in window inc MLine*/
 	char	w_force;		/* If NZ, forcing row.		*/
 	char	w_flag; 		/* Flags.			*/
-#if	COLOR
+#if	0
 	int   w_color;		/* current colors		*/
 #endif
 	int		w_fcol; 		/* first column displayed	*/
@@ -258,6 +258,9 @@ typedef struct	BUFFER
 	short	  b_flag; 		      /* Flags and modes  */
 	unsigned char b_mode;	    /* Flags and modes (extra) */
 	unsigned char b_tabsize;	/* size of hard tab		*/
+#if	COLOR
+	int   	b_color;					/* current colors		*/
+#endif
 #if	CRYPT
 	CRYPTKEY b_key;
 #endif
@@ -324,10 +327,12 @@ typedef struct	{
 	short	t_scrsiz;		/* size of scroll region "	*/
 }	TERM;
 
+typedef int Pascal Emacs_cmd(int, int);
+
                         /* Structure for the table of current key bindings */
 union EPOINTER {
-        int (Pascal *fp)(int,int);      /* C routine to invoke */
-        BUFFER *buf;                    /* buffer to execute */
+        Emacs_cmd * fp;      							/* C routine to invoke */
+        BUFFER *    buf;                  /* buffer to execute */
 };
 			/* Structure for the key binding table */
 typedef struct
@@ -405,7 +410,6 @@ NOSHARE extern int sterm;		/* search terminating character */
 
 NOSHARE extern int prenum;		/*     "       "     numeric arg */
 
-extern const char cname[][9];		/* names of colors		*/
 NOSHARE extern char highlight[64];	/* the highlight string */
 
 NOSHARE extern int cryptflag;		/* currently encrypting?	*/
@@ -419,7 +423,6 @@ NOSHARE extern char palstr[49];		/* palette string		*/
 NOSHARE extern char lastmesg[LFSTR];	/* last message posted		*/
 NOSHARE extern int (Pascal *lastfnc)(int, int);/* last function executed */
 NOSHARE extern char *fline; 		/* dynamic return line */
-NOSHARE extern unsigned int g_flen;	/* max len(fline) */
 NOSHARE extern int eexitflag;		/* EMACS exit flag */
 
 /* uninitialized global external declarations */
@@ -446,7 +449,7 @@ NOSHARE	extern char upcase[HICHAR];	/* upper casing map		*/
 NOSHARE extern char tap[NPAT+10];	/* Reversed pattern array.	*/
 NOSHARE extern char rpat[NPAT+10];	/* replacement pattern		*/
 
-	extern char *g_file_prof;	/* profiles of files */
+				extern char *g_file_prof;	/* profiles of files */
 
 /*	Various "Hook" execution variables	*/
 NOSHARE extern KEYTAB hooks[6];		/* executed on all file reads */
@@ -459,9 +462,8 @@ NOSHARE extern int lastdir;
 NOSHARE extern char outline[];	/* global string to hold debug line text */
 #endif
 
-
-
 NOSHARE extern TERM	term;		/* Terminal information.	*/
+extern int g_cliplife;
 
 
 #define readhook hooks[0]	/* executed on all file reads */

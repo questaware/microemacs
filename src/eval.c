@@ -32,64 +32,63 @@ NOSHARE int predefvars[NEVARS] =
 STOP,  /* EVCBFLAGS */		/* actual: kbdmode - curr keyboard macro mode*/
 0,     /* EVCBUFNAME */		/* actual: kbdrd */
 0,     /* EVCFNAME */		  /* actual: kbdwr */
+UNDEF, /* EVCLIPLIFE */		/* actual: cliplife */
 0,     /* EVCMDHK */ 		  /* actual: execlevel - execution IF level */
 0,     /* EVCMODE */ 	  	/* actual: kbdrep */
 0x71,  /* EVCMTCOL */		  /* comment colour *//* 0x80:blink,  0x8:intense */
 -1,    /* EVCOL1CH */		  /* character selecting colour 1 */
 -1,    /* EVCOL2CH */		  /* character selecting colour 2 */
-TRUE, /* EVCURCHAR */			/* actual: revexist -does reverse video exist?*/
+TRUE,  /* EVCURCHAR */		/* actual: revexist -does reverse video exist?*/
 7,     /* EVCURCOL */		  /* */
 0,     /* EVCURLINE */		/* */
-TRUE,  /* EVCURWIDTH */		/* actual: sgarbf  - screen is garbage	*/
 FALSE, /* EVCWLINE */		  /* actual: mpresf  - Stuff in message line */
-0,     /* EVDEBUG */         	/* macro debugging flag	*/
-0,     /* EVDIAGFLAG */      	/* diagonal mouse movements? */
-1,     /* EVDISCMD */        	/* display command flag */
-1,     /* EVDISINP */        	/* display input characters */
-0,     /* EVEXBHOOK */       	/* actual: swb_luct */
-0,     /* EVFCOL */		        /* The left hand offset on the screen */
-0,     /* EVFILEPROF */	      /* The profiles of file types */
+0,     /* EVDEBUG */      /* macro debugging flag	*/
+0,     /* EVDIAGFLAG */   /* diagonal mouse movements? */
+1,     /* EVDISCMD */     /* display command flag */
+1,     /* EVDISINP */     /* display input characters */
+0,     /* EVEXBHOOK */    /* actual: swb_luct */
+0,     /* EVFCOL */		    /* The left hand offset on the screen */
+0,     /* EVFILEPROF */	  /* The profiles of file types */
 72,    /* EVFILLCOL */		/* not in use */
-1,     /* EVFLICKER */		/* do flicker supression (not in use) */
 0,     /* EVGFLAGS */		  /* global control flag */
 0,     /* EVGMODE */ 		  /* global editor mode */
 7,     /* EVHARDTAB */		/* not in use */
-0,     /* EVHIGHLIGHT */		/* not in use */
-1,     /* EVHJUMP */		    /* horizontal jump size */
-1,     /* EVHSCROLL */		  /* horizontal scrolling flag */
-CTRL |'U', /* EVINCLD */	  /* actual: reptc - current universal rpt char*/
-0,     /* EVKEYCT */		    /* consec key ct */
-CTRL |'G', /* EVKILL */       /* actual: abortc- current abort command char*/
-CTRL |'M', /* EVLANG */       /* actual: sterm - search terminating char */
-0,     /* EVLASTDIR */	      /* actual: prefix- current pending prefix bits*/
-0,     /* EVLASTKEY */       	/* last keystoke */
-0,     /* EVLASTMESG */      	/* actual: prenum    "       "     numeric arg*/
-TRUE,  /* EVLINE */          	/* actual: predef    "       "    default flag*/
-0x11,  /* EVLWIDTH */		      /* actual: quotec quote char during mlreply() */
-0,     /* EVMATCH */         	/* actual: saveflag - Flags, saved with $target var */
-1,     /* EVMODEFLAG */      	/* display mode lines flag */
-1,     /* EVMSFLAG */        	/* use the mouse? */
-FALSE, /* EVPAGELEN */       	/* actual: eexitflag */
-0,     /* EVPALETTE */       	/* not in use */
-0,     /* EVPENDING */       	/* actual: nclicks - clrd on any non-mouse event*/
-0,     /* EVPOPYOP */       	/* */
-CTOEC('\r'),/* EVRAM */       /* actual: gs_term - param to getstring() */
-FALSE, /* EVREADHK */        	/* not in use */
+0,     /* EVHIGHLIGHT */	/* not in use */
+1,     /* EVHJUMP */		  /* horizontal jump size */
+1,     /* EVHSCROLL */		/* horizontal scrolling flag */
+CTRL |'U',/* EVINCLD */		/* actual: reptc - current universal rpt char*/
+0,     /* EVKEYCT */		  /* consec key ct */
+CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
+CTRL |'M',/* EVLANG */  	/* actual: sterm - search terminating char */
+0,     /* EVLASTDIR */	  /* actual: prefix- current pending prefix bits*/
+0,     /* EVLASTKEY */    /* last keystoke */
+0,     /* EVLASTMESG */   /* actual: prenum    "       "     numeric arg*/
+TRUE,  /* EVLINE */       /* actual: predef    "       "    default flag*/
+0x11,  /* EVLWIDTH */		  /* actual: quotec quote char during mlreply() */
+0,     /* EVMATCH */      /* actual: saveflag - Flags, saved with $target var */
+1,     /* EVMODEFLAG */   /* display mode lines flag */
+1,     /* EVMSFLAG */     /* use the mouse? */
+FALSE, /* EVPAGELEN */    /* actual: eexitflag */
+TRUE,  /* EVCURWIDTH */		/* actual: sgarbf  - screen is garbage	*/
+0,     /* EVPALETTE */    /* not in use */
+0,     /* EVPENDING */    /* actual: nclicks - clrd on any non-mouse event*/
+0,     /* EVPOPYOP */     /* */
+CTOEC('\r'),/* EVRAM */   /* actual: gs_term - param to getstring() */
+FALSE, /* EVREADHK */     /* not in use */
 UNDEF, /* EVREGION */	
 UNDEF, /* EVREPLACE */       
-0,     /* EVRVAL */          	/* return value of a subprocess (niu) */
-UNDEF, /* EVSEARCH */        
-0,     /* EVSEED */          	/* random number seed */
-0,     /* EVSOFTTAB */	 /* current soft tab size (0: use hard tabs) */
-UNDEF, /* EVSRES */          
-1,     /* EVSSAVE */         	/* safe save flag */
-1,     /* EVSSCROLL */	 /* smooth scrolling enabled flag */
-1,     /* EVSTATUS */		 /* last command status */
+0,     /* EVRVAL */       /* return value of a subprocess (niu) */
+UNDEF, /* EVSEARCH */     
+0,     /* EVSEED */       /* random number seed */
+1,     /* EVSSAVE */      /* safe save flag */
+1,     /* EVSSCROLL */		/* smooth scrolling enabled flag */
+1,     /* EVSTATUS */			/* last command status */
 UNDEF, /* EVSTERM */ 	
 UNDEF, /* EVTARGET */	
 UNDEF, /* EVTERM */
 UNDEF, /* EVTIME */		
-0,     /* EVUARG */			 /* universal argument */
+0,     /* EVUARG */				/* universal argument */
+0,		 /* EV_USESOFTAB */
 UNDEF, /* EVVERSION */	
 UNDEF, /* EVWINTITLE */
 UNDEF, /* EVWLINE */ 	
@@ -431,13 +430,14 @@ const char *Pascal gtenv(const char * vname)
 		return errorm;
 	switch (vnum)
 	{ case EVPAGELEN: res = term.t_nrowm1 + 1;
+	  when EVPAGEWIDTH:res = term.t_ncol;
 	  when EVCURCOL:  res = getccol();
 	  when EVCURLINE: res = setcline();
 	  when EVHARDTAB: res = curbp->b_tabsize;
+		when EVUSESOFTTAB: res = curbp->b_mode & BSOFTTAB ? 1 : 0;
 #if WRAP_MEM
 	  when EVRAM:	    res = (int)(envram >> 10);
 #endif
-	  when EVCURWIDTH:res = term.t_ncol;
 	  when EVCBFLAGS: res = curbp->b_flag;
 	  case EVCMODE:   if (vnum == EVCMODE) res = res >> NUMFLAGS;
 	  when EVCBUFNAME:return curbp->b_bname;
@@ -461,13 +461,14 @@ const char *Pascal gtenv(const char * vname)
 	  when EVREPLACE: return rpat;
 	  when EVMATCH:   return fixnull(patmatch);
 	  when EVKILL:	  return getkill();
+	  when EVCLIPLIFE:res = g_cliplife;
 	  when EVREGION:  return getreg(&result[0]);
 	  
 	  when EVPENDING:
 #if	GOTTYPAH
-			  return ltos(typahead());
+									  return ltos(typahead());
 #else
-			  return falsem;
+									  return falsem;
 #endif
 	  when EVLINE:	  return getctext(&result[0]);
 	  when EVSTERM:   return cmdstr(&result[0], sterm);
@@ -487,7 +488,6 @@ const char *Pascal gtenv(const char * vname)
 #if S_WIN32
 	  when EVWINTITLE:return curbp->b_fname;		// getconsoletitle();
 #endif
-
 	  when EVDEBUG:   
 	  case EVSTATUS:  
 	  case EVDISCMD:  
@@ -529,7 +529,7 @@ char * Pascal trimstr(char * s, int * from)/* trim whitespace off string */
 
 
 
-static int Pascal findvar(const char * var)/* find a variables type and name */
+static int Pascal findvar(char * var)      /* find a variables type and name */
 	
 {	int vtype;	/* type to return */
 
@@ -551,7 +551,7 @@ fvar:	vtype = -1;
 		      }
 		    }				/* indirect operator? */
 	  when '&': 
-		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')
+		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd' && g_clexec)
 		    {			  /* grab token, and eval it */
 		      execstr = token(execstr, var, NVSIZE+1);
 		      getval(&var[0], var);
@@ -563,7 +563,7 @@ fvar:	vtype = -1;
 
 
 
-int Pascal set_var(const char var[NVSIZE+1], char * value)	/* set a variable */
+int Pascal set_var(char var[NVSIZE+1], char * value)	/* set a variable */
 					/* name of variable to fetch */
 					/* value to set variable to */
 {
@@ -625,7 +625,7 @@ int Pascal setvar(int f, int n)	/* set a variable */
     ;
 	var[cc+(var[cc] == 0)] = 0;
 														/* get the value for that variable */
-	if 	    (f == TRUE)
+	if 	    (f != FALSE)
 	  strcpy(&var[cc+1], int_asc(n));
 	else if (var[cc+1] == 0)
 	{ if (mlreply(TEXT53, &var[cc+1], NSTRING-cc+1) != TRUE)
@@ -686,8 +686,11 @@ int Pascal svar(int var, char * value)	/* set a variable */
                   	     curbp->b_tabsize = val;
                        }
 	                     upwind();
+			when EVUSESOFTTAB: curbp->b_mode &= ~BSOFTTAB;
+											 if (val)
+													curbp->b_mode |= BSOFTTAB;
 	    when EVPAGELEN:	 cc = newdims(term.t_ncol, val);
-	    when EVCURWIDTH: cc = newdims(val, term.t_nrowm1+1);
+	    when EVPAGEWIDTH:cc = newdims(val, term.t_nrowm1+1);
 	    when EVCURCOL:	 cc = setccol(val);
 	    when EVCURLINE:	 cc = gotoline(TRUE, val);
 #if WRAP_MEM
@@ -713,7 +716,8 @@ int Pascal svar(int var, char * value)	/* set a variable */
 				               curwp->w_flag |= WFMODE;
 //	  when EVSRES:	   cc = TTrez(value);
 	    when EVFILEPROF: hookix = strlen(value)+1;
-	    	               free(g_file_prof);
+	    								 if (g_file_prof != NULL)
+	    	               	 free(g_file_prof);
 				               g_file_prof = strcpy(malloc(hookix),value);
 				
 	    when EVCURCHAR:	 ldelchrs(1L, FALSE);	/* delete 1 char */
@@ -733,6 +737,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    when EVPOPUP:    mbwrite(value);
 				               upwind();
 	    when EVKILL:
+		  when EVCLIPLIFE: g_cliplife = val;
 	    when EVLINE:	   putctext(value);
 	    when EVSTERM:	   sterm = stock(value);
 	    when EVFCOL:	   if (val < 0)
@@ -806,10 +811,10 @@ char *Pascal int_asc(int i)
 	return sp;
 }}
 
-int Pascal gettyp(char * token)	/* find the type of a passed token */
+int Pascal gettyp(char * tok)	/* find the type of a passed token */
 
 {
-	char c = *token;	/* first char in token */
+	char c = *tok;	/* first char in token */
         
 	if (c >= '0' && c <= '9')	/* a numeric literal? */
 	  return TKLIT;
@@ -833,39 +838,34 @@ char getvalnull[] = "";
 
 				/* the oob checks are faulty */
 					/* find the value of a token */
-char *Pascal getval(char * tgt, char * token) 
-				/* token: token to evaluate */
-{
-	int blen = NSTRING;
-#define cc blen
- BUFFER *bp;			/* temp buffer pointer */
-          int typ = gettyp(token);
+char *Pascal getval(char * tgt, char * tok) 
+														/* token: token to evaluate */
+{	int blen = NSTRING;
+	BUFFER *bp;			/* temp buffer pointer */
+	int typ = gettyp(tok);
 
 	switch (typ)
 	{ case TKNUL:   return "";
-	  case TKARG:			/* interactive argument */
-						getval(&token[0], &token[1]);
-		      { int sdc = g_discmd;	/* echo it always! */
+	  case TKARG:															/* interactive argument */
+						getval(&tok[0], &tok[1]);
+		      { int sdc = g_discmd;							/* echo it always! */
 						g_discmd = TRUE;
-						cc = getstring(&tgt[0], NSTRING, token);
+					{	Cc cc = getstring(&tgt[0], NSTRING, tok);
 						g_discmd = sdc;
-						if (cc == ABORT)
-						  return getvalnull;
-						return tgt;
-		      }
+						return cc == ABORT ? getvalnull : tgt;
+		      }}
 	  case TKBUF:			/* buffer contents fetch */
 										/* grab the right buffer */
-						bp = bfind(getval(tgt, &token[1]), FALSE, 0);
+						bp = bfind(getval(tgt, &tok[1]), FALSE, 0);
 						if (bp == NULL)
 						  return getvalnull;
-										/* if the buffer is displayed, get the window
-							      	 vars instead of the buffer vars */
+															/* if the buffer is displayed, get the window
+												      	 vars instead of the buffer vars */
 						if (bp->b_nwnd > 0)
 						{ curbp->b_dotp = curwp->w_dotp;
 						  curbp->b_doto = curwp->w_doto;
 						}
 					{ LINE * ln = bp->b_dotp;
-							   		/* make sure we are not at the end */
 						if (ln->l_props & L_IS_HD)
 						  break;
 							  		/* step the buffer's line ptr ahead a line */
@@ -883,12 +883,12 @@ char *Pascal getval(char * tgt, char * token)
 							              /* grab the line as an argument */
 						bp = (BUFFER*)&ln->l_text[0];
 		      }
-	  when TKVAR:	bp = (BUFFER*)gtusr(token+1);
-	  when TKENV:	bp = (BUFFER*)gtenv(token+1);
-	  when TKFUN:	bp = (BUFFER*)gtfun(token+1);
+	  when TKVAR:	bp = (BUFFER*)gtusr(tok+1);
+	  when TKENV:	bp = (BUFFER*)gtenv(tok+1);
+	  when TKFUN:	bp = (BUFFER*)gtfun(tok+1);
 	  when TKLIT:
-	  case TKCMD:	bp = (BUFFER*)token;
-	  when TKSTR: bp = (BUFFER*)(token + 1);
+	  case TKCMD:	bp = (BUFFER*)tok;
+	  when TKSTR: bp = (BUFFER*)(tok + 1);
 	  otherwise   tgt[0] = 0;
 	              return tgt;
 	}

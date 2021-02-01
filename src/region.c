@@ -222,15 +222,12 @@ int Pascal upperregion(int f, int n)
 }
 
 
-/*	reglines:	how many lines in the current region
-			used by the trim/entab/detab-region commands
-*/
-
+													/*	reglines:	how many lines in the current region */
 int Pascal reglines()
 
-{				      /* check for a valid region first */
+{				   										  	/* check for a valid region first */
 	if (getregion())
-	{			  /* place us at the beginning of the region */
+	{								  							/* place us at the beginning of the region */
 	  curwp->w_dotp = region.r_linep;
 	  curwp->w_doto = region.r_offset;
 	}

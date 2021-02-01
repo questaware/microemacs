@@ -60,6 +60,7 @@ char tobuf[TBUFSIZ];		/* terminal output buffer */
 
 #include        <signal.h>
 
+int g_cliplife = CLIP_LIFE;
 
 #define  STDIPCHAN 0 /* not fileno(stdin), it's closed */
 

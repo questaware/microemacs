@@ -654,7 +654,7 @@ int Pascal kdelete(int f, int n)
     return FALSE;
 #if S_MSDOS
   if (n == 0)
-  { ClipSet("");
+  { ClipSet(NULL);
   }
 #endif
   if (kills[n].mem != null)

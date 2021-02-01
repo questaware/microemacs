@@ -10,7 +10,7 @@ USRC=unix
 LFLAGS=-km
 
 OFILES=	basic.o bind.o buffer.o char.o crypt.o display.o eval.o \
-	exec.o execasm.o file.o fileio.o input.o isearch.o line.o main.o malloc.o \
+	exec.o file.o fileio.o input.o isearch.o line.o main.o malloc.o \
 	mouse.o msdir.o random.o region.o search.o sinc.o tag.o window.o word.o
 
 UOFILES= unix.o terminal.o lock.o
@@ -18,7 +18,7 @@ MOFILES= map.o
 
 
 CFILES=	../$(SRC)/basic.c ../$(SRC)/bind.c ../$(SRC)/buffer.c ../$(SRC)/char.c \
-        ../$(SRC)/crypt.c ../$(SRC)/display.c ../$(SRC)/eval.c ../$(SRC)/execasm.o \
+        ../$(SRC)/crypt.c ../$(SRC)/display.c ../$(SRC)/eval.c \
 	../$(SRC)/exec.c ../$(SRC)/file.c ../$(SRC)/fileio.c ../$(SRC)/input.c \
 	../$(SRC)/isearch.c ../$(SRC)/line.c ../$(SRC)/main.c ../$(SRC)/malloc.c \
 	../$(SRC)/mouse.c ../$(SRC)/random.c ../$(SRC)/region.c ../$(SRC)/search.c \
@@ -77,8 +77,6 @@ eval.o:  ../$(SRC)/eval.c
 	$(CC) -c $(CFLAGS) ../$(SRC)/eval.c
 exec.o:  ../$(SRC)/exec.c
 	$(CC) -c $(CFLAGS) ../$(SRC)/exec.c
-execasm.o:  ../$(SRC)/execasm.c
-	$(CC) -c $(CFLAGS) ../$(SRC)/execasm.c
 file.o:  ../$(SRC)/file.c
 	$(CC) -c $(CFLAGS) ../$(SRC)/file.c
 file.i:  ../$(SRC)/file.c

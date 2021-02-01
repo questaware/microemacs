@@ -237,7 +237,7 @@ staticc Char * msd_relpath;
 staticc Char   msd_path_[FILENAMESZ+4] = "?/";
 #define msd_path ((char*)&msd_path_[2])	/* printed path to current file */
 
-staticc Short pathend;          /* end of path part in msd_path (after /)*/
+staticc Short g_pathend;          /* end of path part in msd_path (after /)*/
 
 #if S_MSDOS == 0 || S_WIN32 != 0
 staticc Char msd_pat[120];		/* pattern of last component */
@@ -359,7 +359,7 @@ Cc msd_push()
   }
   msd_lenstk[msd_ix] = strlen(msd_path);
 /*eprintf(null, "LENSTK (%d) = %d\n", msd_ix, msd_lenstk[msd_ix]);*/
-  		       /*pathend;*/
+  		       /*g_pathend;*/
 #if   S_WIN32
   msd_stk[msd_ix] = msd_curr;
 #elif S_MSDOS == 0
@@ -409,10 +409,10 @@ Cc msd_push()
   /*eprintf(null, "Rd %s\n", msd_dp->d_name);*/
   { dirent_t * eny = (dirent_t *) &msd_readahead[ra_top];
     eny->d_ino = msd_dp->d_ino;
-    strpcpy(&eny->d_name[0], msd_dp->d_name, sizeof(eny->d_name));
-    ra_top += strlen(msd_dp->d_name) + 1;
-    ra_top += sizeof(ino_t) + sizeof(off_t) + sizeof(unsigned short) +
-		sizeof(ino_t) - 1;
+    ra_top += strlen(strpcpy(&eny->d_name[0], msd_dp->d_name, sizeof(eny->d_name))
+    							 )+1;
+    ra_top += sizeof(ino_t) + sizeof(off_t) + sizeof(unsigned short)
+						+ sizeof(ino_t) - 1;
     ra_top &= ~(sizeof(ino_t) - 1);
     if (ra_top >= RA_STACK-80)
       break;
@@ -452,7 +452,7 @@ Char * msd_pop()
 
   if (in_range(msd_ix, -1, MAX_TREE-2))
   { ra_pop();
-    pathend = msd_ix < 0 ? 0 : msd_lenstk[msd_ix];
+    g_pathend = msd_ix < 0 ? 0 : msd_lenstk[msd_ix];
 
   /*eprintf(null, "PPop (%d) %s(%d)\n", msd_ix, msd_path, msd_lenstk[msd_ix]);*/
 
@@ -465,13 +465,13 @@ Char * msd_pop()
     /*eprintf(null, "-SLNEST %d\n", msd_slnest);*/
     }
 
-  /*eprintf(null, "MSCD %x %d %d %s\n", msd_curr, msd_nlink[msd_ix+1], pathend, msd_path);*/
+  /*eprintf(null, "MSCD %x %d %d %s\n", msd_curr, msd_nlink[msd_ix+1], g_pathend, msd_path);*/
     if (! msd_nochdir && msd_chd > msd_ix)
     { char buf[FILENAMESZ*2+3];
       char * tgt = "..";
       msd_chd -= 1;
       if (msd_ix < 0 || (S_WIN32 == 0 && msd_slink[msd_ix+1]))
-		  { Char * tt = &msd_path[pathend];
+		  { Char * tt = &msd_path[g_pathend];
       	char sch = *tt;
         msd_chd = msd_ix;
       	strpcpy(&buf[0], msd_startdir, sizeof(buf));
@@ -554,14 +554,13 @@ Char * msd_pop()
 
 		/* do a wild card directory search (for file name completion) */
 
-Cc msd_init(
-	Char const *  diry,	/* must not be "" */
-	Char const *  pat,	/* pattern to match, null => take it from diry */
-	int     props)	/* msdos props + top bits set => repeat first file */
-{ register Char ch;
-  register short pe;
-       		 short pe_last_sl = -1;
-						/* msd_path often == diry */
+Cc msd_init(Char const *  diry,	/* must not be "" */
+						Char const *  pat,	/* pattern to match, null => take it from diry */
+						int     props)	/* msdos props + top bits set => repeat first file */
+{ Char ch;
+  short pe;
+  short pe_last_sl = -1;
+												/* msd_path often == diry */
   for ( pe = -1; ++pe < FILENAMESZ && (msd_path[pe] = (ch = diry[pe])) != 0; )
   { if (ch == '\\' || ch == '/')
     { msd_path[pe] = '/';
@@ -578,7 +577,7 @@ Cc msd_init(
     msd_path[pe++] = '/';
 
   msd_path[pe] = 0;
-  pathend = pe;
+  g_pathend = pe;
 
   for (pe = -1; (ch = pat[++pe]) != 0 && pe < sizeof(msd_pat)-2; )
 #if S_MSDOS && S_WIN32 == 0
@@ -587,6 +586,7 @@ Cc msd_init(
     msd_pat[pe] = ch;
 #endif
   msd_pat[pe] = 0;
+
   loglog2("PATH %s PAT  %s", msd_path, msd_pat);
 /*eprintf(null, "PATH %s\nPAT  %s\n", msd_path, msd_pat);*/
 
@@ -632,8 +632,10 @@ Cc msd_init(
 #endif
   msd_cc = -100;
 
+  pe = g_pathend;
+
 #if S_MSDOS & S_WIN32 == 0
-  strpcpy(&msd_path[pathend], "*.*", 4);
+  strpcpy(&msd_path[pe], "*.*", 4);
 
   ms_intdosx((Char *)dta, 0x1a00);		/*  set dta  */
 
@@ -646,8 +648,8 @@ Cc msd_init(
 { register char * dir;
   
 #if   S_WIN32
-  dir = pathend == 0 ? "./*.*" : msd_relpath;
-  strpcpy(&msd_path[pathend], "*.*", 4);
+  dir = pe == 0 ? "./*.*" : msd_relpath;
+  strpcpy(&msd_path[pe], "*.*", 4);
 /*eprintf(null, "FF %s\n", dir);*/
 
 #if VS_CHAR8
@@ -659,14 +661,14 @@ Cc msd_init(
 #endif
 
 /*eprintf(null, "HANDLE %x %s\n", msd_curr, (Char*)msd_sct.cFileName);*/
-  msd_path[pathend-1] = '/';
-  msd_path[pathend] = 0;
+  msd_path[pe-1] = '/';
+  msd_path[pe] = 0;
   if (msd_curr == INVALID_HANDLE_VALUE)
     return EDENIED;
 
   msd_cc = OK;
 #else
-  dir = pathend == 0 ? "." : msd_relpath;
+  dir = pe == 0 ? "." : msd_relpath;
   msd_curr = opendir(dir);
 /*eprintf(null, "%d %d OPen %s\n", msd_ix, msd_chd, dir);*/
   if (msd_curr == NULL)
@@ -724,7 +726,7 @@ Cc msd_init(
 #endif
       { msd_ochd[msd_ix] = msd_chd;
         msd_chd = nchd;
-	msd_relpath = &msd_path[msd_lenstk[nchd]];
+				msd_relpath = &msd_path[msd_lenstk[nchd]];
       }
     {/*char cn[300];
       eprintf(null,"PUSHDIR %d %d %d, %s ORP %s NRP %s\n", msd_ix, nchd,
@@ -743,7 +745,7 @@ Cc msd_init(
 staticc Cc getnext()
 {
 #if S_WIN32
-  strpcpy(&msd_path[pathend], "*.*", 4);
+  strpcpy(&msd_path[g_pathend], "*.*", 4);
 /*eprintf(null, "FNF %x, %s\n", msd_curr, msd_path);*/
 
 #if VS_CHAR8
@@ -751,7 +753,7 @@ staticc Cc getnext()
 #else
   if (msd_curr == 0 || ! FindNextFileA(msd_curr, &msd_sct))
 #endif
-  { msd_path[pathend] = 0;
+  { msd_path[g_pathend] = 0;
     return ~OK;
   }
 
@@ -760,14 +762,14 @@ staticc Cc getnext()
   
   ms_intdosx((Char *)dta, 0x1a00);		/*  set dta  */
 
-  strpcpy(&msd_path[pathend], "*.*", 4);
+  strpcpy(&msd_path[g_pathend], "*.*", 4);
 
 /*printf("DNF\n");*/
 
   rg.x.cx = msd_props & 0x1f;			/*  allow all files */
   return ms_intdosx(msd_path, DOS_NFILE);
 #else
-  msd_path[pathend] = 0;
+  msd_path[g_pathend] = 0;
 #if READAHEAD
   if (rr_head < msd_ra_top)
   { msd_dp = (dirent_t*)&msd_readahead[rr_head];
@@ -825,19 +827,19 @@ static Bool extract_fn(int * fnoffs)
   #define s (&msd_dp->d_name[0])
 #endif
 
-/*eprintf(null, "MFRI %d %s:%s\n", pathend, s, msd_pat);*/
-  *fnoffs = pathend;
+/*eprintf(null, "MFRI %d %s:%s\n", g_pathend, s, msd_pat);*/
   msd_attrs = 0;	/* do not allow push to . or .. */
-{ register int msd_a;
-  register int i;
-  char * tl = &msd_path[pathend];
+  *fnoffs = g_pathend;
+{ int msd_a;
+  int i;
+  char * tl = &msd_path[g_pathend];
   char * s_ = s;
   if (s_[0] == '.' && (s_[1] == '.' || s_[1] == 0))
     return false;
-  for ( i = FILENAMESZ - 1 - pathend; --i >= 0 && (*tl++ = *s_++) != 0; )
+  for ( i = FILENAMESZ - 1 - g_pathend; --i >= 0 && (*tl++ = *s_++) != 0; )
     ;
 
-/*loglog3("CG %d .%s. %s", pathend, msd_path, s);*/
+/*loglog3("CG %d .%s. %s", g_pathend, msd_path, s);*/
 
   if (i < 0)
     return false;
@@ -885,7 +887,7 @@ static Bool extract_fn(int * fnoffs)
   { char sch = msd_path[msd_lenstk[msd_ix]];
     msd_path[msd_lenstk[msd_ix]] = 0;
     if (stat(msd_relpath, &msd_stat)!= OK)
-    { char cwdb[300];
+    {// char cwdb[300];
     /*eprintf(null, "%d staterr0 %s / %s\n", errno, getcwd(cwdb, 299), msd_relpath);*/
     }
     else

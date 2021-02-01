@@ -406,8 +406,8 @@ int last_was_srch()
 
 int Pascal hunt(int n, int again)
 
-{		 int dir = FORWARD;
-	register int cc;
+{	int dir = FORWARD;
+	int cc;
 								/* Make sure a pattern exists, or that we didn't switch
 								 * into MAGIC mode until after we entered the pattern. */
 //paren.sdir = 1;
@@ -417,7 +417,7 @@ int Pascal hunt(int n, int again)
 
   if (pat[0] == '\0')
 	{ mlwrite(TEXT78);
-/*			"No pattern set" */
+				  /* "No pattern set" */
 	  return FALSE;
 	}
 
@@ -442,7 +442,19 @@ int Pascal hunt(int n, int again)
 			   /* Save away the match, or complain if not there. */
 	if (cc != TRUE)
 	  mlwrite(TEXT79);
-/*			"Not found " */
+					/* "Not found " */
+	else
+	{ LINE * lim = curwp->w_linep;
+		LINE * lp = curwp->w_dotp;
+		int nrows = curwp->w_ntrows;
+		while (--nrows > 0 && lp != lim)
+			lp = lback(lp);
+			
+		if (nrows <= 2)
+		{ update(FALSE);
+			mvdnwind(1,2+nrows);
+		}
+	}
 	return cc;
 }
 
@@ -1191,55 +1203,52 @@ int Pascal indentsearch(int f, int n)
 
 {
   LINE * lp = curwp->w_dotp;
+  int tabsz = curbp->b_tabsize;
 //char buff[132];
 //sprintf(buff,"offs %d", offs);
 //mbwrite(buff);
 
-  char * s = lgets(lp, 0);
-  int fin = lp->l_used-1;
-  int ix = -1;
-  register int offs = 0;
+  char * s = lgets(lp, 0) - 1;
+  int ct = lp->l_used;
+	int off = 0;
   
-  while (ix < fin)
-  { ix += 1;
-    if      (s[ix] == ' ')
-      offs += 1;
-    else if (s[ix] == 9)
-      offs = ((offs + curbp->b_tabsize-1)/curbp->b_tabsize)*curbp->b_tabsize;
+  while (--ct >= 0)
+  { char ch = *++s;
+    if      (ch == ' ')
+      off += 1;
+    else if (ch == 9)
+      off = ((off + tabsz-1)/tabsz)*tabsz;
     else
       break;
   }
 
-  if (n > 0 && offs > 0)
-  { int origoffs = offs;
-    int moved = 0;
+  if (n > 0 && off > 0)
+  { int moved = 0;
+		int offs = 0;
 
-    while (1)
-    {
-      lp = lback(lp);
-      if ((lp->l_props & L_IS_HD) != 0) break;
+    do
+    { lp = lback(lp);
+    	offs = -(lp->l_props & L_IS_HD);
+      if (offs != 0) 
+				break;
 
       moved += 1;
 
-      s = lgets(lp, 0);
-      fin = lp->l_used-1;
-      ix = -1;
-      offs = 0;
-      
-      while (ix < fin)
-      { ix += 1;
-        if      (s[ix] == ' ')
+      s = lgets(lp, 0) - 1;
+      ct = lp->l_used;
+      while (--ct >= 0)
+      { char ch = *++s;
+        if      (ch == ' ')
           offs += 1;
-        else if (s[ix] == 9)
-          offs = ((offs + curbp->b_tabsize-1)/curbp->b_tabsize)*curbp->b_tabsize;
+        else if (ch == 9)
+		      offs = ((offs + tabsz-1)/tabsz)*tabsz;
         else
           break;
       }
 
-      if (offs < origoffs) break;
-    } 
+		} while (offs >= off);
 
-    if ((lp->l_props & L_IS_HD) != 0)
+    if (offs < 0)
       TTbeep();
     else
     { curwp->w_dotp  = lp;

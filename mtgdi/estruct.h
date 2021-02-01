@@ -299,42 +299,15 @@ union REGS {
 /*#define TTopen	ttopen*/
 #define	TTclose		tcapclose
 #define tcapkopen()
-#define	tcapkclose()
 #define	TTgetc		(*term.t_getchar)
 #define	TTputc		ttputc
 #define	TTflush()		
 #define	TTsetcol(col)
 #define	TTeeol		tcapeeol
-#define	TTeeop		tcapeeop
+#define	TTeeop		tcapepage
 #define	TTbeep		tcapbeep
 #define	tcaprev(x)	/* not used in MSDOS */
 #define	TTrez		tcapcres
-
-			/* Structure for the table of current key bindings */
-union EPOINTER {
-	int (*fp)(int, int);		/* C routine to invoke */
-	BUFFER *buf;			/* buffer to execute */
-};
-
-			/* Structure for the key binding table */
-typedef struct
-{ short k_code;	        /* Key code, 0 => end of table */
-/*short k_type;	        ** binding type (C function or buffer) */
-  union EPOINTER k_ptr; /* ptr to thing to execute */
-} KEYTAB;
-
-/*	The !WHILE directive in the execution language needs to
-	stack references to pending whiles. These are stored linked
-	to each currently open procedure via a linked list of
-	the following structure
-*/
-
-typedef struct WHBLOCK {
-	LINE *w_begin;		/* ptr to !while statement */
-	LINE *w_end;		/* ptr to the !endwhile statement*/
-	int w_type;		/* block type */
-	struct WHBLOCK *w_next;	/* next while */
-} WHBLOCK;
 
 /* HICHAR - 1 is the largest character we will deal with.
  * HIBYTE represents the number of bytes in the bitmap.
