@@ -2,7 +2,7 @@ set $discmd 0
 set $sscroll TRUE
 set $col1ch 1
 set $col2ch 8
-set $palette 71727374757670
+set $palette 1234560
 ;set $pagelen 74
 
 set $sterm ~n

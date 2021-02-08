@@ -21,7 +21,7 @@
 #if S_BORLAND
 #include	<dir.h>
 #elif S_WIN32
-#include    <direct.h>
+#include  <direct.h>
 #else
 #include 	<unistd.h>
 #endif
@@ -193,7 +193,7 @@ int Pascal ffputline(char buf[], int nbuf)
 
 	if (ferror(g_ffp))
 	{ mlwrite(TEXT157);
-/*			"Write I/O error" */
+					/* "Write I/O error" */
 	  return FIOERR;
 	}
 

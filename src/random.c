@@ -18,8 +18,70 @@ int Pascal setfillcol(int f, int n)
 
 { fillcol = n;
 	mlwrite(TEXT59,n);
-/*							"[Fill column is %d]" */
+				/* "[Fill column is %d]" */
 	return TRUE;
+}
+
+
+int Pascal setcline() 			/* get the current line number */
+
+{																 /* starting at the beginning of the buffer */
+	LINE *tgt = curwp->w_dotp;
+	LINE *lp;
+	int numlines = 1;
+				
+	for ( lp = curbp->b_baseline;
+			 ((lp = lforw(lp))->l_props & L_IS_HD) == 0 && lp != tgt; )
+		++numlines;
+
+	curwp->w_line_no = numlines;
+	return numlines;
+}
+
+
+/* This routine, given a pointer to a LINE, and the current cursor goal
+ * column, return the best choice for the offset. The offset is returned.
+ * Used by next-line and backward-line.
+ */
+int Pascal getgoal(LINE * dlp, int offs)
+
+{ int col = 0;
+	int dbo;
+	int lim = offs;
+	if (lim >= 0)											// if getccol then result will be 0
+		lim = llength(dlp);
+	else															// getccol
+	{	lim = -lim;
+		offs = 0x7fffffff;
+	}
+
+	for (dbo = -1; ++dbo < lim; )
+	{ short c = lgetc(dlp, dbo);
+		if (c < 0x20 || c == 0x7f)
+		{ if (c == '\t')
+				col += curbp->b_tabsize  - 1 - (col % curbp->b_tabsize);
+			else if (c >= col1ch && c <= col2ch)
+			{ col -= 1;
+				if (c == 8)
+					col -= 1;
+			}
+			else 
+				col += 1;
+		}
+		col += 1;
+		if (col > offs)
+			break;
+	}
+
+	return (offs & 0x40000000) ? col : dbo;
+}
+
+
+/* Return current column.  Stop at first non-blank given TRUE argument.
+ */
+int Pascal getccol()
+
+{ return getgoal(curwp->w_dotp, - curwp->w_doto);
 }
 
 /* Display the current position of the cursor, in origin 1 X-Y coordinates,
@@ -30,11 +92,11 @@ int Pascal setfillcol(int f, int n)
  */
 int Pascal showcpos(int f, int n)
 
-{	register LINE 		*lp;						/* current line */
-	register Int		numchars = 0; 	/* # of chars in file */
-	register int		numlines = 0; 	/* # of lines in file */
-					 Int		predchars;			/* # chars preceding point */
-					 int		predlines = 0;			/* # lines preceding point */
+{	LINE 		*lp;						/* current line */
+	int		numchars = 0; 	/* # of chars in file */
+	int		numlines = 0; 	/* # of lines in file */
+	int		predchars;			/* # chars preceding point */
+	int		predlines = 0;			/* # lines preceding point */
 															/* starting at the beginning of the buffer */
 																			/* start counting chars and lines */
 	for (lp = curbp->b_baseline; ((lp = lforw(lp))->l_props & L_IS_HD) == 0; )
@@ -63,83 +125,14 @@ int Pascal showcpos(int f, int n)
 	{ int ratio = (100L*predchars) / numchars;
 
 		mlwrite(TEXT60,
-/*							"Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x" */
+					/* "Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x" */
 						predlines, numlines, getccol(), ecol,
 						predchars, numchars, ratio, cch);
 	}
 	return (int)numchars;
 }}}
 
-int Pascal setcline() 			/* get the current line number */
 
-{																 /* starting at the beginning of the buffer */
-					 LINE *tgt = curwp->w_dotp;
-	register LINE *lp;
-	register int numlines = 1;
-				
-	for ( lp = curbp->b_baseline;
-			 ((lp = lforw(lp))->l_props & L_IS_HD) == 0 && lp != tgt; )
-		++numlines;
-
-	curwp->w_line_no = numlines;
-	return numlines;
-}
-
-/* This routine, given a pointer to a LINE, and the current cursor goal
- * column, return the best choice for the offset. The offset is returned.
- * Used by "C-N" and "C-P".
- */
-int Pascal getgoal(LINE * dlp, int offs)
-				
-{ int	col = 0;
-	int	dbo;
-
-	for (dbo = -1; ++dbo < llength(dlp); )
-	{ register short c = lgetc(dlp, dbo);
-		if (c < 0x20 || c == 0x7f)
-		{ if (c == '\t')
-				col += curbp->b_tabsize  - 1 - (col % curbp->b_tabsize);
-			else if (c >= col1ch && c <= col2ch)
-			{ col -= 1;
-				if (c == 8)
-					col -= 1;
-			}
-			else 
-				col += 1;
-		}
-		col += 1;
-		if (col > offs)
-			break;
-	}
-	return dbo;
-}
-
-
-/*
- * Return current column.  Stop at first non-blank given TRUE argument.
- */
-int Pascal getccol()
-
-{ register int col = 0;
-					 int dbo;
-
-	for (dbo = -1; ++dbo < curwp->w_doto;)
-	{ short c = lgetc(curwp->w_dotp, dbo);
-		if (c < 0x20 || c == 0x7f)
-		{ if (c == '\t')
-				col += curbp->b_tabsize  - 1 - (col % curbp->b_tabsize);
-			else if (c >= col1ch && c <= col2ch)
-			{ col -= 1;
-				if (c == 8)
-					col -= 1;
-			}
-			else 
-				col += 1;
-		}
-		col += 1;
-	}
-	return col;
-}
 
 #if FLUFF
 /* Twiddle the two characters on either side of dot. If dot is at the end of
@@ -223,7 +216,7 @@ int Pascal detabline()
 }
 */
 
-Bool do_entab = 0;
+Bool g_entab = 0;
 
 int Pascal detab(int f, int n) /* change tabs to spaces */
 
@@ -250,8 +243,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 				dotp = curwp->w_dotp;
 			}}
 
-		if (do_entab)											/* entab the resulting spaced line */
-		{ do_entab = 0;
+		if (g_entab)											/* entab the resulting spaced line */
 		{ int tab_ct = tabsz;
 			int sp_ct = 0;
 			int incol;
@@ -274,20 +266,22 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 					sp_ct = 0;
 			}}
 			dotp->l_used = outcol+1;
-		}}
+		}
 														/* advance/or back to the next line */
 		forwline(TRUE, inc);
 	}
+		
 	curwp->w_doto = 0;			/* to the begining of the line */
 	thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
 	lchange(WFEDIT);				/* yes, we have made at least an edit */
+	g_entab = 0;
 	return TRUE;
 }}
 
 
 int Pascal entab(int f, int n) /* change spaces to tabs where posible */
 
-{	do_entab = 1;
+{	g_entab = 1;
 	return detab(f, n);
 }			
 
@@ -337,12 +331,11 @@ int Pascal trim_white(int f, int n)
 #endif
 
 
-char * Pascal skipspaces(char * s, char * limstr)
-				
-				/* char * 		limstr; 									* the last char */
-{ 				 int lim = limstr - s;
-	register int ix;
-	register char ch;
+char * Pascal skipspaces(char * s, char * limstr)			
+																/* char * limstr; * the last char */
+{ int lim = limstr - s;
+	int ix;
+	char ch;
 	
 	for (ix = -1; ++ix < lim && ((ch=s[ix]) == 'L'-'@' ||
 																ch == ' ' || ch == '\t');)
@@ -510,7 +503,7 @@ int Pascal forwdel(int f, int n)
  */
 int Pascal backdel(int f, int n)
 {
-				return forwdel(f, -n);
+	return forwdel(f, -n);
 }
 
 /* Kill text. If called without an argument, it kills from dot to the end of
@@ -589,8 +582,8 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 /*														"Mode to " */
 				
 				TEXT64a[kind], null);
-/*														 "add: " */
 /*														 "delete: " */
+/*														 "add: " */
 /*														 "toggle: " */
 
 	status = mlreply(cbuf, cbuf, NPAT - 1);
@@ -735,8 +728,8 @@ int Pascal clrmes(int f, int n)
 	return TRUE;
 }
 
-/*			This function writes a string on the message line
-								mainly for macro usage									*/
+/*	This function writes a string on the message line
+			mainly for macro usage									*/
 
 int Pascal writemsg(int f, int n)
 
@@ -744,8 +737,8 @@ int Pascal writemsg(int f, int n)
 	char buf[NSTRING];			/* buffer to recieve message into */
 
 	register int status = mlreply(TEXT67, buf, NSTRING - 1);
+															/* "Message to write: " */
 	if (status != TRUE)
-/*														"Message to write: " */
 		return status;
 
 	ostring(buf);
@@ -941,7 +934,7 @@ int Pascal scan_paren(char ch)
 
 int Pascal scan_par_line(LINE * lp)
 
-{ register int ix;
+{ int ix;
 	for (ix = -1; ++ix < lp->l_used; )
 		scan_paren((char)lgetc(lp, ix));
 	return scan_paren('\n');
@@ -969,8 +962,38 @@ int Pascal scan_for_sl(LINE * lp)
 	return ix;
 }
 
-#if 		CFENCE
+#if CFENCE
 
+#if 0
+char wordmatch(const char * t, int add)
+
+{ int ix = curwp->w_doto + add;
+	const char * s_ = &curwp->w_dotp->l_text[ix];
+	int len = llength(curwp->w_dotp) - ix;
+	
+	while (TRUE)
+	{	const char * s = s_;
+		char res = *t;
+	  char ch = '0';
+	  int ct;
+
+		for (ct = len;
+				--ct >= 0 && (ch = *t) > 1 && (ch | 0x20) == (*s | 0x20); ++s)
+			++t;
+
+		if (ch <= 1 &&(ct < 0 || !(isalnum(*s) || *s == '_')))
+			return res;
+			
+		while (*t >= 1)
+			++t;
+			
+		if (*t++ == 0)
+			return 0;
+	}
+}
+#endif
+
+static
 int wordmatch(const char * t_, int add)
 
 { const char * t = t_;
@@ -979,13 +1002,12 @@ int wordmatch(const char * t_, int add)
 	int len = llength(curwp->w_dotp) - ix;
 	register char ch;
 
-	for (; --len >= 0 && (ch = *t) != 0 && (ch | 0x20) == (*s | 0x20) && *s; ++s)
+	for (; --len >= 0 && (ch = *t) != 0 && (ch | 0x20) == (*s | 0x20); ++s)
 		++t;
 
 	return *t != 0															 ? 0 :
 				 len >= 0 &&(isalnum(*s) || *s == '_') ? 0 : 1;
 }
-
 
 
 typedef struct
@@ -1115,11 +1137,11 @@ int got_f_key(fdcr * fd, int tabsz)
 					mbwrite(pos);
 					mbwrite(buf);*/
 
-					return lbl == null ? i != 0 ? (toupper(pos[1]) == 'L' ? 2 : 1)  :
-																			  (toupper(pos[1]) == 'L' ? -1 : 0) :
-								 *lbl == 'D' ? d												 		 :
-								 *lbl == 'B' ? d == 0 && i == 0  ? 1 : 0 		 :
-																									 wordmatch(lbl, ix);
+					return lbl == null ? i ? (toupper(pos[1]) == 'L' ? 2 : 1)  :
+																	 (toupper(pos[1]) == 'L' ? -1 : 0) :
+								 *lbl == 'D' ? d												 						 :
+								 *lbl == 'B' ? d + i == 0  ? 1 : 0 		 							 :
+															 wordmatch(lbl, ix);
 				}
 			}
 		}
@@ -1205,7 +1227,7 @@ int Pascal getfence(int f, int n)
 		}
 
 		if (s_cmt + p_cmt == 0 && toupper(lstr[ix]) == 'E' &&
-				(wordmatch("ELSE", ix) || wordmatch(/*s_cmt ? "ELSIF" : */ "ELSEIF", ix)))
+				wordmatch("ELSE", ix) + wordmatch("ELSEIF", ix))
 		{ /*mbwrite("GotELSEIF");*/
 			fd.blk_type = 'T';
 			paren.ch = 'T';
@@ -1227,9 +1249,9 @@ int Pascal getfence(int f, int n)
 			  	paren.fence = 'B';
 			  else if (ix <= 0)
 			  	;
-				else if	(wordmatch("DO", ix) != 0
-							|| wordmatch("LOOP", ix) != 0
-							|| wordmatch("SELECT", ix) != 0)
+				else if	(wordmatch("DO", ix) ||
+								 wordmatch("LOOP" ,ix) ||
+								 wordmatch("SELECT", ix))
 				  paren.fence = toupper(lstr[ix]);
 				else if (wordmatch("IF", ix) == 0)
 					paren.fence = 'B';

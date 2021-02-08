@@ -274,7 +274,7 @@ int  tgetc()
 */
 int  getkey()
 
-{ register int c = tgetc();
+{ int c = tgetc();
 
 #if 1				 /* if it exists, process an escape sequence */
   if (c == 0)
@@ -323,8 +323,8 @@ int  getkey()
 */
 int  getcmd()
 
-{ register int c = getkey();
-	  KEYTAB * key = getbind(c);
+{ int c = getkey();
+	KEYTAB * key = getbind(c);
 					/* resolve META and CTLX prefixes */
   if (key->k_code != 0)
   do
@@ -354,6 +354,7 @@ int  mlyesno(char * prompt)
 { int  c = g_discmd;		/* input character */
   
   g_discmd = TRUE;
+  flush_typah();
 						/* " [y/n]? " */
   mlwrite("%s%s", prompt, TEXT162, null);
   g_discmd = c;
@@ -614,10 +615,10 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     c = ectoc(ch);
 #if S_MSDOS == 0
     if (c == '/' && twid && gs_type == CMP_FILENAME)
-    { extern char * homedir;
+    { extern char * g_homedir;
       buf[cpos] = 0;
       if (cpos == 1)
-      { strcat(strpcpy(&combuf[0], homedir, NSTRING-1), "/");
+      { strcat(strpcpy(&combuf[0], g_homedir, NSTRING-1), "/");
       }
       else
       { strpcpy(&combuf[0], buf, NSTRING-2);
@@ -714,13 +715,13 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
         redo = 1;
       }
     }
-    else if (c <= 'Z'-'@' && c != quotec || c == (ALTD | 'S'))
+    else if (c <= 'Z'-'@' && ch != quotec || c == (ALTD | 'S'))
     { autostr = getwtxt(c, &combuf[0], NSTRING-3-cpos);
     }
     else 
     { char mybuf[3];
 
-      if (c == quotec)
+      if (ch == quotec)
       { ch = getkey();     /* get a character from the user */
         c = ectoc(ch);
       }

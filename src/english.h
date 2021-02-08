@@ -10,7 +10,7 @@
 /*const*/ char TEXT94[] = "[TABLE OVERFLOW]";
 /*const*/ char TEXT99[] = "[OUT OF MEMORY]";
 /*const*/ char TEXT23[] = "Out of range";
-/*const*/ char * TEXT64a[3] = { "add:", "delete:", "toggle:",};
+/*const*/ char * TEXT64a[3] = { "delete:", "add:", "toggle:",};
 #else
 extern /*const*/ char TEXT8[];
 extern /*const*/ char TEXT79[];
@@ -147,7 +147,7 @@ extern /*const*/ char * TEXT64a[3];
 #define	TEXT139	"[Reading file]"
 #define	TEXT140	"Read "
 #define	TEXT141	"I/O ERROR, "
-#define	TEXT142	"OUT OF MEMORY,"
+#define	TEXT142	""
 #define	TEXT143	" line"
 #define	TEXT144	"Write file: "
 #define	TEXT145	"No file name"
@@ -164,11 +164,11 @@ extern /*const*/ char * TEXT64a[3];
 #define	TEXT156	"Error closing file"
 #define	TEXT157	"Write I/O error"
 #define	TEXT158	"File read error"
-#define	TEXT159	"%Need function key #"
-#define	TEXT160	"%Function key # oo range"
-#define	TEXT161	"Label contents: "
+#define	TEXT159	"\001Wait ..."
+#define	TEXT160	""								// not in use
+#define	TEXT161	""								// not in use
 #define	TEXT162	" [y/n]? "
-#define	TEXT163	"no default"
+#define	TEXT163	""								// not in use
 #define	TEXT164	"[search failed]"
 #define	TEXT165	"ISearch: "
 #define	TEXT166	"too long"
@@ -176,34 +176,34 @@ extern /*const*/ char * TEXT64a[3];
 #define	TEXT169	"Inserted"	/* this not used anymore */
 #define	TEXT170	"bug:linsert"
 #define	TEXT171	"Replaced"	/* this not used anymore */
-#define	TEXT172	"%%Out of memory while overwriting"
+#define	TEXT172	""								// not in use
 #define	TEXT173	"LOCK ERROR: Lock table full"
-#define	TEXT174	"Cannot lock, out of memory"
+#define	TEXT174	""								// not in use
 #define	TEXT175	"LOCK"
 #define	TEXT176	"File in use by "
 #define	TEXT177	", overide?"
 #define	TEXT178	"[can not get system error message]"
 #define	TEXT179	" Diry:"
-#define	TEXT180	"%%No such resolution"
-#define	TEXT181	"%%Resolution illegal for this monitor"
+#define	TEXT180	""								// not in use
+#define	TEXT181	""								// not in use
 #define	TEXT182	"Environment variable TERM not defined!"
-#define	TEXT183	"Unknown terminal type %s!"
-#define	TEXT184	"termcap entry incomplete (lines)"
-#define	TEXT185	"Termcap entry incomplete (columns)"
-#define	TEXT186	"Incomplete termcap entry\n"
-#define	TEXT187	"Terminal description too big!\n"
+#define	TEXT183	""
+#define	TEXT184	""
+#define	TEXT185	""
+#define	TEXT186	""
+#define	TEXT187	""
 #define	TEXT188	"[End]"
-#define	TEXT189	"Cannot find entry for terminal type.\n"
-#define	TEXT190	"Check terminal type with \"SHOW TERMINAL\" or\n"
-#define	TEXT191	"try setting with \"SET TERMINAL/INQUIRE\"\n"
-#define	TEXT192	"The terminal type does not have enough power to run\n"
-#define	TEXT193	"MicroEMACS.  Try a different terminal or check\n"
-#define	TEXT194	"type with \"SHOW TERMINAL\".\n"
-#define	TEXT195	"Cannot open channel to terminal.\n"
-#define	TEXT196	"Cannot obtain terminal settings.\n"
-#define	TEXT197	"Cannot modify terminal settings.\n"
-#define	TEXT198	"I/O error (%d,%d)\n"
-#define	TEXT199	"[Starting DCL]\r\n"
+#define	TEXT189	""
+#define	TEXT190	""
+#define	TEXT191	""
+#define	TEXT192	""
+#define	TEXT193	""
+#define	TEXT194	""
+#define	TEXT195	""
+#define	TEXT196	""
+#define	TEXT197	""
+#define	TEXT198	""
+#define	TEXT199	"["
 #define	TEXT200	"[Calling DCL]\r\n"
 #define	TEXT201	"[Not available yet under VMS]"
 #define	TEXT202	"Terminal type not 'vt52'or 'z19' !"
@@ -215,15 +215,15 @@ extern /*const*/ char * TEXT64a[3];
 #define	TEXT208	"[No such window exists]"
 #define	TEXT209	"Impossible screen size"
 #define	TEXT211	"Function list"
-#define	TEXT212	"Can not display function list"
-#define	TEXT213	"[Building function list]"
+#define	TEXT212	""
+#define	TEXT213	""
 #define	TEXT214 "%%No such file as %s"
 #define	TEXT215	": macro-to-key "
-#define TEXT216 "Cannot read/write directories!!!"
-#define TEXT217 "[Not available yet under AOS/VS]"
+#define TEXT216 ""
+#define TEXT217 ""
 #define TEXT218 "Multiple links, unlink result"
-#define TEXT219 "Hit a mark, %d done" 
-#define TEXT220 "Interrupted"
+#define TEXT219 ""
+#define TEXT220 ""
 #define TEXT221 "Write to RO file?"
 #define TEXT222 "No Password"
 #define TEXT223 "Cannot save .e2"

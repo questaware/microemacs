@@ -1,5 +1,4 @@
-/*	EVAL.C: Expresion evaluation functions for
-		MicroEMACS
+/*	EVAL.C: Expresion evaluation functions for MicroEMACS
 
 	written 1986 by Daniel Lawrence 			*/
 
@@ -35,9 +34,9 @@ STOP,  /* EVCBFLAGS */		/* actual: kbdmode - curr keyboard macro mode*/
 UNDEF, /* EVCLIPLIFE */		/* actual: cliplife */
 0,     /* EVCMDHK */ 		  /* actual: execlevel - execution IF level */
 0,     /* EVCMODE */ 	  	/* actual: kbdrep */
-0x71,  /* EVCMTCOL */		  /* comment colour *//* 0x80:blink,  0x8:intense */
+4,		 /* EVCMTCOL */		  /* comment colour */
 -1,    /* EVCOL1CH */		  /* character selecting colour 1 */
--1,    /* EVCOL2CH */		  /* character selecting colour 2 */
+-1,    /* EVCOL2CH */		  /* character selecting colour n */
 TRUE,  /* EVCURCHAR */		/* actual: revexist -does reverse video exist?*/
 7,     /* EVCURCOL */		  /* */
 0,     /* EVCURLINE */		/* */
@@ -64,29 +63,23 @@ CTRL |'M',/* EVLANG */  	/* actual: sterm - search terminating char */
 0,     /* EVLASTKEY */    /* last keystoke */
 0,     /* EVLASTMESG */   /* actual: prenum    "       "     numeric arg*/
 TRUE,  /* EVLINE */       /* actual: predef    "       "    default flag*/
-0x11,  /* EVLWIDTH */		  /* actual: quotec quote char during mlreply() */
 0,     /* EVMATCH */      /* actual: saveflag - Flags, saved with $target var */
 1,     /* EVMODEFLAG */   /* display mode lines flag */
 1,     /* EVMSFLAG */     /* use the mouse? */
 FALSE, /* EVPAGELEN */    /* actual: eexitflag */
-TRUE,  /* EVCURWIDTH */		/* actual: sgarbf  - screen is garbage	*/
+TRUE,  /* EVPAGEWIDTH */		/* actual: sgarbf  - screen is garbage	*/
 0,     /* EVPALETTE */    /* not in use */
 0,     /* EVPENDING */    /* actual: nclicks - clrd on any non-mouse event*/
-0,     /* EVPOPYOP */     /* */
-CTOEC('\r'),/* EVRAM */   /* actual: gs_term - param to getstring() */
+CTRL |'Q',/* EVPOPUP */    	/* quotec */
 FALSE, /* EVREADHK */     /* not in use */
 UNDEF, /* EVREGION */	
 UNDEF, /* EVREPLACE */       
-0,     /* EVRVAL */       /* return value of a subprocess (niu) */
 UNDEF, /* EVSEARCH */     
 0,     /* EVSEED */       /* random number seed */
 1,     /* EVSSAVE */      /* safe save flag */
 1,     /* EVSSCROLL */		/* smooth scrolling enabled flag */
 1,     /* EVSTATUS */			/* last command status */
 UNDEF, /* EVSTERM */ 	
-UNDEF, /* EVTARGET */	
-UNDEF, /* EVTERM */
-UNDEF, /* EVTIME */		
 0,     /* EVUARG */				/* universal argument */
 0,		 /* EV_USESOFTAB */
 UNDEF, /* EVVERSION */	
@@ -187,28 +180,30 @@ typedef struct Map_s
 } Map_t, *Map;
 */
 
-static char result[2 * NSTRING];
-       int  stktop = 0;
+static char g_result[2 * NSTRING];
+       int  g_stktop = 0;
 
 static const char *Pascal gtfun(char * fname)/* evaluate a function */
 	
-{
-		 int fnum;
+{	int fnum;
 	int iarg1;
-		 int  iarg2;
-		 int  arglen;
-		 char * arg1 = &result[stktop];
-		 char * arg2 = NULL;		/* to suppress warning */
+	int iarg2;
+	int arglen;
+
+	const char * errorm = g_logm[2];
+
+	char * arg1 = &g_result[g_stktop];
+	char * arg2 = NULL;		/* to suppress warning */
 
 //*arg1 = 0;
-			      /* look the function up in the function table */
-	fname[3] = 0;			/* only first 3 chars significant */
+											      /* look the function up in the function table */
+	fname[3] = 0;							/* only first 3 chars significant */
   mkul(0, fname);
 	fnamemap.srch_key = fname;
 	fnum = binary_const(&fnamemap, funcs);
 	if (fnum < 0)
 	  return errorm;
-				/* if needed, retrieve the first argument */
+																		/* if needed, retrieve the first argument */
 	if (funcs[fnum].f_type >= MONAMIC)
 	{ 
 	  if (macarg(arg1) != TRUE)
@@ -219,15 +214,15 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 	  { arglen = strlen(arg1);
 	    if (fnum != UFCAT)
 	      arglen = (arglen + 2) & -2;
-	    stktop += arglen;
-	    arg2 = &result[stktop];
-	    if (macarg(arg2) != TRUE)
-	    { stktop -= arglen;
+	    g_stktop += arglen;
+	    arg2 = &g_result[g_stktop];
+		{	int rc = macarg(arg2);
+	    g_stktop -= arglen;
+			if (rc != TRUE)
 	      return errorm;
-	    }
-	    stktop -= arglen;
+
       iarg2 = atoi(arg2);
-	  }
+	  }}
 	  iarg1 = atoi(arg1);
 	}
 						/* and now evaluate it! */
@@ -243,7 +238,7 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 		
 		when UFDIT:  return plinecpy();
 		when UFCAT:  return arg1;
-		when UFLEFT: if (stktop + iarg2 < 2 * NSTRING - 2)
+		when UFLEFT: if (g_stktop + iarg2 < 2 * NSTRING - 2)
 		               arg1[iarg2+1] = 0;
 		             return arg1;
 		when UFRIGHT:
@@ -261,9 +256,10 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 				           return strcpy(arg1, &arg1[iarg1]);
 								 }
 				         
-				         return fnum == UFTRIM 				 					 ? arglen = iarg1, trimstr(arg1, &arglen) :
-								        (unsigned)iarg2 >= (unsigned)arglen ? ""    :
-							   																strpcpy(arg1,&arg1[iarg2-1], atoi(arg2)+1);
+				         return fnum == UFTRIM   ? arglen=iarg1, trimstr(arg1, &arglen) :
+								        (unsigned)iarg2 >= 
+								        (unsigned)arglen ? "" 
+								        								 : strpcpy(arg1,&arg1[iarg2-1], atoi(arg2)+1);
 
 		when UFDIR:	 return pathcat(arg1, NSTRING-1, arg1, arg2);
 		when UFIND:	 return getval(arg1, arg1);
@@ -292,13 +288,12 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 		when UFBXOR:	iarg1 ^= iarg2;
 		when UFBNOT:	iarg1 = ~iarg1;
 		when UFXLATE:{ arglen += (strlen(arg2) + 2) & -2;
-		               stktop += arglen;
-		             { char * arg3 = &result[stktop];
-		               if (macarg(arg3) != TRUE) 
-		               { stktop -= arglen;
+		               g_stktop += arglen;
+		             { char * arg3 = &g_result[g_stktop];
+									 int rc = macarg(arg3);
+		               g_stktop -= arglen;
+									 if (rc != TRUE)
 				             return errorm;
-				           }
-		               stktop -= arglen;
 		               return xlat(arg1, arg2, arg3);
 			           }}
 #if DIACRIT
@@ -368,7 +363,7 @@ const char *Pascal gtusr(char * vname)	/* look up a user var's value */
 	  }
 	
 	uv_vnum = vnum;
-	return errorm;
+	return g_logm[2];						// "ERROR"
 }
 
 #if 0
@@ -415,7 +410,7 @@ static Map_t evmap = mk_const_map(T_DOMSTR, 0, envars);
 const char *Pascal gtenv(const char * vname)
  			/* name of environment variable to retrieve */
 {
-	         int ix = 0;
+  int ix = 0;
 	int vnum;		/* ordinal number of var refrenced */
 #define res vnum
  extern char deltaf[NSTRING];
@@ -426,8 +421,9 @@ const char *Pascal gtenv(const char * vname)
 	evmap.srch_key = vname;
 	vnum = binary_const(&evmap, envars);
 	
-	if (vnum < 0) 		/* return errorm on a bad reference */
-		return errorm;
+	if (vnum < 0) 												/* return errorm on a bad reference */
+		return g_logm[2];
+
 	switch (vnum)
 	{ case EVPAGELEN: res = term.t_nrowm1 + 1;
 	  when EVPAGEWIDTH:res = term.t_ncol;
@@ -435,9 +431,6 @@ const char *Pascal gtenv(const char * vname)
 	  when EVCURLINE: res = setcline();
 	  when EVHARDTAB: res = curbp->b_tabsize;
 		when EVUSESOFTTAB: res = curbp->b_mode & BSOFTTAB ? 1 : 0;
-#if WRAP_MEM
-	  when EVRAM:	    res = (int)(envram >> 10);
-#endif
 	  when EVCBFLAGS: res = curbp->b_flag;
 	  case EVCMODE:   if (vnum == EVCMODE) res = res >> NUMFLAGS;
 	  when EVCBUFNAME:return curbp->b_bname;
@@ -445,19 +438,14 @@ const char *Pascal gtenv(const char * vname)
 //  when EVSRES:	  return sres;
 	  when EVPALETTE: return palstr;
 	  when EVFILEPROF:return g_file_prof;
-	  when EVLWIDTH:  
-	  case EVCURCHAR: ix = llength(curwp->w_dotp);
-                    res = vnum == EVLWIDTH    ? ix   :
-                          ix == curwp->w_doto ? '\n' : lgetc(curwp->w_dotp, curwp->w_doto);
+	  when EVCURCHAR: res = llength(curwp->w_dotp) == curwp->w_doto 
+                    								? '\n' : lgetc(curwp->w_dotp, curwp->w_doto);
 	  when EVWLINE:   res = curwp->w_ntrows;
 	  when EVCWLINE:  res = getwpos();
-	  when EVTARGET:  saveflag = lastflag;
-			  					  res = curgoal;
 	  when EVSEARCH:  return pat;
 	  when EVHIGHLIGHT: return highlight;
 	  when EVLASTDIR: res = lastdir;
 	  when EVINCLD:	  return incldirs;
-	  when EVTIME:	  return ""; /* timeset(); */
 	  when EVREPLACE: return rpat;
 	  when EVMATCH:   return fixnull(patmatch);
 	  when EVKILL:	  return getkill();
@@ -468,7 +456,7 @@ const char *Pascal gtenv(const char * vname)
 #if	GOTTYPAH
 									  return ltos(typahead());
 #else
-									  return falsem;
+									  return g_logm[0];
 #endif
 	  when EVLINE:	  return getctext(&result[0]);
 	  when EVSTERM:   return cmdstr(&result[0], sterm);
@@ -486,7 +474,7 @@ const char *Pascal gtenv(const char * vname)
 	  when EVLANG:	  return LANGUAGE;
     when EVZCMD:    return lastline[ll_ix & MLIX];
 #if S_WIN32
-	  when EVWINTITLE:return curbp->b_fname;		// getconsoletitle();
+	  when EVWINTITLE:return "";	// getconsoletitle();
 #endif
 	  when EVDEBUG:   
 	  case EVSTATUS:  
@@ -499,9 +487,8 @@ const char *Pascal gtenv(const char * vname)
 	  case EVDIAGFLAG:
 	  case EVMSFLAG:  return ltos(predefvars[vnum]);
 
-	  otherwise       ix = vnum;
-										res = predefvars[vnum];
-										loglog2("Var %d = %x", ix, res);
+	  otherwise       res = predefvars[vnum];
+										loglog2("Var %d = %x", vnum, res);
 	}
 	return int_asc(res);
 #undef result
@@ -540,7 +527,7 @@ fvar:	vtype = -1;
 	      vtype = binary_const(&evmap, envars)|(TKENV << 11);
 
 	  when '%':		  /* check for existing legal user variable */
-	  	  if (gtusr(&var[1]) != errorm)
+	  	  if (gtusr(&var[1]) != g_logm[2])
 		      vtype = (TKVAR << 11) | uv_vnum;
 		    else
 		    { vtype = uv_vnum;
@@ -661,8 +648,7 @@ static
 
 int Pascal svar(int var, char * value)	/* set a variable */
 
-{
-  int cc = TRUE;
+{	int cc = TRUE;
   int vnum = var & 0x7ff;
 
   if (var == (TKENV << 11) + EVINCLD)
@@ -693,9 +679,6 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    when EVPAGEWIDTH:cc = newdims(val, term.t_nrowm1+1);
 	    when EVCURCOL:	 cc = setccol(val);
 	    when EVCURLINE:	 cc = gotoline(TRUE, val);
-#if WRAP_MEM
-	    when EVRAM:
-#endif
 	    when EVCBFLAGS:	 lchange(WFMODE);
                      /*if (val & BFCHG)
                          mbwrite("EVAL");*/
@@ -715,10 +698,9 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    when EVCFNAME:	 repl_bfname(curbp, value);
 				               curwp->w_flag |= WFMODE;
 //	  when EVSRES:	   cc = TTrez(value);
-	    when EVFILEPROF: hookix = strlen(value)+1;
-	    								 if (g_file_prof != NULL)
+	    when EVFILEPROF: if (g_file_prof != NULL)
 	    	               	 free(g_file_prof);
-				               g_file_prof = strcpy(malloc(hookix),value);
+				               g_file_prof = strdup(value);
 				
 	    when EVCURCHAR:	 ldelchrs(1L, FALSE);	/* delete 1 char */
 			                 linsert(1, (char)val);
@@ -726,16 +708,14 @@ int Pascal svar(int var, char * value)	/* set a variable */
 											 updline(FALSE);
 	    when EVWLINE:	   cc = resize(FALSE, val);
 	    when EVCWLINE:	 cc = forwline(FALSE, val - getwpos());
-	    when EVTARGET:	 curgoal = val;
-				               thisflag = saveflag;
-	    when EVSEARCH:	 mcclear();
+	    when EVSEARCH:	 mcclear();						 
 	    			           strpcpy(pat,value,NPAT);
 	    when EVREPLACE:	 strpcpy(rpat,value,NPAT);
 	    when EVHIGHLIGHT:strpcpy(highlight,value,sizeof(highlight));
 	    when EVLASTMESG: strpcpy(lastmesg,value,NSTRING);
 	    when EVPALETTE:	 strpcpy(palstr,value,sizeof(palstr));
 	    when EVPOPUP:    mbwrite(value);
-				               upwind();
+				           //  upwind();
 	    when EVKILL:
 		  when EVCLIPLIFE: g_cliplife = val;
 	    when EVLINE:	   putctext(value);
@@ -754,17 +734,20 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  				  		    setktkey(&hooks[hookix], BINDFNC, value);
 
 	    when EVHSCROLL: lbound = 0;
-	    case EVDEBUG:	
+#if S_WIN32
+		  when EVWINTITLE:setconsoletitle(value);
+#endif
+	    when EVDEBUG:	
 	    case EVSTATUS:	
 	    case EVDISCMD:	
 	    case EVDISINP:	
 	    case EVSSCROLL:	
 	    case EVSSAVE:	
 	    case EVDIAGFLAG:	
-	    case EVMSFLAG:  predefvars[vnum] = stol(value);
-
-	    when EVMODEFLAG:predefvars[vnum] = stol(value);
-	                    upwind();
+	    case EVMSFLAG:  
+	    case EVMODEFLAG:predefvars[vnum] = stol(value);
+	    								if (vnum == EVMODEFLAG)
+		                    upwind();
 
 	    when EVHJUMP:   if (val <= 0)
 									      val = 1;
@@ -909,7 +892,7 @@ char *Pascal getval(char * tgt, char * tok)
 const char *Pascal ltos(int val)	/* numeric logical to string logical */
 			/* value to translate */
 {
-  return val ? truem : falsem;
+  return g_logm[val == 0 ? 0 : 1];
 }
 
 
@@ -1066,5 +1049,3 @@ Pascal desfunc(int f, int n)
   mkdes();
 	return TRUE;
 }
-
-

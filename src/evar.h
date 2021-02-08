@@ -56,7 +56,6 @@ NOSHARE const char * envars[] = {
 	"lastkey",		/* last keyboard char struck */
 	"lastmesg",		/* last string mlwrite()ed */
 	"line", 			/* text of current line */
-	"lwidth",			/* width of current line */
 	"match",			/* last matched magic pattern */
 	"modeflag",		/* Modelines displayed flag */
 	"msflag",			/* activate mouse? */
@@ -65,20 +64,15 @@ NOSHARE const char * envars[] = {
 	"palette",		/* current palette string */
 	"pending",		/* type ahead pending flag */
 	"popup",			/* popup message */
-	"ram",				/* ram in use by malloc */
 	"readhook",		/* read file execution hook */
 	"region",			/* current region (read only) */
 	"replace",		/* replacement pattern */
-	"rval", 			/* child process return value */
 	"search",			/* search pattern */
 	"seed", 			/* current random number seed */
 	"ssave",			/* safe save flag */
 	"sscroll",		/* smooth scrolling flag */
 	"status",			/* returns the status of the last command */
 	"sterm",			/* search terminator character */
-	"term",				/* terminal type */
-	"target",			/* target for line moves */
-	"time",				/* date and time */
 	"uarg",				/* last universal arg */
 	"usesofttab",	/* expand tabs befoe inserting */
 	"version",		/* current version number */

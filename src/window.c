@@ -47,13 +47,12 @@ void Pascal  openwind(WINDOW * wp_, BUFFER * bp)
 
 
 
-void Pascal leavewind(WINDOW * wp_)
+void Pascal leavewind(WINDOW * wp)
 	
-{ register WINDOW * wp = wp_;
-  register BUFFER * bp = wp->w_bufp;
+{ BUFFER * bp = wp->w_bufp;
 
   --bp->b_nwnd; /* if ( == 0) */			/* Last use. */
-  { bp->b_wlinep = wp->w_linep;
+  {	bp->b_wlinep = wp->w_linep;
     bp->b_dotp	 = wp->w_dotp;
     bp->b_doto	 = wp->w_doto;
     bp->mrks	 = wp->mrks;
@@ -70,7 +69,7 @@ int Pascal openwindbuf(char * bname)
   curbp = bfind(bname, TRUE, 0);		/* and get a buffer for it */
   if (curbp == NULL)
   { mlwrite(TEXT99);
-/*			"out of memory " */
+					/* "out of memory " */
     return FALSE;
   }
   if (bclear(curbp))
@@ -78,7 +77,7 @@ int Pascal openwindbuf(char * bname)
     openwind(curwp, curbp);
   
     curbp->b_flag &= ~MDVIEW;
-    curbp->b_nwnd++;		/* mark us as more in use */
+    curbp->b_nwnd++;										/* mark us as more in use */
     curbp->b_flag |= BFACTIVE;
   }
   return TRUE;

@@ -18,23 +18,12 @@
 #include	"elang.h"
 #include	"logmsg.h"
 
-
-#if _WINDOWS
-#define NROW	60			/* Max Screen size. 	*/
-#define NCOL 148										 /* Edit if you want to.				 */
-#elif S_WIN32
-#define NROW	75			/* Max Screen size. 	*/
-#define NCOL 148										 /* Edit if you want to.				 */
-#else
-#define NROW	80			/* Max Screen size. 	*/
-#define NCOL 134										 /* Edit if you want to.				 */
+#if S_MSDOS
+#include <windows.h>
 #endif
+
 #define MARGIN	8 		/* size of minimim margin and */
 #define SCRSIZ	64			/* scroll size for extended lines */
-
-
-int Pascal myttgetc();
-int Pascal myvvv();
 
 /* Standard terminal interface dispatch table. Most of the fields point into
  * "termio" code.
@@ -77,8 +66,7 @@ typedef struct	VIDEO
 #define V_BLANK 0
 #endif
 
-#define MEMMAP	IBMPC
-
+#define MEMMAP	S_MSDOS
 
 static VIDEO	 **vscreen; 	/* Virtual screen. */
 #if MEMMAP == 0
@@ -91,17 +79,6 @@ static VIDEO	 **vscreen; 	/* Virtual screen. */
 #define MEMCT 2
 #endif
 
-
-#if S_MSDOS
-const short ctrans_[] = 	/* ansi to ibm color translation table */
-	{0, 4, 2, 6, 1, 5, 3, 7,
-	 8, 12, 10, 14, 9, 13, 11, 15};
-
-# define trans(x) ctrans_[x]
-#else
-# define trans(x) (x)
-#endif
-
 const char mdname[NUMMODES][8] = {		/* name of modes		*/
  "WRAP ", "CMODE ", "MS ", "AbC ",	"VW ",
  "OVER ", "RE ", "CRYPT ", "ASAVE ","//" 
@@ -111,21 +88,42 @@ static char fmtstr[LFSTR+1];		/* last message posted		*/
 
 void Pascal updateline(int);
 
-
 #if S_WIN32
 
-short * Pascal get_vscr_line(int row)
+/* 0 : No special effect
+ * 1 : underline
+ * 2 : bold
+ * 4 : Use new foreground
+ * 8 : Use line foreground
+ * An attribute of 0 therefore means the attributes for the line/new foreground
+ */
+unsigned short refresh_colour(int row, int col)
 
-{ 
-	return vscreen[row]->v_text;
-}
+{ VIDEO * vp = vscreen[row];
+  short * scl = vp->v_text;
+  unsigned short line_attr = vp->v_color;
+  unsigned short attr = line_attr;
+  int icol;
+  for (icol = -1; ++icol <= col; )
+    if (scl[icol] & 0xf000)
+		{	int wh = (scl[icol] & 0xff00) >> 8;
+      if      (wh & 0x40)
+      { attr = line_attr & 0xf0 | wh & 0xf;
+	      if (wh & 0x8)												// try it
+					attr |= COMMON_LVB_UNDERSCORE;
+      }
+      else if (wh & 0x80)
+        attr = line_attr;
+#if 0
+      if (wh & 1)
+				attr |= COMMON_LVB_UNDERSCORE;
+			if (wh & 2)
+			  attr |= FOREGROUND_INTENSITY;
+#endif
+    }
 
-
-char Pascal get_vscr_colors(int row)
-
-{
-	return vscreen[row]->v_color;
-}
+	return attr;
+}  
 
 #if 0
 
@@ -207,7 +205,7 @@ void Pascal vtinit()
 			term.t_mrowm1 = lines;
 		}
 }
-		tcapsetfgbg(0x7000);			/* white background */ // should be derived
+		tcapsetfgbg(0x70);			/* white background */ // should be derived
 #endif
 		if (vscreen != null)
 			free((char*)vscreen);
@@ -227,11 +225,6 @@ void Pascal vtinit()
 
 		for ( ; --i >= 0; )
 		{ vscreen[i] = vp;
-#if S_WIN32
-			memset(&vp->v_color, 0, (ncols+3)*2);
-#else
-			vp->v_flag = 0;
-#endif
 			vp->v_color = V_BLANK;
 			vp = (VIDEO *)&vp->v_text[ncols+2];
 		}
@@ -271,6 +264,8 @@ void Pascal vttidy()
 }
 #endif
 
+/* Markup language bold and underline marks must be in pairs here */
+
 static
 int find_match(const char * src, int len)
 
@@ -290,26 +285,56 @@ int find_match(const char * src, int len)
 
 
 #if S_MSDOS
+static
+const short ctrans_[] = 	/* ansi to ibm color translation table */
+	{0, 4, 2, 6, 1, 5, 3, 7,
+	 8, 12, 10, 14, 9, 13, 11, 15};
+
+# define trans(x) ctrans_[x]
+#else
+# define trans(x) (x)
+#endif
+
+#if S_MSDOS
 static const int bu_cols[] = { 4, 1 };
-#define palcol(c) (((trans(palstr[(c)*2]-'0')<<4) + trans(palstr[(c)*2+1]-'0'))<<8)
+
+static int palcol(int ix)
+
+{ int clr = toupper(palstr[ix]);
+	return (in_range(clr,'0','9') ? clr - '0' :
+				  in_range(clr,'A','F') ? clr - 'A' + 10 :
+				  in_range(clr,'a','f') ? clr - 'a' + 10 : 0) << 8;
+}
 #else
 static const int bu_cols[] = { '4'-1, '1'-1};
 #define palcol(c) (((c) + 1) << 8)
 #endif
-
+//89:;<=>?                
 Short g_clring;
 
-/* Set the virtual cursor to the specified row and column on the virtual
- * screen. There is no checking for nonsense values; this might be a good
- * idea during the early stages.
+#define CHR_0		 0x0000
+#define CHR_UL   0x1000
+#define CHR_BOLD 0x2000
+#define CHR_NEW  0x4000
+#define CHR_OLD  0x8000
+
+/* Set the virtual cursor to the specified row and column on the virtual screen.
+ * Bits 8 to 15 control attributes.
+ * The background (bits 12 : 15) cannot be changed within a line and the 
+ * background values have the following meaning (going forward):
+ * 0 : No special effect
+ * 1 : underline
+ * 2 : bold
+ * 4 : Use new foreground
+ * 8 : Use line foreground
+ * An attribute of 0 therefore means the attributes for the line/new foreground
  */
-static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
+static Cc Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 { if (row >= term.t_mrowm1)
 	{ tcapbeep();
 		return -1;
 	}
-	vtrow = row;
 
 { unsigned char * str = (unsigned char *)&lp->l_text[-1];
 	VIDEO *vp = vscreen[row];
@@ -317,36 +342,36 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 	const int BCD = BCCOMT + BCPRL + BCSQL + BCPAS;
 	char markupterm[2] = "";
 	char s_props = lp->l_props;
-	int mode = cmt_col8 == 0 || clring == 0 || 
+	int mode = cmt_chrom == 0 || clring == 0 || 
 								 (vp->v_flag & VFML) ? -1 : s_props & VFCMT;
 												
 	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
 
+	int chrom_nxt = 0;
 	int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
-	int chrom_in_peril = false;
+//int chrom_in_peril = false;
 	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
 
-	register short * tgt = &vp->v_text[0];
-					 int chrom_nxt = 0;
-					 int len = llength(lp); 		/* an upper limit */
-					 int highlite = 0;
+	short * tgt = &vp->v_text[0];
+	int len = llength(lp); 		/* an upper limit */
+	int highlite = 0;
 
 	lp->l_props = 0;			/* restored below */
 
 	while (--len >= 0)
-	{	int c = *++str;
+	{ int chrom = chrom_nxt;
+		int c = *++str;
 
 		if (vtc >= term.t_ncol)
-			tgt[term.t_ncol - 1] = (short)(CHROM_OFF+'$');
+			tgt[term.t_ncol - 1] = (short)(chrom + '$');
 		else
-		{ if (c != 0 && c == highlight[(++highlite)])
+		{	chrom_nxt = CHR_0;
+			if (c != 0 && c == highlight[(++highlite)])
 			{ if (highlight[1+highlite] == 0 && vtc - highlite + 1 >= 0)
-				{ tgt[vtc-highlite+1] |= palcol(highlight[0]-col1ch);
+				{ tgt[vtc-highlite+1] |= palcol(highlight[0]-'1') | CHR_NEW;
 					highlite = 0;
-					if (! (mode & (Q_IN_CMT+Q_IN_EOL)))
-						chrom_nxt = CHROM_OFF;
-					else 
-						chrom_nxt = cmt_col8;
+				  chrom_on = 1;
+					chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
 				}
 			}
 			else
@@ -364,32 +389,13 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 			}
 			else if (c < 0x20 || c == 0x7F)
 			{ if (c >= col1ch && c <= col2ch)
-				{ if (c == 'H' - '@' && vtc > 0 && len > 0)
-					{ int nc = (str[1] == str[-1]);
-						if			(str[1]  == '_' ||
-										 str[-1] == '_' || nc)
-						{ chrom_in_peril = false;
-							if (chrom_on != nc + 1)
-							{ chrom_on = nc + 1;
-								tgt[vtc-1] |= palcol(bu_cols[nc]);
-							}
-							if (str[-1] == '_')
-							{ tgt[vtc-1] &= 0xff00; 	/* switch them */
-								tgt[vtc-1] |= str[1]; 
-							}
-							++str;
-							--len;
-							continue;
-						}
-					}
-					chrom_on = -1;
-					c -= col1ch;			/* this is manual colouring */
-					chrom_nxt = palcol(c);
+				{ 
+					chrom_nxt = palcol(c - col1ch); /* this is manual colouring */
 					continue;
 				}
 				else
 				{ if (vtc >= 0)
-						tgt[vtc] = '^' | chrom_nxt;
+						tgt[vtc] = '^';
 					++vtc;
 					c ^= 0x40;
 				}
@@ -406,7 +412,7 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 				    { str += markupterm[1] != 0;
               len -= markupterm[1] != 0;
 				      chrom_on = 1;
-				      chrom_nxt = CHROM_OFF;
+				      chrom_nxt = CHR_0;
 				      mode &= ~(Q_IN_CMT0+Q_IN_CMT);
 				      continue;
 				    }
@@ -414,7 +420,7 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 				  else
           { int wh = find_match(str, len);
             if (wh >= 0)
-            { chrom_nxt = wh ? 0x7800 : cmt_col8;
+            { chrom_nxt = wh ? chrom | CHR_UL : cmt_chrom;
               mode |= wh ? Q_IN_CMT : Q_IN_CMT0;
               str += wh;
               len -= wh;
@@ -427,7 +433,7 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 				else if (mode & (Q_IN_CMT+Q_IN_CMT0))
 				{ if (str[-1] == '*' && c == duple)	/* l_props cannot be '*' */
 					{ mode = 0;
-						c |= CHROM_OFF;
+						chrom_nxt = CHR_OLD;
 					}
 				}
 				else if (c == '"')
@@ -440,31 +446,30 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 							(clring & BCFOR)	&& c == '!' ||
 							(clring & BCPRL)	&& c == '#')
 					{ mode = c != '*' ? Q_IN_EOL : Q_IN_CMT;
-						if			(vtc == 0)
-							c |= cmt_col8;
+						if			(vtc == 0 || (clring & (BCFOR | BCPRL)))
+							chrom = cmt_chrom;
 						else if (vtc > 0)
-							tgt[vtc-1] |= cmt_col8;
+							tgt[vtc-1] |= cmt_chrom;
 					}
 			}
 
-			if (chrom_in_peril && chrom_on > 0)
-			{ chrom_in_peril = false;
-				if (vtc > 1)
-					tgt[vtc-2] |= CHROM_OFF;
-				chrom_on = 0;
-			}
-			if (chrom_on > 0)
-				chrom_in_peril = true;
+//		if (chrom_in_peril && chrom_on > 0)
+//		{ chrom_in_peril = false;
+//			if (vtc > 1)
+//				tgt[vtc-2] |= CHR_OLD;
+//			chrom_on = 0;
+//		}
+//		if (chrom_on > 0)
+//			chrom_in_peril = true;
 			if (vtc >= 0)
-				tgt[vtc] = c | chrom_nxt;
+				tgt[vtc] = c | chrom;
 			++vtc;
-			chrom_nxt = 0;
 		}
 	}
  /* fix at t-mob */
 	if ((clring & BCD) && (s_props & VFCMT) ||
 			(clring & BCFOR) && toupper(lp->l_text[0]) == 'C' && llength(lp) > 0)
-		tgt[0] |= cmt_col8;
+		tgt[0] |= cmt_chrom;
 
 	if (vtc > 1 && chrom_on != 0)
 	{
@@ -473,7 +478,7 @@ static Cc Pascal vtmove(int row, int col, int cmt_col8, LINE * lp)
 #endif
 		{ if ((tgt[vtc-1] & 0xff00) && vtc < term.t_ncol)
 				tgt[vtc++] = ' ';
-			tgt[vtc-1] |= CHROM_OFF;
+			tgt[vtc] |= CHR_OLD;
 		}
 	}
 { int ct = term.t_ncol - vtc;
@@ -691,8 +696,8 @@ static void Pascal pscroll(int dir, int stt, int lenm1)
 
 static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN */
 	 
-{ 				 int stt = wp->w_toprow;
-	register int lenm1 = wp->w_ntrows-1;
+{ int stt = wp->w_toprow;
+	int lenm1 = wp->w_ntrows-1;
 	if (wp->w_flag & WFMODE)
 		--lenm1;
 
@@ -748,15 +753,28 @@ X 		}
 }}
 	 
 
+
+int Pascal window_bgfg(WINDOW * wp)
+
+{ BUFFER * bp = wp->w_bufp;
+  int clr = bp == NULL ? g_colours : bp->b_color;
+  
+	return (trans((clr >> 4) & 0xf)<< 4) | trans(clr & 0xf);
+
+//return (trans((wp->w_color >>8) & 0x7)<< 4) | trans(wp->w_color & 7);
+}
+
+
+
 void Pascal updline(int force)
 /*	updpos: update the position of the hardware cursor and handle extended
 		lines. This is the only update for simple moves.
 */
 {
-	register int i;
+			  int i;
  static LINE * up_lp = NULL;
-	register LINE * lp;
-		 WINDOW * wp = curwp;
+			  LINE * lp;
+		    WINDOW * wp = curwp;
 	
 					/* make sure it is not off the left side of the screen */
 	while ((i = getccol() - wp->w_fcol) < 0)
@@ -792,7 +810,7 @@ void Pascal updline(int force)
 		++currow;
 
 { int color = window_bgfg(curwp);
-	int cmt_clr = ((color & 0x70) | (cmt_colour & 7)) << 8;
+	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
 
 				/* if horizontal scrolling is enabled, shift if needed */
 	if (hscroll)
@@ -932,9 +950,9 @@ int /*Pascal*/ update(int force)
 		 )
 	{ 				/* update any windows that need refreshing */
 		for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
-			if (wp->w_flag) 			 /* if the window has changed, service it */
-			{ register int set = reframe(wp) & ~( WFMOVE+WFMODE); 
-														 /* check the framing */
+			if (wp->w_flag) 			 				/* if the window has changed, service it */
+			{ int set = reframe(wp) & ~( WFMOVE+WFMODE); 
+														 				/* check the framing */
 				if			(set & (WFTXTU+WFTXTD))
 					scrollupdn(set, wp);	
 				else if (set == WFEDIT)
@@ -1065,17 +1083,6 @@ int Pascal reframe(WINDOW * wp)
 #undef	centre
 #undef	clamp
 
-int Pascal window_bgfg(WINDOW * wp)
-
-{ BUFFER * bp = wp->w_bufp;
-  int clr = bp == NULL ? g_colours : bp->b_color;
-  
-	return (trans((clr >> 4) & 0x7)<< 4) | trans(clr & 7);
-
-//return (trans((wp->w_color >>8) & 0x7)<< 4) | trans(wp->w_color & 7);
-}
-
-
 /*	updall: update all the lines in a window on the virtual screen */
 
 void Pascal updall(WINDOW * wp, int all)
@@ -1086,7 +1093,7 @@ void Pascal updall(WINDOW * wp, int all)
 	int	zline = sline + wp->w_ntrows;
 			
 	int color = window_bgfg(wp);
-	int cmt_clr = ((color & 0x70) | (cmt_colour & 7)) << 8;
+	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
 
 #if S_MSDOS == 0
 	if (color == 0x70)
@@ -1149,9 +1156,6 @@ void Pascal updateline(int row)
 	short *cp1 = &vp1->v_text[0];
 	short *cp9 = &cp1[term.t_ncol];
 	short *cpend = cp9-1;
-	short prechrom = vp1->v_color << 8;
-	int bg = (vp1->v_flag & VFML) == 0 ? 0x7000
-																		 : (prechrom & 0x7000);
 	int postchrom = CHROM_OFF;
 	int revreq = vp1->v_flag & VFREQ;		/* reverse video flags */
 	int caution = ((revreq ^ pscreen[row]->v_flag) & VFREQ) ||
@@ -1159,19 +1163,36 @@ void Pascal updateline(int row)
 										(vp1->v_flag & VFML) != 0;
 
 	vp1->v_flag &= ~(VFCHG+VFREQ/*+VFML*/);/* flag this line is unchanged */
+
+{	short prechrom = vp1->v_color;
+	int bg = (vp1->v_flag & VFML) == 0 ? 0x70
+																		 : (prechrom & 0x70);
+	pscreen[row]->v_color = prechrom;
 	pscreen[row]->v_flag = vp1->v_flag;
-	pscreen[row]->v_color = vp1->v_color;
 
 	if (sgarbf)
 		caution = FALSE;
 				
+/* 0 : No special effect
+ * 1 : underline
+ * 2 : bold
+ * 4 : Use new foreground
+ * 8 : Use line foreground */
+
 	if (!caution) 								 /* skip common chars at the left */
 	{ short *ph9 = &ph1[term.t_ncol];
 		while (cp1 < cp9 && cp1[0] == ph1[0])
-		{ if (*cp1 & 0x7f00)
-				prechrom = *cp1;
-			if (*cp1 & CHROM_OFF)
-				prechrom = CHROM_OFF;
+		{ if (*cp1 & 0xf000)
+			{ int wh = (*cp1) >> 8;
+				if      (wh & 0x40)
+					prechrom = prechrom & 0xf0 | (wh & 0xf);
+				else if (wh & 0x80)
+					prechrom = vp1->v_color;
+				else if (wh & 0x10)
+					prechrom |= 0x8;																
+				else if (wh & 0x20)
+					prechrom |= 0x8;				// cannot do bold
+			}
 			++cp1;
 			++ph1;
 		}
@@ -1189,8 +1210,9 @@ void Pascal updateline(int row)
 
 	tcapmove(row, cp1 - &vp1->v_text[0]);
 
-	if (prechrom != 0)
-		tcapchrom((prechrom & 0x8f00) | bg );
+{	short prechrom_ = prechrom;
+	if (prechrom_ != 0)
+		tcapchrom(prechrom_ | bg );
 
 #if REVSTA
 	if (revreq)
@@ -1205,30 +1227,32 @@ void Pascal updateline(int row)
 			--cp9;
 
 		if (cpend <= cp9 + 3) 	/* Use only if erase is */
-			cp9 = cpend;			/* fewer characters. */
+			cp9 = cpend;					/* fewer characters. */
 	}
 	
 	--cp1;
 	while (++cp1 <= cpend)		/* Ordinary. */
-	{ prechrom = *cp1;
-		if (cp1 <= cp9)
-		{ if (prechrom & 0x7f00)
-				tcapchrom((prechrom & 0x8f00) | bg );
-
-			ttputc(prechrom);
-			++ttcol;
-			if (prechrom & CHROM_OFF)
-				tcapchrom(CHROM_OFF);
+	{	*ph1++ = *cp1;
+		if (*cp1 & 0xf000)
+		do
+		{ int wh = (*cp1) >> 8;
+			if      (wh & 0x40)
+				prechrom = prechrom & 0xf0 | wh & 0xf;
+			else if (wh & 0x80)
+				prechrom = vp1->v_color;
+			else if (wh & 0x10)
+				prechrom |= 0x8;			// bold
+			else if (wh & 0x20)
+				prechrom |= 0x8;			// cannot do bold
+			tcapchrom(prechrom | bg );
 		}
-		else
-			if (prechrom & (0xff00))
-				postchrom = prechrom;
-				
-		*ph1++ = prechrom;
-	}
+		while (0);
 
-	if (postchrom & 0x7f00)
-		tcapchrom((postchrom & 0x8f00) | bg );
+		if (cp1 <= cp9)
+		{ ttputc(*cp1);
+			++ttcol;
+		}
+	}
 
 #if REVSTA
 	if (revreq != 0)
@@ -1243,9 +1267,10 @@ void Pascal updateline(int row)
 			while (++ttcol < term.t_ncol - 1)
 				ttputc(' ');
 	}
-	if (postchrom & CHROM_OFF)
+
+	if (prechrom != 0)
 		tcapchrom(CHROM_OFF);
-}
+}}}
 
 #endif
 

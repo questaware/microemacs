@@ -126,23 +126,23 @@ int Pascal topluct()	/* calculate top luct */
 
 #endif
 
-Pascal swbuffer(BUFFER * bp_) /* make buffer BP current */
+Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
 	
-{	BUFFER *bp = bp_;
-	WINDOW *wp;
-
-	if (bp->b_langprops & BCFOR)
+{	if (bp->b_langprops & BCFOR)
 		bp->b_flag &= ~MDEXACT;
 			 /* let a user macro get hold of things...if he wants */
 	execkey(&exbhook, FALSE, 1);
 
-	leavewind(curwp);
 #if S_WIN32
 	setconsoletitle(bp->b_fname);
 #endif
 	bp->b_luct = ++g_top_luct;
+
+ 	leavewind(curwp);
+
 	curbp = bp; 			/* Switch. */
-	if (!(bp->b_flag & BFACTIVE) && bp->b_fname != null)/*buffer not active yet*/
+
+	if (!(bp->b_flag & BFACTIVE) && bp->b_fname != null)  /* not active yet*/
 	{
 		bp->b_flag |= g_gmode & MDCRYPT;
 		if (bp->b_flag & MDCRYPT)
@@ -151,10 +151,12 @@ Pascal swbuffer(BUFFER * bp_) /* make buffer BP current */
 		readin(bp->b_fname, FILE_LOCK);
 		curwp->w_flag |= WFFORCE;
 	}
+
 	if (bp->b_nwnd < 0)
 		bp->b_nwnd = 0;
 	++bp->b_nwnd; 		/* First use. */
-	wp = curwp;
+
+{	WINDOW *wp = curwp;
 	wp->w_bufp	= bp;
 	wp->w_flag |= WFMODE|WFHARD;			 /* Quite nasty.			 */
 #if 0
@@ -173,7 +175,7 @@ Pascal swbuffer(BUFFER * bp_) /* make buffer BP current */
 	
 	execkey(&bufhook, FALSE, 1);
 	return TRUE;
-}
+}}
 
 
 
@@ -215,12 +217,6 @@ int Pascal usebuffer(int f, int n)
 	return swbuffer(bp);
 }
 
-#if S_WIN32
-#if GOTTYPAH
-	extern int flush_typah();
-#endif
-#endif
-
 /* Dispose of a buffer, by name.
  * Ask for the name. Look it up (don't get too
  * upset if it isn't there at all!). Get quite upset
@@ -234,11 +230,7 @@ int Pascal killbuffer(int f, int n)
 					                    			/* get the buffer name to kill */
 	BUFFER * bp = getcbuf(TEXT26, nxt_bp ? nxt_bp->b_bname : "main", TRUE);
 				             /* "Kill buffer" */
-#if S_WIN32
-#if GOTTYPAH
 	flush_typah();
-#endif
-#endif
 
 	return bp->b_nwnd > 0 && bp == curbp && nextbuffer(0,1) == 0 ? ABORT
                                                                : zotbuf(bp);
@@ -276,7 +268,7 @@ int Pascal bclear(BUFFER * bp_)
 
 	if ((bp->b_flag & (BFINVS+BFCHG)) == BFCHG /* Not scratch buffer.  */
 							 /* Something changed 	 */
-	 && (s=mlyesno(TEXT32)) != TRUE)
+	 && (s = mlyesno(TEXT32)) != TRUE)
 /*					"Discard changes" */
 		return s;
 
@@ -308,10 +300,6 @@ int Pascal bclear(BUFFER * bp_)
 int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 	
 { 
-/*if (bp->b_flag & BSRCH)
-	{ adb(444);
-		return FALSE;
-	} 	*/
 	if (bp->b_nwnd > 0 || bp == curbp)	/* Error if on screen.	*/
 	{ mlwrite(TEXT28);
 /*			"Buffer is being displayed" */

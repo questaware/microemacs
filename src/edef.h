@@ -114,19 +114,17 @@ extern char nulls[];
 				/*	mode flags	*/
 #define	NUMMODES  10		/* # of defined modes	       */
 
-#define MDSTT   0x0010
-#define MDWRAP	0x0010		/* word wrap			*/
-#define	MDCMOD	0x0020		/* C indentation and fence match*/
-#define	MDMS		0x0040		/* File to have CRLF		*/
-#define	MDEXACT	0x0080		/* Exact matching for searches	*/
-#define	MDVIEW	0x0100		/* read-only buffer		*/
-#define MDOVER	0x0200		/* overwrite mode		*/
-#define MDMAGIC	0x0400		/* regular expresions in search */
-#define	MDCRYPT	0x0800		/* encrytion mode active	*/
-#define	MDASAVE	0x1000		/* auto-save mode		*/
-#define MDSRCHC 0x2000    /* search comments also */
-
-#define BSRCH    0x2000   /* currently searching this buffer */
+#define MDSTT    0x0010
+#define MDWRAP	 0x0010		/* word wrap			*/
+#define	MDCMOD	 0x0020		/* C indentation and fence match*/
+#define	MDMS		 0x0040		/* File to have CRLF		*/
+#define	MDEXACT	 0x0080		/* Exact matching for searches	*/
+#define	MDVIEW	 0x0100		/* read-only buffer		*/
+#define MDOVER	 0x0200		/* overwrite mode		*/
+#define MDMAGIC	 0x0400		/* regular expresions in search */
+#define	MDCRYPT	 0x0800		/* encrytion mode active	*/
+#define	MDASAVE	 0x1000		/* auto-save mode		*/
+#define MDSRCHC  0x2000    /* search comments also */
 #define MDDIR    0x4000		/* this file is a directory	*/
 #define BFACTIVE 0x8000		/* this buffer is active */
 
@@ -400,7 +398,6 @@ extern const char mdname[NUMMODES][8];		/* text names of modes		*/
 extern const NBIND names[];	/* name to function table	*/
 NOSHARE extern int g_colours;		/* backgrnd (black*256) + foreground (white) */
 NOSHARE extern int mpresf;		/* Stuff in message line	*/
-NOSHARE extern int vtrow;		/* Row location of SW cursor	*/
 NOSHARE extern int ttinit;		/* => ttrow is wrong */
 NOSHARE extern int ttrow;		/* Row location of HW cursor	*/
 NOSHARE extern int ttcol;		/* Column location of HW cursor */
@@ -416,9 +413,9 @@ NOSHARE extern int cryptflag;		/* currently encrypting?	*/
 NOSHARE extern int restflag;		/* restricted use?		*/
 NOSHARE extern int g_newest;            /* choose newest file           */
 NOSHARE extern Int envram;		/* # of bytes current in use by malloc */
-const extern char errorm[];		/* error literal		*/
-const extern char truem[];		/* true literal 		*/
-const extern char falsem[];		/* false litereal		*/
+
+const extern char g_logm[3][8];
+
 NOSHARE extern char palstr[49];		/* palette string		*/
 NOSHARE extern char lastmesg[LFSTR];	/* last message posted		*/
 NOSHARE extern int (Pascal *lastfnc)(int, int);/* last function executed */
@@ -499,6 +496,18 @@ extern int g_cliplife;
 #define Q_IN_CMT  32
 #define Q_IN_CMT_ 64
 #define Q_IN_EOL 128
+
+
+#if _WINDOWS
+#define NROW	60			/* Max Screen size. 	*/
+#define NCOL 148										 /* Edit if you want to.				 */
+#elif S_WIN32
+#define NROW	75			/* Max Screen size. 	*/
+#define NCOL 148										 /* Edit if you want to.				 */
+#else
+#define NROW	80			/* Max Screen size. 	*/
+#define NCOL 134										 /* Edit if you want to.				 */
+#endif
 
 /*
 	This is the message which should be added to any "About MicroEMACS"

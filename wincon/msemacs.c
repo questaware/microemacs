@@ -203,7 +203,7 @@ void Pascal tcapsetsize(int wid, int dpth)
   size.X = wid;
   size.Y = dpth;
 
-{ int h = g_ConsOut;
+{ HANDLE h = g_ConsOut;
   SetConsoleScreenBufferSize( h, size);
 
 // GetConsoleMode(g_ConsOut, &mode);
@@ -245,23 +245,9 @@ void Pascal tcapmove(int row, int col)
   { tcapbeep();
     row = 0;
   }
-    
-{ short * scl = get_vscr_line(row);
-  WORD attr = get_vscr_colors(row);
-  WORD attr_ = attr;
-  int icol;
-  for (icol = -1; ++icol <= col; )
-    if (scl[icol] & 0xff00)
-      if (scl[icol] & 0x7f00)
-      { attr_ = attr;		/* push */
-        attr = (scl[icol] >> 8) & 0x7f;
-      }
-      else
-      { attr = attr_;
-      }
   
 { WORD MyAttr = row == term.t_mrowm1 ? BG_GREY
-                        					 : window_bgfg(curwp) | BACKGROUND_INTENSITY;
+                        					   : window_bgfg(curwp) | BACKGROUND_INTENSITY;
   DWORD  Dummy;
   COORD  Coords;
   ttrow = row;
@@ -272,13 +258,12 @@ void Pascal tcapmove(int row, int col)
   if (g_cursor_on)
   { WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
     WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );
-   
-    
-    g_oldattr = attr;
+
+    g_oldattr = refresh_colour(row, col);
     g_oldcur = Coords;
   }
   SetConsoleCursorPosition( g_ConsOut, Coords);
-}}}
+}}
 
 
 
@@ -393,12 +378,12 @@ void Pascal tcapopen()
 
 
 int Pascal scwrite(row, outstr, color)	/* write a line out */
-	int 	 row; 	/* row of screen */
+	int 	 row; 			/* row of screen */
 	short *outstr;		/* string to output (must be term.t_ncol long)*/
-	int 	 color; 	/* background, foreground */
-{ 			/* build the attribute byte and setup the screen pointer */
-	SC_CHAR buf[512];
-	WORD cuf[512];
+	int 	 color;		 	/* background, foreground */
+{ 									/* build the attribute byte and setup the screen pointer */
+	SC_CHAR buf[NCOL];
+	WORD 		cuf[NCOL];
 	const SC_WORD sclen = csbiInfo.dwSize.X >= 148 ? 148 : csbiInfo.dwSize.X;
 	unsigned long n_out;
 	WORD attr = color;
@@ -407,22 +392,29 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 	int col;
 
 	for (col = -1; ++col < sclen; )
-	{ cuf[col] = attr;
-		if (outstr[col] & 0xff00)
-		{ 
-			if (outstr[col] & 0x7f00)
-			{ 																/* push */
-				attr = (outstr[col] >> 8) & 0x7f;
-				if (attr & FOREGROUND_INTENSITY)		// is 8
-				{
+	{
+/* 0 : No special effect
+ * 1 : underline
+ * 2 : bold
+ * 4 : Use new foreground
+ * 8 : Use line foreground
+ * An attribute of 0 therefore means the attributes for the line/new foreground
+ */
+    int wh = outstr[col] & 0xf000;
+    if (wh != 0)
+    { wh = wh >> 12;
+      if      (wh & 4)
+      {	attr = color & 0xf0 | (outstr[col] >> 8) & 0xf;
+      	if (wh & 8)
 					attr |= COMMON_LVB_UNDERSCORE;
-				}
-				cuf[col] = attr;
-			}
-			else
-			{ attr = color;
-			}
-		}
+      }
+      else if (wh & 8)
+        attr = color;
+
+      if (wh & 1)						// Cannot do underline so bold (which is faint!)
+				attr |= 0x8;
+    }
+		cuf[col] = attr;
 		buf[col] = (outstr[col] & 0xff);
 	}
 	

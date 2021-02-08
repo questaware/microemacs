@@ -43,6 +43,7 @@
 
   *Key Bindings in the Command Line*
   These are described by pressing ^A in the command line.
+	(The bindings can be avoided by prefixing ^Q -- literal next character).
   
   ^B  kill Buffer contents
   ^G  Abort
@@ -90,6 +91,8 @@
      Ms      file contain(ed) ^M
      AbC     distinguish upper and lower case.
      RE      treat ^$.<asterix>[ in pattern as parts of regular expressions.
+						 The regular expressions are POSIX regular expressions.
+             (In them \0ab where a and b are hex digits can be used)
      Overstrike  Typing overstrikes existing text.
      View    Disallow editing.
      Crypt   Encrypt when saving, decrypt when reading.
@@ -111,12 +114,12 @@
 
   *The Colours*
   Setting the above colour modes colour the current window.
-  There is also colour applied to text by the control characters ^A to ^G and
-  the comment sequences /\* \*/, //
-  The variable $cmtcolour selects a control character 1 => ^A, 2 => ^B, etc.
+  There is also foreground colour applied to text by the 
+  comment sequences \/\* \*/  // and the control characters ^A to ^G.
+  The variable $cmtcolour specifies an ansii colour.
   The control characters between $col1ch and $col2ch select a palette
-  The palette is mapped to colours in $palette, dot separated; 
-  On MSDOS the colours are ibmpc colours in pairs of digits 
+  The palette is mapped to colours in $palette.
+  On MSDOS the colours are ibmpc colours in pairs of hex digits
   and elsewhere vt100 sequences separated by dots.
 
   *Tabs*
@@ -240,9 +243,10 @@ fill-paragraph           M-Q
 filter-buffer            ^X#  Write the buffer to a temp, execute a command
                          ^X\       reading the contents, read in the output.
                          ^X|
-                               In Windows if the command has suffix .exe and
-                               can be found on the path do not use cmd.exe
-                               otherwise use cmd.exe
+                               In Windows for filter-buffer, pipe-command, 
+                               shell-command if the command can be found 
+                               on %Path% or with suffix .exe added do not 
+															 use cmd.exe otherwise use it.
 find-file                ^X^F Read a file into a buffer, new if unique in name
 find-tag                 M-FN> Searches all files named tags up from the directory
                                of the file in the buffer.
@@ -303,7 +307,7 @@ next-word                M-F
 nop
 overwrite-string
 pipe-command             ^X@  Execute a command and use a new buffer for output
-                         ^X<
+                         ^X<  For command see filter-buffer.
 previous-window          ^XP
 print
 query-replace-string     ^R   An illegal response shows legal choices
@@ -343,14 +347,14 @@ search-incls             M-FNP  Search for a define,variable through C++ include
 search-reverse           M-S
 select-buffer                 Show the buffer in the current window
 set                      ^XA  Set a variable
-set-encryption-key       M-E
+set-encryption-key       M-E	Per buffer; 
+                              For all encryption keys pressing and releasing the
+                              control key at a specific point affects the key.
+                              Assists in keeping the key secret. (Windows only)
 set-fill-column          ^XF  For use in word processing
 set-mark                 M- 
                          M-.
 shell-command            ^X!  Execute an OS command in a new task
-                               In Windows if the command has suffix .exe and
-                               can be found on the path do not use cmd.exe
-                               otherwise use cmd.exe
                          A-6
 shrink-window            ^X^Z
 source                   M-^S execute-file
@@ -461,21 +465,9 @@ These bindings search for the word to the right of the cursor backwards resp. fo
  MDMAGIC  0x0400    /* regular expresions in search */
  MDCRYPT  0x0800    /* encrytion mode active  */
  MDASAVE  0x1000    /* auto-save mode   */
- 
- BSRCH    0x4000          /* reserved */
- MDDIR    0x8000    /* this file is a directory */
-
- The mode flags:
- MDSTT    0x0010
- MDWRAP   0x0010    /* word wrap      */
- MDCMOD   0x0020    /* Obsolete     */
- MDMS     0x0040    /* File to have CRLF    */
- MDEXACT  0x0080    /* Exact matching for searches  */
- MDVIEW   0x0100    /* read-only buffer   */
- MDOVER   0x0200    /* overwrite mode   */
- MDMAGIC  0x0400    /* regular expresions in search */
- MDCRYPT  0x0800    /* encrytion mode active  */
- MDASAVE  0x1000    /* auto-save mode   */
+ MDSRCHC  0x2000    /* search comments also */
+ MDDIR    0x4000		/* this file is a directory	*/
+ BFACTIVE 0x8000		/* this buffer is active (read in) */
 
  The System variables:
  --------------------
@@ -485,16 +477,17 @@ $bufhook
 $cbflags       Flags of current buffer.
 $cbufname      Variable list
 $cfname        Name of file in current buffer
+$cliplife      Cut/paste buffer entries older than this are silently deleted!!
 $cmdhook       
 $cmode         The mode on the current buffer
 Colours: 
                On IBMPC BG_COLOUR * 16 + FG_COLOUR + (8:intense)
-         Elsewhere selects from the palette library $palette
+               Elsewhere selects from the palette library $palette
 $cmtcolour     Comment colour
 $col1ch        Lowest palette selector character
 $col2ch        Highest palette selector character
-         If a character is within the range of the two characters
-         above then a colour is selected from $palette
+               If a character is within the range of the two characters
+               above then a colour is selected from $palette
 $curchar       The current character
 $curcol        The current column
 $curline       The Current line number
@@ -506,12 +499,14 @@ $discmd        Display command output
 $disinp        Inhibit all output
 $exbhook       
 $fcol          Column in window column 0 
+$fileprof      See above
 $fillcol       Not in use
-$flicker       Obsolete
 $gflags        Global Flags
 $gmode         The default (i.e. global) mode for buffers
 $hardtab       The tab stop interval
-$highlight     The first character 
+$highlight     The first character is a digit selecting a colour from $palette
+               All sequences the same as the rest of the characters are
+               highlighted in that colour.
 $hjump         Horizontal scrolling jump
 $hscroll       Enable $hjump
 $incldirs      Path of directories to search with srch-incls
@@ -522,40 +517,38 @@ $lastdir       Last direction of search
 $lastkey       The last key pressed
 $lastmesg      The last message shown
 $line          The line of the current buffer
-$lwidth        Obsolete
 $match         The last string matched 
 $modeflag      1: Show the mode line
 $msflag        1: file had ^M on input
-$pagelen       lines on the screen
+$pagelen       Lines on the screen. Changing this changes the physical length
+$pagewidth		 Width of the screen. Changing this changes the physical width
 $palette       A dot separated list of strings str giving colours ESC [ <str> m 
-         On msdos it is not this but a sequence of hex digit pairs
-         describing colours on the MSDOS screen
-$pending       
-$progname      The name of this program
+               On msdos it is not this but a sequence of hex digit pairs
+               describing colours on the MSDOS screen
+$pending       Read only; typahead text 
+$popup				 Write only; Raise a pop-up with this text.
 $ram           Not implemented
 $readhook      
-$region        
+$region        A prefix of the text in the marked region
 $replace       The last replace string typed 
-$rval          
+$rval
 $search        The last search string typed
 $seed          The random number seed
-$softtab       != 0: The tabstop interval causing expansion to spaces
 $sres          display type
 $ssave         Save files to an intermediate temporary
 $sscroll       Smooth scroll
 $status        Status of the last editor command
 $sterm         Terminator of command input, usually ^M
-$term          Obsolete
-$target        
-$time          
-$tpause        
 $uarg          ESC arg to command
+$usesofttab    != 0: Expand tabs to to spaces
 $version       This program version
+$wintitle			 Write only; Change the window title
 $wline         Number of lines in the current window
 $wraphook      
 $writehook     
 $xpos          X position on the screen
 $ypos          Y position on the screen
+$zcmd          The last command
 
  The User variables:
  --------------------

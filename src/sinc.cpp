@@ -930,7 +930,7 @@ int Sinc::srchdeffile(const char * fname, char * str, int depth)
   paren = sparen;
   loglog3("sbp %x bp %x cbp %x", sbp, bp, curbp);
  
-  if (bp->b_flag & BSRCH)
+  if (bp->b_flag & MDSRCHC)
     return 0;
 #endif
 
@@ -975,7 +975,7 @@ int Sinc::srchdeffile(const char * fname, char * str, int depth)
     cplen = save.curoff;
   }
     
-  bp->b_flag |= BSRCH;
+  bp->b_flag |= MDSRCHC;
 
   for (rcc = 0; best_nest > 0 && (lp->l_props & L_IS_HD) == 0;
                 lp = prev, cplen = prev->l_used)
@@ -1292,7 +1292,7 @@ scan:
       zotbuf(bp, 1);
   }
 #else
-  bp->b_flag &= ~BSRCH;
+  bp->b_flag &= ~MDSRCHC;
  
   if (cand_lp != NULL && best_bp == NULL /* && best_nest <= 0)*/)
   { loglog2("SETTING doto %d bn %d", cand_doto, best_nest);

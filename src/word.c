@@ -417,45 +417,49 @@ Pascal killpara(int f, int n)/* delete n paragraphs starting with the current on
 
 int Pascal wordcount(int f, int n)
 
-{				/* make sure we have a region to count */
-	Int nchars = getregion();
-	Int size = nchars;
-{	register LINE *lp = region.r_linep;
-	register int offset = region.r_offset;
-							/* count up things */
-	int inword = FALSE;
+{	Int nchars = 0;
 	Int nwords = 0;
 	Int nlines = 1;
-  char ch;
-	
-	while (size--)
-	{					/* get the current character */
-		++offset;
-		if (offset <= llength(lp))	/* end of line */
-		 	ch = lgetc(lp, offset);
-		else
-		{	lp = lforw(lp);
-			offset = 0;
-			++nlines;
-			ch = '\r';
-		}
+
+	REGION * r = getregion();
+	if (r != NULL)
+	{	Int size = r->r_size;
+		LINE *lp = 	 r->r_linep;
+		int offset = r->r_offset;
+								/* count up things */
+		int inword = FALSE;
+	  
+	  nchars = size;
 		
-		if (in_range(ch & 0xdf, 'A', 'Z') ||
-		    in_range(ch, '0', '9'))
-		{ if (!inword)
-		    ++nwords;
-		  inword = TRUE;
+		while (--size >= 0)
+		{	char ch;										/* get the current character */
+			++offset;
+			if (offset <= llength(lp))	/* end of line */
+			 	ch = lgetc(lp, offset);
+			else
+			{	lp = lforw(lp);
+				offset = 0;
+				++nlines;
+				ch = '\r';
+			}
+			
+			if (in_range(ch & 0xdf, 'A', 'Z') ||
+			    in_range(ch, '0', '9'))
+			{ if (!inword)
+			    ++nwords;
+			  inword = TRUE;
+			}
+			else 
+			  inword = FALSE;
 		}
-		else 
-		  inword = FALSE;
 	}
-						/* and report on the info */
+							/* and report on the info */
 	mlwrite(TEXT100,
-/*		"Words %D Chars %D Lines %d Avg chars/word %f" */
+					/* "Words %D Chars %D Lines %d Avg chars/word %f" */
 					nwords, nchars, nlines, 
 					nwords <= 0 ? 0 : (int)((100L * nchars) / nwords));
 	return TRUE;
-}}
+}
 
 #endif
 

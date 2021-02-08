@@ -435,14 +435,13 @@ extern
 void io_message(const char * txt, int cc, int nline)
 
 { if (cc > FIOEOF)
-  { txt = cc == FIOMEM ? TEXT142 : TEXT141;
+  { txt = cc == FIOMEM ? TEXT99 : TEXT141;
 			/* "OUT OF MEMORY, " */
 			/* "I/O ERROR, " */
     curbp->b_flag |= BFTRUNC;
   }
 
-  mlwrite("[%s%d%s%s", txt, nline, TEXT143,
-		 	     nline == 1 ? "]" : "s]");
+  mlwrite("[%s%d%s%s", txt, nline,  TEXT143,nline == 1 ? "]" : "s]");
 }
 
 
@@ -456,8 +455,8 @@ void io_message(const char * txt, int cc, int nline)
 /*Int readin_lines;			** aux result */
 
 int Pascal readin(char const * fname, int props)
-				/* name of file to read */
-			 	/* check for file locks?, -ve => insert */
+										/* name of file to read */
+									 	/* check for file locks?, -ve => insert */
 {	int ins = props & ~(FILE_REST + FILE_LOCK);
 
   if (restflag && (props & FILE_REST))
@@ -658,7 +657,7 @@ out:
 	else
 	{ WINDOW * wp;
 	  tcapkopen();								/* open the keyboard again (Unix only) */
-	  bp->b_flag |= BFACTIVE;	/* code added */
+	  bp->b_flag |= BFACTIVE;			/* code added */
 //  swb_luct = topluct() + 1;
 //  bp->b_luct = swb_luct;
 	  bp->b_dotp = lforw(bp->b_baseline);
@@ -769,14 +768,7 @@ int Pascal filesave(int f, int n)
 /*			    "Truncated file..write it out" */
     ;
   else
-  {
-#if S_WIN32
-#if GOTTYPAH
-	  extern int flush_typah();
-    flush_typah();
-#endif
-#endif
-		if (bp->b_fname == null)		/* Must have a name.	*/
+  {	if (bp->b_fname == null)		/* Must have a name.	*/
 		{	mlwrite(TEXT145);
 	/*			"No file name" */
 			return FALSE;

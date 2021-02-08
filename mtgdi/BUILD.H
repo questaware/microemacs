@@ -55,7 +55,6 @@
 
 /*	Debugging options	*/
 #define	RAMSIZE	0	/* dynamic RAM memory usage tracking */
-#define PASSWORDLIFE 40			/* seconds */
 
 /*	Terminal Output definitions		*/
 /*	[Set one of these!!]			*/
@@ -136,6 +135,9 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define MINIMAP
 
 #define LOGGING_ON 0
+
+#define PSCP_CMD "c:\\bbin\\pscp.exe "
+#define CLIP_LIFE 120					// seconds
 
 #include "../src/base.h"
 #endif /* BUILDINC */

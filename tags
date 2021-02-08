@@ -1546,6 +1546,7 @@ reeat	./wincon/oswin.c
 reform	./src/word.c
 reframe	./src/display.c
 refresh	./src/window.c
+refresh_colour	./src/display.c
 reglines	./src/region.c
 remallocstr	./src/basic.c
 remmark	./src/basic.c
@@ -1582,6 +1583,7 @@ scan_paren	./src/sinc.c
 scanner	./src/search.c
 scroll_vscr	./src/display.c
 scrollupdn	./src/display.c
+scwrite	./wincon/msemacs.c
 searchIncls	./src/search.c
 searchIncls	./src/sinc.c
 see_alarm	./unix/terminal.c

@@ -213,12 +213,14 @@ int Pascal gotoeob(int f, int n)
 
 extern KEYTAB * prevbind;
 
-
 int Pascal forwline(int f, int n_)
-		/* if we are on the last line as we start....fail the command */
-{ register int n = n_;
-  register LINE *  dlp = curwp->w_dotp;
-           LINE * lim = curbp->b_baseline;
+							/* if we are on the last line as we start....fail the command */
+{ int n = n_;
+  LINE *  dlp = curwp->w_dotp;
+  LINE * lim = curbp->b_baseline;
+
+	static int g_curgoal;
+
   if (n < 0)
     lim = lforw(lim);
   if (dlp == lim)
@@ -236,12 +238,12 @@ int Pascal forwline(int f, int n_)
 				/* if the last command was not note a line move,
 				    reset the goal column */
   if (keyct == 1 && prevbind != NULL && prevbind->k_ptr.fp != backline)
-    curgoal = getccol();
+    g_curgoal = getccol();
 
   thisflag |= CFCPCN;			/* flag this command as a line move */
 
   curwp->w_dotp  = dlp;		/* reseting the current position */
-  curwp->w_doto  = getgoal(dlp, curgoal);
+  curwp->w_doto  = getgoal(dlp, g_curgoal);
   curwp->w_flag |= WFMOVE;
   curwp->w_line_no += n_ - n;
   return TRUE;

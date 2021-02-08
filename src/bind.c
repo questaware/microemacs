@@ -29,7 +29,7 @@
 
 extern char *getenv();
 extern char * g_invokenm;
-extern char * homedir;
+extern char * g_homedir;
 
 static int Pascal cbuf1(int f, int n)  { return execporb(-1,n); }
 static int Pascal cbuf2(int f, int n)  { return execporb(-2,n); }
@@ -453,7 +453,7 @@ int Pascal addnewbind(int c, int (Pascal *func)(int, int))
 
 
 static const short viscod[7] = {CTLX, ALTD, SHFT, MOUS, META, SPEC, CTRL};
-static const char viskey[14] = "^XA-S-MSM-FN^";
+static const char viskey[14] = "^XA-S-MSM-FN^";		// assume aligned
 
 												/* change a key command to a string we can print out */
 char * Pascal cmdstr(char * t, int c) 
@@ -464,13 +464,11 @@ char * Pascal cmdstr(char * t, int c)
 	int i;
 	for (i = -1; ++i < 7; )
     if (c & viscod[i])
-    { ((char*)ptr)[0] = *(char *)&viskey[i*2];
-      ((char*)ptr)[1] = *(char *)&viskey[i*2+1];
+    { ((short*)ptr)[0] = *(short *)&viskey[i*2];
 	     
+      ptr += 2;
       if (i == 6)			/* must be last */
-        ptr += 1;
-      else
-        ptr += 2;
+        ptr -= 1;
     }
 					/* and output the final sequence */
 	ptr[0] = c & 255;	/* strip the prefixes */
@@ -480,15 +478,76 @@ char * Pascal cmdstr(char * t, int c)
 
 
 
-int Pascal getechockey(int yn)
+/*	stock() 	String key name TO Command Key
+
+	A key binding consists of one or more prefix functions followed by
+	a keystroke.  Allowable prefixes must be in the following order:
+
+	^X	preceeding control-X
+	A-	simeltaneous ALT key (on PCs mainly)
+	S-	shifted function key
+	MS	mouse generated keystroke
+	M-	Preceding META key
+	FN	function key
+	^	control key
+
+	Meta and ^X prefix of lower case letters are converted to upper
+	case.  Real control characters are automatically converted to
+	the ^A form.
+*/
+
+unsigned int Pascal stock(char * keyname)
+				/* name of key to translate to Command key form */
+{
+  unsigned int c = 0;
+  int i;
+
+  if (in_range(keyname[0], '0','9'))
+    return atoi(keyname);
+  
+  for (i = -1; ++i < 6; )
+    if (keyname[0] == viskey[i*2] && keyname[1] == viskey[i*2+1] &&
+        (i != 0 || keyname[2] != 0))   /* Key is not bare ^X */
+    { c |= viscod[i];
+      keyname += 2;
+    }
+				    /* a control char?	(Always upper case) */
+  if (keyname[0] == '^' && keyname[1] != 0)
+  { c |= CTRL;
+    ++keyname;
+  }
+				
+  if(!(c & (MOUS|SPEC|ALTD|SHFT))) /* If not a special key */
+  {	if (*keyname < 32)						 /* A literal control character? (Boo, hiss) */
+	  { c |= CTRL;
+  	  *keyname += '@';
+  	}
+	}
+
+  if (c & (CTRL|CTLX|META))
+    mkul(1, keyname);							/* Make sure it's upper case */
+
+  return c | *keyname & 255;
+}
+
+
+static
+int Pascal getechockey(int mode)
 
 { char outseq[20];
-  int c = getckey(yn);
-					/* change it to something printable */
-  if (g_discmd)
-  { mlwrite("\001 ");
-    ostring(cmdstr(&outseq[0], c));
-  }
+	char tok[NSTRING];
+								/* check to see if we are executing a command line */
+	int c;
+	if (!g_clexec)
+		c = mode & 1 ? getkey() : getcmd();
+	else
+	{ macarg(tok);	/* get the next token */
+	  c = stock(tok);
+	}
+																	/* change it to something printable */
+  if (g_discmd && (mode & 2) == 0)
+  	mlwrite("\001 %s",cmdstr(&outseq[0], c));	// can be overwritten!
+
   return c;
 }
 
@@ -595,11 +654,11 @@ int Pascal append_keys(const char * name, Emacs_cmd * addr, const char * filt)
     if (ktp->k_ptr.fp == addr)
     {																		/* pad out some spaces */
       mlwrite("%>%25s%s\n", name, cmdstr(&outseq[0], ktp->k_code));
-      name = NULL; 	/* and clear the line */
+      name = "";											 	/* and clear the line */
     }
   }
 
-  if (name != NULL)	   /* if no key was bound, we need to dump it anyway */
+  if (name[0] != 0)	   			/* if no key was bound, we need to dump it anyway */
   	mlwrite("%>%s\n", name);
 
   return OK;
@@ -678,22 +737,6 @@ int Pascal buildlist(const char * mstring)
   mkdes();
   return cc;
 }
-
-
-/* get a command key sequence from the keyboard */
-
-unsigned int Pascal getckey(int mflag)
-			/* going for a meta sequence? */
-{
-	char tok[NSTRING];
-								/* check to see if we are executing a command line */
-	if (g_clexec)
-	{ macarg(tok);	/* get the next token */
-	  return stock(tok);
-	}
-						/* or the normal way */
-	return mflag ? getkey() : getcmd();
-}
 
 #if S_WIN32
 
@@ -712,7 +755,6 @@ void Pascal flook_init(char * cmd)
 
   if (*sp != 0)
     *sp = 0;
-
 }}
 
 #endif
@@ -762,43 +804,46 @@ int Pascal fexist(const char * fname)	/* does <fname> exist on disk? */
 
 char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 	
-{ register int tix;
-
-  if (dir[0] == '.' && dir[1] == '/' && dir[2] == '.' && dir[3] == '.' && dir[4] == '/')
+{ 
+  if (dir[0]=='.' && dir[1]=='/' && dir[2]=='.' && dir[3]=='.' && dir[4]=='/')
     dir += 2;
 
   if (file[0] == '/' || file[0] == '\\')
-    strpcpy(t, file, bufsz);
-  else
-  { for (tix = -1; ++tix < bufsz - 1 && dir[tix] != 0; )
-      t[tix] = dir[tix];
+    dir = file;
 
-    t[tix] = 0;
-   
-    while (1)
+{ int tix = -1;
+
+	while (TRUE)
+	{	int six = 0;
+		for (; ++tix < bufsz - 1 && dir[six] != 0; ++six)
+	    t[tix] = dir[six];
+
+		if (dir == file)
+			break;
+
+		while (1)
     { while (--tix >= 0 && t[tix] != '/' && t[tix] != '\\')	/* strip back to / */
-        ;
+	      ;
 
-      if (tix > 0)
-      { if (t[tix-1] != '.' &&
-            file[0] == '.'  && file[1] == '.' && file[2] == '/')
-        { for (file = &file[2]; *++file == '/';)		/* strip forward to non / */
-            ;
-          continue;
-        }
-      }
+	    if (tix > 0)
+	    { if (t[tix-1] != '.' &&
+	          file[0] == '.'  && file[1] == '.' && file[2] == '/')
+	      { for (file = &file[2]; *++file == '/';)		/* strip forward to non / */
+	          ;
+	        continue;
+	      }
+	    }
 
-      break;
-    }
-  
-  { int six = 0;
-    for (; ++tix < bufsz - 1 && file[six] != 0; ++six)
-      t[tix] = file[six];
+	    break;
+	  }
+	  
+	  dir = file;
+  }
 
-    t[tix] = 0;
-  }}
+  t[tix] = 0;
+
   return t;
-}
+}}
 
 
 static char fspec[256+2];	/* full path spec to search */
@@ -871,8 +916,8 @@ const char * Pascal flook(char wh, const char * fname)
       return fspec;
 
 #if ENVFUNC
-	  if (wh < 'a' && homedir[0] != 0)
-	    if (fex_path(homedir, fname))
+	  if (wh < 'a')
+	    if (fex_path(g_homedir, fname))
 	      return fspec;
 #endif
 	  if (fex_path(INCDIR, fname))
@@ -1000,60 +1045,6 @@ char *Pascal flooknear(knfname, name)
 
 #endif
 
-/*	stock() 	String key name TO Command Key
-
-	A key binding consists of one or more prefix functions followed by
-	a keystroke.  Allowable prefixes must be in the following order:
-
-	^X	preceeding control-X
-	A-	simeltaneous ALT key (on PCs mainly)
-	S-	shifted function key
-	MS	mouse generated keystroke
-	M-	Preceding META key
-	FN	function key
-	^	control key
-
-	Meta and ^X prefix of lower case letters are converted to upper
-	case.  Real control characters are automatically converted to
-	the ^A form.
-*/
-
-unsigned int Pascal stock(char * keyname)
-				/* name of key to translate to Command key form */
-{
-  register unsigned int c = 0;
-  register int i;
-
-  if (in_range(keyname[0], '0','9'))
-    return atoi(keyname);
-  
-  for (i = -1; ++i < 6; )
-    if (keyname[0] == viskey[i*2] && keyname[1] == viskey[i*2+1] &&
-        (i != 0 || keyname[2] != 0))   /* Key is not bare ^X */
-    { c |= viscod[i];
-      keyname += 2;
-    }
-				    /* a control char?	(Always upper case) */
-  if (keyname[0] == '^' && keyname[1] != 0)
-  { c |= CTRL;
-    ++keyname;
-    mkul(1, keyname);
-  }
-				/* A literal control character? (Boo, hiss) */
-  if(!(c & (MOUS|SPEC|ALTD|SHFT)) && *keyname < 32)
-  { c |= CTRL;
-    *keyname += '@';
-  }
-
-		/* make sure we are not lower case if used with ^X or M- */
-  if(!(c & (MOUS|SPEC|ALTD|SHFT)))	/* If not a special key */
-    if( c & (CTLX|META))		/* If is a prefix */
-      mkul(1, keyname);		/* Then make sure it's upper case */
-
-  return c | *keyname & 255;
-}
-
-
 /* getfname:	This function takes a ptr to KEYTAB entry and gets the name
 		associated with it
 */
@@ -1108,7 +1099,7 @@ int (Pascal *Pascal fncmatch(char * fname))(int, int)
 const char *Pascal transbind(char * skey)/* string key name to binding name..*/
 					/* name of key to get binding for */
 { const char *bindname = getfname(stock(skey));
-  return *bindname == 0 ? errorm : bindname;
+  return *bindname == 0 ? g_logm[2] : bindname;
 }
 
 
@@ -1172,9 +1163,8 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 	char outseq[NSTRING];
 			     /* prompt the user to type us a key to describe */
 	mlwrite(TEXT13);
-	  /*  ": describe-key " */
-
-	c = getckey(FALSE);
+			  /* ": describe-key " */
+	c = getechockey(2);
 					/* change it to something printable */
 	mlwrite("\001 %d %s ", lastkey, cmdstr(&outseq[0], c));  
 						/* find the right ->function */

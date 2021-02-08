@@ -41,7 +41,7 @@
 
 extern char * getenv();
 
-extern int overmode;			/* from line.c */
+extern int g_overmode;			/* from line.c */
 
 /* initialized global definitions */
 NOSHARE int g_nosharebuffs = FALSE; /* dont allow different files in same buffer*/
@@ -51,7 +51,6 @@ NOSHARE char *execstr = NULL;		/* pointer to string to execute */
 NOSHARE int g_execlevel = 0;	/* execution IF level		*/
 NOSHARE int g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
-NOSHARE int vtrow = 0;		/* Row location of SW cursor	*/
 NOSHARE int ttrow = HUGE; 	/* Row location of HW cursor	*/
 NOSHARE int ttcol = HUGE; 	/* Column location of HW cursor */
 NOSHARE int lbound = 0;		/* leftmost column of current line
@@ -63,7 +62,7 @@ static
 NOSHARE int g_prefix = 0;	/* currently pending prefix bits */
 NOSHARE int prenum = 0;		/*     "       "     numeric arg */
 
-char highlight[64] = "hello";
+char highlight[64] = "4hello";
 
 NOSHARE int restflag = FALSE;	    /* restricted use?		*/
 NOSHARE int g_newest = 0;         /* choose newest file           */
@@ -77,9 +76,8 @@ NOSHARE int g_newest = 0;         /* choose newest file           */
  NOSHARE Int envram = 0l;		/* # of bytes current in use by malloc */
 #endif
 
-const char errorm[] = "ERROR";		/* error literal		*/
-const char truem[] = "TRUE";		/* true literal 		*/
-const char falsem[] = "FALSE";		/* false litereal		*/
+const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
+
 NOSHARE char palstr[49] = "";		/* palette string		*/
 NOSHARE char lastmesg[LFSTR] = ""; 	/* last message posted		*/
 NOSHARE int(Pascal *lastfnc)(int, int);/* last function executed	*/
@@ -94,7 +92,6 @@ NOSHARE int currow;	/* Cursor row			*/
 NOSHARE int curcol;	/* Cursor column		*/
 NOSHARE int thisflag;	/* Flags, this command		*/
 NOSHARE int lastflag;	/* Flags, last command		*/
-NOSHARE int curgoal;	/* Goal for C-P, C-N		*/
 NOSHARE WINDOW *curwp; 		/* Current window		*/
 NOSHARE BUFFER *curbp; 		/* Current buffer		*/
 NOSHARE WINDOW *wheadp;		/* Head of list of windows	*/
@@ -133,7 +130,7 @@ NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
 #endif
 
 char * g_invokenm;
-char * homedir;
+char * g_homedir;
 
 
 #define MLIX 3
@@ -157,13 +154,6 @@ void Pascal editloop(int c_); /* forward */
 static
 void Pascal dcline(int argc, char * argv[])
 
-{	set_var("$incldirs", getenv("INCLUDE"));
-	homedir = getenv("HOME");
-	if (homedir == NULL)
-		homedir = "";
-	if (g_invokenm == NULL)
-		g_invokenm = argv[0];
-
 { BUFFER *bp;
 	char * startfile = EMACSRC;	/* startup file */
 	BUFFER * firstbp = NULL;	/* ptr to first buffer in cmd line */
@@ -177,6 +167,9 @@ void Pascal dcline(int argc, char * argv[])
 	for (carg = argc; --carg > 0; )
 		clean_arg(argv[carg]);
 #endif
+	if (g_invokenm == NULL)
+		g_invokenm = argv[0];
+
 	for (carg = argc; --carg > 0; )
 	{ char * filev = (++argv)[0];
 		if			(filev[0] == '-')
@@ -309,13 +302,12 @@ void Pascal dcline(int argc, char * argv[])
 	} // loop
 
 	if (firstbp == null)
-	{ 				/* if there are any files to read, read the first one! */
+	{
 		firstbp = bfind(def_bname, TRUE, 0);
 		nopipe = iskboard();
 		if (nopipe == 0)
 		{ 
 			firstbp->b_fname = strdup("-");
-		/*bp->b_active = FALSE;*/
 			firstbp->b_flag |= g_gmode;
 		}
 	}
@@ -333,13 +325,13 @@ void Pascal dcline(int argc, char * argv[])
 #endif
 	if (carg != TRUE)
 	{ firstbp = dofilebuff;
-		if (firstbp != NULL)
-		{ firstbp->b_flag |= BFACTIVE;
-			startfile = "Error in .rc file%w%w";
-		}
-		else
+		if (firstbp == NULL)
 		{	carg = 13;
 			startfile = "No .rc file";
+		}
+		else
+		{// firstbp->b_flag |= BFACTIVE;
+			startfile = "Error in .rc file%w%w";
 		}
 		mbwrite(startfile);
 	}
@@ -398,7 +390,7 @@ void Pascal dcline(int argc, char * argv[])
 
   g_gmode &= ~MDCRYPT;
 	g_clexec = FALSE;
-}}
+}
 
 
 /*	This is the primary entry point that is used by command line
@@ -446,7 +438,11 @@ int main(int argc, char * argv[])
 	wheadp =
 	curwp = (WINDOW *) aalloc(sizeof(WINDOW)); /* First window	*/
 
-				/* Process command line and let the user edit */
+	set_var("$incldirs", getenv("INCLUDE"));
+	g_homedir = getenv("HOME");
+	if (g_homedir == NULL)
+		g_homedir = "";
+
 	(void)dcline(argc, argv);
 	do
 	{ lastflag = 0; 								/* Fake last flags.*/
@@ -584,9 +580,9 @@ static int Pascal execute(int c, int f, int n)
 			return n == 0;
 		}
 
-		overmode = curwp->w_bufp->b_flag & MDOVER;
+		g_overmode = curwp->w_bufp->b_flag & MDOVER;
 		status = linsert(n, (char)c); 	/* do the insertion */
-		overmode = FALSE;
+		g_overmode = FALSE;
 #if 0
 						 /* check for CMODE fence matching */
 		if ((c == '}' || c == ')' || c == ']') &&

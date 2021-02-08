@@ -576,7 +576,10 @@ extern CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
 static HANDLE g_ConsIn;
 //static HWND g_origwin = NULL;
 
+
+#if _DEBUG
 static int g_got_ctrl = false;
+#endif
 
 
 BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
@@ -596,12 +599,12 @@ BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
   rec_.Event.KeyEvent.wVirtualScanCode = 0x20;
 
   rc = WriteConsoleInputA( g_ConsIn, &rec_, 1, &ct);
+#if _DEBUG
   if (rc == 0 || ct != 1)
-  { /*DWORD ec = GetLastError();
-    mlwrite("Err %d %d", ec, ct);
-    Beep(600, 1000);*/
-    g_got_ctrl = true;
+  { g_got_ctrl = true;
+    flagerr("Err");
   }
+#endif
   return true;
 }
 
@@ -726,11 +729,12 @@ int Pascal ttgetc()
     int cc = WaitForSingleObject(g_ConsIn, lim);
     switch(cc)
     { case WAIT_TIMEOUT: 
+#if _DEBUG
     					if (g_got_ctrl)
 							{ g_got_ctrl = false;
 							  return (int)(CTRL | 'C');
 							}
-
+#endif
 							if (--totalwait == 0)			// -w opt
 								exit(2);
 
@@ -756,6 +760,39 @@ int Pascal ttgetc()
 			g_chars_since_shift = 0;
 
     if      (rec.EventType == KEY_EVENT && rec.Event.KeyEvent.bKeyDown)
+#if 0
+		{ int chr = rec.Event.KeyEvent.uChar.AsciiChar & 0xff;
+      if (in_range(rec.Event.KeyEvent.wVirtualKeyCode, 0x10, 0x12))
+        continue; /* shifting key only */
+
+		{ int vsc = rec.Event.KeyEvent.wVirtualScanCode - 0x3b;
+      if (!in_range(vsc, 0, 0x58 - 0x3b) ||
+      		 chr == 0x7c	||
+      		 chr == '\\')
+      	vsc = -1;
+
+		{	int ctrl = keystate & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED);
+      if (ctrl)
+        ctrl = CTRL;
+
+      if (keystate & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED))
+      { chr = rec.Event.KeyEvent.wVirtualKeyCode;
+	 		  if (in_range(chr, 'a', 'z'))
+      		chr += 'A' - 'a';
+	 		  ctrl |= ALTD;
+			}
+
+      if (keystate & SHIFT_PRESSED)
+      { if (ctrl || vsc >= 0)
+          ctrl |= SHFT;
+      }
+      
+			++g_chars_since_shift;
+
+      return ctrl | (vsc >= 0 	 ? (SPEC | scantokey[vsc]) :
+										 chr == 0xdd ? 0x7c : chr);
+    }}}
+#else
     { int ctrl = 0;
       int chr = rec.Event.KeyEvent.uChar.AsciiChar & 0xff;
       if (in_range(rec.Event.KeyEvent.wVirtualKeyCode, 0x10, 0x12))
@@ -782,7 +819,7 @@ int Pascal ttgetc()
       if (in_range(vsc, 0, 0x58 - 0x3b) &&
 	   		  chr != 0x7c && chr != '\\'
 	  		 )
-      { return (int)(ctrl | SPEC | scantokey[vsc]);
+      { return ctrl | SPEC | scantokey[vsc];
 #if 0
         in_put(ctrl >> 8);
         in_put(ctrl & 255);
@@ -791,8 +828,9 @@ int Pascal ttgetc()
       }
        
 			++g_chars_since_shift;
-      return (int)(ctrl | (chr == 0xdd ? 0x7c : chr));
+      return ctrl | (chr == 0xdd ? 0x7c : chr);
     }}
+#endif
     else if (rec.EventType == MENU_EVENT)
     { /*loglog1("Menu %x", rec.Event.MenuEvent.dwCommandId);*/
     }  
@@ -994,12 +1032,11 @@ Cc WinLaunch(Cc *sysRet, int flags,
 		}
 	}
 	
-	if (app != NULL && ca != NULL && ca[0] != ' ')
+	if (app != NULL && ca != NULL && ca[0] > ' ')
 		return -1000;
 
 { char	dummyInFile[NFILEN] = ""; 		// Dummy input file
-	HANDLE newstdout = 0;								// pipe handles
-  HANDLE write_stdin = 0;
+  HANDLE write_stdin = 0;							// pipe handles
   HANDLE read_stdout = 0;
 	Cc wcc = OK;
   STARTUPINFO si;
@@ -1024,20 +1061,31 @@ Cc WinLaunch(Cc *sysRet, int flags,
 	if (!(flags & WL_SPAWN))
 	{ if ((flags & WL_NOIHAND) == 0)
 		{	si.hStdInput = CreateFile(infile == NULL ? "nul" : infile,
-										 						GENERIC_READ,FILE_SHARE_READ,NULL,
+										 						GENERIC_READ,FILE_SHARE_READ,&sa,
 																OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 		}
 		if (outfile != NULL)
-		{	si.hStdOutput = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sa,
+		{ si.hStdOutput = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sa,
 																 CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
-			if (si.hStdOutput < 0)
+			if (si.hStdOutput <= 0)
 				mbwrite("CFOut Failed");
+#if 1
+			else
+			{	HANDLE cur_proc = GetCurrentProcess();
+									 
+				BOOL s = DuplicateHandle(cur_proc,si.hStdOutput,
+																 cur_proc,&si.hStdError,0,TRUE,
+																 DUPLICATE_SAME_ACCESS) ;
+			}
+	  // mbwrite("IHAND");
+#endif	  
 		}
 		if (si.hStdInput > 0 || si.hStdOutput > 0)
 			si.dwFlags |= STARTF_USESTDHANDLES;
 	}
 	else
-	{	if (!CreatePipe(&read_stdout,&newstdout,&sa,0))  //create stdout pipe
+	{	HANDLE newstdout = 0;								
+		if (!CreatePipe(&read_stdout,&newstdout,&sa,0))  //create stdout pipe
 	  	return -1000 + flagerr("CreatePipe");
 	
 		if (!CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
@@ -1126,11 +1174,12 @@ Cc WinLaunch(Cc *sysRet, int flags,
 			{ int	 i[64];
 				char buf[512];
 			} l;
-			FILE * ip = infile == NULL ? NULL : fopen(infile, "r");
+			FILE * ip_ = infile == NULL ? NULL : fopen(infile, "r");
+			FILE * ip = ip_;
 	  	FILE * op = outfile == NULL ? NULL_OP : fopen(outfile, "w");
 			const char * ipstr = in_data == NULL ? "" : in_data;
-	  	int append_nl = *ipstr != 0;
-	  	int std_delay = 10;
+	  	int append_nl = 1;
+	  	int std_delay = 5;
 	  	int delay = 0;
 			
 			if (read_stdout == 0)
@@ -1198,8 +1247,7 @@ Cc WinLaunch(Cc *sysRet, int flags,
 		    {	if (ip != 0)
 			    { ipstr = fgets(&fbuff[0], sizeof(fbuff)-1-bwrote, ip);
 			    	if (ipstr == NULL)
-			    	{	fclose(ip);
-			    		ip = NULL;
+			    	{	ip = NULL;
 			    		ipstr = "";
 							continue;
 						}
@@ -1231,8 +1279,8 @@ Cc WinLaunch(Cc *sysRet, int flags,
 		   	if (!sentz && sl == 0 || l.buf[sl-1] == 'Z' - '@')
 			  {	if (!sentz)
 			  		l.buf[sl++] = 'Z' -'@';
-			  	std_delay = 100;
-			  	sentz = 4000 / 100;			// Wait 4 seconds
+			  	std_delay = 50;
+			  	sentz = 4000 / 50;			// Wait 4 seconds
 		   	}
 #if 0
 		    --sct;
@@ -1261,8 +1309,8 @@ Cc WinLaunch(Cc *sysRet, int flags,
 				l.i[2] = 0;
 	    	//delay = STD_DELAY;
 	    }}}
-			if (ip != NULL)
-				fclose(ip);
+			if (ip_ != NULL)
+				fclose(ip_);
 			if (op != NULL_OP)
 				fclose(op);
 		}
@@ -1273,6 +1321,7 @@ Cc WinLaunch(Cc *sysRet, int flags,
   CloseHandle(pi.hProcess);
   CloseHandle(si.hStdInput);
   CloseHandle(si.hStdOutput);
+  CloseHandle(si.hStdError);
   CloseHandle(read_stdout);
   CloseHandle(write_stdin);
 	setMyConsoleIP();
@@ -1399,6 +1448,7 @@ int pipefilter(wh)
 																			/* "[Cannot write filter file]" */
 			return FALSE;
 		}
+		mlwrite(TEXT159);					/* "\001Wait ..." */
 	}
 
 //char * fnam2 = wh == '!' - '@' ? NULL : mkTempCommName(pipeOutFile,"so");
@@ -1420,7 +1470,8 @@ int pipefilter(wh)
 	cc = WL_IHAND + WL_HOLD;
 
 	if      (wh == '#'-'@')
-		cc |= WL_SPAWN+WL_CNC;
+//	cc |= WL_SPAWN+WL_CNC;
+		cc |= WL_SHELL+WL_CNC;
 	else if	(wh <= 0)					// %@
 		cc |= WL_SHELL;
 #if 0
@@ -1481,13 +1532,16 @@ int pipefilter(wh)
 		}
 	}
 	else													/* on failure, escape gracefully */ 		
-	{ char * sfn = curbp->b_fname;
-		curbp->b_fname = null;
+	{ BUFFER * bp = curbp;
+		char * sfn = bp->b_fname;
+		bp->b_fname = null;									/* otherwise it will be freed */
 		cc = readin(fnam2, 0);
-		curbp->b_fname = sfn; 							/* restore name */
-		curbp->b_flag |= BFCHG; 		/* flag it as changed */
+		bp->b_fname = sfn; 									/* restore name */
+		bp->b_flag |= BFCHG; 								/* flag it as changed */
 //  if (fnam3 != null)
 // 	  cc = readin(fnam3, FILE_INS);
+		if (wh == '#'-'@')
+			flush_typah();
 	}
 	if (sysRet != 0 || !cc)
 		mlwrite(TEXT3); 							/* "[Execution failed]" */
@@ -1544,7 +1598,7 @@ X sp = ctime(buf);
 X sp[strlen(sp)-1] = 0;
 X return sp;
 X#else
-X return errorm;
+X return g_logm[2];
 X#endif
 }
 

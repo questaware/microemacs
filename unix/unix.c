@@ -16,6 +16,7 @@
 #include  <pthread.h>
 #include  <sys/select.h>
 #include  <sys/time.h>
+#include  <sys/poll.h>
 #undef CTRL
 #include	"estruct.h"
 #include	"build.h"
@@ -282,23 +283,39 @@ int ttflush(void)
   fflush(stdout);
 }
 
-static int  eaten_char = -1;		 /* Re-eaten char */
+static int  g_eaten_char = -1;		 /* Re-eaten char */
 
+void flush_typah()
+
+{ struct pollfd fds;
+  fds.fd = 0; /* this is STDIN */
+  fds.events = POLLIN;
+
+	g_eaten_char = -1;
+
+  while (TRUE)
+	{	int ret = poll(&fds, 1, 0);
+  	if (ret != 1)
+  		break;
+  	
+    (void)ttgetraw();
+  }
+}
 
 void Pascal reeat(int c)
 
 {
-    eaten_char = c;			/* save the char for later */
+	g_eaten_char = c;			/* save the char for later */
 }
 	    	     /* TTGETC:	Read a character from the terminal, performing no
-			editing and doing no echo at all.
-	      */
+								editing and doing no echo at all.
+	      			*/
 int ttgetraw()
 
 {	char c;
-	if (eaten_char != -1)
-  { int c = eaten_char;
-    eaten_char = -1;
+	if (g_eaten_char != -1)
+  { int c = g_eaten_char;
+    g_eaten_char = -1;
     return c;
   }
   

@@ -18,7 +18,7 @@
 #include	"elang.h"
 #include	"logmsg.h"
 
-int overmode = false;
+int g_overmode = false;
 
 #define BSIZE(a)  (a + NBLOCK - 1) & (~(NBLOCK - 1))
 
@@ -183,27 +183,26 @@ X  }
   return nlp;
 }
 
-int inhibit_scan = 0;		/* also used by replace */
+int g_inhibit_scan = 0;		/* also used by replace */
+static
 int header_scan = 0;
 /*
  * This routine gets called when a character is changed in place in the current
  * buffer. It updates all of the required flags in the buffer and window
- * system. The flag used is passed as an argument; if the buffer is being
- * displayed in more than 1 window we change EDIT to HARD. Set MODE if the
- * mode line needs to be updated (the "*" has to be set).
+ * system. The flag used is passed as an argument (WFEDIT, or WFHARD); 
+ * if the buffer is displayed in more than 1 window we change EDIT to HARD.
+ * Set MODE if the mode line needs to be updated (the "*" has to be set).
  */
 void Pascal lchange(int flag)
 
-{
-  register WINDOW *wp;
+{	WINDOW *wp;
 
   if (curbp->b_nwnd != 1) 		/* Ensure hard. 	*/
     flag = WFHARD;
   if ((curbp->b_flag & BFCHG) == 0)	/* First change, so	*/
-  { flag |= WFMODE;		/* update mode lines.	*/
-    TTbeep();
+	{	curbp->b_flag |= BFCHG;
   /*mbwrite(curbp->b_fname);*/
-    curbp->b_flag |= BFCHG;
+    TTbeep();
     flag = WFHARD;
   }
 			   /* make sure all the needed windows get this flag */ 
@@ -211,13 +210,15 @@ void Pascal lchange(int flag)
 
   wp = curwp;
 
-  if (inhibit_scan == 0)
+  if (g_inhibit_scan == 0)
   {	LINE * lp = wp->w_dotp;
-		LINE * slp = lp;
-		register int ct = header_scan + 6;     
-		header_scan += 2;                             /* just two more */
-		while ((lp->l_props & L_IS_HD) == 0 && --header_scan >= 0)
+		int ct = header_scan + 6;     								/* just 6 more */
+		while ((lp->l_props & L_IS_HD) == 0 && --ct >= 0)
 		  lp = lback(lp);
+
+		header_scan = ct + 6;
+		ct = 12;
+
 		init_paren("",0);
 		paren.in_mode = (lp->l_props & Q_IN_CMT);
 
@@ -227,16 +228,14 @@ void Pascal lchange(int flag)
 	  	if (lp->l_props & L_IS_HD)
 	    	break;
 		  if      ((lp->l_props ^ paren.in_mode) & Q_IN_CMT)
-		  { /* logstr("CMT %s %d\n", lgets(lp, 0), lp->l_props); */
+		  {// logstr("CMT %s %d\n", lgets(lp, 0), lp->l_props);
 	  	  lp->l_props ^= Q_IN_CMT;
-		    wp->w_dotp = lp;
 		    wp->w_flag |= WFEDIT;
 		  }
 		  else if (--ct <= 0)
 	  	  break;
 		  updall(wp, 0);
 		}
-		wp->w_dotp = slp;
   }
   resetlcache();
 }
@@ -252,13 +251,13 @@ void Pascal lchange(int flag)
  */
 int Pascal lnewline()
 
-{ register LINE * lp1 = curwp->w_dotp;   /* Get the address and  */
-  register int    doto = curwp->w_doto;   /* offset of "."        */
-
-  if (curbp->b_flag & MDVIEW)     						/* don't allow this command if */
+{ if (curbp->b_flag & MDVIEW)     						/* don't allow this command if */
     return rdonly();              						/* we are in read only mode    */
 
-{	int  sz = lp1->l_used - doto;
+{ LINE * lp1 = curwp->w_dotp;   /* Get the address and  */
+  int    doto = curwp->w_doto;   /* offset of "."        */
+
+	int  sz = lp1->l_used - doto;
   LINE * inslp = mk_line(&lp1->l_text[doto], sz + EXPANSION_SZ, sz);
   if (inslp == NULL)				                      /* New first half line  */
     return FALSE;
@@ -269,12 +268,12 @@ int Pascal lnewline()
 
   inslp->l_props = s->l_props & ~L_IS_HD;
 
-  if ((lp1->l_props & L_IS_HD) == 0)
+  if (lp1->l_props & L_IS_HD)
+    ibefore(lp1, inslp);
+	else
   { ibefore(lforw(lp1), inslp);
     curwp->w_line_no += 1;
   }
-  else
-    ibefore(lp1, inslp);
 
   rpl_all(lp1, inslp, 2, doto, 0);
   lchange(WFHARD);
@@ -303,57 +302,57 @@ int Pascal linsert(int n, char c)
     return lnewline();
   }
   else
-  { register LINE * lp1 = curwp->w_dotp;		/* Current line */
+  { LINE * lp = curwp->w_dotp;		/* Current line */
 
-   if (overmode  &&
-       curwp->w_doto < lp1->l_used  &&
-			(lgetc(lp1, curwp->w_doto) != '\t' ||
+   if (g_overmode  &&
+       curwp->w_doto < lp->l_used  &&
+			(lgetc(lp, curwp->w_doto) != '\t' ||
 			(unsigned short)curwp->w_doto % curbp->b_tabsize == (curbp->b_tabsize - 1)))
     ins = 0;
 
  	{ register int  doto;
 	  LINE * newlp;
 
-    if (ins <= lp1->l_spare)
-    { newlp = lp1;
+    if (ins <= lp->l_spare)
+    { newlp = lp;
       newlp->l_spare -= ins;
       newlp->l_used += ins;
     }
     else
-    { ins += lp1->l_used;
-      newlp = mk_line(&lp1->l_text[0],BSIZE(ins+EXPANSION_SZ),lp1->l_used);
+    { ins += lp->l_used;
+      newlp = mk_line(&lp->l_text[0],BSIZE(ins+EXPANSION_SZ),lp->l_used);
       if (newlp == NULL)
         return FALSE;
-			newlp->l_fp = lp1->l_fp;
-      newlp->l_bp = lp1->l_bp;
+			newlp->l_fp = lp->l_fp;
+      newlp->l_bp = lp->l_bp;
       newlp->l_used = ins;
-      newlp->l_props= lp1->l_props & ~L_IS_HD;
+      newlp->l_props= lp->l_props & ~L_IS_HD;
     }
 
     doto = curwp->w_doto;
     if (ins != 0)
-    {	if ((Int)lp1->l_used - doto > 0)
-    		memmove(&newlp->l_text[doto+n],&lp1->l_text[doto],(Int)lp1->l_used-doto);
+    {	if ((Int)lp->l_used - doto > 0)
+    		memmove(&newlp->l_text[doto+n],&lp->l_text[doto],(Int)lp->l_used-doto);
     }
     memset(&newlp->l_text[doto],c,n);
 
-    if      (lp1->l_props & L_IS_HD) 	      /* At the end: special */
-    { if (curwp->w_doto != 0 || lp1 == newlp)
-      { mlwrite(TEXT170);							/* "bug: linsert" */
+    if      (lp->l_props & L_IS_HD) 	      /* At the end: special */
+    {
+#if _DEBUG
+			if (doto != 0 || lp == newlp)
+			{ mlwrite(TEXT170);							/* "bug: linsert" */
 				return FALSE;
-      }
-      ibefore(lp1, newlp);				/* Link in */
+			}
+#endif
+			ibefore(lp, newlp);				/* Link in */
     }
-    else if (lp1 != newlp)
-    { lback(lp1)->l_fp = (Lineptr)newlp;
-      lforw(lp1)->l_bp = (Lineptr)newlp;
-   /* newlp->l_fp = lp1->l_fp; */
-   /* newlp->l_bp = lp1->l_bp; */
-      free((char *) lp1);
+    else if (lp != newlp)
+    { lback(lp)->l_fp = (Lineptr)newlp;
+      lforw(lp)->l_bp = (Lineptr)newlp;
+      free((char *) lp);
     }
 
-    doto = curwp->w_doto;
-    rpl_all(lp1, newlp, 1, doto, n);
+    rpl_all(lp, newlp, 1, doto, n);
     lchange(WFEDIT);
     return TRUE;
 	}}
@@ -361,8 +360,7 @@ int Pascal linsert(int n, char c)
 
 int Pascal insspace(int f, int n)/* insert spaces forward into text */
 
-{
-	linsert(n, ' ');
+{	linsert(n, ' ');
 	return backchar(f, n);
 }
 
@@ -373,12 +371,11 @@ int Pascal insspace(int f, int n)/* insert spaces forward into text */
  */
 int Pascal linstr(const char * instr_)
 	
-{
-	register int status = TRUE;
-	register const char * instr = instr_;
+{	int status = TRUE;
+	const char * instr = instr_;
 
 	if (instr != NULL && *instr != 0)
-	{ inhibit_scan += 1;
+	{ g_inhibit_scan += 1;
 	  newlinect = 1;
 	  
 	  while (*instr)
@@ -392,32 +389,30 @@ int Pascal linstr(const char * instr_)
 	    instr++;
 	  }
 	  header_scan = newlinect;
-	  inhibit_scan -= 1;
+	  g_inhibit_scan -= 1;
 	}
 	return status;
 }
 
 const char * stoi_msg[] = {TEXT68, TEXT69};
 
-int Pascal istring(int f, int n_)	/* ask for and insert a string into the current
+int Pascal istring(int f, int n)	/* ask for and insert a string into the current
 																	   buffer at the current point */
-{ register int n = n_;
-	char tstring[NPAT+1];	/* string to add */
+{ char tstring[NPAT+1];	/* string to add */
 
-	int status = mltreply(stoi_msg[overmode], tstring, NPAT);
-/*			  "String to insert<META>: " */
-/*			  "String to overwrite<META>: " */
-	if (status != TRUE)
-	  return status;
+	int status = mltreply(stoi_msg[g_overmode], tstring, NPAT);
+											/* "String to insert<META>: " */
+											/* "String to overwrite<META>: " */
+	if (status == TRUE)
+	{	if (f == FALSE)
+		  n = 1;
 
-	if (f == FALSE)
-	  n = 1;
+		if (n < 0)
+		  n = - n;
 
-	if (n < 0)
-	  n = - n;
-
-	while (n-- && (status = linstr(tstring)))
-	  ;
+		while (n-- && (status = linstr(tstring)))
+		  ;
+	}
 	return status;
 }
 
@@ -425,9 +420,9 @@ int Pascal istring(int f, int n_)	/* ask for and insert a string into the curren
 int Pascal ovstring(int f, int n_) /* ask for and overwite a string into the current
 			       buffer at the current point */
 				/* ignored arguments */
-{ overmode = true;
+{ g_overmode = true;
 { int cc = istring(f, n_);
-  overmode = false;
+  g_overmode = false;
   return cc;
 }}
 
@@ -440,15 +435,15 @@ int kinsert_n;		/* parameter to kinsert, used in region.c */
  * buffer. The "kflag" is TRUE if the text should be put in the kill buffer.
  */
 int Pascal ldelchrs(Int n, int tokill)
-	/* Int n; 		* # of chars to delete */
-	/* int tokill;	* put killed text in kill buffer flag */
+								 /* Int n; 		  * # of chars to delete */
+								 /* int tokill;	* put killed text in kill buffer flag */
 {
   int res = TRUE;
 
   if (curbp->b_flag & MDVIEW)     /* don't allow this command if  */
     return rdonly();              /* we are in read only mode     */
 
-  inhibit_scan += 1;
+  g_inhibit_scan += 1;
 /* if (! (curbp->b_flag & BFCHG) && g_discmd)
      TTbeep();             
 */
@@ -477,22 +472,21 @@ int Pascal ldelchrs(Int n, int tokill)
     if (n <= 0)
       rpl_all(dotp, dotp, 3, doto, chunk);
 
-  { register char * cp1 = &dotp->l_text[doto];
-    int delct;
-
     if (tokill)
-    { for (delct = chunk; --delct >= 0; )
+  	{ char * cp1 = &dotp->l_text[doto];
+			int delct;
+    	for (delct = chunk; --delct >= 0; )
         if (kinsert(*cp1++) == FALSE)
           res = ABORT;
     }
 
-		if (dotp->l_used-doto-chunk <= 0)
-	  { if (dotp->l_used-doto-chunk < 0)
+		if (dotp->l_used-(doto+chunk) <= 0)
+	  { if (dotp->l_used-(doto+chunk) < 0)
 				adb(44);
 	  }
 		else
     	memmove(&dotp->l_text[doto], &dotp->l_text[doto+chunk],
-    				  dotp->l_used-doto-chunk);
+    				  dotp->l_used-(doto+chunk));
 
     dotp->l_used -= chunk;
 
@@ -500,14 +494,14 @@ int Pascal ldelchrs(Int n, int tokill)
     if (chunk > 255)
       chunk = 255;
     dotp->l_spare = chunk;
-  }}}
+  }}
 
 #if S_WIN32
   if (tokill && kinsert_n <= 0)
     ClipSet(getkill());
 #endif
   lchange(WFEDIT);
-  inhibit_scan -= 1;
+  g_inhibit_scan -= 1;
   return res;
 }
 
@@ -517,12 +511,12 @@ int Pascal ldelchrs(Int n, int tokill)
 char *Pascal getctext(char * t)
 
 {
-	register char *tgt = t;	/* string pointer into returned line */
+	char *tgt = t;	/* string pointer into returned line */
 
 		     /* find the contents of the current line and its length */
-		 LINE * lp = curwp->w_dotp;
-	register char * sp = lp->l_text;
-	register int size = lp->l_used;
+	LINE * lp = curwp->w_dotp;
+	char * sp = lp->l_text;
+	int size = lp->l_used;
 	if (size >= NSTRING)
 	  size = NSTRING - 1;
 				/* copy it across */
@@ -538,7 +532,7 @@ int Pascal putctext(char * iline)
 											/* contents of new line */
 {											/* delete the current line */
 	curwp->w_doto = 0;	/* starting at the beginning of the line */
-{	register int status = killtext(TRUE, 1);
+{	int status = killtext(TRUE, 1);
 	if (status == TRUE)
 	{ status = linstr(iline);
 	  if (status == TRUE)
@@ -560,16 +554,16 @@ int Pascal putctext(char * iline)
  */
 /* static */ int Pascal ldelnewline()
 
-{   resetlcache();
-{	register LINE * lp1 = curwp->w_dotp;
-	register LINE * lp2 = lforw(lp1);
-	register int used1 = lp1->l_used; 
+{ resetlcache();
+{	LINE * lp1 = curwp->w_dotp;
+	LINE * lp2 = lforw(lp1);
+	int used1 = lp1->l_used; 
 	if      (lp2->l_props & L_IS_HD)	/* At the buffer end.	*/
 	{ if (used1 == 0) 			/* Blank line.		*/
 	    lfree(lp1,0);
 	}
 #if 0
-X /* not worth it */
+X 																								/* not worth it */
 X	if (lp2->l_used <= lp1->l_spare - lp1->l_used)
 X	{ register WINDOW *wp;
 X
@@ -747,7 +741,7 @@ int Pascal yank(int f, int n)
   while (n--)
   { 
     newlinect = 1;
-    inhibit_scan += 1;
+    g_inhibit_scan += 1;
 
 #if S_WIN32
     if (ix == 0)
@@ -773,7 +767,7 @@ int Pascal yank(int f, int n)
     }
 
     header_scan = newlinect;
-    inhibit_scan -= 1;
+    g_inhibit_scan -= 1;
     lchange(WFEDIT);
 #if S_WIN32
     if (ix == 0)

@@ -101,15 +101,15 @@ int Pascal namedcmd(int f, int n)
 	  execstr = token(execstr, ebuffer, sizeof(ebuffer));
 							     /* evaluate it */
 	{ char * fnm = getval(ebuffer, ebuffer);
-	  if (fnm == errorm)
+	  if (fnm == g_logm[2])
 	    return FALSE;
-							/* and look it up */
+																								/* and look it up */
 	  kfunc = fncmatch(fnm);
 	}}
 
 	if (kfunc != NULL)
 	{ g_clexec = FALSE;
-	  cc = (*kfunc)(f, n);	/* call the function */
+	  cc = (*kfunc)(f, n);												/* call the function */
 	  g_clexec = scle;
 	}
 	else
@@ -126,14 +126,14 @@ int Pascal namedcmd(int f, int n)
 int Pascal execcmd(int f, int n)
 
 {
-	char cmdstr[NSTRING];		/* string holding command to execute */
+	char cmdnm[NSTRING];		/* string holding command to execute */
 						      /* get the line wanted */
-	int cc = mlreply(": ", cmdstr, NSTRING);
+	int cc = mlreply(": ", cmdnm, NSTRING);
 	if (cc != TRUE)
 	  return cc;
 
 	g_execlevel = 0;
-	return docmd(cmdstr);
+	return docmd(cmdnm);
 }
 #endif
 

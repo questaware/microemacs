@@ -801,7 +801,7 @@ static int def_colour;
 
 void tcapsetfgbg(int chrom)
 
-{ def_colour = chrom >> 8;
+{ def_colour = chrom;
 }
 
 
@@ -811,7 +811,7 @@ void tcapchrom(short chroms)
 { static char chromattrs[20] = "\033[";
 	static short last_chm;
 				 int tix = 2;
-				 short chm = (chroms >> 8) & 0x7f;	/* background,foreground */
+				 short chm = chroms & 0x7f;	/* background,foreground */
 	if (chm == 0 || (chroms & CHROM_OFF))
 		chm = def_colour;
 

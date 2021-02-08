@@ -116,6 +116,9 @@ void Pascal openwind(WINDOW *, BUFFER*);
 int Pascal openwindbuf(char *);
 int Pascal orwindmode(int, int);
 char * Pascal pathcat(char *, int, const char *, const char *);
+#if S_MSDOS
+unsigned short refresh_colour(int row, int col);
+#endif
 int Pascal reglines();
 void Pascal release(char * mp);
 int Pascal remmark(int, int);
@@ -218,6 +221,7 @@ int Pascal filewrite(int, int);
 int Pascal fillpara(int, int);
 int Pascal filter(int, int);
 int        findTag(int, int);
+void flush_typah();
 int Pascal fmatch();
 int Pascal fnclabel();
 int Pascal forwchar(int, int);
@@ -231,8 +235,7 @@ int Pascal getccol();
 int Pascal getcmd();
 int Pascal getfence(int, int);
 int Pascal getgoal(LINE*, int);
-extern REGION region;
-int Pascal getregion();
+REGION * Pascal getregion();
 int Pascal getstring(char * buf, int nbuf, const char * prompt);
 short * Pascal get_vscr_line(int row);
 char    Pascal get_vscr_colors(int row);
