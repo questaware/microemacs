@@ -42,6 +42,9 @@ static int nbuttons;	/* number of buttons on the mouse */
 static int oldbut;	/* Previous state of mouse buttons */
 #endif
 
+#define millisleep(n) Sleep(n)
+
+
 int g_chars_since_shift;
 int g_timeout_secs;
 

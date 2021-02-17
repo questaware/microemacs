@@ -1,6 +1,8 @@
 /* This file contains the command processing functions for a number of random
  * commands. There is no functional grouping here, for sure.
  */
+#define IN_RANDOM_C 1
+
 #include	<stdio.h>
 #include	<stdlib.h>
 #include	"estruct.h"
@@ -10,18 +12,6 @@
 #include	"logmsg.h"
 
 int g_c_cmt, g_s_cmt, g_f_cmt, g_p_cmt;
-
-/*
- * Set fill column to n.
- */
-int Pascal setfillcol(int f, int n)
-
-{ fillcol = n;
-	mlwrite(TEXT59,n);
-				/* "[Fill column is %d]" */
-	return TRUE;
-}
-
 
 int Pascal setcline() 			/* get the current line number */
 
@@ -216,14 +206,13 @@ int Pascal detabline()
 }
 */
 
-Bool g_entab = 0;
 
 int Pascal detab(int f, int n) /* change tabs to spaces */
 
 { if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
 
-	if (f == FALSE)
+	if ((f & 0x7fff) == FALSE)
 		n = reglines();
 
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sgn(n)] */
@@ -243,7 +232,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 				dotp = curwp->w_dotp;
 			}}
 
-		if (g_entab)											/* entab the resulting spaced line */
+		if ((f & 0x8000))											/* entab the resulting spaced line */
 		{ int tab_ct = tabsz;
 			int sp_ct = 0;
 			int incol;
@@ -272,17 +261,15 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 	}
 		
 	curwp->w_doto = 0;			/* to the begining of the line */
-	thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
+//thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
 	lchange(WFEDIT);				/* yes, we have made at least an edit */
-	g_entab = 0;
 	return TRUE;
 }}
 
 
 int Pascal entab(int f, int n) /* change spaces to tabs where posible */
 
-{	g_entab = 1;
-	return detab(f, n);
+{	return detab(f | 0x8000, n);
 }			
 
 /* trim:				trim trailing whitespace from the point to eol
@@ -325,7 +312,7 @@ int Pascal trim_white(int f, int n)
 		forwline(TRUE, inc);
 	}
 	lchange(WFEDIT);
-	thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
+//thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
 	return TRUE;
 }}
 #endif
@@ -377,10 +364,10 @@ int Pascal indent(int f, int n)
 
 int Pascal cinsert()				/* insert a newline and indentation for C */
 
-{ register int bracef;				 /* was there a brace at the end of line? */
-	register LINE *lp = curwp->w_dotp;
-																		 /* trim the whitespace before the point */
-	register int offset = curwp->w_doto;
+{ int bracef;				 								/* was there a brace at the end of line? */
+	LINE *lp = curwp->w_dotp;
+																		/* trim the whitespace before the point */
+	int offset = curwp->w_doto;
 	while (--offset >= 0 &&
 					lgetc(lp, offset) == ' ' ||
 					lgetc(lp, offset) == '\t')
@@ -444,8 +431,8 @@ int Pascal openline(int f, int n)
  * indentation as specified.
  */
 int Pascal ins_newline(int f, int n)
-{
-	register int s;
+
+{	int s;
 
 	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
@@ -462,10 +449,10 @@ int Pascal ins_newline(int f, int n)
 				 * and we are not read-only, perform word wrap.
 				 */
 	if ((curbp->b_flag & MDWRAP) && 
-			fillcol > 0 && getccol() > fillcol)
+			getccol() > pd_fillcol)
 		execkey(&wraphook, FALSE, 1);
 																						/* insert some lines */
-	while (n--)
+	while (--n >= 0)
 		if ((s=lnewline()) != TRUE)
 			return s;
 
@@ -483,9 +470,9 @@ int Pascal forwdel(int f, int n)
 		return rdonly();							/* we are in read only mode 		*/
 		
 	if (f != FALSE) 											/* Really a kill. 			*/
-	{ if ((lastflag&CFKILL) == 0)
+	{ if ((g_lastflag&CFKILL) == 0)
 			kdelete(0,0);
-		thisflag |= CFKILL;
+		g_thisflag |= CFKILL;
 	}
 	if (n < 0)
 	{ n = -n;
@@ -526,7 +513,7 @@ int Pascal killtext(int f, int n)
 		n = 1;
 	}
 #if 0
-	if ((lastflag & CFKILL) == 0) 					/* Clear kill buffer if */
+	if ((g_lastflag & CFKILL) == 0) 					/* Clear kill buffer if */
 		kdelete(0,0); 												/* last wasn't a kill.	*/
 
 	if (last_was_yank)
@@ -535,7 +522,7 @@ int Pascal killtext(int f, int n)
 		kdelete(0, kinsert_n);
 	}
 #endif
-	thisflag |= CFKILL;
+	g_thisflag |= CFKILL;
 { register Int chunk = -curwp->w_doto;
 
 	if			(f == FALSE)
@@ -547,7 +534,7 @@ int Pascal killtext(int f, int n)
 	{ chunk = -chunk;
 		curwp->w_doto = 0;
 	}
-	else if (n > 0)
+	else
 	{ LINE *nextp = curwp->w_dotp;
 
 		while (--n >= 0)
@@ -560,15 +547,6 @@ int Pascal killtext(int f, int n)
 	return ldelchrs(chunk, TRUE);
 }}
 
-static
-const char cname[][9] = {		/* names of colors		*/
-	"BLACK", "RED", "GREEN", "YELLOW", "BLUE",
-	"MAGENTA", "CYAN", "GREY",
-	"GRAY", "LRED", "LGREEN", "LYELLOW", "LBLUE",
-	"LMAGENTA", "LCYAN", "WHITE"};
-
-#define NCOLORS 16
-	
 static 
 int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 				/* int kind;		** 0 = delete, 1 = set, 2 = toggle */
@@ -590,24 +568,8 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 	if (status != TRUE)
 		return status;
 
-	mlerase();
+//mlerase();
 
-	if (!global)
-	{ if (strcmp_right(cbuf, "CHGD") == 0)
-		{ curbp->b_flag &= ~BFCHG;
-			upmode();
-			return TRUE;
-		}
-		if (strcmp_right(cbuf, "INVS") == 0)
-		{ if			(kind == 0)
-				curbp->b_flag &= ~BFINVS;
-			else if (kind == 1)
-				curbp->b_flag |= BFINVS;
-			else
-				curbp->b_flag ^= BFINVS;
-			return TRUE;
-		}
-	}
 {	int iter;
 	int index = -1;
 	int bestmatch = 0;
@@ -644,9 +606,13 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 			curwp->w_flag |= WFCOLR;
 #endif
 		}
-		else
+		else 
 		{ int x = (MDSTT << (index-1024)); 			/* finding a match, we process it */
-			int md = global ? g_gmode : curbp->b_flag;
+			if ((index - 1024 - 10) >= 0)
+			{	x = (index-1024 - 10)== 0 ? BFCHG : BFINVS;
+				global = 0;
+			} 
+		{	int md = global ? g_gmode : curbp->b_flag;
 			if			(kind == 0)
 					md &= ~x;
 			else if (kind == 1)
@@ -668,7 +634,7 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 #endif																	
 			if (global == 0)						/* display new mode line */
 				upmode();
-		}
+		}}
 		/*mlerase();*/
 		return TRUE;
 	}
@@ -945,9 +911,10 @@ int Pascal scan_par_line(LINE * lp)
 												 * the first / of / / */
 int Pascal scan_for_sl(LINE * lp)
 
-{ int cplim = lp->l_used;
+{	int cplim = lp->l_used;
+	Paren_t sparen = paren;
 	int ix;
-	char cmt = paren.olcmt;
+	char cmt = sparen.olcmt;
 	
 	init_paren("{",0);
 
@@ -959,6 +926,7 @@ int Pascal scan_for_sl(LINE * lp)
 			break;
 	}
 
+	paren = sparen;
 	return ix;
 }
 
@@ -1061,7 +1029,7 @@ int got_f_key(fdcr * fd, int tabsz)
 			{ 
 				while (--pos >= start)
 				{ if (toupper(*pos) == 'I' && toupper(pos[1]) == 'F' 
-					 && (isspace(pos[2]) || pos[2] == '(')
+					 && (is_space(pos[2]) || pos[2] == '(')
 					 && (pos == start || (!isalpha(*(pos-1)) && *(pos-1) != '_')))
 						return 1;
 					if (*pos == ';')
@@ -1104,17 +1072,17 @@ int got_f_key(fdcr * fd, int tabsz)
 
 		if (g_s_cmt + g_p_cmt)
 		{ if (wordmatch("END", 0))
-		  { return len <= 4 || !isspace(pos[3]) ||
+		  { return len <= 4 || !is_space(pos[3]) ||
 		  	 			 wordmatch("IF", 4) == 0;
 		  }
 	  }
 		else
 		{	if (len >= 4)
 			{ int ix = 3;
-				if (isspace(pos[3]) || len > 4 && isspace(pos[4]))
+				if (is_space(pos[3]) || len > 4 && is_space(pos[4]))
 					++ix;
 				if (*strmatch("ELSE", pos) == 0 && paren.ch != 'D') 
-				{ if (paren.nest == 0 && (len == 4 || isspace(pos[4])))
+				{ if (paren.nest == 0 && (len == 4 || is_space(pos[4])))
 						return 1;
 					++ix;
 					if (len <= ix)
@@ -1296,10 +1264,7 @@ int Pascal getfence(int f, int n)
 		{ scan_paren('\n');
 			if (dir < 0)
 			{ if (c_cmt + s_cmt != 0)
-				{	Paren_t sparen = paren;
 					curwp->w_doto = scan_for_sl(lp);
-					paren = sparen;
-				}
 				else if (f_cmt != 0)
 				{ if (offs > 0 && toupper(lp->l_text[0]) == 'C')
 						curwp->w_doto = 0;

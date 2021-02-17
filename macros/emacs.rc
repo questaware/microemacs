@@ -14,7 +14,6 @@ add-global-mode black
 add-mode GREY
 add-mode black
 
-
 1 store-macro		; change case one character
   set %ccc $curchar
   !if &gre %ccc 96 
@@ -30,7 +29,11 @@ add-mode black
 
 btk execute-macro-1 
 
-2 store-macro		; quit buffer
+2 store-macro		; end buffer
+	!if &equ $lastkey 47
+	  save-file
+  !endif
+
   set %disc $discmd
   set $discmd FALSE
   set %mybuf $cbufname
@@ -54,13 +57,7 @@ btk execute-macro-1 
 
 btk execute-macro-2 M-\
 btk execute-macro-2 M-`
-
-3 store-macro		; save, quit buffer
-  save-file
-  execute-macro-2
-!endm
-
-btk execute-macro-3 M-/
+btk execute-macro-2 M-/
 
 4 store-macro		; new file
   set %fle @&cat &cat "new file [" $cfname "]: "
@@ -145,11 +142,18 @@ btk execute-macro-10 FN2
 btk execute-macro-10 FN^2
 
 11 store-macro		; kill line
-  beginning-of-line
-  1 kill-to-end-of-line 
+  !if &equ $lastkey 260
+	  beginning-of-line
+	!else
+		newline
+		beginning-of-line
+		backward-line
+	!endif
+	1 kill-to-end-of-line 
 !endm
 
 btk execute-macro-11 ^D
+btk execute-macro-11 M-^H
 
 ; 12 store-macro		; Not in use
 
@@ -294,4 +298,4 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".sql=^4.h=2.c=2.cpp=2.py=2"
+set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.jav=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.pas=P2.md=m2.py=p2"

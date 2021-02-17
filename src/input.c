@@ -591,6 +591,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       c = ectoc(ch);
       goto getliteral;
     }
+
     if (redo)
     { tcapeeol();				/* redraw */
       c = ttcol;
@@ -636,28 +637,29 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     { ctrlg(FALSE, 0);    /* Abort the input? */
       return ABORT;
     }
-#define tpos c
+
     if (c==0x7F || c==0x08 || c==0x15)         /* rubout/erase */
     { if (cpos > 0)
-      { --cpos;
+      { int tpos;
+      	--cpos;
         for (tpos = cpos; ++tpos <= fulllen; )   /* include the 0 */
           buf[tpos-1] = buf[tpos];      
         --fulllen;
 				redo = 3;
       }
-    } 
+    }
     else if (ch == (CTRL | 'A') && gs_type >= 0)
     { buildlist(null);
       return ABORT;
-    }               
+    }
     else if (ch == (CTRL | 'F'))
-    { int ix;
+    { int tpos,ix;
       char mybuf[256];
       buf[cpos+1] = 0;
-      for (tpos = cpos; --tpos >= 0 && !isspace(buf[tpos]); )
+      for (tpos = cpos; --tpos >= 0 && !is_space(buf[tpos]); )
         ;
-      memcpy(mybuf,buf+tpos+1,cpos-tpos);
-      mybuf[cpos-tpos] = 0;
+      ((char*)memcpy(mybuf,buf+tpos+1,cpos-tpos))[cpos-tpos] = 0;
+
       ix = comp_name(mybuf, cpos - tpos - 1, CMP_FILENAME);
       if (ix > cpos - tpos)
       { memcpy(buf+tpos+1,mybuf,ix);
@@ -666,16 +668,17 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
         fulllen = cpos;
       }
     }
-    else if (gs_type >= 0 && (c == ' '|| c == ectoc(sterm) || c == '\t'))
-    { tpos = comp_name(buf, cpos, gs_type);    /* attempt a completion */
-      if (buf[tpos - 1] == 0)
+    else if (gs_type >= 0 && cpos > 0 &&
+    				 (c == ' '|| c == ectoc(sterm) || c == '\t'))
+    { int tpos = comp_name(buf, cpos, gs_type);    /* attempt a completion */
+      if (tpos > 0 && buf[tpos - 1] == 0)
         break;
       cpos = tpos;
       buf[cpos] = 0;
       fulllen = cpos;
     }
     else if (ch & SPEC)
-    { tpos = cpos;
+    { int tpos = cpos;
       switch (ch)
       { case (SPEC | 'F'): tpos += 1;
         when (SPEC | 'B'): tpos -= 1;
@@ -719,14 +722,14 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     { autostr = getwtxt(c, &combuf[0], NSTRING-3-cpos);
     }
     else 
-    { char mybuf[3];
+    { int tpos;
+    	char mybuf[3];
 
       if (ch == quotec)
       { ch = getkey();     /* get a character from the user */
         c = ectoc(ch);
       }
 getliteral:
-      
       if (fulllen >= nbuf-1)
       { autostr = "";
         continue;
@@ -741,24 +744,21 @@ getliteral:
       }
 #endif
       ch = c;
-      for (tpos = fulllen+1; --tpos >= cpos; )
+      for (tpos = ++fulllen; --tpos >= cpos; )
         buf[tpos+1] = buf[tpos];
-      buf[cpos] = ch;
+      buf[cpos++] = ch;
+      if (fulllen > cpos)
+      	redo = 2;
       
-#if S_MSDOS
       if (g_disinp <= 0)
 				ch = '*';
+#if S_MSDOS
       mybuf[0] = ch;
       mybuf[1] = 0;
       (void)redrawln(mybuf, term.t_ncol-ttcol);
 #else
 			mlout(ch);
 #endif
-      cpos++;
-      fulllen++;
-      if (fulllen > cpos)
-      { redo = 2;
-      }
     }
   }}
   ll_ix += 1;
@@ -863,4 +863,3 @@ void  ostring(const char * s)	/* output a string of output characters */
   if (g_discmd)
     mlputs(s);
 }
-

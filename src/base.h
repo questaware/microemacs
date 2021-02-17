@@ -19,6 +19,7 @@
 
 #define upper_index(arr) (sizeof(arr)/sizeof(arr[0]) - 1)
 
+#define is_space(ch) (ch <= ' ')
 
 #if SIZEOF_LONG > 4
 typedef int Int;

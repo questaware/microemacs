@@ -10,7 +10,7 @@ static const char irsrchm[] = "reverse-incremental-search";
 #define ISRCHM_OFFS 8
 #endif
 
-NOSHARE const NBIND names[] = 
+const NBIND names[] = 
 {	{"abort-command",				ctrlg},
 	{"add-global-mode",			setgmode},
 	{"add-mode",						setmod},
@@ -212,7 +212,7 @@ NOSHARE const NBIND names[] =
 	{"remove-mark",					remmark},
 	{"replace-string",			sreplace},
 	{"resize-window",				resize},
-	{"restore-window",			restwnd},
+//{"restore-window",			restwnd},
 #if	ISRCH
 	{irsrchm,								risearch},
 #endif
@@ -220,7 +220,7 @@ NOSHARE const NBIND names[] =
 	{"run",									execproc},
 #endif
 	{"save-file",						filesave},
-	{"save-window",					savewnd},
+//{"save-window",					savewnd},
 	{"scroll-next-down",		nextdown},
 	{"scroll-next-up",			nextup},
 	{"search-forward",			forwsearch},
@@ -231,7 +231,6 @@ NOSHARE const NBIND names[] =
 #if	CRYPT
 	{"set-encryption-key",	setuekey},
 #endif
-	{"set-fill-column",			setfillcol},
 	{"set-mark",						setmark},
 	{"shell-command",				spawn},
 	{"shrink-window",				shrinkwind},

@@ -228,11 +228,12 @@ int Pascal killbuffer(int f, int n)
 
 { BUFFER * nxt_bp = getdefb();
 					                    			/* get the buffer name to kill */
-	BUFFER * bp = getcbuf(TEXT26, nxt_bp ? nxt_bp->b_bname : "main", TRUE);
+	BUFFER * bp = getcbuf(TEXT26, nxt_bp ? nxt_bp->b_bname : "main", FALSE);
 				             /* "Kill buffer" */
 	flush_typah();
 
-	return bp->b_nwnd > 0 && bp == curbp && nextbuffer(0,1) == 0 ? ABORT
+	return bp == NULL 																					 ? TRUE :
+				 bp->b_nwnd > 0 && bp == curbp && nextbuffer(0,1) == 0 ? ABORT
                                                                : zotbuf(bp);
 }
 
@@ -291,7 +292,7 @@ int Pascal bclear(BUFFER * bp_)
 			wp->w_doto = 0;
 			memset(&wp->mrks, 0, sizeof(MARKS));
 		}
-	resetlcache();
+
 	return TRUE;
 }}
 
@@ -355,8 +356,8 @@ X
 static
 void Pascal fmt_modecodes(char * t, int mode)
 	
-{ register int c = NUMMODES;
-	static const char modecode[NUMMODES] = "WCSEVOMYA"; /* letters for modes */
+{ int c = NUMMODES-2; 																	/* ignore CHGD, INVS */
+	static const char modecode[NUMMODES-2] = "WCSEVOMYA"; /* letters for modes */
 
 	t[c] = 0;
 	while (--c >= 0)
@@ -375,7 +376,7 @@ void Pascal fmt_modecodes(char * t, int mode)
 Pascal listbuffers(int iflag, int n)
 		 
 { BUFFER * bp;
-	Char line[15+NUMMODES] = "Global Modes ";
+	Char line[15+NUMMODES-2] = "Global Modes ";
 	Int nbytes; 		/* # of bytes in current buffer */
  
 	openwindbuf("[List]");
@@ -384,20 +385,20 @@ Pascal listbuffers(int iflag, int n)
 //strcpy(&line[0], "Global Modes ");
 	fmt_modecodes(&line[13], g_gmode);
 
-	line[13+NUMMODES] = '\n';
-	line[14+NUMMODES] = 0;
+	line[13+NUMMODES-2] = '\n';
+	line[14+NUMMODES-2] = 0;
 
 	if (linstr(line) == FALSE)
 		return FALSE;
 
 	if (linstr("ACT 	Modes 		 Size Buffer			File\n") == FALSE)
 		return FALSE;
-						/* output the list of buffers */
+																					/* output the list of buffers */
 	for (bp = bheadp; bp != NULL; bp = bp->b_bufp) 
 	{ if ((bp->b_flag & BFINVS) && iflag == FALSE)
 			continue;
 
-		nbytes = 0L;			/* Count bytes in buf.	*/
+		nbytes = 0L;													/* Count bytes in buf.	*/
 	{	LINE * lp;
 		for (lp = bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
  /* for (lp = bp->b_baseline; (lp = lforw(lp)) != bp->b_baseline; ) */
@@ -455,11 +456,13 @@ BUFFER *Pascal bfind(const char * bname,
 				/* create it if not found? */
 				/* bit settings for a new buffer */
 {
-	const char nm[][4] = {"c","cpp", "cxx", "h",  "prl","pl","pc","jav",
-												"for","fre","inc","pre","f",  "sql","pas","md"};
-	const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL, BCDEF, BCDEF,
+#if 0
+	const char nm[][4] = {"c","cpp", "cxx", "cs",	"h","pc","jav", "prl","pl",
+												"for","fre","inc","pre","f", "sql","pas","md"};
+	const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL,
                   			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
-			 int cc = -1;
+#endif
+	int cc = -1;
                       			/* find the place in the list to insert this buffer */
 	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_bufp);
 
@@ -500,8 +503,8 @@ BUFFER *Pascal bfind(const char * bname,
 						/* and set up the other buffer fields */
 		 /*bp->b_flag |= BFACTIVE; ** very doubtful !!! */
 	bp->b_flag = bflag | g_gmode;
-	bp->b_tabsize = tabsize <= 0 ? 8 : tabsize;		/* default tab size is 8 */
 	bp->b_color = g_colours;
+	bp->b_tabsize = 8;
 
 	bp->b_bufp = sb->b_bufp;    /* insert it */
 	sb->b_bufp = bp;
@@ -516,13 +519,14 @@ BUFFER *Pascal bfind(const char * bname,
 	  		bname[1] == '2' &&
 	  		bname[2] == 0)
 			bp->b_mode |= BCRYPT2;
-  
+#if 0  
   	for (cc = upper_index(nm)+1; --cc >= 0; )
 	  	if (strcmp_right(nm[cc], bname) == 0)
 		  {
 			  bp->b_langprops = fm[cc];
   			break;
 	  	}
+#endif
 	}
 
 	return bp;

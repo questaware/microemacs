@@ -151,17 +151,21 @@ static char Pascal nextch(Lpos_t * lpos, int dir)
 static int Pascal cclmake(int patix, MC * mcptr)
 	
 {
-	BITMAP  * p_bmap;
-	
   int to = cclarr_ix;
-	if (to >= sizeof(cclarray)/sizeof(char*) || 
-	    (p_bmap = aalloc(HICHAR >> 3)) == NULL)
-	{ 
+	if (to >= sizeof(cclarray)/sizeof(char*))
+	{ // cclarr_ix = 0;
 	  return ERR_OOMEM;
 	}
-
+		
+{	BITMAP  * p_bmap = cclarray[to];
+	if (p_bmap != NULL)
+		;
+	else
+	{ cclarray[ to ] = p_bmap = aalloc(HICHAR >> 3);
+		if (cclarray[ to ] == NULL)
+	  	return ERR_OOMEM;
+	}
 	cclarr_ix = to + 1;
-	cclarray[ to ] = p_bmap;
 	mcptr->lchar = to;
 														/* Test the initial character(s) in ccl for
 														 * special cases - negate ccl, or an end ccl
@@ -175,7 +179,7 @@ static int Pascal cclmake(int patix, MC * mcptr)
 	for ( ; (from = pat[++patix]) != MC_ECCL && from != 0; )
 	{
 	  if (pat[patix + 1] == MC_RCCL && pat[patix + 2] != MC_ECCL)
-	  { to = pat[patix + 2];
+		{	to = pat[patix + 2];
 	  	patix += 2;
 	  }
 	  else
@@ -187,12 +191,10 @@ static int Pascal cclmake(int patix, MC * mcptr)
 
 	if (from == 0)
 	{ 
-	  mlwrite(TEXT97);
-           /* "%%Missing ]" */
 		return ERR_SYN;
 	}
 	return patix;
-}}
+}}}
 
 
 static
@@ -223,11 +225,8 @@ int Pascal get_hex2(int * res_ref, const char * s)
  */
 void Pascal mcclear()
 
-{	while (--cclarr_ix >= 0)
-	  free(cclarray[cclarr_ix]);
-
-	cclarr_ix = 0;
-	mcpat[0].mc_type = tapcm[0].mc_type = MCNIL;
+{	
+//mcpat[0].mc_type = tapcm[0].mc_type = MCNIL;
 }
 
 
@@ -246,9 +245,8 @@ int Pascal mcstr(int mode)
 #define DOES_CL 1
 
 	mcpat[NPAT].mc_type = -1;	/* a barrier */
-						    /* If we had metacharacters in the MC array previously,
-						     * free up any bitmaps that may have been allocated, and */
-	mcclear();		/* reset magical. */
+
+	cclarr_ix = 0;		/* reset magical. */
 
 	if (mode < 0)
 		mode = curwp->w_bufp->b_flag;
@@ -323,10 +321,8 @@ litcase:mcptr->mc_type = LITCHAR;
 		 * to free any other bitmaps.
 		 */
 	if (patix < 0)
-	{ if (patix == ERR_OOMEM)
-	    mlwrite(TEXT99); /* Out of Memory */
-
-	  mcclear();
+	{ mlwrite(patix == ERR_SYN ? TEXT97		/* Out of Memory */
+	  												 : TEXT99);	/* "%%Missing ]" */
 	  return false;
 	}
 	else
@@ -422,10 +418,9 @@ int Pascal hunt(int n, int again)
 //	paren.sdir = -1;
 	}
 
-	if (/*(mdexact & MDMAGIC) && */pats[dir][0].mc_type == MCNIL)
-	{ if (!mcstr(-1))
-	    return FALSE;
-	}
+//if (/*(mdexact & MDMAGIC) && */pats[dir][0].mc_type == MCNIL)
+	if (!mcstr(-1))
+	  return FALSE;
 
   if (dir == FORWARD && (curwp->w_bufp->b_flag & MDSRCHC) == 0)
     dir = -1;
@@ -948,6 +943,10 @@ qprompt:
 					  last.curline = NULL;
 							    /* Delete the new string. */
 					  cc = strlen(&rpat[0]);
+#if _DEBUG
+					  if (cc != lenold)
+					  	adb(148);
+#endif
 					  backchar(FALSE, cc);
 					  cc = delins(cc, patmatch, FALSE);
 					  if (cc != TRUE)
@@ -1017,64 +1016,62 @@ qprompt:
  *	then either insert the string directly, or make use of
  *	replacement meta-array.
  */
+static
 int Pascal delins(int dlength, char * instr, int use_meta)
 	
-{					       /* Zap what we gotta,
-									* and insert its replacement. */
- char buf[120];
- int cc;
- extern int g_overmode;
-        int sov = g_overmode;
+{					       					/* Zap what we gotta, and insert its replacement. */
+  char buf[120];
+  int ix;
 
-	for (cc = -1; ! use_meta && instr[++cc] != 0; )
-		if (instr[cc] == '\n' || instr[cc] == MC_ESC || instr[cc] == MC_DITTO)
-		{ cc = -1;
+	for (ix = -1; ! use_meta && instr[++ix] != 0; )
+		if (instr[ix] == '\n' || instr[ix] == MC_ESC || instr[ix] == MC_DITTO)
+		{ ix = -1;
 			break;
 		}
-	g_overmode = cc == dlength;
 
-	cc = TRUE;
-	if (! g_overmode)
-		cc = ldelchrs((Int)dlength, FALSE);
+{	int cc = ix == dlength ? TRUE : ldelchrs((Int)dlength, FALSE);
 	if (cc != TRUE)
 	  mlwrite(TEXT93);
-/*			"%%ERROR while deleting" */
+					/* "%%ERROR deleting" */
 	else
-	{ cc = -1;
+	{ extern int g_overmode;		// from line.c
+		int sov = g_overmode;
+		g_overmode = ix == dlength;
+
+	  ix = -1;
 	  for ( ; ; ++instr)
 	  { if (instr[0] == MC_ESC && instr[1] != 0 && use_meta)
 	    { int chr = *++instr;
         if (chr == '0')
-	      { instr += get_hex2(&chr, instr+1);
-	      }
-	      buf[++cc] = chr;
+	      	instr += get_hex2(&chr, instr+1);
+
+	      buf[++ix] = chr;
 	      continue;
 	    }
 	    if (instr[0] == MC_DITTO && use_meta || 
 	        instr[0] == 0                    ||
-	        cc > sizeof(buf) - 4 )
-	    { buf[++cc] = 0;
+	        ix > sizeof(buf) - 4 )
+	    { buf[++ix] = 0;
 	      cc = linstr(buf);
 	      if (cc != TRUE || instr[0] == 0)
 	        break;
-	      cc = -1;
+	      ix = -1;
 	      if (instr[0] == MC_DITTO && use_meta)
 	      { cc = linstr(patmatch);
 	        if (cc != TRUE)
 	          break;
-	        cc = -1;
+	        ix = -1;
 	        continue;
 	      }
 	    }
 	    
-	    buf[++cc] = instr[0];
+	    buf[++ix] = instr[0];
 	  }
-	  cc = TRUE;
+	  g_overmode = sov;
 	}
 	  
-  g_overmode = sov;
 	return cc;
-}
+}}
 
 /*
  * wordsearch -- Reverse search for a word starting with a prefix.

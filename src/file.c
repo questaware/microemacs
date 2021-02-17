@@ -38,7 +38,7 @@ extern char * g_fline;					/* from fileio.c */
 int Pascal makename(char * bname, const char * fname)
 
 {									/* Find the last directory entry name in the file name */
-  const char *s_cp;
+	const char *s_cp;
   const char *cand = &fname[0]; 
   char  ch;
 
@@ -83,10 +83,25 @@ int Pascal insfile(int f, int n)
   return readin(NULL, FILE_LOCK+FILE_REST+FILE_INS);
 }
 
+#if 0
+const char nm[][4] = {"c","cpp", "cxx", "cs",	"h","pc","jav", "prl","pl",
+											"for","fre","inc","pre","f", "sql","pas","md"};
+const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL,
+                 			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
+
+#define BCCOMT  0x02		/* c style comments */
+#define BCPRL   0x04		/* perl style comments */
+#define BCFOR   0x08		/* fortran style comments */
+#define BCSQL   0x10    /* sql style comments */
+#define BCPAS   0x20		/* pascal style comments */
+#define BCML    0x40    /* Markup language */
+#endif
+const char * suftag  = "cpfqPm";
+
 void Pascal customise_buf(BUFFER * bp)
 
 {   const char * pat = NULL;
-    const char * fn = bp->b_fname - 1;
+    const char * fn = bp->b_bname - 1;
     while (*++fn != 0)
       if (*fn == '.')
         pat = fn;
@@ -108,10 +123,18 @@ void Pascal customise_buf(BUFFER * bp)
           { ++pr;
             bp->b_flag &= ~MDEXACT;
           }
+        { int six;
+          for (six = 6; --six >= 0 && suftag[six] != pr[2]; )
+          	;
+          if (six >= 0)
+          { bp->b_langprops = (1 << (six + 1));
+            ++pr;
+				  }
+          
         { int tabsz = atoi(pr+2);
           bp->b_tabsize = tabsz <= 0 ? 8 : tabsz;
           break;
-        }}}
+        }}}}
    }
 }
 
@@ -294,7 +317,7 @@ Pascal filefind(int f, int n)
 {	char * s;
   char *fname = gtfilename(g_ffmsg);
                       /* "Find file" */
-	if	(fname == NULL || fname[0] == 0)
+	if	(fname == NULL || fname[0] <= ' ')
 	  return FALSE;
 
 	for (s = fname-1; *++s != 0																	// strip off :n
@@ -407,7 +430,9 @@ BUFFER * get_remote(BUFFER * bp, const char * pw, const char * cmdbody,
 
   cc = ttsystem(strcat(strcat(strcat(fullcmd,tmp),"/"),rnm+1), pw);
   if (cc != OK)
-		mbwrite((const char*)concat(fullcmd, cmdnm," Fetch failed ",int_asc(cc), 0));
+	{	popup = TRUE;
+		concat(fullcmd, cmdnm," Fetch failed ",int_asc(cc), 0);
+	}
   else
 	{//	sprintf(diag_p, "EKEY %x %s", curbp, ekey == NULL ? "()" : ekey);
 	 //	mbwrite(diag_p);
@@ -422,9 +447,10 @@ BUFFER * get_remote(BUFFER * bp, const char * pw, const char * cmdbody,
 	  }
 
 //	memset(&fullcmd[strlen(cmdnm)],'*', pwlen);
-	  if (popup)
-			mbwrite(fullcmd);
 	}
+  if (popup)
+		mbwrite(fullcmd);
+
   memset(fullcmd, 0, sizeof(fullcmd));
 	return bp;
 }}}
@@ -494,8 +520,6 @@ int Pascal readin(char const * fname, int props)
   }
   
 { char fnbuff[NFILEN+1];
- 	int nline = 0;
-	int crlf = 0;
   int diry = FALSE;
 	Cc cc;
 
@@ -570,6 +594,7 @@ int Pascal readin(char const * fname, int props)
   }
 {	int   len;
 	int   fno;
+ 	int   nline = 0;
  	char * sfline = NULL;
   LINE * nextline = ins == 0 ? bp->b_baseline : lforw(curwp->w_dotp);
 #if S_MSDOS == 0
@@ -635,9 +660,10 @@ int Pascal readin(char const * fname, int props)
 
 	if (!diry)
 	  ffclose();				/* Ignore errors. */
-}
+
 	io_message(ins >= 0 ? TEXT140 : TEXT154, cc, nline);
 																/* "Read 999 line" */
+}
 out:
 //readin_lines = nline;
 	bp->b_doto = 0;

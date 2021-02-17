@@ -118,12 +118,11 @@ Pascal mregdown(f, n)
 	}
 
 	/* perform the region function */
-	if (nclicks == 1) {
-		return(setmark(FALSE, 0));
-	} else {
-		lastflag &= ~CFKILL;
-		return(killregion(FALSE, 0));
-	}
+	if (nclicks == 1)
+		return setmark(FALSE, 0);
+
+	g_lastflag &= ~CFKILL;
+	return(killregion(FALSE, 0));
 }
 
 /*	mouse-region-up:	mouse region operations
@@ -384,7 +383,7 @@ register int	col;
 Pascal ismodeline(wp, row)
 WINDOW	*wp;
 {
-	if (row == wp->w_toprow+wp->w_ntrows && modeflag)
+	if (row == wp->w_toprow+wp->w_ntrows)
 		return(TRUE);
 	return(FALSE);
 }

@@ -10,10 +10,8 @@
 #include	"etype.h"
 #include	"elang.h"
 #include	"base.h"
-
-#define is_space(ch) (ch == ' ' || ch == '\t')
-
-#define A_LEND (-2)
+																				// All other characters are positive
+#define A_LEND       (-1)
 
 
 int Pascal thischar()
@@ -29,8 +27,7 @@ int Pascal thischar()
  */
 int Pascal inword()
 
-{ return curwp->w_doto == llength(curwp->w_dotp)
-		       ? FALSE : isword(lgetc(curwp->w_dotp, curwp->w_doto));
+{ return isword(thischar());
 }
 
 /* Word wrap on n-spaces. Back-over whatever precedes the point on the current
@@ -43,45 +40,42 @@ int Pascal inword()
  */
 int Pascal wrapword(int f, int n)
 
-{
-	register int cnt;	/* size of word wrapped to next line */
-	register int c; 	/* charector temporary */
-					    /* backup from the <NL> 1 char */
-	if (!backchar(FALSE, 1))
+{ 					             /* backup from the <NL> 1 char */
+	if (!forwchar(FALSE, -1))
 	  return FALSE;
-				   /* back up until we aren't in a word,
-				      make sure there is a break in the line */
-	cnt = 0;
+              				   /* back up until we aren't in a word,
+              				      make sure there is a break in the line */
+{ int	cnt = 0;
+  int c;
 	while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) != ' ')
 				&& (c != '\t'))
-	{ cnt++;
-	  if (!backchar(FALSE, 1))
+	{ ++cnt;
+	  if (!forwchar(FALSE, -1))
 	    return FALSE;
-			/* if we make it to the beginning, start a new line */
+                  		  /* if we make it to the beginning, start a new line */
 	  if (curwp->w_doto == 0)
 	  { gotoeol(FALSE, 0);
 	    return lnewline();
 	  }
 	}
-					/* delete the forward white space */
+            					  /* delete the forward white space */
 	if (!forwdel(0, 1) || !lnewline())
 	  return FALSE;
-						/* and past the first word */
-	while (cnt-- > 0)
+          						  /* and past the first word */
+	while (--cnt >= 0)
 	  if (forwchar(FALSE, 1) == FALSE)
 	    return FALSE;
-			/* make sure the display is not horizontally scrolled */
+                			  /* make sure the display is not horizontally scrolled */
 	if (curwp->w_fcol != 0)
 	{ curwp->w_fcol = 0;
 	  curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
 	}
 
 	return TRUE;
-}
+}}
 
 
-Int b_f_size;
-char b_stop_eol;
+static int  g_f_size;
 
 /*
  * Move the cursor backward by "n" words. All of the details of motion are
@@ -90,41 +84,36 @@ char b_stop_eol;
  */
 int Pascal backword(int f, int n)
 
-{ register int ch;
+{ // if (n < 0 || 1)
+  return nextword(f, -n);
+#if 0
+{ int f_size = -1;
   
-  if (n < 0)
-    return nextword(f, -n);
-
-  b_f_size = -1;
-
-  while (true) 
-  { while (TRUE)
-    { if (backchar(FALSE, 1) == FALSE)
+  while (--n >= 0)
+  { int ch;
+  	while (TRUE)													// Skip spaces and usually A_LEND
+    { if (forwchar(FALSE, -1) == FALSE)
         return FALSE;
-      b_f_size += 1;
+      f_size += 1;
       ch = thischar();
-      if (! is_space(ch) && (ch != A_LEND || b_stop_eol))
+      if (!is_space(ch) && ch != A_LEND)
 				break;
     }
 
-    if (--n < 0)
-      break;
+//  if (n <= 0 && g_ignore >= 0)
+//   	break;
+	  																			// skip non spaces
+    for ( ;!is_space(ch) && ch != A_LEND ; ch = thischar())
+    { if (forwchar(FALSE, -1) == FALSE)
+			  return TRUE;
+      f_size += 1;
+		}
+  } 
 
-  { int in_word = inword();
-
-    if (n > 0 || ! b_stop_eol)      
-      for (;!in_word ? !is_space(ch) && ch != A_LEND && 
-      	               !isletter(ch) && ! in_range(ch,'0','9')
-	                   : inword();
-	          ch = thischar())
-      { if (backchar(FALSE, 1) == FALSE)
-				  return TRUE;
-        b_f_size += 1;
-      }
-    if (n <= 0)
-      break;
-  }}
+  g_f_size = f_size;
   return forwchar(FALSE, 1);
+}
+#endif
 }
 
 
@@ -134,34 +123,51 @@ int Pascal backword(int f, int n)
  */
 int Pascal nextword(int f, int n)
 
-{ register int ch;
-
-	if (n < 0)
-	  return backword(f, -n);
-
-  b_f_size = 0;
-	
-	while (n--) 
-	{ int in_word = inword();
-	  
-	  ch = thischar();
-	  for (;in_word ? inword()
-	                : !is_space(ch) && ch != A_LEND && 
-	                  !isletter(ch) && ! in_range(ch,'0','9');
-		ch = thischar())
-	  { if (forwchar(FALSE, 1) == FALSE)
-	      return FALSE;
-			b_f_size += 1;
-	  }
-
-	  for (; is_space(ch) || ch == A_LEND; ch = thischar())
-	  { if (forwchar(FALSE, 1) == FALSE)
-	      return FALSE;
-      b_f_size += 1;
-	  }
+{
+//if (n < 0)
+//  return backword(f, -n);
+	int mask = 0;
+	int dir = 1;
+	int ct = n;
+	if (ct < 0)
+	{ ct = -ct;
+		dir = -1;
+		mask = 1;
 	}
-	return TRUE;
-}
+
+{ int f_size = 0;
+
+  while (--ct >= 0)
+  { int ch;
+  	int a = inword();
+  	while (TRUE)													// Skip non spaces and usually A_LEND
+    { if (forwchar(FALSE, dir) == FALSE)
+        return FALSE;
+      f_size += 1;
+      ch = thischar();
+      if ((is_space(ch) != 0 || ch == A_LEND) ^ mask)
+				break;
+    	if (!mask && a != isword(ch))
+    		break;
+    }
+
+//  if (ct <= 0 && g_ignore >= 0)
+//   	break;
+
+		a = isword(ch);
+	  																			// skip spaces resp. non spaces
+    for ( ;((is_space(ch) != 0 || ch == A_LEND) ^ mask) &&
+    			  a == isword(ch)
+    			; ch = thischar())
+    { if (forwchar(FALSE, dir) == FALSE)
+			  return TRUE;
+      f_size += 1;
+    }
+  }
+
+	g_f_size = f_size - mask;
+	return mask == 0 ? TRUE : forwchar(FALSE, 1);
+}}
 
 
 static int Pascal ccaseword(int n, int low)
@@ -171,24 +177,26 @@ static int Pascal ccaseword(int n, int low)
     if (n < 0)
       return FALSE;
 
-    while (n--)
-    { register int lo = low;
+    while (--n >= 0)
+    { int lo = low;
       while (!inword())
         if (forwchar(FALSE, 1) == FALSE)
           return FALSE;
-      
-      while (inword())
-      
-      { int c = lgetc(curwp->w_dotp, curwp->w_doto);
-        if (lo == 0 && !islower(c) ||
-            lo < 3  &&  islower(c))
-        { lputc(curwp->w_dotp,curwp->w_doto, chcaseunsafe(c));
+
+      while (TRUE)
+      { int ch = thischar();
+        if (lo == 0 && !islower(ch) ||
+            lo < 3  &&  islower(ch))
+        { lputc(curwp->w_dotp,curwp->w_doto, chcaseunsafe(ch));
           lchange(WFEDIT);
         }
         if (lo == 2)
           lo = 3;  
         if (forwchar(FALSE, 1) == FALSE)
           return FALSE;
+
+				if (isword(ch))
+					break;
       }
     }
     return TRUE;
@@ -251,20 +259,20 @@ Pascal delfword(int f, int n)
 
 	if (n == 0)
 	  return TRUE;
-		      /* Clear the kill buffer if last command wasn't a kill */
-	if ((lastflag & CFKILL) == 0)
+								      /* Clear the kill buffer if last command wasn't a kill */
+	if ((g_lastflag & CFKILL) == 0)
 	  kdelete(0, 0);
 
-	thisflag |= CFKILL;	/* this command is a kill */
+	g_thisflag |= CFKILL;	/* this command is a kill */
         
-	b_stop_eol = true;
+//g_ignore = 256;
   (void)nextword(f, n);
-	b_stop_eol = false;
-			/* restore the original position and delete the words */
+//g_ignore = A_LEND;
+											/* restore the original position and delete the words */
 	if (n > 0)
 	  rest_l_offs(&save);
 
-	return ldelchrs(b_f_size, TRUE);
+	return ldelchrs(g_f_size, TRUE);
 }
 
 /*
@@ -280,18 +288,20 @@ int Pascal delbword(int f, int n)
 
 #if	WORDPRO
 
-void Pascal reform(char * para)	/* reformat a paragraph as stored in a string */
+static 
+char * Pascal reform(char * para)	/* reformat a paragraph */
 						/* string buffer containing paragraph */
 {
-	register int sp = -1;		  /* string scan pointer */
-	         int lastbreak = -0x3fff; /* ix of last word break */
-	register int col = 0;		  /* current column position */
-	register int ch;
+	int sp = -1;		  				/* string scan pointer */
+	int lastbreak = -0x3fff;  /* ix of last word break */
+	int col = 0;		  /* current column position */
+	int ch;
+	int fillcol = pd_fillcol != 0 ? pd_fillcol : term.t_ncol;
 
-		/* scan string, replacing some whitespace with newlines */
+											/* scan string, replacing some whitespace with newlines */
 	for (; (ch = para[++sp]) != 0; ++col)
 	{ 
-	  if (isspace(ch))			  /* white space.... */
+	  if (is_space(ch))			  /* white space.... */
 	  { if (ch == '\t')
 	      col = (col + 7) & ~7;
 						  /* break on whitespace? */
@@ -307,79 +317,65 @@ void Pascal reform(char * para)	/* reformat a paragraph as stored in a string */
 	    }
 	  }
 	}
+	return para;
 }
 
 
 Pascal fillpara(int f, int n)/* Fill the current paragraph according to the
-				   current fill column */
+															  current fill column */
 {
- register char *pp;	/* ptr into paragraph being reformed */
- 	  char *para;	/* malloced buffer for paragraph */
- register LINE *lp;	/* ptr to current line */
- register int lsize;	/* bytes in current line */
- register char *txtptr;	/* ptr into current line */
 	LINE *ptline = curwp->w_dotp; /* line the point started on */
-	int ptoff = curwp->w_doto;    /* offset of original point */
-	int back;		/* # of characters from origin point to eop */
-	int psize;		/* byte size of paragraph */
-	LINE *bop;		/* ptr to beg of paragraph */
-	LINE *eop;		/* pointer to line just past EOP */
+	int  ptoff = curwp->w_doto;    /* offset of original point */
 
 	if (curbp->b_flag & MDVIEW)
 	  return rdonly();
-
-	if (fillcol == 0)	/* no fill column set */
-	{ mlwrite(TEXT98);
-/*			"No fill column set" */
-	  return FALSE;
-	}
-			/* record the pointer to the line just past the EOP */
+													/* record the pointer to the line just past the EOP */
 	gotoeop(FALSE, 1);
-	eop = lforw(curwp->w_dotp);
-		        
-	gotobop(FALSE, 1);    /* and back top the beginning of the paragraph */
-	bop = curwp->w_dotp;
-					   /* ok, how big is this paragraph? */
-	psize = 0;
-	for (lp = bop; lp != eop; lp = lforw(lp))
-	  psize += lp->l_used + 1;
-					/* create a buffer to hold this stuff */
-	para = (char*)malloc(psize + 100);	/***** THIS IS TEMP *****/
-	if (para == NULL)
-	  return FALSE;
-				/* now, grab all the text into a string */
-	back = 0;	/* counting the distance to backup when done */
-	lp = bop;
-	pp = para;
-	while (lp != eop)
-	{ lsize = lp->l_used + 1;
-	  if	    (back != 0)
-	    back += lsize;
-	  else if (lp == ptline)
-	    back = lsize - ptoff;
-	  
-	  txtptr = lp->l_text;
-	  while (--lsize)			/* copy a line */
-	    *pp++ = *txtptr++;
-	  *pp++ = ' ';			/* turn the NL to a space */
-	  lp = lfree(lp,0);			/* free the old line */
-	}
-	*(--pp) = 0;	/* truncate the last space */
-				     /* reformat the paragraph in the buffer */
-	reform(para);
-
-	    /* insert the reformatted paragraph back into the current buffer */
-{	int cc = linstr(para);
-	lnewline();		/* add the last newline to our paragraph */
-	if (cc == TRUE)	/* reposition us to the same place */
-	  cc = backchar(FALSE, back);
-
+	
 			/* make sure the display is not horizontally scrolled */
 	curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
 
+{	LINE * eop = lforw(curwp->w_dotp);
+		        
+	gotobop(FALSE, 1);    	/* and back top the beginning of the paragraph */
+
+{	LINE * bop = curwp->w_dotp;
+											  	/* ok, how big is this paragraph? */
+	int	psize = 0;
+	LINE * lp;
+	for (lp = bop; lp != eop; lp = lforw(lp))
+	  psize += lp->l_used + 1;
+																/* now, grab all the text into a string */
+{	int	back = 0;									/* counting the distance to backup when done */
+	char * para = (char*)malloc(psize + 100);	/***** THIS IS TEMP *****/
+	char * pp = para;
+	if (pp == NULL)
+	  return FALSE;
+	
+	while (bop != eop)
+	{ int lsize = bop->l_used + 1;
+	  if	    (back != 0)
+	    back -= lsize;
+	  else if (bop == ptline)
+	    back = ptoff - lsize;
+	  
+	{	char * txtptr = bop->l_text-1;
+	  while (--lsize > 0)					/* copy a line */
+	    *++pp = *++txtptr;
+	  *++pp = ' ';						/* turn the NL to a space */
+	  bop = lfree(bop,0);				/* free the old line */
+	}}
+	*pp = 0;									/* truncate the last space */
+
+					    /* insert the reformatted paragraph back into the current buffer */
+{	int cc = linstr(reform(para+1));
+	lnewline();		/* add the last newline to our paragraph */
+	if (cc == TRUE)	/* reposition us to the same place */
+	  cc = forwchar(FALSE, back);
+
 	free(para);
 	return cc;
-}}
+}}}}}
 
 
 #if 0
@@ -427,7 +423,7 @@ int Pascal wordcount(int f, int n)
 		LINE *lp = 	 r->r_linep;
 		int offset = r->r_offset;
 								/* count up things */
-		int inword = FALSE;
+		int in_wd = FALSE;
 	  
 	  nchars = size;
 		
@@ -443,14 +439,13 @@ int Pascal wordcount(int f, int n)
 				ch = '\r';
 			}
 			
-			if (in_range(ch & 0xdf, 'A', 'Z') ||
-			    in_range(ch, '0', '9'))
-			{ if (!inword)
+			if (isword(ch))
+			{ if (!in_wd)
 			    ++nwords;
-			  inword = TRUE;
+			  in_wd = TRUE;
 			}
 			else 
-			  inword = FALSE;
+			  in_wd = FALSE;
 		}
 	}
 							/* and report on the info */
@@ -471,7 +466,7 @@ char * Pascal getwtxt(int wh, char * buf, int lim)
     return getkill();
   if (wh == 'N'-'@')
     return fixnull(curbp->b_fname);
-  if (wh == 'S'-'@' || wh == 'S')
+  if (wh == 'S'-'@' || wh == (ALTD | 'S'))
     return fixnull(patmatch);
 
 { int offs = wh == 'W'-'@' || wh == 'K'-'@' ? g_txt_woffs : 0;
@@ -479,9 +474,8 @@ char * Pascal getwtxt(int wh, char * buf, int lim)
   if (lct > lim)
     lct = lim;
 
-{ register char * t = buf;
-  register int	c;
-
+{ char * t = buf;
+  int	c;
   while (--lct >= 0)
   { c = lgetc(curwp->w_dotp, offs);
     if (! isword(c) && t != buf && wh == (int)'W'-'@')

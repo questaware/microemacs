@@ -54,6 +54,7 @@
 #define false 0
 #define true 1
 
+#define is_space(ch) (ch <= ' ')
 
 char * strpcpy(char * t_, const char * s_, int n_)
 { register short n = n_;
@@ -378,7 +379,7 @@ int main(int argc, char * argv[])
     
     while (findTagSearch(".", tag, tagline) && --clamp >= 0)
 	{	char * tl = tagline+strlen(tagline);
-		while (*++tl != 0 && isspace(*tl))
+		while (*++tl != 0 && is_space(*tl))
 		  ;
 	    printf("FOUND %s %s\n", tagline, tl);
 	}
@@ -392,7 +393,7 @@ int main(int argc, char * argv[])
 static	int
 findTagExec(const char tag[])
 {
-    char * file;	/* File name */
+	char * file;	/* File name */
     int  ix;
     char tagline[1025];
     char fullfilename[256+1];
@@ -404,20 +405,17 @@ findTagExec(const char tag[])
     file = skipspaces(tagline + strlen(tagline) + 1, tagline+1024);
 
     if (file[0] == '=')
-    {   for (ix = -1; file[++ix] > 0xd; )
-          ;
-        file[ix] = 0;
-     	mlwrite("%s = %s", tagline, file+2);
+    {	for (ix = -1; file[++ix] > 0xd; )
+        	;
+    	file[ix] = 0;
+	    mlwrite("%s = %s", tagline, file+2);
         return true;
     }
 
-	for (ix = -1; file[++ix] != 0 && !isspace(file[ix]); ) /* to tab */
+	for (ix = -1; file[++ix] > ' '; ) /* to tab */
 	  ;
 		      
-	if (file[ix] == 0)
-	  file[ix+1] = 0;
-	else
-	  file[ix] = 0;
+	file[ix+(file[ix] == 0)] = 0;
 
 {	char * fn = pathcat(fullfilename, sizeof(fullfilename), g_tagLastFile, file);
     BUFFER * bp = bufflink(fn, true);

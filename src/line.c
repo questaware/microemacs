@@ -18,8 +18,6 @@
 #include	"elang.h"
 #include	"logmsg.h"
 
-int g_overmode = false;
-
 #define BSIZE(a)  (a + NBLOCK - 1) & (~(NBLOCK - 1))
 
 
@@ -237,7 +235,6 @@ void Pascal lchange(int flag)
 		  updall(wp, 0);
 		}
   }
-  resetlcache();
 }
 
 #define EXPANSION_SZ 8
@@ -282,7 +279,9 @@ int Pascal lnewline()
 
 int newlinect = 0;
 
-/* Insert "n" copies of the character "c" at the current location of dot. 
+int g_overmode;
+
+/* Insert n copies of the character "c" at the current location of dot. 
  * In the easy case all that happens is that the text is stored in the line.  
  * In the hard case, the line has to be reallocated.  When the window list is 
  * updated take special care;  You always update dot in the current window.  
@@ -304,7 +303,7 @@ int Pascal linsert(int n, char c)
   else
   { LINE * lp = curwp->w_dotp;		/* Current line */
 
-   if (g_overmode  &&
+   if (g_overmode &&
        curwp->w_doto < lp->l_used  &&
 			(lgetc(lp, curwp->w_doto) != '\t' ||
 			(unsigned short)curwp->w_doto % curbp->b_tabsize == (curbp->b_tabsize - 1)))
@@ -410,7 +409,7 @@ int Pascal istring(int f, int n)	/* ask for and insert a string into the current
 		if (n < 0)
 		  n = - n;
 
-		while (n-- && (status = linstr(tstring)))
+		while (--n >= 0 && (status = linstr(tstring)))
 		  ;
 	}
 	return status;
@@ -526,23 +525,6 @@ char *Pascal getctext(char * t)
 	return t;
 }
 
-/* putctext:	replace the current line with the passed in text	*/
-
-int Pascal putctext(char * iline)
-											/* contents of new line */
-{											/* delete the current line */
-	curwp->w_doto = 0;	/* starting at the beginning of the line */
-{	int status = killtext(TRUE, 1);
-	if (status == TRUE)
-	{ status = linstr(iline);
-	  if (status == TRUE)
-	  { status = lnewline();
-	    backline(TRUE, 1);
-	  }
-	}
-	return status;
-}}
-
 /*
  * Delete a newline. Join the current line with the next line. If the next line
  * is the magic header line always return TRUE; merging the last line with the
@@ -554,7 +536,6 @@ int Pascal putctext(char * iline)
  */
 /* static */ int Pascal ldelnewline()
 
-{ resetlcache();
 {	LINE * lp1 = curwp->w_dotp;
 	LINE * lp2 = lforw(lp1);
 	int used1 = lp1->l_used; 
@@ -612,7 +593,7 @@ X	}
 	  lfree(lp1, used1);
 	}
 	return TRUE;
-}}
+}
 
 /* The kill buffer abstraction */
 
@@ -629,7 +610,7 @@ int Pascal chk_k_range(int n)
 
 { if (! in_range(n,0,NOOKILL))
   { mlwrite(TEXT23);
-/*			"Out of range" */
+					/* "Out of range" */
     return -1;
   }
   return n == 0 ? 0 : n-1;

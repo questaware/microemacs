@@ -20,6 +20,8 @@
 
 #if S_MSDOS
 #include <windows.h>
+
+#define millisleep(n) Sleep(n)
 #endif
 
 #define MARGIN	8 		/* size of minimim margin and */
@@ -81,7 +83,7 @@ static VIDEO	 **vscreen; 	/* Virtual screen. */
 
 const char mdname[NUMMODES][8] = {		/* name of modes		*/
  "WRAP ", "CMODE ", "MS ", "AbC ",	"VW ",
- "OVER ", "RE ", "CRYPT ", "ASAVE ","//" 
+ "OVER ", "RE ", "CRYPT ", "ASAVE ","//","CHGD", "INVS"
  };
 
 static char fmtstr[LFSTR+1];		/* last message posted		*/
@@ -210,9 +212,9 @@ void Pascal vtinit()
 		if (vscreen != null)
 			free((char*)vscreen);
 
-#define ncols term.t_mcol
+#define ncols 
 
-#define UESZ	((sizeof(VIDEO)+2*(ncols+2)-10)*MEMCT)	// 10 --- 5 extra
+#define UESZ	((sizeof(VIDEO)-12+2*(term.t_mcol+3))*MEMCT)	// 3 extra
 
 		i = (term.t_mrowm1+2) * MEMCT; 
 		vscreen = (VIDEO **)aalloc(i * (sizeof(VIDEO*)+UESZ));
@@ -226,7 +228,7 @@ void Pascal vtinit()
 		for ( ; --i >= 0; )
 		{ vscreen[i] = vp;
 			vp->v_color = V_BLANK;
-			vp = (VIDEO *)&vp->v_text[ncols+2];
+			vp = (VIDEO *)&vp->v_text[term.t_mcol+2];
 		}
 }
 
@@ -340,7 +342,8 @@ static Cc Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	VIDEO *vp = vscreen[row];
 	Short  clring = g_clring;
 	const int BCD = BCCOMT + BCPRL + BCSQL + BCPAS;
-	char markupterm[2] = "";
+	char markupterm = 0;
+	int  markuplen = 1;
 	char s_props = lp->l_props;
 	int mode = cmt_chrom == 0 || clring == 0 || 
 								 (vp->v_flag & VFML) ? -1 : s_props & VFCMT;
@@ -404,15 +407,15 @@ static Cc Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			{ if			(mode < 0 || (mode & Q_IN_EOL))
 					;
 				else if ((clring & BCML) && (c == '*' || c == '_') && str[-1] != c &&
-				         ((str[-1] > ' ' || len > 2 && str[(c==str[1])+1] > ' ')))
+				         ((str[-1] > ' ' || len > 0 && str[1] > ' ')))
 				{ if      (str[-1] == '\\')
 				    --vtc;
 				  else if (mode & Q_IN_CMT0+Q_IN_CMT)
-				  { if (c == markupterm[0] && (markupterm[1] == 0 || markupterm[1] == c))
-				    { str += markupterm[1] != 0;
-              len -= markupterm[1] != 0;
+				  { if (c == markupterm && (markuplen == 0 || str[1] == markupterm))//safe
+				    { str += markuplen;
+              len -= markuplen;
 				      chrom_on = 1;
-				      chrom_nxt = CHR_0;
+				      chrom_nxt = CHR_OLD;
 				      mode &= ~(Q_IN_CMT0+Q_IN_CMT);
 				      continue;
 				    }
@@ -424,8 +427,8 @@ static Cc Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
               mode |= wh ? Q_IN_CMT : Q_IN_CMT0;
               str += wh;
               len -= wh;
-              markupterm[0] = c;
-              markupterm[1] = (char)(wh * (int)c);
+              markuplen = wh;
+              markupterm = c;
               continue;
             }
           }
@@ -496,14 +499,8 @@ static Cc Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 /************************** Modeline stuff *************************/
 
 
-static WINDOW *g_lastwp;
-static LINE *  g_lastlp;
+LINE *  g_lastlp;								// NULL => reset
 static int     g_lastfcol;
-
-void Pascal resetlcache()
-
-{ g_lastwp	= null;
-}
 
 /* Redisplay the mode line for the window pointed to by the "wp".
  * This is the only routine that knows how the modeline is formatted.
@@ -518,11 +515,8 @@ void Pascal modeline(WINDOW * wp)
 	  char c[NLINE+24]; /* buffer for part of mode line */
 	}   tline;
 
-	if (vscreen == null || !modeflag)/* don't bother if there is none*/
+	if (vscreen == null)/* don't bother if there is none*/
 		return;
-
-	if      ((wp->w_flag & WFMODE) || wp != g_lastwp)
-	  g_lastwp = wp;
 
 	else if (wp->w_dotp == g_lastlp /* and wp->w_wndp == NULL */)
 	{ if (wp->w_fcol == g_lastfcol)
@@ -586,7 +580,7 @@ void Pascal modeline(WINDOW * wp)
 	
 { int cpix;
   int	modeset = wp->w_bufp->b_flag >> NUMFLAGS;
-	for (i = -1; ++i < NUMMODES && modeset != 0; ) /* add in mode flags */
+	for (i = -1; ++i < NUMMODES - 2 && modeset != 0; ) /* add in mode flags */
 	{ if (modeset & 1) 
 			strcat(&tline.lc.l_text[10], mdname[i]);
 		modeset = modeset >> 1;
@@ -631,7 +625,6 @@ void Pascal modeline(WINDOW * wp)
 	vtputs((wp->w_flag&WFMODE) != 0  ? "M" : "");
 	vtputs((wp->w_flag&WFHARD) != 0  ? "H" : "");
 	vtputs((wp->w_flag&WFEDIT) != 0  ? "E" : "");
-	vtputs((wp->w_flag&WFMOVE) != 0  ? "V" : "");
 	vtputs((wp->w_flag&WFFORCE) != 0 ? "F" : "");
 #endif
 }}}}
@@ -852,8 +845,6 @@ void Pascal updline(int force)
 	{ lp = wp->w_linep;
 		i = wp->w_toprow;
 	{ int zline = i + wp->w_ntrows; 			/* zero based */
-		if (modeflag == FALSE)
-			zline++;
 		if (zline >= term.t_mrowm1)
 		{ /* addb(sline); */
 			zline = term.t_mrowm1-1;
@@ -931,7 +922,7 @@ void Pascal updline(int force)
 int /*Pascal*/ update(int force)
 	/* int force; ** force update past type ahead? */
 {
-	register WINDOW *wp;
+	WINDOW *wp;
 
 	if (vscreen != NULL
 
@@ -968,7 +959,7 @@ int /*Pascal*/ update(int force)
 			/* wp->w_changed = null; */
 				wp->w_force = 0;
 				wp->w_flag &= ~WFMODE;
-				if (set && modeflag)
+				if (set && 1)
 					wp->w_flag = WFMODE;
 			}
 					/* recalc the current hardware cursor location */
@@ -1003,9 +994,7 @@ int Pascal reframe(WINDOW * wp)
 
 	int nlines = wp->w_ntrows;
 	int centre = wp->w_force;
-	if (! modeflag)
-		++nlines;
-{ int flags = wp->w_flag;
+  int flags = wp->w_flag;
 												/* if not a requested reframe, check for a needed one */
 	if ((flags & WFFORCE) == 0)
 	{ lp = wp->w_linep;
@@ -1078,7 +1067,7 @@ int Pascal reframe(WINDOW * wp)
 	wp->w_linep = lp;
 	sgarbf = 1;
 	return flags | WFHARD;
-}}
+}
 
 #undef	centre
 #undef	clamp
@@ -1099,8 +1088,6 @@ void Pascal updall(WINDOW * wp, int all)
 	if (color == 0x70)
 		color = V_BLANK;
 #endif
-	if (! modeflag)
-		++zline;
 	if (zline >= term.t_mrowm1)
 	{ /* addb(sline); */
 		zline = term.t_mrowm1-1;
@@ -1284,7 +1271,7 @@ void Pascal upmode()	/* update all the mode lines */
 
 void Pascal upwind()	/* force hard updates on all windows */
 
-{ orwindmode(WFMODE | WFHARD, 0);
+{ orwindmode(WFMODE | WFHARD | WFMOVE, 0);
 }
 
 static int fmtstr_ix;
@@ -1455,15 +1442,8 @@ int mlwrite(const char * fmt, ...)
 			mlputli_width = 0;
 		}}
 	}
-#if S_MSDOS != 0
-			/* if we can not erase to end-of-line, do it manually */
-	if			(vscreen == null)
-		millisleep(4800);
-	else
-		TTflush();
-#elif S_LINUX
 	TTflush();
-#endif
+
 	mpresf = TRUE;
 	if (g_discmd < 0)
 	{ fmtstr[(fmtstr_ix & 0x7f)] = 0; 	/* terminate lastmesg[] */

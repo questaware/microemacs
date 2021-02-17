@@ -10,14 +10,28 @@
 /*const*/ char TEXT94[] = "[TABLE OVERFLOW]";
 /*const*/ char TEXT99[] = "[OUT OF MEMORY]";
 /*const*/ char TEXT23[] = "Out of range";
-/*const*/ char * TEXT64a[3] = { "delete:", "add:", "toggle:",};
 #else
 extern /*const*/ char TEXT8[];
 extern /*const*/ char TEXT79[];
 extern /*const*/ char TEXT94[];
 extern /*const*/ char TEXT99[];
 extern /*const*/ char TEXT23[];
-extern /*const*/ char * TEXT64a[3];
+#endif
+
+#ifdef IN_RANDOM_C
+
+static
+const char cname [][9] = {		/* names of colors		*/
+	"BLACK", "RED", "GREEN", "YELLOW", "BLUE",
+	"MAGENTA", "CYAN", "GREY",
+	"GRAY", "LRED", "LGREEN", "LYELLOW", "LBLUE",
+	"LMAGENTA", "LCYAN", "WHITE"};
+
+#define NCOLORS 16
+
+static	
+const char const TEXT64a[][8] = { "delete:", "add:", "toggle:",};
+
 #endif
 
 #define TEXT119 TEXT99
@@ -35,7 +49,7 @@ extern /*const*/ char * TEXT64a[3];
 #define	TEXT12	"Help file not found"
 #define	TEXT13	": describe-key "
 #define	TEXT14	"Not Bound"
-#define	TEXT15	": bind-to-key "
+#define	TEXT15	"Command to use "
 #define	TEXT16	"No such function"
 #define	TEXT17	"Binding table FULL!"
 #define	TEXT18	": unbind-key "

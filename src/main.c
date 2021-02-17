@@ -51,8 +51,8 @@ NOSHARE char *execstr = NULL;		/* pointer to string to execute */
 NOSHARE int g_execlevel = 0;	/* execution IF level		*/
 NOSHARE int g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
-NOSHARE int ttrow = HUGE; 	/* Row location of HW cursor	*/
-NOSHARE int ttcol = HUGE; 	/* Column location of HW cursor */
+NOSHARE int ttrow = 0; 	/* Row location of HW cursor	*/
+NOSHARE int ttcol = 0; 	/* Column location of HW cursor */
 NOSHARE int lbound = 0;		/* leftmost column of current line
 					   being displayed		*/
 NOSHARE int abortc = CTRL | 'G';	/* current abort command char	*/
@@ -90,8 +90,8 @@ NOSHARE int eexitval = 0; 	/* and the exit return value	*/
 
 NOSHARE int currow;	/* Cursor row			*/
 NOSHARE int curcol;	/* Cursor column		*/
-NOSHARE int thisflag;	/* Flags, this command		*/
-NOSHARE int lastflag;	/* Flags, last command		*/
+NOSHARE int g_thisflag;	/* Flags, this command		*/
+NOSHARE int g_lastflag;	/* Flags, last command		*/
 NOSHARE WINDOW *curwp; 		/* Current window		*/
 NOSHARE BUFFER *curbp; 		/* Current buffer		*/
 NOSHARE WINDOW *wheadp;		/* Head of list of windows	*/
@@ -445,7 +445,7 @@ int main(int argc, char * argv[])
 
 	(void)dcline(argc, argv);
 	do
-	{ lastflag = 0; 								/* Fake last flags.*/
+	{ g_lastflag = 0; 								/* Fake last flags.*/
 
 																	/* execute the "command" macro, normally null*/
 		execkey(&cmdhook, FALSE, 1);	/* used to push/pop lastflag */
@@ -506,7 +506,6 @@ Pascal clean()
 
 #if MAGIC
 	mcclear();			/* clear some search variables */
-	rmcclear();
 #endif
 	if (patmatch != NULL)
 	{ free(patmatch);
@@ -542,7 +541,7 @@ static int Pascal execute(int c, int f, int n)
 
 { register int status;
 	KEYTAB *key = getbind(c); /* key entry to execute */
-		 /* loglog3("L %x T %x ct %d", lastbind == NULL ? 0 : lastbind->k_code, key->k_code, keyct); */
+/*loglog3("L %x T %x c %d", lastbind==NULL ? 0 : lastbind->k_code,key->k_code,keyct);*/
 
 	if (key != lastbind && key->k_ptr.fp != cex
 											&& key->k_ptr.fp != meta)
@@ -554,15 +553,15 @@ static int Pascal execute(int c, int f, int n)
 	keyct += 1;
 					 
 	if		 (key->k_code != 0) /* if keystroke is bound to a function..do it*/
-	{ thisflag = 0;
+	{ g_thisflag = 0;
 	
 		status = execkey(key, f, n);			// f is 0 or any other value
 	}
 	else if (!in_range(c, ' ', 0xFF)) /* Self inserting.	*/
 	{  /*  TTbeep();*/
 		mlwrite(TEXT19);		/* complain 	*/
-	/*							 "[Key not bound]" */
-		thisflag = 0; 			/* Fake last flags. */
+					/* [Key not bound]" */
+		g_thisflag = 0; 			/* Fake last flags. */
 		status = FALSE;
 	}
 	else
@@ -570,17 +569,17 @@ static int Pascal execute(int c, int f, int n)
 		 * negative, wrap mode is enabled, and we are now past fill column,
 		 * and we are not read-only, perform word wrap.
 		 */
-		if (c == ' ' && (curwp->w_bufp->b_flag & (MDVIEW | MDWRAP)) == MDWRAP
-								 && fillcol > 0 && getccol() > fillcol
+		if (c == ' ' && (curbp->b_flag & (MDVIEW | MDWRAP)) == MDWRAP
+								 && pd_fillcol > 0 && getccol() > pd_fillcol
 								 && n >= 0)
 			execkey(&wraphook, FALSE, 1);
 
 		if (n <= 0) 		/* Fenceposts.	*/
-		{ lastflag = 0;
+		{ g_lastflag = 0;
 			return n == 0;
 		}
 
-		g_overmode = curwp->w_bufp->b_flag & MDOVER;
+		g_overmode = curbp->b_flag & MDOVER;
 		status = linsert(n, (char)c); 	/* do the insertion */
 		g_overmode = FALSE;
 #if 0
@@ -589,7 +588,7 @@ static int Pascal execute(int c, int f, int n)
 				(curbp->b_flag & MDCMOD))
 			fmatch(c);
 #endif
-		thisflag = 0; 			/* For the future. */
+		g_thisflag = 0; 			/* For the future. */
 								 /* check auto-save mode */
 		if (curbp->b_flag & MDASAVE)
 			if (--gacount == 0)
@@ -598,7 +597,7 @@ static int Pascal execute(int c, int f, int n)
 				filesave(FALSE, 0);
 			}
 	}
-	lastflag = thisflag;
+	g_lastflag = g_thisflag;
 	return status;
 }
 

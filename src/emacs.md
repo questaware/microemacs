@@ -46,6 +46,7 @@
 	(The bindings can be avoided by prefixing ^Q -- literal next character).
   
   ^B  kill Buffer contents
+	^F  The longest match to a file name
   ^G  Abort
   ^K  Chars to eol
   ^N  File Name of buffer
@@ -126,8 +127,11 @@
   The variable $hardtab specifies the distance between tab stops;
   it is stored in each buffer.
   The variable $fileprof specifies $hardtab for file suffixes (starting .).
+	The syntax is **suffix** = [^][**type**]#
   The presence of a ^ signifies that the mode of operation is not AbC
-  Example : set $fileprof ".sql=^4.h=2.c=2.cpp=2.py=2"
+	The **type** is one of cpfqPm signifying C/C++,perl,Fortran,SQL,Pascal,markup.
+	The number # is the tab size.
+  Example : set $fileprof ".sql=^q4.h=c2.c=c2.cpp=c2.py=2"
 	The variable $softtab when not zero signifies that tabs are expanded before
   inserting in the buffer; it is stored in each buffer. 
   The command handle-tab (bound to C-I) with an argument also expands the tab..
@@ -319,11 +323,9 @@ redraw-display           ^L   Redraw with current position in middle of buffer
 remove-mark
 replace-string           M-R
 resize-window            ^XW
-restore-window
 reverse-incremental-search^XR
 run                      M-^E
 save-file                ^X^S Write out a file
-save-window
 scroll-next-down         M-^V
 scroll-next-up           M-^Z
 search-forward           ^S
@@ -475,7 +477,7 @@ $acount
 $asave         
 $bufhook       
 $cbflags       Flags of current buffer.
-$cbufname      Variable list
+$cbufname      Current buffer name (read only).
 $cfname        Name of file in current buffer
 $cliplife      Cut/paste buffer entries older than this are silently deleted!!
 $cmdhook       
@@ -500,7 +502,7 @@ $disinp        Inhibit all output
 $exbhook       
 $fcol          Column in window column 0 
 $fileprof      See above
-$fillcol       Not in use
+$fillcol       Right margin for text wrapping.
 $gflags        Global Flags
 $gmode         The default (i.e. global) mode for buffers
 $hardtab       The tab stop interval
@@ -516,9 +518,8 @@ $language      english
 $lastdir       Last direction of search
 $lastkey       The last key pressed
 $lastmesg      The last message shown
-$line          The line of the current buffer
+$line          The line of the current buffer (read only)
 $match         The last string matched 
-$modeflag      1: Show the mode line
 $msflag        1: file had ^M on input
 $pagelen       Lines on the screen. Changing this changes the physical length
 $pagewidth		 Width of the screen. Changing this changes the physical width

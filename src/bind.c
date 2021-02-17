@@ -180,7 +180,6 @@ static KEYTAB keytab[NBINDS+1] =
 	{META|CTRL|'F', BINDFNC, getfence},
 #endif
 	{CTRL|'R',	BINDFNC, backsearch},
-/*{CTRL|'S',	BINDFNC, setfillcol},*/
 #if FLUFF
 	{CTRL|'T',	BINDFNC, twiddle},
 #endif
@@ -432,7 +431,7 @@ int Pascal addnewbind(int c, int (Pascal *func)(int, int))
 																				  sizeof(KEYTAB)*oflowtabsize);
       if (tab == NULL)
       { mlwrite(TEXT94);
-													/* "[TABLE OVERFLOW]" */
+							/* "[TABLE OVERFLOW]" */
         return FALSE;
       }
     }}
@@ -700,7 +699,7 @@ int Pascal buildlist(const char * mstring)
               "^F	Complete filename\n" \
 				      "^G	Abort\n"\
 				      "^K	Chars to eol\n"\
-				      "^N	File Name of buffer\n"\
+				      "^N	Filename of buffer\n"\
 				      "^S,Alt-S Search string\n"\
 				      "^W	Chars to eow\n"\
 				      "Arrows	Previous\n"\
@@ -729,7 +728,7 @@ int Pascal buildlist(const char * mstring)
 		{	NBIND t = {bp->b_bname, ((*)(int, int))bp};
 			if (append_keys(&t, mstring) < 0)
 				break;
-		}
+		}}
 	}
 #endif
   }
@@ -1145,10 +1144,11 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 					/* "[Help file is not online]" */
 	  return FALSE;
 	}
+#if 0
 								/* split the current window to make room for the help stuff */
 	if (splitwind(FALSE, 1) == FALSE)
 	  return FALSE;
-
+#endif
 	(void)swbuffer(bp);
 		    /* make this window in VIEW mode, update all mode lines */
 	curbp->b_flag |= MDVIEW;

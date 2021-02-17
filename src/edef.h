@@ -90,8 +90,8 @@ extern char nulls[];
 #define	FIOFUN	5		/* File I/O, eod of file/bad line*/
 #define	FIODEL	6		/* Can't delete/rename file	*/
 
-#define CFCPCN	0x0001			/* Last command was C-P, C-N	*/
-#define CFKILL  0x0002
+#define CFKILL  0x0001
+#define CFCPCN	0x0002			/* Last command was C-P, C-N	*/
 
 
 #define WFFORCE 0x01		/* Window needs forced reframe	*/
@@ -112,7 +112,7 @@ extern char nulls[];
 #define	BFNAROW	0x08		/* buffer has been narrowed	*/
 
 				/*	mode flags	*/
-#define	NUMMODES  10		/* # of defined modes	       */
+#define	NUMMODES  12		/* # of defined modes	       */
 
 #define MDSTT    0x0010
 #define MDWRAP	 0x0010		/* word wrap			*/
@@ -195,7 +195,7 @@ typedef struct
 
 typedef struct MARK
 { struct LINE *markp;	/* Line containing "mark"	*/
-  int	       marko;	/* Byte offset for "mark"	*/
+  int	         marko;	/* Byte offset for "mark"	*/
 } MARK;
 
 typedef struct MARKS
@@ -217,8 +217,8 @@ typedef struct	WINDOW
 	struct	BUFFER *w_bufp; 	/* Buffer displayed in window	*/
 	struct	LINE *w_linep;		/* Top line in the window	*/
   struct  MARKS mrks;
-	struct	LINE *w_dotp;		/* Line containing "."		*/
-	short	       w_doto; 		/* offset for "."; isomorphism ends */
+	struct	LINE *w_dotp;			/* Line containing "."		*/
+	int	          w_doto; 		/* offset for "."; isomorphism ends */
 	unsigned int w_line_no;		/* Lpos_t isomorphism ends      */
 	char	w_toprow;		/* Origin 0 top row of window	*/
 	char	w_ntrows;		/* # of rows in window inc MLine*/
@@ -248,12 +248,12 @@ typedef struct	BUFFER
 	struct	LINE *b_wlinep;		/* Link top LINE in last window */
   struct  MARKS mrks;
 	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
-	short	  b_doto; 		      /* offset of "."; isomorphism ends */
-	short   b_luct;			      /* last use count		*/ 
+	int	  				b_doto; 		/* offset of "."; isomorphism ends */
 	struct	LINE *b_narlims[2];/* Link to narrowed top, bottom text */
-	char    b_langprops;		  /* type of language of contents */
-  signed char	b_nwnd; 		  /* Count of windows on buffer	*/
-	short	  b_flag; 		      /* Flags and modes  */
+	char    			b_langprops;/* type of language of contents */
+  signed char		b_nwnd; 		/* Count of windows on buffer	*/
+	short	  			b_flag; 		/* Flags and modes  */
+	short   			b_luct;			/* last use count		*/ 
 	unsigned char b_mode;	    /* Flags and modes (extra) */
 	unsigned char b_tabsize;	/* size of hard tab		*/
 #if	COLOR
@@ -300,12 +300,14 @@ typedef struct	LINE {
 
 #define lforw(lp)	((lp)->l_fp)
 #define lback(lp)	((lp)->l_bp)
-#define Lineptr		struct LINE *          
+#define lmove(lp,wh) (((LINE**)lp)[wh])
 
 #define lgetc(lp, n)	((lp)->l_text[n]&0xFF)
 #define lgets(lp, n)	&(lp)->l_text[n]
 #define lputc(lp, n, c) ((lp)->l_text[n]=(c))
 #define llength(lp)	((lp)->l_used)
+
+#define Lineptr		struct LINE *  
 
 /*
  * The editor communicates with the display using a high level interface. A
@@ -426,8 +428,8 @@ NOSHARE extern int eexitflag;		/* EMACS exit flag */
 
 NOSHARE extern int currow;	/* Cursor row			*/
 NOSHARE extern int curcol;	/* Cursor column		*/
-NOSHARE extern int thisflag;	/* Flags, this command		*/
-NOSHARE extern int lastflag;	/* Flags, last command		*/
+NOSHARE extern int g_thisflag;	/* Flags, this command		*/
+NOSHARE extern int g_lastflag;	/* Flags, last command		*/
 NOSHARE extern int curgoal;	/* Goal for C-P, C-N		*/
 NOSHARE extern Short g_clring;
 

@@ -126,10 +126,10 @@ int Pascal fisearch(int f, int n)
     if (srchres)
       mlerase();			/* If happy, just erase the cmd line  */
     else 
-    {   curwp->w_flag |= WFMOVE;
-				update(FALSE);
-				mlwrite (TEXT164);
-/*		 "[search failed]" */
+    { curwp->w_flag |= WFMOVE;
+			update(FALSE);
+			mlwrite (TEXT79);
+					/* "Not found" */
     }
     return srchres;
 }}
@@ -157,6 +157,7 @@ static int Pascal checknext(int poffs, int dir)/* Check next search string chars
 {
 			       /* setup the local scan pointer to current "." */
 	  Lpos_t cur = *(Lpos_t*)&curwp->w_dotp;
+	  LINE * lp = cur.curline;
     int offs = cur.curoff;
    	int buffchar;		/* character at current position      */
 	  int i;
@@ -165,20 +166,21 @@ static int Pascal checknext(int poffs, int dir)/* Check next search string chars
     
     for (i = dir <= 0 ? -1 : poffs-2; pat[++i] != 0;)/* for all of pattern */
     {
-			if (offs != llength(cur.curline)) /* If at end of line        */
-	  	  buffchar = lgetc(cur.curline, offs++); /* Get the next char */
+			if (offs != llength(lp)) /* If at end of line        */
+	  	  buffchar = lgetc(lp, offs++); /* Get the next char */
 			else
-			{	buffchar = '\r';        /* And say the next char is NL  */
+			{	lp = lforw(lp);
+				if (lp->l_props & L_IS_HD)
+					return FALSE;        /* Abort if at end of buffer    */
 				offs = 0;
 				cur.line_no += 1;
-				cur.curline = lforw(cur.curline);
-				if (cur.curline->l_props & L_IS_HD)
-					return FALSE;        /* Abort if at end of buffer    */
+				buffchar = '\r';        /* And say the next char is NL  */
 			}
 			if (!myeq(buffchar, pat[i]))  /* Is it what we're looking for?*/
 				return FALSE;            /* Nope, just punt it then        */
 			if (dir > 0)
-			{	cur.curoff = offs;
+			{	cur.curline = lp;
+				cur.curoff = offs;
         rest_l_offs(&cur);        /* point to the matched character     */
         curwp->w_flag |= WFMOVE;
         break;
@@ -291,7 +293,7 @@ int Pascal isearch(int f, int n)
 		pat[++cpos] = 0;			/* null terminate the buffer  */
 		if (cpos >= NPAT-1)			/* too many chars in string?  */
 		{					/* Yup.  Complain about it    */
-  		mlwrite(TEXT166);
+// 		mlwrite(TEXT166);
 					/* "? Search string too long" */
 	    return TRUE;			/* Return an error	      */
 		}
@@ -343,8 +345,8 @@ int Pascal get_char ()
     update(FALSE);			/* Pretty up the screen 	      */
     if (g_isb.cmd_offset >= CMDBUFLEN-1)
     {
-			mlwrite(TEXT166);
-				/*		 " too long" */
+//		mlwrite(TEXT166);
+//					/* " too long" */
 			return -1;
     }
     g_isb.cmd_buff[++g_isb.cmd_offset] = '\0';	/* And terminate the buffer   */

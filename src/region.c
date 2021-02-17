@@ -27,12 +27,13 @@ REGION * Pascal getregion()
 	  return NULL;
 	}
 
-{	LINE * flp = curwp->w_dotp;
-	LINE * blp = flp;
-
-	int wh = 0;
+{	int wh = 0;
 	int _lines = 0;
 	int _size = (int)curwp->mrks.c[0].marko - curwp->w_doto;
+
+  LINE * flp = curwp->w_dotp;
+	LINE * blp = flp;
+	g_region.r_linep = flp;
 
 	if (flp == curwp->mrks.c[0].markp)
 	{	_lines = 1;
@@ -47,16 +48,16 @@ REGION * Pascal getregion()
 		while (true)
 		{ _lines += 1;
 
-			if ((lback(blp)->l_props & L_IS_HD) == 0)
-			{ blp = lback(blp);
-				bsize += llength(blp)+1;
-				if (blp == curwp->mrks.c[0].markp)
-				{ wh = 1;
-					flp = blp;
-					_size = bsize;
-					break;
-				}
+			if (blp == curwp->mrks.c[0].markp)
+			{ wh = 1;
+				g_region.r_linep = blp;
+				_size = bsize;
+				break;
 			}
+
+			blp = lback(blp);
+			if ((blp->l_props & L_IS_HD) == 0)
+				bsize += llength(blp)+1;
 
 			if (flp == curwp->mrks.c[0].markp)
 				break;
@@ -65,14 +66,13 @@ REGION * Pascal getregion()
 			{ _size += llength(flp)+1;
 				flp = lforw(flp);
 			}
-			else
+			else if ((blp->l_props & L_IS_HD) != 0)
 			{	adb(99);
 				break;
 			}
 		}
 	}
 
-	g_region.r_linep = flp;
 	g_region.r_lines = _lines;
 	g_region.r_size = _size;
 	g_region.r_offset = wh == 0 ? curwp->w_doto : curwp->mrks.c[0].marko;
@@ -104,7 +104,7 @@ Pascal doregion(int wh)
 
     while (++offs < len && 
                ((ch = lp[offs]) == '_' || isalpha(ch) || isdigit(ch)))
-    { int cc = kinsert(lp[offs]);
+    { int cc = kinsert(ch);
 	    if (cc != TRUE)
 	      return cc;
     }
@@ -184,8 +184,8 @@ int to_kill_buff(int wh, int n)
   }
 #endif
   mlwrite(TEXT70);
-/*		"[region copied]" */
-  thisflag |= CFKILL;
+				/* "[region copied]" */
+  g_thisflag |= CFKILL;
   return cc;
 }}
  
@@ -264,9 +264,9 @@ int Pascal killregion(int f, int n)
 	if (s == 0)
 	  return FALSE;
 
-/*if ((lastflag&CFKILL) == 0)		** This is a kill type	**
+/*if ((g_lastflag&CFKILL) == 0)		** This is a kill type	**
     kdelete() */;								/* command, so do magic */
-	thisflag |= CFKILL;			/* kill buffer stuff.	*/
+	g_thisflag |= CFKILL;			/* kill buffer stuff.	*/
 	kinsert_n = chk_k_range(n);
 	return ldelchrs(g_region.r_size, TRUE);
 }}
@@ -281,7 +281,7 @@ int Pascal narrow(int f, int n)
 	BUFFER* bp = curwp->w_bufp;
 	if (bp->b_flag & BFNAROW)
 	{ mlwrite(TEXT71);
-				 /* "%%This buffer is already narrowed" */
+				 /* "%%Buffer already narrowed" */
 	  return FALSE;
 	}
 									       /* find the boundries of the current region */
@@ -303,7 +303,8 @@ int Pascal narrow(int f, int n)
 	forwchar(TRUE, sz);
 	curwp->w_doto = 0;			    /* only full lines! */
 
-					       /* archive the top fragment */
+	bp->b_flag |= BFNAROW;							/* remember we are narrowed */
+																      /* archive the top fragment */
 	if (lforw(bp->b_baseline) != g_region.r_linep)
 	{ bp->b_narlims[0] = lforw(bp->b_baseline);
 	  lback(g_region.r_linep)->l_fp = (Lineptr)0L;
@@ -337,7 +338,6 @@ int Pascal narrow(int f, int n)
 }
 #endif
 				       
-	bp->b_flag |= BFNAROW;		/* and now remember we are narrowed */
 	mlwrite(TEXT73);
 				/* "[Buffer is narrowed]" */
 	return TRUE;
@@ -358,25 +358,27 @@ int Pascal widen(int f, int n)
 	}
 
 	bp->b_flag &= (~BFNAROW);
+{ LINE ** nlims = bp->b_narlims-1;
 
-	for (iter = -1; ++iter < 2; )
-	{ if (bp->b_narlims[iter] != NULL)
-	  { for (lp = bp->b_narlims[iter];  
+	for (iter = 2; --iter <= 0; )
+	{ ++nlims;
+		if (*nlims != NULL)
+	  { for (lp = *nlims;
 	         lp->l_fp != (Lineptr)0L;  lp = lforw(lp))
 	      ;
-	    if (iter == 0)			  /* recover the top fragment */
+	    if (iter > 0)			  /* recover the top fragment */
 	    { lp->l_fp = (Lineptr)bp->b_baseline->l_fp;
 	      lforw(lp)->l_bp = (Lineptr)lp;
-	      bp->b_baseline->l_fp = (Lineptr)bp->b_narlims[0];
-	      bp->b_narlims[0]->l_bp = (Lineptr)bp->b_baseline;
+	      bp->b_baseline->l_fp = (Lineptr)*nlims;
+	      nlims[0]->l_bp = (Lineptr)bp->b_baseline;
 	    }
 	    else			       /* recover the bottom fragment */
 	    { lp->l_fp = (Lineptr)bp->b_baseline;
-	      lback(bp->b_baseline)->l_fp = (Lineptr)bp->b_narlims[1];
-	      bp->b_narlims[1]->l_bp = bp->b_baseline->l_bp;
+	      lback(bp->b_baseline)->l_fp = (Lineptr)*nlims;
+	      nlims[0]->l_bp = bp->b_baseline->l_bp;
 	      bp->b_baseline->l_bp = (Lineptr)lp;
 	    }
-	    bp->b_narlims[iter] = NULL;
+	    *nlims = NULL;
 	  }
 	}
 
@@ -385,5 +387,5 @@ int Pascal widen(int f, int n)
 	mlwrite(TEXT75);
 				/* "[Buffer is widened]" */
 	return TRUE;
-}
+}}
 

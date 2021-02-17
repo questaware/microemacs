@@ -16,7 +16,7 @@
 
 int Pascal orwindmode(int mode, int wh)
 	/* Short 	wh;  ** 0 => all, 1 => for curbp */
-{ register WINDOW *wp;
+{ WINDOW *wp;
   int ct = 0;
 				   /* force all windows to redraw */
   for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
@@ -77,8 +77,8 @@ int Pascal openwindbuf(char * bname)
     openwind(curwp, curbp);
   
     curbp->b_flag &= ~MDVIEW;
-    curbp->b_nwnd++;										/* mark us as more in use */
     curbp->b_flag |= BFACTIVE;
+    curbp->b_nwnd++;										/* mark us as more in use */
   }
   return TRUE;
 }
@@ -118,7 +118,7 @@ int Pascal refresh(int f, int n)
 int Pascal nextwind(int f, int n)
 
 {
-	register WINDOW *wp;
+	WINDOW *wp;
 
 	if (! f)
 	{ if ((wp = curwp->w_wndp) == NULL)
@@ -170,19 +170,19 @@ int Pascal prevwind(int f, int n)
  */
 int Pascal mvupwind(int f, int n)
 
-{   register LINE * lp = curwp->w_linep;
-             LINE * p = curbp->b_baseline;
-    register int i = n;
+{   LINE * lp = curwp->w_linep;
+    LINE * p = curbp->b_baseline;
+    int i = n;
 
     if (i < 0)
     { while (lp != p && ++i <= 0)
-	lp = lforw(lp);
+				lp = lforw(lp);
       --i;
     }
     else
     { p = lforw(p);
       while (lp != p && --i >= 0)
-	lp = lback(lp);
+				lp = lback(lp);
       ++i;
     }
 
@@ -224,15 +224,15 @@ int Pascal mvdnwind(int f, int n)
  */
 int Pascal onlywind(int f, int n)
 
-{	register WINDOW *wp;
-	register WINDOW *nwp;
+{	WINDOW *wp;
+	WINDOW *nwp;
 	if (curbp == NULL)
 	  return FALSE;
 
 	for (wp = wheadp; wp != NULL; wp = nwp)
 	{ nwp = wp->w_wndp;
 	  if (wp != curwp)
-	  { tcapbeep();
+	  { //tcapbeep();
 	    if (wheadp == wp)
 	      wheadp = wheadp->w_wndp;
 	    leavewind(wp);
@@ -258,9 +258,9 @@ int Pascal onlywind(int f, int n)
 int Pascal delwind(int f, int n)
 				/* arguments are ignored for this command */
 {
-	register WINDOW *wp;		/* window to recieve deleted space */
-	register WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_wndp);		/* previous */
-	register WINDOW *nwp = NULL;
+	WINDOW *wp;		/* window to recieve deleted space */
+	WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_wndp);		/* previous */
+	WINDOW *nwp = NULL;
 
 	if (wheadp->w_wndp == NULL)
 	{ mlwrite(TEXT204);
@@ -309,41 +309,35 @@ window.  Bound to "C-X 2".
 */
 int Pascal splitwind(int f, int n)
 
-{
-	register WINDOW *wp;
-	register LINE	*lp;
-	register int	ntrd = (curwp->w_ntrows-1);
-	register int	ntru = ntrd >> 1; 	/* Upper size */
-	register int	ntrl = ntrd - ntru;	/* Lower size */
-				     /* make sure we have enough space */
-	if (curwp->w_ntrows < (modeflag ? 3 : 2))
-	{ mlwrite(TEXT205, curwp->w_ntrows);
-/*			"Cannot split a %d line window" */
-	  return FALSE;
-	}
-
-	wp = (WINDOW *) aalloc(sizeof(WINDOW));
+{	WINDOW * wp = (WINDOW *) aalloc(sizeof(WINDOW));
 	if (wp == NULL)
 	  return FALSE;
 
-	++curbp->b_nwnd;			/* Displayed twice.	*/
 	curwp->w_flag |= WFMODE|WFHARD;
-	memcpy(wp, curwp, sizeof(WINDOW));
-#if 0
-	wp->w_force = 0;
-	wp->w_color = g_colours;								/* set colors of the new window */
-#endif
+	*wp = *curwp;
+
+{	int	ntrd = (curwp->w_ntrows-1);
+				     /* make sure we have enough space */
+	if (ntrd <= 3)
+	{ mlwrite(TEXT205, ntrd+1);
+					/* "Cannot split a %d line window" */
+	  return FALSE;
+	}
+
+{	int	ntru = ntrd >> 1; 	/* Upper size */
+	int	ntrl = ntrd - ntru;	/* Lower size */
+
 	ntrd = getwpos() - 1 - ntru;
 
 	if (f == FALSE ? ntrd <= 0 : n == 1)
-	{ 					     /* Old is upper window. */
+	{ 					     									/* Old is upper window. */
 	  wp->w_toprow += ntru+1;
 	  wp->w_ntrows = ntrl;
 	  wp->w_wndp = curwp->w_wndp;
 	  curwp->w_wndp = wp;
-	  curwp->w_ntrows = ntru;
+		ntrl = ntru;
 	} 
-	else					      /* Old is lower window */
+	else					      							/* Old is lower window */
 	{ WINDOW * wp1 = (WINDOW*)prevele((BUFFER*)wheadp,(BUFFER*)curwp);
 	  if (wp1 == null)
 	    wheadp = wp;
@@ -352,20 +346,25 @@ int Pascal splitwind(int f, int n)
 
 	  wp->w_wndp = curwp;
 	  wp->w_ntrows = ntru;
-	  curwp->w_toprow += ntru + 1;
-	  curwp->w_ntrows = ntrl;
 	  ntrd = ntru;
+	  curwp->w_toprow += ntru + 1;
 	}
-	lp = curwp->w_linep;
-	for  (; ntrd >= 0; --ntrd)
+	curwp->w_ntrows = ntrl;
+{	LINE* lp = curwp->w_linep;
+	for  (; ntrd-- >= 0;)
 	  lp = lforw(lp);
-	curwp->w_linep = lp;			/* Adjust the top lines */
+
 	wp->w_linep = lp;			/* if necessary.	*/
+	curwp->w_linep = lp;			/* Adjust the top lines */
 	curbp->b_wlinep = lp;
-	modeline(wp);
+	++curbp->b_nwnd;			/* Displayed twice.	*/
+{ extern LINE * g_lastlp;								// -ve => reset
+	g_lastlp = NULL;
 	modeline(curwp);
+	g_lastlp = NULL;
+	modeline(wp);
 	return TRUE;
-}
+}}}}}
 
 
 /* Enlarge the current window. Find the window that loses space. Make sure it
@@ -394,7 +393,7 @@ int Pascal enlargewind(int f, int n)
       thisp = adjwp;	
       adjwp = curwp;
     }
-    if (adjwp->w_ntrows - n <= modeflag - 1)
+    if (adjwp->w_ntrows - n <= 0)
     { mlwrite(TEXT207);
 /*			"Impossible change" */
       return FALSE;
@@ -439,7 +438,7 @@ X	}
 X	adjwp = curwp->w_wndp;
 X	if (adjwp == NULL)
 X
-X	if ((curwp->w_ntrows + (modeflag ? 0 : 1)) <= n)
+X	if ((curwp->w_ntrows) <= n)
 X	{ mlwrite(ichg_msg);
 X/*			"Impossible change" */
 X	  return FALSE;
@@ -514,9 +513,9 @@ int Pascal nextdown(int f, int n)	/* scroll next window down (forward) a page*/
 {	return nextup(f, -n);
 }
 
-
+#if 0
+																												// This code is not safe
 static WINDOW *swindow = NULL; 	/* saved window pointer 	*/
-
 
 int Pascal savewnd(int f, int n)	/* save ptr to current window */
 
@@ -541,6 +540,8 @@ int Pascal restwnd(int f, int n)	/* restore the saved screen */
 /*		"[No such window exists]" */
 	return FALSE;
 }
+
+#endif
 
 #if 0				       
 const static char text209[] = TEXT209;
@@ -570,7 +571,7 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 #else
     onlywind(FALSE, 1);		/* can only make this work */
 #endif
-	  orwindmode(WFHARD | WFMOVE | WFMODE, 0);
+		upwind();
 	  tcapepage();
 #if S_WIN32
 	{ char buf[35];

@@ -120,23 +120,6 @@ int Pascal namedcmd(int f, int n)
 	return cc;
 }
 
-#if FLUFF || DEBUGM
-/*	execcmd:	Execute a command line command to be typed in
-			by the user					*/
-int Pascal execcmd(int f, int n)
-
-{
-	char cmdnm[NSTRING];		/* string holding command to execute */
-						      /* get the line wanted */
-	int cc = mlreply(": ", cmdnm, NSTRING);
-	if (cc != TRUE)
-	  return cc;
-
-	g_execlevel = 0;
-	return docmd(cmdnm);
-}
-#endif
-
 /*	docmd:	take a passed string as a command line and translate
 		it to be executed as a command. This function will be
 		used by execute-command-line and by all source and
@@ -148,13 +131,14 @@ int Pascal execcmd(int f, int n)
 
 */
 
+static
 int Pascal docmd(char * cline)
 			/* command line to execute */
 {
-	int f = g_got_uarg;  /* default argument flag */
-		     /* if we are scanning and not executing..go back here */
-  g_got_uarg = FALSE;
+	int f = g_got_uarg;
+  g_got_uarg = FALSE;							// The 1st command in the buffer gets the arg
 
+		     /* if we are scanning and not executing..go back here */
 	if (g_execlevel)
 		return TRUE;
 
@@ -169,8 +153,8 @@ int Pascal docmd(char * cline)
 	g_clexec = TRUE;	      /* in cline execution */
 	execstr = cline;	      /* and set this one as current */
 
-	lastflag = thisflag;
-	thisflag = 0;
+	g_lastflag = g_thisflag;
+	g_thisflag = 0;
 	ebuffer[0] = '[';
 
 	cc = macarg(tkn);
@@ -207,6 +191,25 @@ int Pascal docmd(char * cline)
 	return cc;
 #undef tkn
 }}
+
+
+#if FLUFF || DEBUGM
+/*	execcmd:	Execute a command line command to be typed in
+			by the user					*/
+int Pascal execcmd(int f, int n)
+
+{
+	char cmdnm[NSTRING];		/* string holding command to execute */
+						      /* get the line wanted */
+	int cc = mlreply(": ", cmdnm, NSTRING);
+	if (cc != TRUE)
+	  return cc;
+
+	g_execlevel = 0;
+	return docmd(cmdnm);
+}
+#endif
+
 
 /* token:	chop a token off a string
 		return a pointer past the token
@@ -484,8 +487,8 @@ failexit:
 	    freewhile(scanner);
 		  cc = FALSE;
 		}
-						/* let the first command inherit the flags from the last one..*/
-		thisflag = lastflag;
+								/* let the first command inherit the flags from the last one..*/
+		g_thisflag = g_lastflag;
 																	/* starting at the beginning of the buffer */
 		lp = bp->b_baseline; 
 		while (1)

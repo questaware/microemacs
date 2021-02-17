@@ -1,24 +1,26 @@
-#include <winsock2.h>
+#define CHECK 0
+
+#include <windows.h>
+
+#if CHECK
 
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 
+#include <winsock2.h>
 #include <cstdio>
 #include <ctime>
 #include <sys/types.h>
-#include <windows.h>
 #include <stdio.h>
 
-#define CHECK 1
+#endif
 
 #define _CRT_SECURE_NO_WARNINGS
-
-extern "C" void tcapbeep(void);
-extern "C" void mbwrite(const char*);
 
 extern "C"
 {
 #if CHECK
+extern void mbwrite(const char*);
 
 int gettimeofday(struct timeval * tp, struct timezone * tzp)	/* one day only */
 {

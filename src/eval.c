@@ -64,7 +64,6 @@ CTRL |'M',/* EVLANG */  	/* actual: sterm - search terminating char */
 0,     /* EVLASTMESG */   /* actual: prenum    "       "     numeric arg*/
 TRUE,  /* EVLINE */       /* actual: predef    "       "    default flag*/
 0,     /* EVMATCH */      /* actual: saveflag - Flags, saved with $target var */
-1,     /* EVMODEFLAG */   /* display mode lines flag */
 1,     /* EVMSFLAG */     /* use the mouse? */
 FALSE, /* EVPAGELEN */    /* actual: eexitflag */
 TRUE,  /* EVPAGEWIDTH */		/* actual: sgarbf  - screen is garbage	*/
@@ -180,20 +179,46 @@ typedef struct Map_s
 } Map_t, *Map;
 */
 
-static char g_result[2 * NSTRING];
-       int  g_stktop = 0;
+static struct
+{ char * result;
+	int    top;
+	int		 lim;
+} g_stk;
+
+static char * push_arg(char * src, int fnum)
+
+{ int sl = strlen(src);
+	if (fnum != UFCAT)
+		sl = (sl + 2) & -2;
+
+	g_stk.top += sl;
+	
+	if (g_stk.top >= g_stk.lim)
+	{ g_stk.lim += 2 * NSTRING;
+	  (void)remallocstr(&g_stk.result, g_stk.result, g_stk.lim + 2 * NSTRING);
+	}
+
+{	char * tgt = &g_stk.result[g_stk.top];
+	int rc = fnum == 0 ? TRUE : macarg(tgt);
+	if ((fnum == UFXLATE || fnum == UFMID) && rc == TRUE)
+		rc = macarg(tgt+strlen(tgt)+1);
+	g_stk.top -= sl;
+	
+	return fnum == 0  ? tgt - sl :
+				 rc != TRUE ? NULL : tgt;
+}}
+
 
 static const char *Pascal gtfun(char * fname)/* evaluate a function */
-	
+
 {	int fnum;
 	int iarg1;
 	int iarg2;
-	int arglen;
 
 	const char * errorm = g_logm[2];
 
-	char * arg1 = &g_result[g_stktop];
-	char * arg2 = NULL;		/* to suppress warning */
+	char * arg2 = NULL;											/* to suppress warning */
+	char * arg1 = push_arg("", 0);					/* to initialise area */
 
 //*arg1 = 0;
 											      /* look the function up in the function table */
@@ -208,72 +233,39 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 	{ 
 	  if (macarg(arg1) != TRUE)
 	    return errorm;
-
-				/* if needed, retrieve the second argument */
+												 /* if needed, retrieve the second and third arguments */
 	  if (funcs[fnum].f_type >= DYNAMIC)
-	  { arglen = strlen(arg1);
-	    if (fnum != UFCAT)
-	      arglen = (arglen + 2) & -2;
-	    g_stktop += arglen;
-	    arg2 = &g_result[g_stktop];
-		{	int rc = macarg(arg2);
-	    g_stktop -= arglen;
-			if (rc != TRUE)
+	  { arg2 = push_arg(arg1, fnum);		// arglen: length of arg1
+			if (arg2 == NULL)
 	      return errorm;
 
       iarg2 = atoi(arg2);
-	  }}
+	  }
 	  iarg1 = atoi(arg1);
 	}
 						/* and now evaluate it! */
-	if (funcs[fnum].f_kind == RINT)
-	{ switch (fnum)
-	  {case UFABS: iarg1 = absv(iarg1);
-		when UFADD:	 iarg1 += iarg2;
-		when UFSUB:	 iarg1 -= iarg2;
-		when UFTIMES:iarg1 *= iarg2;
-		when UFDIV:	 iarg1 /= iarg2;
-		when UFMOD:	 iarg1 = iarg1 % iarg2;
-		when UFNEG:	 iarg1 = -iarg1;
-		
-		when UFDIT:  return plinecpy();
-		when UFCAT:  return arg1;
-		when UFLEFT: if (g_stktop + iarg2 < 2 * NSTRING - 2)
-		               arg1[iarg2+1] = 0;
-		             return arg1;
-		when UFRIGHT:
-		case UFMID:	
-		case UFLENGTH:
-		case UFTRIM: iarg1  = strlen(arg1);
-				         if (fnum == UFLENGTH)
-				         	 break;
 
-				         if (fnum == UFRIGHT)
-								 { 
-									 iarg1 -= iarg2;
-				           if (iarg1 < 0)
-				             iarg1 = 0;
-				           return strcpy(arg1, &arg1[iarg1]);
-								 }
-				         
-				         return fnum == UFTRIM   ? arglen=iarg1, trimstr(arg1, &arglen) :
-								        (unsigned)iarg2 >= 
-								        (unsigned)arglen ? "" 
-								        								 : strpcpy(arg1,&arg1[iarg2-1], atoi(arg2)+1);
+	if      (funcs[fnum].f_kind < RINT)
+	 switch (fnum)
+	 {case UFDIT:  return plinecpy();
+		when UFCAT:  return arg1;
+		when UFLEFT: if (g_stk.top + iarg2 < g_stk.lim)
+		               arg1[iarg2] = 0;
+		             return arg1;
+		when UFRIGHT:iarg1 -= iarg2;
+				         return iarg1 <= 0 ? arg1 : strcpy(arg1, &arg1[iarg1]);
+		when UFTRIM: return iarg1 = 0, trimstr(arg1, &iarg1);
 
 		when UFDIR:	 return pathcat(arg1, NSTRING-1, arg1, arg2);
 		when UFIND:	 return getval(arg1, arg1);
 
 		when UFLOWER:
 		case UFUPPER:	return mkul(fnum == UFUPPER, arg1);
-		when UFASCII:	iarg1 = (int)arg1[0];
 		when UFGTKEY:   
 		case UFCHR:	  arg1[0] = fnum == UFCHR ? iarg1 : tgetc();
 				          arg1[1] = 0;
 				          return arg1;
 		when UFGTCMD:	return cmdstr(&arg1[0], getcmd());
-		when UFRND:   iarg1 = (ernd() % absv(iarg1)) + 1;
-		when UFSINDEX:iarg1 = sindex(arg1, arg2);
 		when UFENV:
 #if	ENVFUNC
 				          return fixnull(getenv(arg1));
@@ -283,32 +275,52 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 		when UFBIND:	return transbind(arg1);
 		when UFFIND:
 				          return fixnull(flook(0, arg1));
-		when UFBAND:	iarg1 &= iarg2;
-		when UFBOR:	  iarg1 |= iarg2;
-		when UFBXOR:	iarg1 ^= iarg2;
-		when UFBNOT:	iarg1 = ~iarg1;
-		when UFXLATE:{ arglen += (strlen(arg2) + 2) & -2;
-		               g_stktop += arglen;
-		             { char * arg3 = &g_result[g_stktop];
-									 int rc = macarg(arg3);
-		               g_stktop -= arglen;
-									 if (rc != TRUE)
-				             return errorm;
-		               return xlat(arg1, arg2, arg3);
-			           }}
+		when UFXLATE:
+		case UFMID:	 { char * arg3 = arg2 + strlen(arg2) + 1;
+									 if (fnum == UFXLATE)
+				           	 return xlat(arg1, arg2, arg3);
+									 
+								 { int n = atoi(arg2);
+								 	 if (n < 0)
+								 	 	 n = 0;
+								 { int end = n + atoi(arg3);
+								 	 if (end >= 0 && end < g_stk.lim)
+								 	   arg1[end] = 0;
+				           return arg1+n;
+			           }}}
 #if DIACRIT
 		when UFSLOWER:setlower(arg1, arg2);
 				          return "";
 		when UFSUPPER:setupper(arg1, arg2);
 #endif
 		default:	    return "";
-	  }
-	  return int_asc(iarg1);
+	 }
+	else if (funcs[fnum].f_kind == RINT)
+	{switch (fnum)
+	 {case UFABS: iarg1 = absv(iarg1);
+		when UFADD:	 iarg1 += iarg2;
+		when UFSUB:	 iarg1 -= iarg2;
+		when UFTIMES:iarg1 *= iarg2;
+		when UFDIV:	 iarg1 /= iarg2;
+		when UFMOD:	 iarg1 = iarg1 % iarg2;
+		when UFNEG:	 iarg1 = -iarg1;
+		
+		when UFASCII:	iarg1 = (int)arg1[0];
+		when UFGTKEY:   
+		when UFRND:   iarg1 = (ernd() % absv(iarg1)) + 1;
+		when UFSINDEX:iarg1 = sindex(arg1, arg2);
+		when UFBAND:	iarg1 &= iarg2;
+		when UFBOR:	  iarg1 |= iarg2;
+		when UFBXOR:	iarg1 ^= iarg2;
+		when UFBNOT:	iarg1 = ~iarg1;
+		when UFLENGTH:iarg1  = strlen(arg1);
+		otherwise		  return "";
+	 }
+	 return int_asc(iarg1);
 	}
 	else
-	{ /*printf(" FN %d ", fnum);*/
-	  switch (fnum)
-    {case UFEQUAL:	iarg1 = iarg1 == iarg2;
+	{switch (fnum)
+   {case UFEQUAL:		iarg1 = iarg1 == iarg2;
 		when UFLESS:		iarg1 = -iarg1;
 		                iarg2 = -iarg2;
 		case UFGREATER: iarg1 = iarg1 > iarg2;
@@ -336,11 +348,9 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 
 		when UFTRUTH:	  iarg1 = iarg1 == 42;  /* ???? */
 		when UFEXIST:	  iarg1 = fexist(arg1);
-		otherwise	return "";
-    }
-    return ltos(iarg1);
-  }
-#undef arg
+	 }
+	 return ltos(iarg1);
+	}
 }
 
 
@@ -480,7 +490,6 @@ const char *Pascal gtenv(const char * vname)
 	  case EVSTATUS:  
 	  case EVDISCMD:  
 	  case EVDISINP:  
-	  case EVMODEFLAG:
 	  case EVSSCROLL: 
 	  case EVSSAVE:   
 	  case EVHSCROLL: 
@@ -693,10 +702,9 @@ int Pascal svar(int var, char * value)	/* set a variable */
 				  						   curwp->w_flag |= WFMODE;
 			 	  						 }
 				  						 curbp->b_flag = hookix;
-	    when EVCBUFNAME: curwp->w_flag |= WFMODE;
-											 return FALSE; /* strpcpy(curbp->b_bname, value, NBUFN); */
-	    when EVCFNAME:	 repl_bfname(curbp, value);
-				               curwp->w_flag |= WFMODE;
+	    when EVCBUFNAME: return FALSE;						// read only
+	    when EVCFNAME:	 curwp->w_flag |= WFMODE;
+	    								 repl_bfname(curbp, value);
 //	  when EVSRES:	   cc = TTrez(value);
 	    when EVFILEPROF: if (g_file_prof != NULL)
 	    	               	 free(g_file_prof);
@@ -708,8 +716,8 @@ int Pascal svar(int var, char * value)	/* set a variable */
 											 updline(FALSE);
 	    when EVWLINE:	   cc = resize(FALSE, val);
 	    when EVCWLINE:	 cc = forwline(FALSE, val - getwpos());
-	    when EVSEARCH:	 mcclear();						 
-	    			           strpcpy(pat,value,NPAT);
+	    when EVSEARCH:	 //mcclear();
+											 strpcpy(pat,value,NPAT);
 	    when EVREPLACE:	 strpcpy(rpat,value,NPAT);
 	    when EVHIGHLIGHT:strpcpy(highlight,value,sizeof(highlight));
 	    when EVLASTMESG: strpcpy(lastmesg,value,NSTRING);
@@ -718,7 +726,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 				           //  upwind();
 	    when EVKILL:
 		  when EVCLIPLIFE: g_cliplife = val;
-	    when EVLINE:	   putctext(value);
+	    when EVLINE:	   return FALSE;						// read only
 	    when EVSTERM:	   sterm = stock(value);
 	    when EVFCOL:	   if (val < 0)
 	                       val = curwp->w_doto;
@@ -744,10 +752,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    case EVSSCROLL:	
 	    case EVSSAVE:	
 	    case EVDIAGFLAG:	
-	    case EVMSFLAG:  
-	    case EVMODEFLAG:predefvars[vnum] = stol(value);
-	    								if (vnum == EVMODEFLAG)
-		                    upwind();
+	    case EVMSFLAG:  predefvars[vnum] = stol(value);
 
 	    when EVHJUMP:   if (val <= 0)
 									      val = 1;
@@ -969,7 +974,7 @@ void Pascal mkdes()
   curbp->b_flag &= ~BFCHG;			/* don't flag this as a change */
   curwp->w_dotp = lforw(curbp->b_baseline);     /* back to the beginning */
   curwp->w_doto = 0;
-  upmode();
+//upmode();
   mlerase();					/* clear the mode line */
 }
 
