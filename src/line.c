@@ -89,8 +89,7 @@ void Pascal ibefore(LINE * tline, LINE * new_line)
 
 void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
 	
-{ 
-  register WINDOW *wp;
+{ WINDOW *wp;
 
   for (wp = wheadp; ; wp = wp->w_wndp) 
   { if      (wp == NULL) 
@@ -115,21 +114,21 @@ void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
                 if (wp == curwp || wp->w_doto >= offs)
                   wp->w_doto += noffs;
 
-        when 2: if (wp->w_doto >= offs)
-                { wp->w_dotp = new_;
-                  wp->w_doto -= offs;
-                }
         otherwise
-                if (wp->w_doto >= offs)
-                { wp->w_doto -= noffs;
-                  if (wp->w_doto < offs)
-                    wp->w_doto = offs;
-                }
+        				if (wp->w_doto >= offs)
+        					if (wh == 2)
+                	{ wp->w_dotp = new_;
+	                  wp->w_doto -= offs;
+  	              }
+    	            else
+      	          { wp->w_doto -= noffs;
+        	          if (wp->w_doto < offs)
+          	          wp->w_doto = offs;
+            	    }
       }
       
       if (wh != -2)
-      { register MARK * m;
-
+      { MARK * m;
         for (m = &wp->mrks.c[NMARKS]; --m >= &wp->mrks.c[0]; ) 
           if (m->markp == old || wh < 0)
           { switch (wh)
@@ -163,20 +162,13 @@ void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
  * might be in. Release the memory. The buffers are updated too; the magic
  * conditions described in the above comments don't hold here.
  */
-LINE * Pascal lfree(register LINE * lp, int noffs)
+LINE * Pascal lfree(LINE * lp, int noffs)
 
 { LINE * nlp = lforw(lp);
   rpl_all(lp, nlp, 0, noffs, noffs);
   lback(lp)->l_fp = (Lineptr)nlp;
   nlp->l_bp = lp->l_bp;
-#if 0
-X  if (lp->l_props & L_HAS_BL)
-X  { LINE * prev = lp_link0;
-X    (void)lback(lforw(lp));
-X    lp_link1->l_fp[-1] = lp_link0;
-X    lp = (LINE*)&lp->l_fp[-1];
-X  }
-#endif
+
   free((char *) lp);
   return nlp;
 }
@@ -539,42 +531,8 @@ char *Pascal getctext(char * t)
 {	LINE * lp1 = curwp->w_dotp;
 	LINE * lp2 = lforw(lp1);
 	int used1 = lp1->l_used; 
-	if      (lp2->l_props & L_IS_HD)	/* At the buffer end.	*/
-	{ if (used1 == 0) 			/* Blank line.		*/
-	    lfree(lp1,0);
-	}
-#if 0
-X 																								/* not worth it */
-X	if (lp2->l_used <= lp1->l_spare - lp1->l_used)
-X	{ register WINDOW *wp;
-X
-X	  cp1 = &lp1->l_text[lp1->l_used];
-X	  cp2 = &lp2->l_text[0];
-X	  while (cp2 != &lp2->l_text[lp2->l_used])
-X	    *cp1++ = *cp2++;
-X	  for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
-X	  { MARK * m;
-X
-X	    if (wp->w_linep == lp2)
-X	      wp->w_linep = lp1;
-X	    if (wp->w_dotp == lp2)
-X	    { wp->w_dotp  = lp1;
-X	      wp->w_doto += lp1->l_used;
-X	    }
-X	    for (m = &wp->mrks.c[NMARKS - 1]; m >= &wp->mrks.c[0]; --m) 
-X	      if (m->markp == lp2)
-X	      { m->markp = lp1;
-X		m->marko += lp1->l_used;
-X	      }
-X	  }
-X	  lp1->l_used += lp2->l_used;
-X	  lp1->l_fp = lp2->l_fp;
-X	  lforw(lp2)->l_bp = lp1;
-X	  free((char *) lp2);
-X	  return TRUE;
-X	}
-#endif
-	else
+
+	if ((lp2->l_props & L_IS_HD) == 0)		/* not at buffer end.	*/
 	{ if (used1 > 0)
 		{ int nsz = used1+lp2->l_used;
 		  LINE * lp3 = mk_line(&lp1->l_text[0], nsz, used1);
@@ -591,6 +549,10 @@ X	}
 	  }
 	  lchange(WFHARD);
 	  lfree(lp1, used1);
+	}
+	else
+	{ if (used1 == 0)			 								/* Blank line.		*/
+	    lfree(lp1,0);
 	}
 	return TRUE;
 }

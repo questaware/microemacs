@@ -16,8 +16,8 @@
 	the following structure
 */
 
-typedef struct WHBLOCK {
-	LINE *w_begin;		/* ptr to !while statement */
+typedef struct WHBLOCK
+{	LINE *w_begin;		/* ptr to !while statement */
 	LINE *w_end;		/* ptr to the !endwhile statement*/
 	char  w_type;		/* block type */
 	struct WHBLOCK *w_next;	/* next while */
@@ -27,8 +27,8 @@ typedef struct WHBLOCK {
 /* directive name table:
 	This holds the names of all the directives....	*/
 
-static const char dname[][8] = {
-	"if", "else", "endif",
+static const char dname[][8] =
+{	"if", "else", "endif",
 	"goto", "return", "endm",
 	"while", "endw", "break",
 	"force"
@@ -417,6 +417,8 @@ void Pascal freewhile(WHBLOCK * wp)/* free a list of while block pointers */
 	*LBL01
 */
 
+BUFFER * g_dobuf;
+
 int Pascal dobuf(BUFFER * bp, int iter)
 			 /* iter:   # times to do it */
 {
@@ -424,6 +426,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	FILE *fp;		/* file handle for log file */
 #endif
 	int cc = TRUE;
+	g_dobuf = bp;
 
   while (--iter >= 0 && cc == TRUE)
 	{ LINE *lp;						/* pointer to line to execute */
@@ -541,14 +544,9 @@ failexit:
 		      cc = FALSE;
 		      continue;
 		    }
-																	/* service only the !ENDM macro here */
-		    if (dirnum == DENDM)
-		    { g_bstore = NULL;
-		      continue;
-		    }
 		  }
 																		/* if macro store is on, salt this away */
-		  if (g_bstore != null)
+		  if (g_bstore != null && dirnum != DENDM)
 		  { LINE * mp = mk_line(ebuf,linlen-1,linlen-1);
 		    if (mp == NULL)
 		    { mlwrite(TEXT125);					/* "Out of memory while storing macro" */
@@ -585,8 +583,6 @@ failexit:
 																							/* expression evaluated false */
 						  if (dirnum == DIF)
 						  	g_execlevel |= (1 << nest_level);
-							else
-						  	continue;
 						}
 																			/* drop down and act just like !BREAK */
 		      case DBREAK:			/* BREAK directive */
@@ -657,6 +653,12 @@ failexit:
 						  lp = lback(whtemp->w_begin);
 						}
 						continue;
+					when DENDM:
+		    		if (g_bstore != NULL)
+		    		{ g_bstore->b_dotp = lforw(g_bstore->b_baseline);
+				    	g_bstore = NULL;
+				    }
+		  	    continue;
 		    } // switch
 		  }
 
@@ -686,6 +688,8 @@ failexit:
 
 		freewhile(whlist);
 	}
+
+	g_dobuf = NULL;
   return cc;
 #undef tkn
 }
@@ -793,7 +797,7 @@ dinput:
 
 
 
-BUFFER * dofilebuff;
+BUFFER * g_dofilebuff;
 
 /*	dofile: yank a file into a buffer and execute it
 		if there are no errors, delete the buffer on exit */
@@ -803,17 +807,18 @@ static int Pascal dofile(const char * fname)
 { char bname[NBUFN];		/* name of buffer */
 
   makename(bname, fname); 		/* derive the name of the buffer */
-  unqname(bname); 			/* make sure we don't stomp things */
-{ BUFFER *scb = curbp;	   /* temp to hold current buf while we read */
-  BUFFER *dfb = bfind(bname, TRUE, 0);
-  if (dfb == NULL) 			   /* get the needed buffer */
+  unqname(bname); 						/* make sure we don't stomp things */
+
+{ BUFFER *dfb = bfind(bname, TRUE, 0);
+  if (dfb == NULL) 			   		/* get the needed buffer */
     return FALSE;
 
-  curbp = dfb;			      /* make this one current */
-  curbp->b_flag = MDVIEW;	/* mark the buffer as read only */
-				                  /* and try to read in the file to execute */
+{ BUFFER *scb = curbp;	   		
+  curbp = dfb;			      		/* make this one current */
+  curbp->b_flag = MDVIEW;			/* mark the buffer as read only */
+				                  		/* and try to read in the file to execute */
 { Cc cc = readin(fname, 0);
-  curbp = scb;			/* restore the current buffer */
+  curbp = scb;								/* restore the current buffer */
   if (cc != TRUE)
     return cc;
 							/* go execute it! */
@@ -824,9 +829,9 @@ static int Pascal dofile(const char * fname)
   { zotbuf(dfb);
     dfb = NULL;
   }
-  dofilebuff = dfb;
+  g_dofilebuff = dfb;
   return cc;
-}}}
+}}}}
 
 					                        /* execute the startup file */
 int Pascal startup(const char * sfname)

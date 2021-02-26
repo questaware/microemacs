@@ -57,9 +57,9 @@
 #define is_space(ch) (ch <= ' ')
 
 char * strpcpy(char * t_, const char * s_, int n_)
-{ register short n = n_;
-  register const char * s = s_;
-  register char * t = t_;
+{ short n = n_;
+  const char * s = s_;
+  char * t = t_;
  
   if (t != NULL)
   { while (--n > 0 && (*t++ = *s++) != 0)
@@ -230,23 +230,21 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 	    if (ln == NULL || ln[0] == 0)
 		  break;
 
-		if (ln[0] == '\n')
-		{ pos += 1;
-		  if (pos >= end)
-		    pos = start;
-		  continue;
-		}
-
 	  /*mlwrite("Try %d %s\n", pos, ln);ttgetc();*/
-		for (ix = -1; linebuf[++ix] != 0 && linebuf[ix] != '\t'; )
+		for (ix = -1; linebuf[++ix] != 0; )
+			if (linebuf[ix] == '\t')
+				linebuf[ix] = 0;
 		  ;
-		if (linebuf[ix] != 0)
-		{ linebuf[ix] = 0;
-		  for (; linebuf[++ix] != 0; )
-		    ;
-		}
 		if (linebuf[ix-1] == '\n')
+		{ if (ix == 1)
+		  { pos += 1;
+			if (pos >= end)
+			  pos = start;
+			continue;
+		  }
+		
 		  linebuf[ix-1] = 0;
+		}
 	  { int tmp = strcmp(keybuf, linebuf);
 	  /*mlwrite("%d Cmp %s,%s\n", tmp, key, linebuf);ttgetc();*/
 	    if (!tmp)						/* found */
@@ -270,7 +268,7 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 	if (linebuf[0] == 0)
 	  break;
 	ln = fgets(linebuf, sizeof(linebuf)-1, fp);
-	if (ln == NULL || ln[0] == 0)
+	if (ln == NULL)
 	  break;
 
     for (ix = -1; linebuf[++ix] != 0 && linebuf[ix] != ':'; )
@@ -495,8 +493,8 @@ findTag(int f, int n)
     {	char * ss = curwp->w_dotp->l_text;
 		int  ll   = curwp->w_dotp->l_used;
         int  offs = curwp->w_doto;
-													/* Go to the start of the word. */
-        while (--offs >= 0 && (isword(ss[offs]) || ss[offs] == ':'))
+												/* Go to the start of the word.*/
+        while (--offs >= 0 && (ss[offs] == ':' || isword(ss[offs])))
             ;
         ++offs;
         ll -= offs;
@@ -504,7 +502,7 @@ findTag(int f, int n)
           ll = sizeof(tag)-1;
         
     {	int len = 0;
-        for (len = -1; ++len < ll && (isword(ss[offs]) || ss[offs] == ':'); )
+        for (len = -1; ++len < ll && (ss[offs] == ':' || isword(ss[offs])); )
             tag[len] = ss[offs++] ;
         tag[len] = 0 ;
         if (len > 1 && tag[len-1] == ':' && tag[len-2] != ':') tag[len-1] = 0;

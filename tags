@@ -1177,7 +1177,7 @@ flookdown	./src/bind.c
 fmt_desv	./src/eval.c
 fmt_modecodes	./src/buffer.c
 fmtch	./src/display.c
-fnb	./src/sinc.cpp
+fncmatch	./src/bind.c
 forward	./mtgdi/base.h
 forward	./src/base.h
 forwchar	./src/basic.c
@@ -1777,3 +1777,5 @@ xxx	./src/epredef.h
 yank	./src/line.c
 ypos	./src/epredef.h
 zotbuf  ./src/buffer.c
+zzz
+

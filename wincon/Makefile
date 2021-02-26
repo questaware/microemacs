@@ -104,6 +104,6 @@ clean :
 inc :
 	rem $(INCLUDE)
 
-test :
-	$(CPP) -o doit ../test.c
+test.exe : ../test.c
+	$(CPP) -o doit.exe ../test.c
 

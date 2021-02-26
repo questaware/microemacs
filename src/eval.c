@@ -51,7 +51,7 @@ FALSE, /* EVCWLINE */		  /* actual: mpresf  - Stuff in message line */
 72,    /* EVFILLCOL */		/* not in use */
 0,     /* EVGFLAGS */		  /* global control flag */
 0,     /* EVGMODE */ 		  /* global editor mode */
-7,     /* EVHARDTAB */		/* not in use */
+8,     /* EVHARDTAB */		/* default tab size */
 0,     /* EVHIGHLIGHT */	/* not in use */
 1,     /* EVHJUMP */		  /* horizontal jump size */
 1,     /* EVHSCROLL */		/* horizontal scrolling flag */
@@ -92,7 +92,7 @@ UNDEF, /* EVWRITEHK */
 
 char *g_file_prof = NULL;
 
-char * incldirs;
+char * g_incldirs;
 
 
 #if CALLED
@@ -455,7 +455,7 @@ const char *Pascal gtenv(const char * vname)
 	  when EVSEARCH:  return pat;
 	  when EVHIGHLIGHT: return highlight;
 	  when EVLASTDIR: res = lastdir;
-	  when EVINCLD:	  return incldirs;
+	  when EVINCLD:	  return g_incldirs;
 	  when EVREPLACE: return rpat;
 	  when EVMATCH:   return fixnull(patmatch);
 	  when EVKILL:	  return getkill();
@@ -665,7 +665,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 
   if (var - vnum == (TKVAR << 11) || !cc)
   {     
-    return remallocstr(cc ? &uv[vnum].u_value : &incldirs, value, 0) != null;
+    return remallocstr(cc ? &uv[vnum].u_value : &g_incldirs, value, 0) != null;
   }
   else
   { int val = atoi(value);

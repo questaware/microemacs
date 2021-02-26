@@ -207,7 +207,7 @@ int Pascal usebuffer(int f, int n)
                 					/* get the buffer name to switch to */
 				
 	bp = getcbuf(TEXT24, bp ? bp->b_bname : "main", TRUE);
-/*					"Use buffer" */
+							/* "Use buffer" */
 	if (!bp)
 		return ABORT;
 				/* make it invisable if there is an argument */
@@ -232,24 +232,27 @@ int Pascal killbuffer(int f, int n)
 				             /* "Kill buffer" */
 	flush_typah();
 
-	return bp == NULL 																					 ? TRUE :
-				 bp->b_nwnd > 0 && bp == curbp && nextbuffer(0,1) == 0 ? ABORT
-                                                               : zotbuf(bp);
+	return bp == NULL 																			? TRUE :
+				 bp->b_nwnd > 0 && bp == curbp 
+												&& bp == (BUFFER*)nextbuffer(0,1) ? ABORT
+                                                          : zotbuf(bp);
 }
 
 
 
 static void init_buf(BUFFER * bp, LINE * lp)
 
-{	bp->b_doto = 0;
-//bp->b_remote = NULL;
-/*bp->b_fcol = 0;*/
+{	lp->l_fp = (Lineptr)lp;
+	lp->l_bp = (Lineptr)lp;
+  lp->l_props 	 = L_IS_HD;
 	bp->b_dotp		 = lp;
 	bp->b_baseline = lp;
 	bp->b_wlinep	 = lp;
-	lp->l_fp = (Lineptr)lp;
-	lp->l_bp = (Lineptr)lp;
-  lp->l_props 	 = L_IS_HD;
+  bp->b_doto = 0;
+	bp->b_flag &= ~BFCHG; 		/* Not changed		*/
+	memset((char *)&bp->mrks, 0, sizeof(MARKS));
+//bp->b_remote = NULL;
+/*bp->b_fcol = 0;*/
 }
 
 
@@ -273,7 +276,6 @@ int Pascal bclear(BUFFER * bp_)
 /*					"Discard changes" */
 		return s;
 
-	memset((char *)&bp->mrks, 0, sizeof(MARKS));
 	for (nlp = lforw(bp->b_baseline); 
 			((lp = nlp)->l_props & L_IS_HD) == 0; )
 	{ nlp = lforw(lp);
@@ -283,14 +285,13 @@ int Pascal bclear(BUFFER * bp_)
 /*loglog1("Rebaseline %x", lp); */
 
 	init_buf(bp, lp);
-	bp->b_flag &= ~BFCHG; 		/* Not changed		*/
 
 { WINDOW * wp;
-	for (wp = wheadp; wp != NULL; wp = (wp)->w_wndp)
+	for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
 		if (wp->w_bufp == bp)
-		{ wp->w_dotp = bp->b_baseline;
+		{	wp->mrks = bp->mrks;
+			wp->w_dotp = bp->b_baseline;
 			wp->w_doto = 0;
-			memset(&wp->mrks, 0, sizeof(MARKS));
 		}
 
 	return TRUE;
@@ -299,13 +300,15 @@ int Pascal bclear(BUFFER * bp_)
 
 
 int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
-	
-{ 
-	if (bp->b_nwnd > 0 || bp == curbp)	/* Error if on screen.	*/
+
+{	extern BUFFER * g_dobuf;
+
+	if (bp->b_nwnd > 0 || bp == curbp || bp == g_dobuf)	/* Error if on screen.	*/
 	{ mlwrite(TEXT28);
-/*			"Buffer is being displayed" */
+					/* "Buffer displayed" */
 		return FALSE;
 	}
+
 {	int s = bclear(bp);
 	if (s != TRUE)				/* Blow text away.	*/
 		return s;
@@ -463,6 +466,7 @@ BUFFER *Pascal bfind(const char * bname,
                   			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
 #endif
 	int cc = -1;
+	BUFFER * db = bheadp;
                       			/* find the place in the list to insert this buffer */
 	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_bufp);
 
@@ -504,7 +508,7 @@ BUFFER *Pascal bfind(const char * bname,
 		 /*bp->b_flag |= BFACTIVE; ** very doubtful !!! */
 	bp->b_flag = bflag | g_gmode;
 	bp->b_color = g_colours;
-	bp->b_tabsize = 8;
+	bp->b_tabsize = tabsize;
 
 	bp->b_bufp = sb->b_bufp;    /* insert it */
 	sb->b_bufp = bp;

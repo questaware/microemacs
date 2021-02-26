@@ -30,7 +30,7 @@ const char cname [][9] = {		/* names of colors		*/
 #define NCOLORS 16
 
 static	
-const char const TEXT64a[][8] = { "delete:", "add:", "toggle:",};
+const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 
 #endif
 
@@ -58,7 +58,7 @@ const char const TEXT64a[][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT21	"Binding list"
 #define	TEXT24	"Use buffer"
 #define	TEXT26	"Kill buffer"
-#define	TEXT28	"Buffer displayed"
+#define	TEXT28	"Buffer in use"
 #define	TEXT29	"Change buffer name to: "
 #define	TEXT30	"ACT   Modes      Size Buffer          File"
 #define	TEXT31	"         Global Modes"
@@ -241,5 +241,4 @@ const char const TEXT64a[][8] = { "delete:", "add:", "toggle:",};
 #define TEXT221 "Write to RO file?"
 #define TEXT222 "No Password"
 #define TEXT223 "Cannot save .e2"
-
-
+#define TEXT224 " ? extra INCLS path or CR:"

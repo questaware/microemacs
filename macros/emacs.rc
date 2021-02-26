@@ -59,6 +59,17 @@ btk execute-macro-2 M-\
 btk execute-macro-2 M-`
 btk execute-macro-2 M-/
 
+3 store-macro
+	set %ch &chr $curchar
+
+	!while &or &not &seq &low %ch &upp %ch &seq &xla %ch "0123456789" "__________" "_"
+		forward-character
+		set %ch &chr $curchar
+	!endw
+!endm
+
+btk execute-macro-3 ^@
+
 4 store-macro		; new file
   set %fle @&cat &cat "new file [" $cfname "]: "
   !if &equ 0 &length %fle

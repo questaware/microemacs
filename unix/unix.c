@@ -509,10 +509,9 @@ int pipecmd(int f, int n)
 	      break;
 	    }
 
-    if (bp == curbp)
-      nextbuffer(0,0);
-	  if (zotbuf(bp) != TRUE)
-	    return FALSE;
+	  s = zotbuf(bp)
+	  if (s != TRUE)
+	    return s;
 	}
 
   char rcmd[256];

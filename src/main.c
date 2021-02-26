@@ -281,22 +281,21 @@ void Pascal dcline(int argc, char * argv[])
 				if (filev == null)
 					filev = argv[0];
 		  }
-		  bp = bufflink(strdup(filev),TRUE/*|(genflag & 16)*/); /* setup buffer for file */
+		  bp = bufflink(filev,TRUE/*|(genflag & 16)*/); /* setup buffer for file */
 		  if (bp != NULL)
-		  { bp->b_flag |= (genflag & MDVIEW);
-
 				if (firstbp == NULL)
 				{ if (genflag & BFACTIVE)
-				  { zotbuf(bp);
+					{ 
+				  	zotbuf(bp);
 						bp = bufflink(def_bname, 1 | MSD_DIRY);
 						if (bp != NULL)													// safe against out of memory 
-						{ bp->b_flag |= (genflag & MDVIEW);
 					  	repl_bfname(bp, filev);
-						}
 				  }
 				  firstbp = bp;
 				}
-		  }
+
+		  if (bp != NULL)
+		  	bp->b_flag |= (genflag & MDVIEW);
 		  lastline[0][0] = 0;
 		}
 	} // loop
@@ -324,7 +323,7 @@ void Pascal dcline(int argc, char * argv[])
 	}
 #endif
 	if (carg != TRUE)
-	{ firstbp = dofilebuff;
+	{ firstbp = g_dofilebuff;
 		if (firstbp == NULL)
 		{	carg = 13;
 			startfile = "No .rc file";
@@ -485,8 +484,8 @@ int main(int argc, char * argv[])
 */
 Pascal clean()
 
-{ register BUFFER *bp;	/* buffer list pointer */
-	register WINDOW *wp;	/* window list pointer */
+{ BUFFER *bp;	/* buffer list pointer */
+	WINDOW *wp;	/* window list pointer */
 
 	wp = wheadp;			/* first clean up the windows */
 	while (wp)

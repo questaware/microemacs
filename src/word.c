@@ -138,32 +138,24 @@ int Pascal nextword(int f, int n)
 { int f_size = 0;
 
   while (--ct >= 0)
-  { int ch;
-  	int a = inword();
-  	while (TRUE)													// Skip non spaces and usually A_LEND
-    { if (forwchar(FALSE, dir) == FALSE)
-        return FALSE;
-      f_size += 1;
-      ch = thischar();
-      if ((is_space(ch) != 0 || ch == A_LEND) ^ mask)
-				break;
-    	if (!mask && a != isword(ch))
-    		break;
-    }
+	{	if (dir < 0)
+			if (forwchar(FALSE, dir) == FALSE)
+				return FALSE;
+			
+  { int ch = thischar();
+		int state = !is_space(ch) ^ mask;
+		int iter = 1 + state;
 
-//  if (ct <= 0 && g_ignore >= 0)
-//   	break;
-
-		a = isword(ch);
-	  																			// skip spaces resp. non spaces
-    for ( ;((is_space(ch) != 0 || ch == A_LEND) ^ mask) &&
-    			  a == isword(ch)
-    			; ch = thischar())
-    { if (forwchar(FALSE, dir) == FALSE)
-			  return TRUE;
-      f_size += 1;
-    }
-  }
+  	while (--iter >= 0)
+		{	while (state == (!is_space(ch) ^ mask))
+	    { if (forwchar(FALSE, dir) == FALSE)
+  	      return FALSE;
+    	  f_size += 1;
+				ch = thischar();
+			}
+			state = !state;
+  	}
+  }}
 
 	g_f_size = f_size - mask;
 	return mask == 0 ? TRUE : forwchar(FALSE, 1);
@@ -172,34 +164,34 @@ int Pascal nextword(int f, int n)
 
 static int Pascal ccaseword(int n, int low)
 
-{   if (low != 3 && (curbp->b_flag & MDVIEW)) /* disallow this command if */
-      return rdonly();	                 /* we are in read only mode */
-    if (n < 0)
-      return FALSE;
+{	if (low != 3 && (curbp->b_flag & MDVIEW)) /* disallow this command if */
+		return rdonly();	                 /* we are in read only mode */
+  if (n < 0)
+    return FALSE;
 
-    while (--n >= 0)
-    { int lo = low;
-      while (!inword())
-        if (forwchar(FALSE, 1) == FALSE)
-          return FALSE;
+	while (--n >= 0)
+  { int lo = low;
+    while (!inword())
+      if (forwchar(FALSE, 1) == FALSE)
+        return FALSE;
 
-      while (TRUE)
-      { int ch = thischar();
-        if (lo == 0 && !islower(ch) ||
-            lo < 3  &&  islower(ch))
-        { lputc(curwp->w_dotp,curwp->w_doto, chcaseunsafe(ch));
-          lchange(WFEDIT);
-        }
-        if (lo == 2)
-          lo = 3;  
-        if (forwchar(FALSE, 1) == FALSE)
-          return FALSE;
-
-				if (isword(ch))
-					break;
+    while (TRUE)
+    { int ch = thischar();
+      if (lo == 0 && !islower(ch) ||
+          lo < 3  &&  islower(ch))
+      { lputc(curwp->w_dotp,curwp->w_doto, chcaseunsafe(ch));
+        lchange(WFEDIT);
       }
-    }
-    return TRUE;
+      if (lo == 2)
+        lo = 3;  
+      if (forwchar(FALSE, 1) == FALSE)
+        return FALSE;
+
+			if (isword(ch))
+				break;
+		}
+	}
+	return TRUE;
 }
 
 /* Move the cursor forward by the specified number of words. As you move

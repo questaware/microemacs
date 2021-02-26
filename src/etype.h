@@ -194,7 +194,7 @@ int Pascal detab(int, int);
 char *Pascal dir_entry_name();
 int Pascal dobuf(BUFFER*, int);
 int Pascal docmd(char *);
-extern BUFFER * dofilebuff;
+extern BUFFER * g_dofilebuff;
 void Pascal double_crypt(char *, int);
 int Pascal ectoc(int);
 void Pascal edinit(void);
@@ -284,7 +284,7 @@ int Pascal lnewline();
 int Pascal lowerregion(int, int);
 int Pascal lowerword(int, int);
 int Pascal macarg(char * tok);
-int Pascal macrotokey(int, int);
+//int Pascal macrotokey(int, int);
 int main_(int argc, char * argv[]);
 void Pascal mbwrite(const char *);
 void Pascal mcclear();
@@ -426,7 +426,11 @@ long unsigned int thread_id(void);
 #if FLUFF
 int Pascal twiddle(int,int);
 #endif
+#if S_MSDOS
+#define typahead _kbhit
+#else
 int Pascal typahead();
+#endif
 int Pascal unarg(int, int);
 int Pascal unbindkey(int, int);
 int Pascal unmark(int, int);

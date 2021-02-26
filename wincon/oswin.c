@@ -545,11 +545,12 @@ int extcode(c_)
 #endif
 
 #if GOTTYPAH
-				 /* typahead: See if any characters are already in the keyboard buffer */
-int Pascal typahead()
 
-{	return _kbhit();
-}
+//			 /* typahead: See if any characters are already in the keyboard buffer */
+//int Pascal typahead()
+//
+//{	return _kbhit();
+//}
 
 
 static int g_eaten_char = 1000000;		 /* Re-eaten char */
@@ -731,18 +732,7 @@ int Pascal ttgetc()
 
     int cc = WaitForSingleObject(g_ConsIn, lim);
     switch(cc)
-    { case WAIT_TIMEOUT: 
-#if _DEBUG
-    					if (g_got_ctrl)
-							{ g_got_ctrl = false;
-							  return (int)(CTRL | 'C');
-							}
-#endif
-							if (--totalwait == 0)			// -w opt
-								exit(2);
-
-							continue;
-			case WAIT_OBJECT_0:
+		{	case WAIT_OBJECT_0:
 //					  SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 							cc = ReadConsoleInput(g_ConsIn, &rec, (DWORD)1, &actual);
 							if (!cc || actual < 1)
@@ -755,6 +745,16 @@ int Pascal ttgetc()
 						    continue;
 						  }
 							break;
+    	case WAIT_TIMEOUT: 
+#if _DEBUG
+    					if (g_got_ctrl)
+							{ g_got_ctrl = false;
+							  return (int)(CTRL | 'C');
+							}
+#endif
+							if (--totalwait == 0)			// -w opt
+								exit(2);
+														// drop through
 			default:continue;
     }
 
@@ -876,7 +876,7 @@ static char * mkTempCommName(/*out*/char *filename, char *suffix)
 	if (td == NULL)
 #if (defined _DOS) || (defined _WIN32)
 						/* the C drive : better than ./ as ./ could be on a CD-Rom etc */
-		td = "c:\\" ;
+		td = "c:/" ;
 #else
 		td = "./" ;
 #endif
@@ -1099,10 +1099,11 @@ Cc WinLaunch(Cc *sysRet, int flags,
 // 		GetStartupInfo(&si);      //set startupinfo for the spawned process
 			si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 		  si.wShowWindow = SW_HIDE;
-		  si.hStdOutput = newstdout;
-		  si.hStdError = newstdout;     //set the new handles for the child process
 //	  si.lpTitle = "Emsub";
-#if 0
+		  si.hStdOutput = newstdout;
+#if 1
+		  si.hStdError = newstdout;     //set the new handles for the child process
+#else
 			if (si.hStdOutput != 0)
 			{	HANDLE cur_proc = GetCurrentProcess();
 									 
@@ -1125,9 +1126,7 @@ Cc WinLaunch(Cc *sysRet, int flags,
   DWORD avail;  										//bytes available
   int got_ip = 0;
   int clamp = 4;
-  int iter = 0;
-  int end = 0;
-	int sct = 6;
+//int sct = 6;
  	int sentz = 0;
 
 	if      (wcc != OK)
@@ -1190,7 +1189,7 @@ Cc WinLaunch(Cc *sysRet, int flags,
 				return -1;
 			}
 
-		  for(;;++iter)      //main program loop
+		  while (TRUE)															      //main program loop
 		  {	(void)millisleep(delay);											//check for data on stdout
 		  	delay = std_delay;
 		  {	Cc cc = PeekNamedPipe(read_stdout,buff,2,&bread,&avail,NULL);
@@ -1421,28 +1420,14 @@ int pipefilter(wh)
 		{ const char * val = gtusr(line+1);
 			line[ix] = sch;
 
-			if (val != NULL && strcmp(val,"ERROR") != 0)
+			if (strcmp(val,"ERROR") != 0)
 			{ 
 				strcpy(line,strcat(strcpy(pipeInFile,val),line+ix));
 			}
 		}}
 	}
 
-	if (wh == '@'-'@')
-	{ 
-		BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), FALSE, 0);
-		if (bp != null) 					/* try to make sure we are off screen */
-		{ BUFFER * sbp = curbp;
-			cc = orwindmode(0, 1);
-			curbp = sbp;
-			if (cc > 0)
-				onlywind(FALSE, 1);
-														 /* get rid of the existing command buffer */
-			if (zotbuf(bp) != TRUE)
-				return FALSE;
-		}
-	}
-	else if (wh == '#'-'@') 						 /* setup the proper file names */
+	if (wh == '#'-'@') 						 /* setup the proper file names */
 	{ 			
 		fnam1 = mkTempCommName(pipeInFile,"si");
 
@@ -1499,7 +1484,7 @@ int pipefilter(wh)
 	close(fid);
 */
 	if (/*sysRet == OK && */ wh == '@'-'@')
-	{ BUFFER * bp = bfind(bname, TRUE, 0);
+	{ BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), TRUE, 0);
 		if (bp == NULL)
 			return FALSE;
 /*	

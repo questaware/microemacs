@@ -519,7 +519,7 @@ void Pascal modeline(WINDOW * wp)
 		return;
 
 	else if (wp->w_dotp == g_lastlp /* and wp->w_wndp == NULL */)
-	{ if (wp->w_fcol == g_lastfcol)
+	{ if (wp->w_fcol == g_lastfcol && (wp->w_flag & WFMODE == 0))
 			return;
 	}
 /*else if (lback(lp) == g_lastlp)
@@ -586,11 +586,11 @@ void Pascal modeline(WINDOW * wp)
 		modeset = modeset >> 1;
 	}
 	cpix = strlen(tline.lc.l_text);
-	if (i != 0)
+	if (tline.lc.l_text[cpix-1] == ' ')
 		--cpix;
 	tline.lc.l_text[cpix] = ')'; 
 	tline.lc.l_text[cpix+3] = ' ';
-  tline.lc.l_text[cpix+1] = tline.lc.l_text[0];
+  tline.lc.l_text[cpix+1] = n;
   cpix += 4;
 
 { const char * s = bp->b_fname;
@@ -604,9 +604,7 @@ void Pascal modeline(WINDOW * wp)
 		if (strcmp(s+1,bp->b_bname) != 0)
 			s = NULL;
 
-		strpcpy(&tline.lc.l_text[cpix], fn, NLINE - 4 - cpix);
-
-		cpix = strlen(tline.lc.l_text)+1;
+		cpix += strlen(strpcpy(&tline.lc.l_text[cpix], fn, NLINE - 4 - cpix))+1;
 		tline.lc.l_text[cpix-1] = ' ';
 	}
 
@@ -763,8 +761,7 @@ void Pascal updline(int force)
 /*	updpos: update the position of the hardware cursor and handle extended
 		lines. This is the only update for simple moves.
 */
-{
-			  int i;
+{			  int i;
  static LINE * up_lp = NULL;
 			  LINE * lp;
 		    WINDOW * wp = curwp;
@@ -862,10 +859,8 @@ void Pascal updline(int force)
 			}
 			lp = lforw(lp);
 		}
-		if (wp->w_flag & WFMODE)
-		{
-			modeline(wp);
-		}
+
+		modeline(wp);
 		wp->w_flag = 0; 		/* we are done */
 	}}
 
@@ -959,8 +954,8 @@ int /*Pascal*/ update(int force)
 			/* wp->w_changed = null; */
 				wp->w_force = 0;
 				wp->w_flag &= ~WFMODE;
-				if (set && 1)
-					wp->w_flag = WFMODE;
+//			if (set && 1)
+//				wp->w_flag = WFMODE;
 			}
 					/* recalc the current hardware cursor location */
 		updline(force);

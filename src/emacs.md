@@ -204,8 +204,6 @@ delete-other-windows     ^X1
 delete-backward-word     M-^H Delete spaces back to the previous word.
 delete-window            ^X0
 demote-buffer                 Treat the current buffer as if not yet shown
-describe-bindings             Like apropos
-describe-functions    (Not.Impl.) Describe functions for .rc scripts.
 detab-region             ^X^D Expand tabs
 display                  ^XG  Display a variable
 end-macro                ^X)  End collecting keys to be executed by execute macro.
@@ -263,6 +261,7 @@ forward-character        ^L
 goto-line                M-G
 goto-mark                M-^G
 goto-matching-fence      M-^F Goto a matching bracket, parenthesis, etc
+															If arg != 1 and on left brace use a right brace.
                          ^T
 grow-window              ^X^
                          ^XZ
@@ -283,10 +282,10 @@ kill-region              ^XD  Kill removes text to the n.th kill buffer
 kill-to-end-of-line      ^K
                          FN^;
 last-buffer              M-FNB Show the previous buffer shown
+list-bindings        		 Like apropos
 list-buffers             ^X^B
 list-key                 ^X?
 list-variables                 List values of variables
-macro-to-key             ^X^K
 meta-prefix              ^[    Not usable
 move-window-down         ^X^N
 move-window-up           ^X^P
@@ -331,7 +330,7 @@ scroll-next-up           M-^Z
 search-forward           ^S
 search-incls             M-FNP  Search for a define,variable through C++ includes
         When asking about include files:
-          SP   Search it and ask no more
+          SP   Search it and ask no more even on failure.
           CR   Search it
           N    Dont search it
           1    Stop at line 1 of the include file
@@ -341,11 +340,9 @@ search-incls             M-FNP  Search for a define,variable through C++ include
         searched for using path $incldirs 
         (; (or : in Unix) separates directories.)
 
-        The environment variable INCLLIST can point to
-        a file containing the absolute file names of
-        include files.
-        When an include file is not found you may
-        type a path that leads to the file.
+				When asking and an include file is not found then an opportunity is
+				offered to append new directories to $incldirs.
+
 search-reverse           M-S
 select-buffer                 Show the buffer in the current window
 set                      ^XA  Set a variable
@@ -490,7 +487,7 @@ $col1ch        Lowest palette selector character
 $col2ch        Highest palette selector character
                If a character is within the range of the two characters
                above then a colour is selected from $palette
-$curchar       The current character
+$curchar       The current character code. &chr $curchar is the current char.
 $curcol        The current column
 $curline       The Current line number
 $curwidth      The width of the screen

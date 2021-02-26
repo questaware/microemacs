@@ -17,9 +17,8 @@
 #define	ALTD	0x4000		/* ALT key...				*/
 #define NOTKEY  0x8000
 
-#define	BINDNUL	0		/* not bount to anything		*/
-#define	BINDFNC	1		/* key bound to a function		*/
-#define	BINDBUF	2		/* key bound to a buffer		*/
+#define	BINDFNC	0		/* key bound to a function		*/
+#define	BINDBUF	1		/* key bound to a buffer		*/
 
 
 #if 0

@@ -56,7 +56,6 @@ const NBIND names[] =
 	{"delete-other-windows",onlywind},
 	{"delete-window",				delwind},
 	{"demote-buffer",				hidebuffer},
-	{"describe-bindings",		desbind},
 #if	AEDIT
 	{"detab-region",				detab},
 #endif
@@ -163,13 +162,14 @@ const NBIND names[] =
 	{"label-function-key",	fnclabel},
 #endif
 	{"last-buffer",					lastbuffer},
+	{"list-bindings",				desbind},
 	{"list-buffers",				listbuffers},
 #if	DEBUGM || 1
 	{"list-functions",			desfunc},
 #endif
 	{"list-key",						deskey},
 	{"list-variables",			desvars},
-	{"macro-to-key",				macrotokey},
+//{"macro-to-key",				macrotokey},
 	{"meta-prefix",					meta},
 #if	MOUSE
 	{"mouse-move-down",			movemd},

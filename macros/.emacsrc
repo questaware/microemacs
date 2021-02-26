@@ -30,7 +30,11 @@ add-mode black
 
 btk execute-macro-1 
 
-2 store-macro		; quit buffer
+2 store-macro		; end buffer
+	!if &equ $lastkey 47
+	  save-file
+  !endif
+
   set %disc $discmd
   set $discmd FALSE
   set %mybuf $cbufname
@@ -54,13 +58,18 @@ btk execute-macro-1 
 
 btk execute-macro-2 M-\
 btk execute-macro-2 M-`
+btk execute-macro-2 M-/
 
-3 store-macro		; save, quit buffer
-  save-file
-  execute-macro-2
+3 store-macro
+	set %ch &chr $curchar
+
+	!while &or &not &seq &low %ch &upp %ch &seq &xla %ch "0123456789" "__________" "_"
+		forward-character
+		set %ch &chr $curchar
+	!endw
 !endm
 
-btk execute-macro-3 M-/
+btk execute-macro-3 ^@
 
 4 store-macro		; new file
   set %fle @&cat &cat "new file [" $cfname "]: "

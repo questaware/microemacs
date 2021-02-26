@@ -116,7 +116,7 @@ static KEYTAB keytab[NBINDS+1] =
 #endif
 	{CTLX|CTRL|'F', BINDFNC, filefind},
 	{CTLX|CTRL|'I', BINDFNC, insfile},
-	{CTLX|CTRL|'K', BINDFNC, macrotokey},
+//{CTLX|CTRL|'K', BINDFNC, macrotokey},
 	{CTLX|CTRL|'L', BINDFNC, lowerregion},
 	{CTLX|CTRL|'M', BINDFNC, delmode},
 	{CTLX|CTRL|'N', BINDFNC, mvdnwind},
@@ -452,7 +452,7 @@ int Pascal addnewbind(int c, int (Pascal *func)(int, int))
 
 
 static const short viscod[7] = {CTLX, ALTD, SHFT, MOUS, META, SPEC, CTRL};
-static const char viskey[14] = "^XA-S-MSM-FN^";		// assume aligned
+static const char  viskey[14] = "^XA-S-MSM-FN^";		// assume aligned
 
 												/* change a key command to a string we can print out */
 char * Pascal cmdstr(char * t, int c) 
@@ -574,6 +574,9 @@ int Pascal bindtokey(int f, int n)
 	return addnewbind(c, kfunc); /* search the table to see if it exists */
 }
 
+#if 0
+  What does this do (NOTKEY ?)?
+
 	      /* macrotokey: Bind a key to a macro in the key binding table */
 int Pascal macrotokey(int f, int n)
 							 /* int f, n;	 ** command arguments [IGNORED] */
@@ -584,7 +587,7 @@ int Pascal macrotokey(int f, int n)
 {	int cc = mlreply(strcpy(outseq, TEXT215), &bufn[1], NBUFN-2);
 	if (cc != TRUE)
 	  return cc;
-				     /* build the response string for later */
+																     /* build the response string for later */
 	strcat(outseq, &bufn[1]);
 	bufn[0] = '[';
 {	BUFFER *kmacro = bfind(strcat(bufn, "]"), FALSE, 0);
@@ -598,6 +601,8 @@ int Pascal macrotokey(int f, int n)
 
 	return addnewbind(cc | NOTKEY, (int (Pascal *)(int, int))kmacro);
 }}}
+
+#endif
 
 			/* unbindkey: delete a key from the key binding table */
 
@@ -882,6 +887,8 @@ int fex_path(const char * dir, const char * file)
   return 0;  
 }
 
+extern char * g_incldirs;				// from eval.c
+
 /*char * inclmod;			** initial mod to incldirs */
 
 /*	wh == I => 
@@ -896,9 +903,9 @@ int fex_path(const char * dir, const char * file)
 */
 const char * Pascal flook(char wh, const char * fname)
 
-{          char uwh = toupper(wh);
-  register char *path;	/* environmental PATH variable */
-//         char buf[100];
+{ char uwh = toupper(wh);
+  char *path;	/* environmental PATH variable */
+//char buf[100];
 
 	if (fexist(fname))
 	  return fname;
@@ -922,31 +929,20 @@ const char * Pascal flook(char wh, const char * fname)
 	  if (fex_path(INCDIR, fname))
 	    return fspec;
 #if 1
-	  path = getenv("INCLLIST");
-	  if (path != NULL)
-	  { FILE * ip = fopen(path, "r");
-	    if (ip != NULL)
-	    { char * line;
-	      /*mlreply("Looking", fspec, 10);*/
-	      while (line = fgets(&fspec[1], sizeof(fspec)-2, ip))
-	      { 
-	        line += strlen(line)-1;
-	        line[0] = 0;
-	        while (--line > &fspec[1] && *line != '/')
-	          ;
-#if	S_MSDOS | S_OS2
-		 	       																		/* msdos isn't case sensitive */
-	        if (*strmatch(fname, line+1) == 0 && bad_strmatch == 0)
-#else
-	        if (strcmp(fname, line+1) == 0)
-#endif       
-	        { line = &fspec[1];
-	          break;
-	        }
-	      }
-	      fclose(ip);
-	      return line;
-	    }
+	  if (g_incldirs != NULL)								// gtenv("incldirs");
+	  { char * incls;
+	  	for (incls = g_incldirs; *incls != 0; )
+	  	{ char * ln = incls;
+	  		char ch;
+	  		while ((ch = *++ln) != 0 && ch != PATHCHR)
+	  			;
+			{	int len = ln - incls + 1;
+				if (len < sizeof(fspec))
+	  		{	if (fex_path(strpcpy(fspec, incls, len), fname))
+						return fspec;
+	  		}
+	  		incls = ln + (ch != 0);
+	  	}}
 	  }
 #endif
 	  return NULL;
@@ -1124,7 +1120,7 @@ void Pascal setktkey(KEYTAB * key, int type, char * name)
 				/* type of binding */
 				/* name of function or buffer */
 {																		// Only called on table hooks
-  	key->k_type = type;
+  key->k_type = type;
 	if      (type == BINDFNC)
 	  key->k_ptr.fp = fncmatch(name);
 	else if (type == BINDBUF)

@@ -132,7 +132,7 @@ void Pascal customise_buf(BUFFER * bp)
 				  }
           
         { int tabsz = atoi(pr+2);
-          bp->b_tabsize = tabsz <= 0 ? 8 : tabsz;
+          bp->b_tabsize = tabsz <= 0 ? tabsize : tabsz;
           break;
         }}}}
    }
