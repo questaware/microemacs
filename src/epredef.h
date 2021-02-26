@@ -110,15 +110,15 @@ extern NOSHARE int predefvars[];
 
 #if 0
 					/* overloading variables */
-#define xxx	  predefvars[EVREADHK]
-#define g_execlevel predefvars[EVCMDHK]
-#define mpresf    predefvars[EVCWLINE]
-#define abortc    predefvars[EVKILL]
-#define sterm     predefvars[EVLANG]
-#define g_prefix    predefvars[EVLASTDIR]
-#define prenum    predefvars[EVLASTMESG]
-#define cryptflag predefvars[EVVERSION]
-#define gs_term   predefvars[EVRAM]
+X#define xxx	  predefvars[EVREADHK]
+X#define g_execlevel predefvars[EVCMDHK]
+X#define mpresf    predefvars[EVCWLINE]
+X#define abortc    predefvars[EVKILL]
+X#define sterm     predefvars[EVLANG]
+X#define g_prefix    predefvars[EVLASTDIR]
+X#define prenum    predefvars[EVLASTMESG]
+X#define cryptflag predefvars[EVVERSION]
+X#define gs_term   predefvars[EVRAM]
 
 #endif
 

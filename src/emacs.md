@@ -380,7 +380,7 @@ yank                     ^Y Insert the contents of the kill buffer here
 
  *DEFAULT ASSIGNMENTS OF THE MACROS FROM EMACS.RC*
 
- None of the macros accepts an argument ESC n.
+ The argument ESC n to these macros is the number of times to execute the macro.
 
 execute-macro-1          S-FN1  Change case one character
 execute-macro-2          S-FN2  Drop the buffer, %goon: take new one, none: exit

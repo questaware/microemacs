@@ -1124,13 +1124,14 @@ scan:
 				  when '*':
 				  case '&': word_ct -= 1;
 				  
-          when '}':{ Lpos_t here = *(Lpos_t*)&wp->w_dotp;
+          when '}':{ Cc rc = FALSE;
+          					 Lpos_t here = *(Lpos_t*)&wp->w_dotp;
           					 wp->w_dotp = lp;
           					 wp->w_doto = cp - cpstt;
 									 
           					 if (paren.nest <= 0 && getfence(0,1))
           					 { Sinc::ext_c = *(Lpos_t*)&wp->w_dotp;
-          					 	 Cc rc = nextword(0,-1);
+          					 	 rc = nextword(0,-1);
           					 	 if (rc)
 	          					 { LINE * tlp = wp->w_dotp;
 	          					 	 int offs = wp->w_doto;
@@ -1140,10 +1141,11 @@ scan:
     	      					 	 						 || tlp->l_text[offs+1]!= 'C')
     	      					 	 	 rc = false;
     	      					 }
-    	      					 if (!rc)
-    	      					 	 Sinc::ext_c.curline = NULL;
           					 }
           					 rest_l_offs(&here);
+    	      				 if (rc)						// dont scan
+    	      				 	 break;
+    	      				 Sinc::ext_c.curline = NULL;
           				 }	
           case '/': case '\\': 
           case '"': case '\'': 
