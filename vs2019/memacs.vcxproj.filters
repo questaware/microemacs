@@ -48,9 +48,6 @@
     <ClCompile Include="..\src\exec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\execasm.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\file.c">
       <Filter>Source Files</Filter>
     </ClCompile>

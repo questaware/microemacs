@@ -21,6 +21,12 @@ int Pascal thischar()
 }
 
 
+int Pascal isword(char ch)
+	
+{ return isalpha(ch) || ch == '_' || ch == '$' || in_range(ch, '0', '9');
+}
+
+
 /*
  * Return TRUE if the character at dot is a character that is considered to be
  * part of a word. The word character list is hard coded. Should be setable.
@@ -126,18 +132,17 @@ int Pascal nextword(int f, int n)
 {
 //if (n < 0)
 //  return backword(f, -n);
-	int mask = 0;
 	int dir = 1;
-	int ct = n;
-	if (ct < 0)
-	{ ct = -ct;
+	int mask = 0;
+	if (n < 0)
+	{ n = -n;
 		dir = -1;
 		mask = 1;
 	}
 
-{ int f_size = 0;
+{ int f_size = -mask;
 
-  while (--ct >= 0)
+  while (--n >= 0)
 	{	if (dir < 0)
 			if (forwchar(FALSE, dir) == FALSE)
 				return FALSE;
@@ -148,17 +153,17 @@ int Pascal nextword(int f, int n)
 
   	while (--iter >= 0)
 		{	while (state == (!is_space(ch) ^ mask))
-	    { if (forwchar(FALSE, dir) == FALSE)
+	    { ch = nextch((Lpos_t*)curwp, dir);
+				if (ch < 0)
   	      return FALSE;
     	  f_size += 1;
-				ch = thischar();
 			}
 			state = !state;
   	}
   }}
 
-	g_f_size = f_size - mask;
-	return mask == 0 ? TRUE : forwchar(FALSE, 1);
+	g_f_size = f_size;
+	return forwchar(FALSE, -dir);
 }}
 
 
@@ -457,11 +462,12 @@ char * Pascal getwtxt(int wh, char * buf, int lim)
 { if (wh == 'B'-'@')
     return getkill();
   if (wh == 'N'-'@')
-    return fixnull(curbp->b_fname);
+    return curbp->b_fname;
   if (wh == 'S'-'@' || wh == (ALTD | 'S'))
-    return fixnull(patmatch);
+    return patmatch;
 
-{ int offs = wh == 'W'-'@' || wh == 'K'-'@' ? g_txt_woffs : 0;
+	wh -= 'W'-'@';
+{ int offs = wh == 0 || wh == 'K'-'W' ? g_txt_woffs : 0;
 	int lct = llength(curwp->w_dotp) - offs;
   if (lct > lim)
     lct = lim;
@@ -470,13 +476,13 @@ char * Pascal getwtxt(int wh, char * buf, int lim)
   int	c;
   while (--lct >= 0)
   { c = lgetc(curwp->w_dotp, offs);
-    if (! isword(c) && t != buf && wh == (int)'W'-'@')
+    if (! isword(c) && t != buf && wh == 0)
       break;
     *t++ = c;
     offs += 1;
   }
 
-  if (wh == 'W'-'@')
+  if (wh == 0)
     g_txt_woffs = offs;
 
   *t = 0;

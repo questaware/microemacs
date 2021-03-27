@@ -1,6 +1,7 @@
 #CC=c89
 #LK=c89
 CC=gcc
+LK=g++
 CFLAGS = -g -D_INCLUDE_HPUX_SOURCE -D_INCLUDE_POSIX_SOURCE -DINCLUDE_POSIX4_SOURCE -D_INCLUDE_XOPEN_SOURCE -I. -I../$(SRC)
 LFLAGS = -g -Dhp
 SRC=src
@@ -31,7 +32,7 @@ all:	makekeys emacs
 emacs:	$(OFILES) $(UOFILES) $(MOFILES)
 #	$(CC)  -L/opt/FSFlibg++/lib -o emacs $(OFILES) $(MOFILES) $(UOFILES) /opt/FSFlibg++/lib/libstdc++.a
 #	$(CC) $(CFLAGS) $(OFILES) $(MOFILES) $(UOFILES) -lncurses -o emacs
-	$(CC) $(CFLAGS) $(OFILES) $(MOFILES) $(UOFILES)  -o emacs
+	$(LK) $(CFLAGS) $(OFILES) $(MOFILES) $(UOFILES)  -o emacs
 
 line.i:   ../$(SRC)/line.c
 	$(CC) -E -I../$(USRC)/ -I../$(SRC) ../$(SRC)/line.c

@@ -163,7 +163,7 @@ char *Pascal getreg(char * t)
 }
 
 
-
+static
 int to_kill_buff(int wh, int n)
 
 { kinsert_n = chk_k_range(n);

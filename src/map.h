@@ -43,13 +43,11 @@ typedef struct Map_s
   Short    max_len;	/* in bytes */
   Short    curr_len;	/* in bytes */
   Short    curr_mult;   /* in entries */
-  Int	   update_ct;
+  Int	   	 update_ct;
   Byte	   is_mallocd;
   Byte     filler[3];   /* must be long aligned for 64 bit machines */
   Byte     c[1];    /* actually Mapeny_t *//* must be aligned to SIZEOF_PTR */
 } Map_t, *Map;
-
-
 
 
 typedef union
@@ -59,7 +57,6 @@ typedef union
   Char * domstr;
   Char   domchararr[4];
 } Key_t, *Key;
-
 
 
 /*		Note 1. The user must maintain the contents of the location 
@@ -72,17 +69,16 @@ typedef struct Mapstrm_s
 } Mapstrm_t, * Mapstrm;
 
 
-
-
 #define map_alloc(reclen, len)\
   (Map)aalloc(FOFFS_MAP + (reclen) * (len));
 
 
-#define mk_const_map(typ,keyoffs, tbl) \
-		     {{typ, keyoffs, sizeof(tbl[0])}, \
-		       null, -1, sizeof(tbl), sizeof(tbl), \
-		       sizeof(tbl)/ sizeof(tbl[0]), 0, 0, {0}, \
-                     }
+#define mk_const_map(typ,keyoffs, tbl, deduct) \
+		     			{{typ, keyoffs, sizeof(tbl[0])}, \
+	/*srch_key*/  null, -1, \
+	/*max_len*/		sizeof(tbl), sizeof(tbl)-(deduct)*sizeof(tbl[0]), \
+					      sizeof(tbl)/sizeof(tbl[0])-(deduct), 0, 0, {0}, \
+              }
 
 
 Map mk_map(Map c, Format_t format, Vint len);

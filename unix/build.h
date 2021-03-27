@@ -1,6 +1,14 @@
 #ifndef BUILDINC
 #define BUILDINC
 
+/*	Program Identification.....
+	Macros can query this via the $progname variable
+*/
+
+#define PROGNAME	"Edm"
+#define	VERSION		"2.9"
+
+
 /*	Machine/OS definitions			*/
 /*	[Set one of these!!]			*/
 
@@ -19,6 +27,8 @@
  #define S_UNIX5 1
 #endif 
 #define S_WIN32 0
+
+#define USE_FAST_CALL
 
 /*      [Set any of these ] */
 #define S_XTERM   0
@@ -152,7 +162,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #endif
 
 #define PSCP_CMD "pscp "
-#define CLIP_LIFE 120					// seconds
+#define CLIP_LIFE 0					// seconds, not in use
 
 #include "../src/base.h"
 #endif /* VERSION */

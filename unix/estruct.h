@@ -23,18 +23,6 @@
 #undef	CTRLZ
 #endif
 
-/*	Program Identification.....
-
-	PROGNAME should always be MicroEMACS for a distribution
-	unmodified version. People using MicroEMACS as a shell
-	for other products should change this to reflect their
-	product. Macros can query this via the $progname variable
-*/
-
-#define PROGNAME	"Edm"
-#define	VERSION		"2.7"
-
-
 #include "build.h"
 /*
 #if S_UNIX5
@@ -195,8 +183,6 @@ union REGS {
 # define DIRSEPCHAR	'/'
 #endif
 
-			/*  Emacs global flag bit definitions (for gflags) */
-#define GFREAD	1
 					/*	internal constants	*/
 #define NBINDS	210			/* max # of bound keys		*/
 #if AOSVS

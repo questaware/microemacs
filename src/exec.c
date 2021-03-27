@@ -17,12 +17,11 @@
 */
 
 typedef struct WHBLOCK
-{	LINE *w_begin;		/* ptr to !while statement */
-	LINE *w_end;		/* ptr to the !endwhile statement*/
-	char  w_type;		/* block type */
-	struct WHBLOCK *w_next;	/* next while */
+{ struct WHBLOCK *w_next;	/* next while */
+	LINE *w_begin;					/* ptr to !while statement */
+	LINE *w_end;						/* ptr to the !endwhile statement*/
+	char  w_type;						/* block type */
 } WHBLOCK;
-
 
 /* directive name table:
 	This holds the names of all the directives....	*/
@@ -37,10 +36,9 @@ static const char dname[][8] =
 #define NUMDIRS (sizeof(dname) / 8)
 
 
-char smalleline[80];
+static struct BUFFER * g_bstore = NULL;				/* buffer to store macro text to*/
 
-
-static struct BUFFER * g_bstore = NULL;	/* buffer to store macro text to*/
+extern int (Pascal *g_bfunc)(int, int);				/* from bind.c */
 
 #if BACKCH
 
@@ -98,7 +96,7 @@ int Pascal namedcmd(int f, int n)
 	else
 	{	char ebuffer[40];
 																					/* grab token and advance past */
-	  execstr = token(execstr, ebuffer, sizeof(ebuffer));
+	  (void)token(ebuffer, sizeof(ebuffer));
 							     /* evaluate it */
 	{ char * fnm = getval(ebuffer, ebuffer);
 	  if (fnm == g_logm[2])
@@ -109,7 +107,9 @@ int Pascal namedcmd(int f, int n)
 
 	if (kfunc != NULL)
 	{ g_clexec = FALSE;
-	  cc = (*kfunc)(f, n);												/* call the function */
+																												/* call the function */
+		cc = in_range((int)kfunc, 1, 40) ? execporb(-(int)kfunc, n)
+																		 : (*kfunc)(f, n);	  
 	  g_clexec = scle;
 	}
 	else
@@ -134,63 +134,62 @@ int Pascal namedcmd(int f, int n)
 static
 int Pascal docmd(char * cline)
 			/* command line to execute */
-{
-	int f = g_got_uarg;
-  g_got_uarg = FALSE;							// The 1st command in the buffer gets the arg
-
-		     /* if we are scanning and not executing..go back here */
+{	  	  	  	  		     /* if we are scanning and not executing..go back here */
 	if (g_execlevel)
 		return TRUE;
 
-{	int n = ! f ? 1 : prenum;   /* numeric repeat value */
-	int (Pascal *fnc)(int, int);      	/* function to execute */
-	char ebuffer[40];
-#define tkn (&ebuffer[1])
-	int cc;											/* TRUE, FALSE, ABORT */
-	int oldcle = g_clexec;     /* old contents of g_clexec flag */
-	char *oldestr = execstr; /* original exec string */
+{	int f = g_got_uarg;
+  g_got_uarg = FALSE;							// The 1st command in the buffer gets the arg
 
-	g_clexec = TRUE;	      /* in cline execution */
-	execstr = cline;	      /* and set this one as current */
+{	int n = ! f ? 1 : g_univct;  					/* numeric repeat value */
+//int (Pascal *fnc)(int, int);      	  /* function to execute */
+	Command fnc;      	  								/* function to execute */
+	char ebuffer[40];
+#define tkn ebuffer+1
+	int cc;											/* TRUE, FALSE, ABORT */
+	char *oldestr = g_execstr; 		/* original exec string */
+
+	++g_clexec;	      /* in cline execution */
+	g_execstr = cline;	      /* and set this one as current */
 
 	g_lastflag = g_thisflag;
 	g_thisflag = 0;
-	ebuffer[0] = '[';
 
 	cc = macarg(tkn);
 	if (cc == TRUE)
-		if (gettyp(tkn) != TKCMD)     /* process leadin argument */
+		if (*(tkn) < 'A')
 		{ f = TRUE;
 		  n = atoi(getval(tkn, tkn));
 														      /* and now get the command to execute */
 		  cc = macarg(tkn);
-		}
+		}  
 
 	if (cc == TRUE)
-	{	fnc = fncmatch(tkn);						/* and match the token to see if it exists */
+	{	fnc = fncmatch(tkn);					/* and match the token to see if it exists */
 		if (fnc != NULL)
-			cc = (*fnc)(f, n);					/* call the function */
-		else
-																/* find the pointer to that buffer */
-		{ BUFFER *bp = bfind(strcat(&ebuffer[0], "]"), FALSE, 0); 
+		{ 
+			cc = in_range((int)fnc, 1, 40) ? execporb(-(int)fnc, n)
+																		 : (*fnc)(f, n);			/* call the function */
+		}
+		else													/* find the pointer to that buffer */
+		{	ebuffer[0] = '[';														
+		{ BUFFER *bp = bfind(strcat(ebuffer, "]"), FALSE, 0); 
 		  if (bp == NULL) 
 			{ mlwrite(TEXT16);
 							/* "[No such Function]" */
 				cc = FALSE;
 			}
-			else 				/* execute the buffer */
-			{ univct = n;
+			else 												/* execute the buffer */
 				cc = dobuf(bp,n);
-			}
-		}
-		cmdstatus = cc;			/* save the status */
+		}}
+		cmdstatus = cc;								/* save the status */
 		lastfnc = fnc;
 	}
-	g_clexec = oldcle;			/* restore g_clexec flag */
-	execstr = oldestr;
+	--g_clexec;			/* restore g_clexec flag */
+	g_execstr = oldestr;
 	return cc;
 #undef tkn
-}}
+}}}
 
 
 #if FLUFF || DEBUGM
@@ -215,11 +214,11 @@ int Pascal execcmd(int f, int n)
 		return a pointer past the token
 */
 
-char *Pascal token(const char * src_, char * tok, int size)
+char *Pascal token(char * tok, int size)
 				/* source string, destination token string */
 				/* maximum size of token */
-{
-	const char * src = src_;
+{	
+	const char * src = g_execstr;
 	char quotef = 0;	/* is the current string quoted? */
 	char c;
 	int leading = TRUE;
@@ -260,16 +259,15 @@ char *Pascal token(const char * src_, char * tok, int size)
 	}
 
 	*tok = 0;
-	return (char*)(*src == 0 ? src : src+1);
+	return g_execstr = (char*)(*src == 0 ? src : src+1);
 }
 
 
 int Pascal macarg(char * tok) /* get a macro line argument */
 				/* buffer to place argument */
-{ int sclexec = g_clexec;
-  g_clexec = TRUE;
+{ ++g_clexec;
 {	int res = nextarg(null, tok, NSTRING);
-  g_clexec = sclexec;
+  --g_clexec;
 	return res;      
 }}
 
@@ -280,13 +278,13 @@ int Pascal nextarg(const char * prompt, char * buffer, int size)
 				/* buffer to put token into */
 				/* size of the buffer */
 {					/* if we are interactive, go get it! */
-/*if (g_clexec && execstr == null)
+/*if (g_clexec && g_execstr == null)
 	  adb(55);
 */
-	if (g_clexec == FALSE || execstr == null)
+	if (g_clexec <= 0 || g_execstr == null)
 	  return getstring(buffer, size, prompt);
 																			     /* grab token and advance past */
-	execstr = token(execstr, buffer, size);
+	(void)token(buffer, size);
 
 	return getval(buffer, buffer) != getvalnull;/* evaluate it *//* no protection! */
 }
@@ -422,21 +420,24 @@ BUFFER * g_dobuf;
 int Pascal dobuf(BUFFER * bp, int iter)
 			 /* iter:   # times to do it */
 {
+	char smalleline[80];
 #if	LOGFLG
 	FILE *fp;		/* file handle for log file */
 #endif
 	int cc = TRUE;
 	g_dobuf = bp;
+	g_univct = iter;
 
   while (--iter >= 0 && cc == TRUE)
 	{ LINE *lp;						/* pointer to line to execute */
 		int dirnum;					/* directive index */
 		char *ebuf = smalleline;	/* initial value of eline */
 		char *eline;				/* text of line to execute */
+		char * msg = NULL;
 		char tkn[NSTRING];	/* buffer to evaluate an expresion in */
 
   	WHBLOCK *whlist = NULL; /* ptr to !WHILE list */
-		WHBLOCK *scanner = NULL;/* ptr during scan */
+		WHBLOCK *scan = NULL;/* ptr during scan */
 												    /* scan the buffer, building WHILE header blocks */
 		int nest_level = 0;
 		g_execlevel = 0;		/* clear IF level flags/while ptr */
@@ -457,37 +458,36 @@ int Pascal dobuf(BUFFER * bp, int iter)
 			{ WHBLOCK * whtemp = (WHBLOCK *)aalloc(sizeof(WHBLOCK));
 		 		if (whtemp == NULL ||
 	     															/* "%%!BREAK outside of any !WHILE loop" */
-	         (eline[1] == 'b' && scanner == NULL))
+	         (eline[1] == 'b' && scan == NULL))
 					goto failexit;
 
 		    whtemp->w_begin = lp;
 		    whtemp->w_type = eline[1];
-	  	  whtemp->w_next = scanner;
-	    	scanner = whtemp;
+	  	  whtemp->w_next = scan;
+	    	scan = whtemp;
 	  	}
 												/* if it is an endwhile directive, record the spot.. */
 		  if (strcmp_right(&eline[1], &dname[DENDWHILE][0]) == 0)
-		  { if (scanner == NULL)
+		  { if (scan == NULL)
 	 	    { 			/* %%mismatched !ENDWHILE in %s */
 	 	    	goto failexit;
-	 			}
-															/* move top records from the scanner list to the
+	 			}											/* move top records from the scan list to the
 															   whlist until we have moved all BREAK records */
 			  do										/* and one WHILE record */
 				{ WHBLOCK * whtemp = whlist;
-					scanner->w_end = lp;
-		 			whlist = scanner;
-		 			scanner = scanner->w_next;
+					scan->w_end = lp;
+		 			whlist = scan;
+		 			scan = scan->w_next;
 		 			whlist->w_next = whtemp;
 	    	} while (whlist->w_type == 'b');
 	  	}
 		} /* for */
 
-		if (scanner != NULL)
+		if (scan != NULL)
 		{ eline = "WHILE";		/* %%mismatched !WHILE in '%s' */
 failexit:     
 	    mlwrite(TEXT121, bp->b_bname, eline);
-	    freewhile(scanner);
+	    freewhile(scan);
 		  cc = FALSE;
 		}
 								/* let the first command inherit the flags from the last one..*/
@@ -495,7 +495,12 @@ failexit:
 																	/* starting at the beginning of the buffer */
 		lp = bp->b_baseline; 
 		while (1)
-		{	if (ebuf != smalleline)
+		{	if (msg != NULL)
+			{ mlwrite(msg);
+				msg = NULL;
+	      cc = FALSE;
+			}
+			if (ebuf != smalleline)
 		    free(ebuf);
 
 	    if (eexitflag || cc != TRUE ||
@@ -526,7 +531,7 @@ failexit:
 #if	DEBUGM
 		  if (macbug && g_bstore == null && g_execlevel == 0)
 		    if (debug(bp, eline) == FALSE)
-		    { mlforce(TEXT54);						/*	"[Macro aborted]" */
+		    { mlwrite("%!"TEXT54); /*	"[Macro aborted]" */
 		      cc = FALSE;
 		      continue;
 		    }
@@ -540,8 +545,7 @@ failexit:
 						break;
 																				/* and bitch if it's illegal */
 		    if (dirnum < 0)
-		    { mlwrite(TEXT124);	/* "%%Unknown Directive" */
-		      cc = FALSE;
+		    { msg = TEXT124;						/* "%%Unknown Directive" */
 		      continue;
 		    }
 		  }
@@ -549,8 +553,8 @@ failexit:
 		  if (g_bstore != null && dirnum != DENDM)
 		  { LINE * mp = mk_line(ebuf,linlen-1,linlen-1);
 		    if (mp == NULL)
-		    { mlwrite(TEXT125);					/* "Out of memory while storing macro" */
-		      return FALSE;
+		    { cc = FALSE;
+		      continue;
 		    }
 																		/* attach the line to the end of the buffer */
         ibefore(g_bstore->b_baseline, mp);
@@ -558,8 +562,9 @@ failexit:
 		  }
 																		/* now, execute directives */
 		  if (dirnum >= 0)
-		  {															/* skip past the directive */
-		    while (*eline > ' ')
+		  {	char *s_execstr = g_execstr; 		/* original exec string */
+
+		    while (*eline > ' ')						/* skip past the directive */
 		      ++eline;
 
 				if (dirnum == DRETURN)
@@ -574,11 +579,10 @@ failexit:
 		      case DWHILE:			/* WHILE directive */
 																				/* grab the value of the logical exp */
 						if (g_execlevel == 0)
-						{ char *saveexecstr = execstr; /* original exec string */
-							execstr = eline;
+						{ g_execstr = eline;
 							cc = macarg(tkn);
-							execstr = saveexecstr;
-							if (cc != TRUE || stol(tkn) == TRUE)
+							g_execstr = s_execstr;
+							if (cc != TRUE || stol(tkn))
 								continue;
 																							/* expression evaluated false */
 						  if (dirnum == DIF)
@@ -597,8 +601,7 @@ failexit:
 							    break;
         
 							if (whtemp == NULL) 
-							{ mlwrite(TEXT126);						/* "%%Internal While loop error" */
-							  cc = FALSE;
+							{ msg = TEXT126;						/* "%%Internal While loop error" */
 							  continue;
 							}
 																					    /* reset the line pointer back.. */
@@ -619,8 +622,11 @@ failexit:
 		      when DGOTO:	/* GOTO directive */
 																	/* .....only if we are currently executing */
 						if (g_execlevel == 0) 
-						{ static char golabel[20] = "";
-						  eline = token(eline, golabel, sizeof(golabel));
+						{ char golabel[20];
+							g_execstr = eline;
+							(void)token(golabel, sizeof(golabel));
+						//eline = g_execstr
+							g_execstr = s_execstr;
 						  
 						  for (lp = bp->b_baseline; 
 						      ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
@@ -645,11 +651,10 @@ failexit:
 						      break;
 		        
 						  if (whtemp == NULL)
-						  { mlwrite(TEXT126);						/* "%%Internal While loop error" */
-						    cc = FALSE;
+						  { msg = TEXT126;						/* "%%Internal While loop error" */
 						    continue;
 						  }
-																				   /* reset the line pointer back.. */
+																				  /* reset the line pointer back.. */
 						  lp = lback(whtemp->w_begin);
 						}
 						continue;
@@ -680,7 +685,7 @@ failexit:
 #endif
 			    bp->b_dotp = lp;									/* in any case set the buffer. */
 			    bp->b_doto = 0;
-			    if (gflags & MD_KEEP_MACROS)
+			    if (is_opt('M'))				// MD_KEEP_MACROS
 			      bp->b_flag &= ~BFINVS;
 			  }
 			}
@@ -709,11 +714,11 @@ int Pascal debug(BUFFER* bp, char * eline)
 	KEYTAB *key;						/* ptr to a key entry */
 	static char track[NSTRING] = "";/* expression to track value of */
 	       char temp[NSTRING];
-	int oldcmd = g_discmd;
+	int oldcmd = pd_discmd;
 	int oldinp = g_disinp;
 	
 dbuild: /* Build the information line to be presented to the user */
-	g_discmd = oldcmd;
+	pd_discmd = oldcmd;
 	g_disinp = oldinp;
 
 	strcpy(outline, "<<<");
@@ -731,7 +736,9 @@ dbuild: /* Build the information line to be presented to the user */
 						/* write out the debug line */
 dinput: 
   outline[term.t_ncol - 1] = 0;
-	ostring(outline);
+  if (pd_discmd > 0)
+    mlputs(outline);
+
 	update(TRUE);
 						   /* and get the keystroke */
 	c = getkey();
@@ -742,7 +749,7 @@ dinput:
 	else if (c == abortc) 
 	  return FALSE;
 	else 
-	{ int oldcmd = g_discmd;		        
+	{ int oldcmd = pd_discmd;		        
 	  int oldinp = g_disinp;
 	  int oldstatus = cmdstatus;
 	  
@@ -752,34 +759,34 @@ dinput:
 /*"(e)val exp, (c/x)ommand, (t)rack exp, (^G)abort, <SP>exec, <META> stop debug"*/
       		      goto dinput;
 
-	    case 'c': g_discmd = TRUE;			/* execute statement */
+	    case 'c': pd_discmd = TRUE;			/* execute statement */
       		      g_disinp = TRUE;
       		      execcmd(FALSE, 1);
       		      goto dbuild;
 
-	    case 'x': g_discmd = TRUE;		/* execute extended command */
+	    case 'x': pd_discmd = TRUE;		/* execute extended command */
       		      g_disinp = TRUE;
       		      namedcmd(FALSE, 1);
       		      cmdstatus = oldstatus;
       		      goto dbuild;
 
 	    case 'e': strcpy(temp, "set %track ");   /* evaluate expresion */
-      		      g_discmd = TRUE;
+      		      pd_discmd = TRUE;
       		      g_disinp = TRUE;
       					getstring(&temp[11], NSTRING, "Exp: ");
-      		      g_discmd = oldcmd;
+      		      pd_discmd = oldcmd;
       		      g_disinp = oldinp;
       		      docmd(temp);
       		      cmdstatus = oldstatus;
-      		      concat(&temp[0], " = [", gtusr("track"), "]", null);
-      		      mlforce(temp);
+      		      concat(&temp[0], "%! = [", gtusr("track"), "]", null);
+      		      mlwrite(temp);
       		      c = getkey();
       		      goto dinput;
 
-	    case 't': g_discmd = TRUE;			/* track expresion */
+	    case 't': pd_discmd = TRUE;			/* track expresion */
       		      g_disinp = TRUE;
       		      getstring(&temp[0], NSTRING, "Exp: ");
-      		      g_discmd = oldcmd;
+      		      pd_discmd = oldcmd;
       		      g_disinp = oldinp;
       		      concat(&track[0], "set %track ", temp, null);
       		      goto dbuild;
@@ -807,9 +814,8 @@ static int Pascal dofile(const char * fname)
 { char bname[NBUFN];		/* name of buffer */
 
   makename(bname, fname); 		/* derive the name of the buffer */
-  unqname(bname); 						/* make sure we don't stomp things */
 
-{ BUFFER *dfb = bfind(bname, TRUE, 0);
+{ BUFFER *dfb = bfind(bname, 3, 0);
   if (dfb == NULL) 			   		/* get the needed buffer */
     return FALSE;
 
@@ -842,7 +848,7 @@ int Pascal startup(const char * sfname)
 																			      /* if it isn't around */
 	if (fspec == NULL)
 	{				  																/* complain if we are interactive */
-	  if (g_clexec == FALSE)
+	  if (g_clexec <= 0)
 	    mlwrite(TEXT214, sfname);
 						/* "%%No such file as %s" */
 	   return 13;

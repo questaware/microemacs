@@ -61,8 +61,6 @@ char tobuf[TBUFSIZ];		/* terminal output buffer */
 
 #include        <signal.h>
 
-int g_cliplife = CLIP_LIFE;
-
 #define  STDIPCHAN 0 /* not fileno(stdin), it's closed */
 
   static int  kbdflgs;			/* saved keyboard fd flags	*/
@@ -283,7 +281,7 @@ int ttflush(void)
   fflush(stdout);
 }
 
-static int  g_eaten_char = -1;		 /* Re-eaten char */
+// static int  g_eaten_char = -1;		 /* Re-eaten char */
 
 void flush_typah()
 
@@ -291,7 +289,7 @@ void flush_typah()
   fds.fd = 0; /* this is STDIN */
   fds.events = POLLIN;
 
-	g_eaten_char = -1;
+//g_eaten_char = -1;
 
   while (TRUE)
 	{	int ret = poll(&fds, 1, 0);
@@ -302,23 +300,28 @@ void flush_typah()
   }
 }
 
+#if 0
+
 void Pascal reeat(int c)
 
 {
 	g_eaten_char = c;			/* save the char for later */
 }
+
+#endif
 	    	     /* TTGETC:	Read a character from the terminal, performing no
 								editing and doing no echo at all.
 	      			*/
 int ttgetraw()
 
 {	char c;
+#if 0
 	if (g_eaten_char != -1)
   { int c = g_eaten_char;
     g_eaten_char = -1;
     return c;
   }
-  
+#endif
 #if     V7 | S_BSD
   read(STDIPCHAN, &c, 1);
 	return 255 & (int)c;
@@ -389,7 +392,7 @@ int rtfrmshell()
 
 { ttopen();
   curwp->w_flag = WFHARD;
-  sgarbf = TRUE;
+  pd_sgarbf = TRUE;
   return 0;     /* dont know the value */
 }
 #endif
@@ -399,7 +402,7 @@ static void usehost(line, end)
 	char	 end;
 { TTflush();
   tcapclose(1);
-  if (!g_clexec)
+  if (g_clexec <= 0)
     ttputc('\n');                /* Already have '\r'    */
 
   system(line);
@@ -420,7 +423,7 @@ static void usehost(line, end)
      ;
   }
 #endif
-  sgarbf = TRUE;
+  pd_sgarbf = TRUE;
 }
 
 
@@ -442,7 +445,7 @@ int gen_spawn(f, n, prompt, line)
       return s;
   }
 
-  usehost(line, prompt != NULL && !g_clexec);
+  usehost(line, prompt != NULL && g_clexec <= 0);
 
   ttcol = 0;  		   /* otherwise we shall not see the message */
 			   /* if we are interactive, pause here */
@@ -509,7 +512,7 @@ int pipecmd(int f, int n)
 	      break;
 	    }
 
-	  s = zotbuf(bp)
+	  s = zotbuf(bp);
 	  if (s != TRUE)
 	    return s;
 	}
@@ -524,12 +527,10 @@ int pipecmd(int f, int n)
 	if (splitwind(FALSE, 1) == FALSE)
 	  return FALSE;
 					    /* and read the stuff in */
-  bp = bufflink(line+s, g_clexec);
+  bp = bufflink(line+s, (g_clexec > 0) + 64);
 	if (bp == NULL)
 	  return FALSE;
-	  
-	swbuffer(bp);
-		     /* make this window in VIEW mode, update all mode lines */
+	  		     /* make this window in VIEW mode, update all mode lines */
 	curwp->w_bufp->b_flag |= MDVIEW;
 	orwindmode(WFMODE, 0);
 

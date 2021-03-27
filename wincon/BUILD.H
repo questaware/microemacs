@@ -1,13 +1,12 @@
 #ifndef BUILDINC
 #define BUILDINC
-			/*  ENVIRONMENT SELECTION SECTION */
 
 /*	Program Identification.....
 	Macros can query this via the $progname variable
 */
 
 #define PROGNAME	"Edm"
-#define	VERSION		"2.8"
+#define	VERSION		"2.9"
 
 
 /*	Machine/OS definitions			*/
@@ -23,6 +22,8 @@
 #define S_FINDER 0			/* Macintosh OS 		*/
 #define S_WIN32 1
 #define S_BORLAND 0
+
+#define USE_FAST_CALL __fastcall
 
 #define NONDIR  	0                     /* ndir.h is dirent.h           */
 #define USE_UBAR  0
@@ -131,7 +132,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define MINIMAP
 
 #define PSCP_CMD "c:\\bbin\\pscp.exe "
-#define CLIP_LIFE 120					// seconds
+#define CLIP_LIFE 300					// seconds
 
 #include "../src/base.h"
 #endif /* BUILDINC */

@@ -47,17 +47,16 @@ void Pascal  openwind(WINDOW * wp_, BUFFER * bp)
 
 
 
-void Pascal leavewind(WINDOW * wp)
+void Pascal leavewind(WINDOW * wp, int dec)
 	
 { BUFFER * bp = wp->w_bufp;
 
-  --bp->b_nwnd; /* if ( == 0) */			/* Last use. */
-  {	bp->b_wlinep = wp->w_linep;
-    bp->b_dotp	 = wp->w_dotp;
-    bp->b_doto	 = wp->w_doto;
-    bp->mrks	 = wp->mrks;
-  /*bp->b_fcol	 = wp->w_fcol;*/
-  }
+  bp->b_nwnd -= dec;
+	bp->b_wlinep = wp->w_linep;
+  bp->b_dotp	 = wp->w_dotp;
+  bp->b_doto	 = wp->w_doto;
+  bp->mrks	 = wp->mrks;
+/*bp->b_fcol	 = wp->w_fcol;*/
 }
 
 int Pascal openwindbuf(char * bname)
@@ -73,12 +72,11 @@ int Pascal openwindbuf(char * bname)
     return FALSE;
   }
   if (bclear(curbp))
-  { leavewind(curwp);
+  { leavewind(curwp, 0);
     openwind(curwp, curbp);
   
     curbp->b_flag &= ~MDVIEW;
     curbp->b_flag |= BFACTIVE;
-    curbp->b_nwnd++;										/* mark us as more in use */
   }
   return TRUE;
 }
@@ -103,8 +101,8 @@ int Pascal refresh(int f, int n)
 
 {  if (f != FALSE)
       return reposition(0, 0);  /* Center dot. */
-    sgarbf = TRUE;
-    return sgarbf;
+    pd_sgarbf = TRUE;
+    return pd_sgarbf;
 }
 
 /*
@@ -120,8 +118,11 @@ int Pascal nextwind(int f, int n)
 {
 	WINDOW *wp;
 
+	leavewind(curwp,0);
+
 	if (! f)
-	{ if ((wp = curwp->w_wndp) == NULL)
+	{ wp = curwp->w_wndp;
+		if (wp == NULL)
 	    wp = wheadp;
 	}
 	else
@@ -235,7 +236,7 @@ int Pascal onlywind(int f, int n)
 	  { //tcapbeep();
 	    if (wheadp == wp)
 	      wheadp = wheadp->w_wndp;
-	    leavewind(wp);
+	    leavewind(wp, 1);
 	    free((char *)wp);
 	  }
 	}
@@ -287,7 +288,7 @@ int Pascal delwind(int f, int n)
 	  return FALSE;
 	nwp->w_ntrows += 1 + curwp->w_ntrows;
 	nwp->w_flag |= WFHARD | WFMODE;
-	leavewind(curwp);
+	leavewind(curwp, 1);
 					   /* get rid of the current window */
 	pwp->w_wndp = curwp->w_wndp;
 
@@ -354,11 +355,11 @@ int Pascal splitwind(int f, int n)
 	for  (; ntrd-- >= 0;)
 	  lp = lforw(lp);
 
-	wp->w_linep = lp;			/* if necessary.	*/
+	wp->w_linep = lp;					/* if necessary.	*/
 	curwp->w_linep = lp;			/* Adjust the top lines */
 	curbp->b_wlinep = lp;
-	++curbp->b_nwnd;			/* Displayed twice.	*/
-{ extern LINE * g_lastlp;								// -ve => reset
+	++curbp->b_nwnd;					/* Displayed twice.	*/
+{ extern LINE * g_lastlp;		// -ve => reset
 	g_lastlp = NULL;
 	modeline(curwp);
 	g_lastlp = NULL;
@@ -374,51 +375,53 @@ int Pascal splitwind(int f, int n)
  */
 int Pascal enlargewind(int f, int n)
 
-{            WINDOW * thisp = curwp;
-    register WINDOW * adjwp;
-    register LINE * lp;
-    register int  ix;
+{   WINDOW * wp = curwp;
+    WINDOW * adjwp;
 
     if (wheadp->w_wndp == NULL)
-    { mlwrite(TEXT206);
-/*			"Only one window" */
       return FALSE;
-    }
-    adjwp = thisp->w_wndp;
+
+    adjwp = wp->w_wndp;
     if (adjwp == NULL)
     	adjwp = wheadp;
 
     if (n < 0)
     { n = -n;
-      thisp = adjwp;	
+      wp = adjwp;	
       adjwp = curwp;
     }
     if (adjwp->w_ntrows - n <= 0)
     { mlwrite(TEXT207);
-/*			"Impossible change" */
+						/* "Impossible change" */
       return FALSE;
     }
-    if (adjwp != wheadp)    // Shrink below.
-    { lp = adjwp->w_linep;
-      for (ix = n; --ix >= 0 && (lp->l_props & L_IS_HD) == 0; )
-      	lp = lforw(lp);
-      adjwp->w_linep  = lp;
-      adjwp->w_toprow += n;
-    } 
-    else                    /// Shrink above.
-    { LINE * p = lforw(thisp->w_bufp->b_baseline);
-      lp = thisp->w_linep;
-      for (ix = n; --ix >= 0 && lp != p; )
-      	lp = lback(lp);
-      thisp->w_linep  = lp;
-      thisp->w_toprow -= n;
-    }
-    thisp->w_ntrows += n;
-    adjwp->w_ntrows -= n;
-    thisp->w_flag |= WFMODE|WFHARD;
+
+    wp->w_ntrows += n;
+    wp->w_flag |= WFMODE|WFHARD;
     adjwp->w_flag |= WFMODE|WFHARD;
+    adjwp->w_ntrows -= n;
+
+{		int wh = adjwp == wheadp;
+		LINE * p;
+
+    if (wh)    						// Shrink above
+		{	adjwp = wp;
+      n = -n;
+    }
+    adjwp->w_toprow += n;
+		p = adjwp->w_bufp->b_baseline;
+		if (wh)
+		{	p = lforw(p);
+			n = -n;
+		}
+
+{		LINE * lp = adjwp->w_linep;
+
+		while (--n >= 0 && lp != p)
+     	lp = lmove(lp,wh);
+    adjwp->w_linep  = lp;
     return TRUE;
-}
+}}}
 
 /*
  * Shrink the current window. Find the window that gains space. Hack at the
@@ -504,8 +507,7 @@ int Pascal nextup(int f, int n)	/* scroll the next window up (back) a page */
 
 {	nextwind(FALSE, 1);
 	backpage(f, n);
-	prevwind(FALSE, 1);
-	return TRUE;
+	return prevwind(FALSE, 1);
 }
 
 int Pascal nextdown(int f, int n)	/* scroll next window down (forward) a page*/
@@ -526,7 +528,7 @@ int Pascal savewnd(int f, int n)	/* save ptr to current window */
 int Pascal restwnd(int f, int n)	/* restore the saved screen */
 
 {
-	register WINDOW *wp;
+	WINDOW *wp;
 					     /* find the window */
 	for (wp = wheadp; wp != NULL; wp = wp->w_wndp) 
 		if (wp == swindow)
@@ -537,7 +539,7 @@ int Pascal restwnd(int f, int n)	/* restore the saved screen */
 		}
 
 	mlwrite(TEXT208);
-/*		"[No such window exists]" */
+				/* "[No such window exists]" */
 	return FALSE;
 }
 
@@ -572,21 +574,21 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
     onlywind(FALSE, 1);		/* can only make this work */
 #endif
 		upwind();
-	  tcapepage();
+//  tcapepage();
 #if S_WIN32
 	{ char buf[35];
 	  mlwrite(strpcpy(&buf[0], lastmesg, 30));
 	}
 #endif
-	  sgarbf = TRUE;			  /* screen is garbage */
+	  pd_sgarbf = TRUE;			  /* screen is garbage */
 	}
 #if 0				       
 	if (!inr)
 	{ mlwrite(text209);
-/*			"Impossible screen size" */
+					/* "Impossible screen size" */
 	}
 #endif
-	return true/*inr*/;
+	return true /*inr*/;
 }
 
 
@@ -594,8 +596,8 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 
 int Pascal getwpos()
 
-{ register LINE *lp;
-  register int sline = curwp->w_ntrows;
+{ LINE *lp;
+  int sline = curwp->w_ntrows;
   
   for (lp = curwp->w_linep;
        lp != curwp->w_dotp;
@@ -608,5 +610,3 @@ int Pascal getwpos()
 
   return curwp->w_ntrows - sline;
 }
-
-

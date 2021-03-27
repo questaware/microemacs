@@ -4,7 +4,7 @@
 #include   "build.h"
 
 
-
+// Not in use
 
 Char * match_re(Char * tlt_, Char * pat_, Bool ic)
 	

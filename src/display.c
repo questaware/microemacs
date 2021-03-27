@@ -86,9 +86,10 @@ const char mdname[NUMMODES][8] = {		/* name of modes		*/
  "OVER ", "RE ", "CRYPT ", "ASAVE ","//","CHGD", "INVS"
  };
 
-static char fmtstr[LFSTR+1];		/* last message posted		*/
+static int currow;	/* Cursor row			*/
+static int curcol;	/* Cursor column		*/
 
-void Pascal updateline(int);
+static void Pascal updateline(int);
 
 #if S_WIN32
 
@@ -165,7 +166,7 @@ void Pascal vtinit()
 { 	int i;
 		VIDEO *vp;
 
-/*	if (gflags & MD_NO_MMI)
+/*	if (pd_gflags & MD_NO_MMI)
 			return; */
 
 #if S_WIN32
@@ -331,169 +332,172 @@ Short g_clring;
  * 8 : Use line foreground
  * An attribute of 0 therefore means the attributes for the line/new foreground
  */
-static Cc Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
+static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
-{ if (row >= term.t_mrowm1)
-	{ tcapbeep();
-		return -1;
+{	const int BCD = BCCOMT + BCPRL + BCSQL + BCPAS;
+	int  markuplen = 1;
+	char markupterm = 0;
+	int highlite = 0;
+	int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
+	int chrom_nxt = 0;
+	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
+
+	int len = llength(lp); 		/* an upper limit */
+  unsigned char * str = (unsigned char *)&lp->l_text[-1];
+	unsigned char s_props = *str;												/* layout dependent */
+	*str = 0;																						/* restored below */
+
+	if (row >= term.t_mrowm1)
+	{
+#if _DEBUG
+	  tcapbeep();
+#endif
+		row = term.t_mrowm1 - 1;
 	}
 
-{ unsigned char * str = (unsigned char *)&lp->l_text[-1];
-	VIDEO *vp = vscreen[row];
+{	VIDEO *vp = vscreen[row];
+	short * tgt = &vp->v_text[0];
 	Short  clring = g_clring;
-	const int BCD = BCCOMT + BCPRL + BCSQL + BCPAS;
-	char markupterm = 0;
-	int  markuplen = 1;
-	char s_props = lp->l_props;
 	int mode = cmt_chrom == 0 || clring == 0 || 
 								 (vp->v_flag & VFML) ? -1 : s_props & VFCMT;
 												
-	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
+	if ((clring & BCD) && (s_props & VFCMT) ||
+			(clring & BCFOR) && toupper(str[1]) == 'C' && len > 0)
+		chrom_nxt = cmt_chrom;
 
-	int chrom_nxt = 0;
-	int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
 //int chrom_in_peril = false;
-	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
 
-	short * tgt = &vp->v_text[0];
-	int len = llength(lp); 		/* an upper limit */
-	int highlite = 0;
-
-	lp->l_props = 0;			/* restored below */
+{	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
 
 	while (--len >= 0)
-	{ int chrom = chrom_nxt;
-		int c = *++str;
-
+	{	int chrom = chrom_nxt;
+		chrom_nxt = CHR_0;
 		if (vtc >= term.t_ncol)
-			tgt[term.t_ncol - 1] = (short)(chrom + '$');
+		{ tgt[term.t_ncol - 1] = (short)(chrom + '$');
+			continue;
+		}
+		
+	{ int c = *++str;
+		if (c != 0 && c == highlight[(++highlite)])
+		{ if (highlight[1+highlite] == 0 && vtc - highlite + 1 >= 0)
+			{ tgt[vtc-highlite+1] |= palcol(highlight[0]-'1') | CHR_NEW;
+				highlite = 0;
+			  chrom_on = 1;
+				chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
+			}
+		}
 		else
-		{	chrom_nxt = CHR_0;
-			if (c != 0 && c == highlight[(++highlite)])
-			{ if (highlight[1+highlite] == 0 && vtc - highlite + 1 >= 0)
-				{ tgt[vtc-highlite+1] |= palcol(highlight[0]-'1') | CHR_NEW;
-					highlite = 0;
-				  chrom_on = 1;
-					chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
-				}
+		{ highlite = 0;
+			if (c != 0 && c == highlight[1])
+				highlite = 1;
+		}
+
+		if			(c == '\t') 
+		{ c = ' ';
+			if (((vtc + 1 + col) % curbp->b_tabsize) != 0)
+			{ --str;
+				++len;
+			}
+		}
+		else if (c < 0x20 || c == 0x7F)
+		{ if (c >= col1ch && c <= col2ch)
+			{ 
+				chrom_nxt = palcol(c - col1ch); /* this is manual colouring */
+				continue;
 			}
 			else
-			{ highlite = 0;
-				if (c != 0 && c == highlight[1])
-					highlite = 1;
+			{ if (vtc >= 0)
+					tgt[vtc] = '^';
+				++vtc;
+				c ^= 0x40;
 			}
-
-			if			(c == '\t') 
-			{ c = ' ';
-				if (((vtc + 1 + col) % curbp->b_tabsize) != 0)
-				{ --str;
-					++len;
-				}
-			}
-			else if (c < 0x20 || c == 0x7F)
-			{ if (c >= col1ch && c <= col2ch)
-				{ 
-					chrom_nxt = palcol(c - col1ch); /* this is manual colouring */
-					continue;
-				}
-				else
-				{ if (vtc >= 0)
-						tgt[vtc] = '^';
-					++vtc;
-					c ^= 0x40;
-				}
-			}
-			else if (c < '0')
-			{ if			(mode < 0 || (mode & Q_IN_EOL))
-					;
-				else if ((clring & BCML) && (c == '*' || c == '_') && str[-1] != c &&
-				         ((str[-1] > ' ' || len > 0 && str[1] > ' ')))
-				{ if      (str[-1] == '\\')
-				    --vtc;
-				  else if (mode & Q_IN_CMT0+Q_IN_CMT)
-				  { if (c == markupterm && (markuplen == 0 || str[1] == markupterm))//safe
-				    { str += markuplen;
-              len -= markuplen;
-				      chrom_on = 1;
-				      chrom_nxt = CHR_OLD;
-				      mode &= ~(Q_IN_CMT0+Q_IN_CMT);
-				      continue;
-				    }
-				  }
-				  else
-          { int wh = find_match(str, len);
-            if (wh >= 0)
-            { chrom_nxt = wh ? chrom | CHR_UL : cmt_chrom;
-              mode |= wh ? Q_IN_CMT : Q_IN_CMT0;
-              str += wh;
-              len -= wh;
-              markuplen = wh;
-              markupterm = c;
-              continue;
-            }
-          }
-				}
-				else if (mode & (Q_IN_CMT+Q_IN_CMT0))
-				{ if (str[-1] == '*' && c == duple)	/* l_props cannot be '*' */
-					{ mode = 0;
-						chrom_nxt = CHR_OLD;
-					}
-				}
-				else if (c == '"')
-					mode ^= Q_IN_STR;
-				else if ((mode & (Q_IN_STR+Q_IN_EOL)) == 0)
-					if ( 		
-							(clring & BCCOMT) && (c == '*' || c == '/') && str[-1] == '/'||
-							(clring & BCPAS)	&&	c == '*' && str[-1] == '(' ||
-							(clring & BCSQL)	&& c == '-'  && str[-1] == '-' ||
-							(clring & BCFOR)	&& c == '!' ||
-							(clring & BCPRL)	&& c == '#')
-					{ mode = c != '*' ? Q_IN_EOL : Q_IN_CMT;
-						if			(vtc == 0 || (clring & (BCFOR | BCPRL)))
-							chrom = cmt_chrom;
-						else if (vtc > 0)
-							tgt[vtc-1] |= cmt_chrom;
-					}
-			}
-
-//		if (chrom_in_peril && chrom_on > 0)
-//		{ chrom_in_peril = false;
-//			if (vtc > 1)
-//				tgt[vtc-2] |= CHR_OLD;
-//			chrom_on = 0;
-//		}
-//		if (chrom_on > 0)
-//			chrom_in_peril = true;
-			if (vtc >= 0)
-				tgt[vtc] = c | chrom;
-			++vtc;
 		}
-	}
- /* fix at t-mob */
-	if ((clring & BCD) && (s_props & VFCMT) ||
-			(clring & BCFOR) && toupper(lp->l_text[0]) == 'C' && llength(lp) > 0)
-		tgt[0] |= cmt_chrom;
+		else if (c < '0')
+		{ if			(mode < 0 || (mode & Q_IN_EOL))
+				;
+			else if ((clring & BCML) && (c == '*' || c == '_') && str[-1] != c &&
+			         ((str[-1] > ' ' || len > 0 && str[1] > ' ')))
+			{ if      (str[-1] == '\\')
+			    --vtc;
+			  else if (mode & Q_IN_CMT0+Q_IN_CMT)
+			  { if (c == markupterm && (markuplen == 0 || str[1] == markupterm))//safe
+			    { str += markuplen;
+             len -= markuplen;
+			      chrom_on = 1;
+			      chrom_nxt = CHR_OLD;
+			      mode &= ~(Q_IN_CMT0+Q_IN_CMT);
+			      continue;
+			    }
+			  }
+			  else
+         { int wh = find_match(str, len);
+           if (wh >= 0)
+           { chrom_nxt = wh ? chrom | CHR_UL : cmt_chrom;
+             mode |= wh ? Q_IN_CMT : Q_IN_CMT0;
+             str += wh;
+             len -= wh;
+             markuplen = wh;
+             markupterm = c;
+             continue;
+           }
+         }
+			}
+			else if (mode & (Q_IN_CMT+Q_IN_CMT0))
+			{ if (str[-1] == '*' && c == duple)	/* l_props cannot be '*' */
+				{ mode = 0;
+					chrom_nxt = CHR_OLD;
+				}
+			}
+			else if (c == '"')
+				mode ^= Q_IN_STR;
+			else if ((mode & (Q_IN_STR+Q_IN_EOL)) == 0)
+				if ( 		
+						(clring & BCCOMT) && (c == '*' || c == '/') && str[-1] == '/'||
+						(clring & BCPAS)	&&	c == '*' && str[-1] == '(' ||
+						(clring & BCSQL)	&&  c == '-'  && str[-1] == '-' ||
+						(clring & BCFOR)	&&  c == '!' ||
+						(clring & BCPRL)	&&  c == '#')
+				{ mode = c != '*' ? Q_IN_EOL : Q_IN_CMT;
+					chrom = cmt_chrom;
+					if (vtc > 0 && (clring & (BCFOR | BCPRL)) == 0)
+						tgt[vtc-1] |= cmt_chrom;
+				}
+		}
 
-	if (vtc > 1 && chrom_on != 0)
+//	if (chrom_in_peril && chrom_on > 0)
+//	{ chrom_in_peril = false;
+//		if (vtc > 1)
+//			tgt[vtc-2] |= CHR_OLD;
+//		chrom_on = 0;
+//	}
+//	if (chrom_on > 0)
+//		chrom_in_peril = true;
+		if (vtc >= 0)
+			tgt[vtc] = c | chrom;
+		++vtc;
+	}}
+
+  --vtc;
+{ int ct = term.t_ncol - vtc;
+
+	if (vtc > 0 && chrom_on != 0)
 	{
 #if S_MSDOS == 0
 		if (mode > 0)
 #endif
-		{ if ((tgt[vtc-1] & 0xff00) && vtc < term.t_ncol)
-				tgt[vtc++] = ' ';
+		{ if ((tgt[vtc] & 0xff00) && ct < 0)
+				tgt[++vtc] = ' ';
 			tgt[vtc] |= CHR_OLD;
 		}
 	}
-{ int ct = term.t_ncol - vtc;
-	while (--ct >= 0)
-	{ if (vtc >= 0)
+	while (--ct > 0)
+	{ if (++vtc >= 0)
 			tgt[vtc] = ' ';
-		++vtc;
 	}
 
 	lp->l_props = s_props;
-	return OK;
-}}}
+	return vp;
+}}}}
 
 
 /************************** Modeline stuff *************************/
@@ -509,16 +513,13 @@ static int     g_lastfcol;
 void Pascal modeline(WINDOW * wp)
 	
 {	int row;
-	int n; 			      /* cursor position count */
+	int n; 			      	/* cursor position count */
 	union 
 	{ LINE lc;
-	  char c[NLINE+24]; /* buffer for part of mode line */
+	  char c[NLINE+24]; /* buffer for mode line */
 	}   tline;
 
-	if (vscreen == null)/* don't bother if there is none*/
-		return;
-
-	else if (wp->w_dotp == g_lastlp /* and wp->w_wndp == NULL */)
+	if (wp->w_dotp == g_lastlp /* and wp->w_wndp == NULL */)
 	{ if (wp->w_fcol == g_lastfcol && (wp->w_flag & WFMODE == 0))
 			return;
 	}
@@ -537,12 +538,15 @@ void Pascal modeline(WINDOW * wp)
 	n = wp == curwp ? '='  :
 #endif
 										'-';
+	tline.lc.l_used = term.t_ncol;
 	memset(&tline.lc.l_text[0], n, NLINE);
 
 	row = wp->w_toprow+wp->w_ntrows;		/* Location. */
 	if ((unsigned)row >= (unsigned)term.t_mrowm1)
 	{ row = term.t_mrowm1 - 1;
+#if _DEBUG
 		mbwrite("toprow+ntrows oor");
+#endif
 	}
 	vscreen[row]->v_flag &= ~VFCMT;
 #if S_MSDOS || OWN_MODECOLOUR
@@ -579,11 +583,10 @@ void Pascal modeline(WINDOW * wp)
 					/* display the modes */
 	
 { int cpix;
-  int	modeset = wp->w_bufp->b_flag >> NUMFLAGS;
-	for (i = -1; ++i < NUMMODES - 2 && modeset != 0; ) /* add in mode flags */
-	{ if (modeset & 1) 
+  int	modeset = wp->w_bufp->b_flag >> NUMFLAGS-1;
+	for (i = -1; ++i < NUMMODES - 2; ) /* add in mode flags */
+	{ if ((modeset = modeset >> 1) & 1) 
 			strcat(&tline.lc.l_text[10], mdname[i]);
-		modeset = modeset >> 1;
 	}
 	cpix = strlen(tline.lc.l_text);
 	if (tline.lc.l_text[cpix-1] == ' ')
@@ -594,10 +597,10 @@ void Pascal modeline(WINDOW * wp)
   cpix += 4;
 
 { const char * s = bp->b_fname;
-	const char * fn = s;
 
 	if (s != NULL)	/* File name. */
 	{
+		const char * fn = s;
 		for (s = &s[strlen(s)]; --s >= fn && *s != '/'; )
 			;
 						
@@ -614,10 +617,9 @@ void Pascal modeline(WINDOW * wp)
 		tline.lc.l_text[strlen(tline.lc.l_text)] = ' ';
 	}
 
-	tline.lc.l_used = term.t_ncol;
-	tline.lc.l_text[tline.lc.l_used] = 0;
+//tline.lc.l_text[tline.lc.l_used] = 0;
 	
-	vtmove(row, 0, 0, &tline.lc); 	/* Seek to right line. */
+	(void)vtmove(row, 0, 0, &tline.lc); 	/* Seek to right line. */
 #if 0
 	vtputs((wp->w_flag&WFCOLR) != 0  ? "C" : "");
 	vtputs((wp->w_flag&WFMODE) != 0  ? "M" : "");
@@ -665,63 +667,65 @@ static void Pascal pscroll(int dir, int stt, int lenm1)
 		/*	dir;			** < 0 => window down */
 		/*	stt;			** start target location */
 		/*	lenm1;									*/
-{ register VIDEO * vp;
+{ int n = 1;
+	int src = stt;
+	int tgt = stt;
 
 	if (dir < 0)
-	{ vp = pscreen[stt];
-		memmove(&pscreen[stt], &pscreen[stt+1], lenm1 * sizeof(VIDEO*));
-		pscreen[stt+lenm1] = vp;
+	{ ++src;
+		n = 0;
 	}
-	else 
-	{ vp = pscreen[stt+lenm1];
-		memmove(&pscreen[stt+1], &pscreen[stt], lenm1 * sizeof(VIDEO*));
-		pscreen[stt] = vp;
-	}
-	lenm1 = term.t_ncol;
-	while (--lenm1 >= 0)
-		vp->v_text[lenm1] = ' ';
-}
+	else
+		++tgt;
+
+{ VIDEO *	vp = pscreen[stt+n*lenm1];
+	memmove(&pscreen[tgt], &pscreen[src], lenm1 * sizeof(VIDEO*));
+	pscreen[stt+(n ^ 1) * lenm1] = vp;
+
+	n = term.t_ncol;
+	while (--n >= 0)
+		vp->v_text[n] = ' ';
+}}
 
 #endif
 
 
 static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN */
 	 
-{ int stt = wp->w_toprow;
-	int lenm1 = wp->w_ntrows-1;
-	if (wp->w_flag & WFMODE)
-		--lenm1;
-
 { int n = 1;
+	int lenm1 = wp->w_ntrows-2;
+	int stt = wp->w_toprow;
 
-/*	vtscroll(n, wp->w_toprow, lenm1); */
+//if (wp->w_flag & WFMODE)
+//	--lenm1;
+//vtscroll(n, wp->w_toprow, lenm1);
 	VIDEO * vp;
+	int src = stt;
+	int tgt = stt;
 
 	if (set & WFTXTD)
-	{ n = -1;
-		vp = vscreen[stt];
-		memmove(&vscreen[stt], &vscreen[stt+1], lenm1 * sizeof(VIDEO*));
-		vscreen[stt+lenm1] = vp;
+	{ 
 #if S_MSDOS == 0
-		ttrow -= 2;
-		tcapmove(ttrow + 2, ttcol); 		/* a trick */
+		ttrow -= 2;								/* a trick */
 #endif
+		++src;
+		n = 0;
 	}
-	else 
-	{ vp = vscreen[stt+lenm1];
-		memmove(&vscreen[stt+1], &vscreen[stt], lenm1 * sizeof(VIDEO*));
-		vscreen[stt] = vp;
-#if S_MSDOS == 0
-		tcapmove(ttrow, ttcol);
-#endif
-	}
- /*lenm1 += stt;*/
+	else
+		++tgt;
+
+	vp = vscreen[stt+n*lenm1];
 	vp->v_flag = VFCHG;
+	memmove(&vscreen[tgt], &vscreen[src], lenm1 * sizeof(VIDEO*));
+	vscreen[stt + (n ^ 1) * lenm1] = vp;
+
 #if S_MSDOS == 0
+	n = n * 2 - 1;
+	tcapmove(ttrow - n + 1, ttcol);
 	tcapscreg(stt, stt+lenm1);
 	ttscupdn(n);
-#endif
 	pscroll(n, stt, lenm1);
+#endif
 	updall(wp, 0);
 /* updateline(n < 0 ? wp->w_toprow : wp->w_toprow+lenm1);*/
 #if 0 && MEMMAP == 0
@@ -741,7 +745,7 @@ X 		{ pteeol(term.t_mrowm1-2);
 X 			psuppress(term.t_mrowm1-2);
 X 		}
 #endif
-}}
+}
 	 
 
 
@@ -763,10 +767,10 @@ void Pascal updline(int force)
 */
 {			  int i;
  static LINE * up_lp = NULL;
-			  LINE * lp;
 		    WINDOW * wp = curwp;
-	
-					/* make sure it is not off the left side of the screen */
+		    LINE * curlp = curwp->w_dotp;
+			  LINE * lp;
+															 		/* ensure its not off the left of the screen */
 	while ((i = getccol() - wp->w_fcol) < 0)
 	{ if (wp->w_fcol >= hjump)
 			wp->w_fcol -= hjump;
@@ -799,7 +803,7 @@ void Pascal updline(int force)
 			 lp = lforw(lp))
 		++currow;
 
-{ int color = window_bgfg(curwp);
+{ // int color = window_bgfg(curwp);
 	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
 
 				/* if horizontal scrolling is enabled, shift if needed */
@@ -824,13 +828,13 @@ void Pascal updline(int force)
 
 				/* scan through the line copying to the virtual screen*/
 			/* once we reach the left edge						*/
-			vtmove(currow, lbound + wp->w_fcol, cmt_clr, wp->w_dotp);
+		{ VIDEO * vp = vtmove(currow, lbound + wp->w_fcol, cmt_clr, wp->w_dotp);
 						/* start scanning offscreen */
 			
-			vscreen[currow]->v_text[0] = /*BG(C_BLUE)+FG(C_WHITE)+*/'$';
+			vp->v_text[0] = /*BG(C_BLUE)+FG(C_WHITE)+*/'$';
 								 /* and put a '$' in column 1 */
-			vscreen[currow]->v_flag |= (VFEXT | VFCHG);
-		}
+			vp->v_flag |= (VFEXT | VFCHG);
+		}}
 	}
 					 /* update the current window if we have to move it around */
 	if (wp->w_flag & WFHARD)
@@ -842,19 +846,20 @@ void Pascal updline(int force)
 	{ lp = wp->w_linep;
 		i = wp->w_toprow;
 	{ int zline = i + wp->w_ntrows; 			/* zero based */
+#if _DEBUG
 		if (zline >= term.t_mrowm1)
-		{ /* addb(sline); */
+		{ adb(37);
 			zline = term.t_mrowm1-1;
 		}
-
-		for (; i < zline; ++i)
+#endif
+		for (--i; ++i < zline; )
 		{ if (vscreen[i]->v_flag & VFEXT)
-			{ if ((wp != curwp) || (lp != wp->w_dotp) ||
-					 (curcol < term.t_ncol - 1))
-				{ vtmove(i, wp->w_fcol, cmt_clr, lp);
+			{ 
+				if (lp != curlp || curcol < term.t_ncol - 1)
+				{ VIDEO * vp = vtmove(i, wp->w_fcol, cmt_clr, lp);
 					/* this line no longer is extended */
-					vscreen[i]->v_flag &= ~VFEXT;
-					vscreen[i]->v_flag |= VFCHG;
+					vp->v_flag -= VFEXT;
+					vp->v_flag |= VFCHG;
 				}
 			}
 			lp = lforw(lp);
@@ -867,7 +872,7 @@ void Pascal updline(int force)
 /*	updupd: update the physical screen from the virtual screen	*/
 
 #if MEMMAP == 0
-	if (sgarbf != FALSE)
+	if (pd_sgarbf != FALSE)
 	{  
 	 /*tcapmove(0, 0);		** Erase the screen. */
 		 tcapepage();			 /* Erase-page, also clears the message area. */
@@ -878,7 +883,7 @@ void Pascal updline(int force)
 	for (i = -1; ++i <= term.t_nrowm1; )
 	{
 #if MEMMAP == 0
-		if (sgarbf)
+		if (pd_sgarbf)
 		{ 
 #if REVSTA && 0
 			vscreen[i]->v_flag &= ~VFREV;
@@ -887,7 +892,7 @@ void Pascal updline(int force)
 		}
 #endif
 				/* for each line that needs to be updated*/
-		if (sgarbf || (vscreen[i]->v_flag & VFCHG))
+		if (pd_sgarbf || (vscreen[i]->v_flag & VFCHG))
 		{ 
 #if GOTTYPAH && S_MSDOS == 0 && 0
 			if (force == FALSE && typahead())
@@ -897,17 +902,106 @@ void Pascal updline(int force)
 /* UPDATELINE specific code for the IBM-PC and other compatables */
 
 		{ struct VIDEO *vp1 = vscreen[i]; /* virtual screen image */
-			scwrite(i, vp1->v_text, vp1->v_color);
 			vp1->v_flag &= ~VFCHG;	/* flag this line as changed */
+			scwrite(i, vp1->v_text, vp1->v_color);
 		}
 #else
 			updateline(i);
 #endif
 		}
 	}
-	sgarbf = FALSE;
+	pd_sgarbf = FALSE;
 }}
 
+											/* reframe:	check to see if the cursor is on in the window
+												and re-frame it if needed or wanted 	*/
+static 
+int Pascal reframe(WINDOW * wp)
+
+{	LINE *lp;			 /* search pointer */
+//LINE *rp;			 /* reverse search pointer */
+
+	LINE * top = wp->w_linep;
+	int nlines = wp->w_ntrows;
+	int centre = wp->w_force;
+  int flags = wp->w_flag;
+	wp->w_force = 0;
+												/* if not a requested reframe, check for a needed one */
+	if ((flags & WFFORCE) == 0)
+	{ int i;
+	  lp = top;
+		for (i = nlines; --i >= 0; ) 
+		{												 		/* if the line is in the window, no reframe */
+			if (lp == wp->w_dotp)
+				return flags;
+																/* if we are at the end of the file, reframe */
+			if (lp->l_props & L_IS_HD)
+				break;
+				
+			lp = lforw(lp);						/* on to the next line */
+		}
+		if	(sscroll && (flags & WFHARD) == 0)
+		{ if		  (wp->w_dotp == lp)
+			{ lp = lforw(top);
+				flags |= WFTXTD;
+				goto ret;
+			}
+			else if ((wp->w_dotp->l_props & L_IS_HD) == 0 &&
+							 lforw(wp->w_dotp) == top)
+			{ lp = wp->w_dotp;
+				flags |= WFTXTU;
+				goto ret;
+			}
+			centre = (nlines >> 2) + 1;
+		}
+	}
+#if 0
+														 /* reaching here, we need a window refresh */
+														 /* search thru the buffer looking for the point */
+		{ int clamp = 0x7fff;  /* why is this being done? */
+			rp = lp;
+			
+			while (lp != wp->w_dotp && rp != wp->w_dotp)
+			{ if			((lp->l_props & L_IS_HD) == 0)
+				lp = lforw(lp);
+				else if (rp->l_props & L_IS_HD)
+					break;
+				if ((rp->l_props & L_IS_HD) == 0)
+					rp = lback(rp);
+
+				if (--clamp == 0)
+				{ adb(51);
+					break;
+				}
+			}
+		}
+#endif
+															/* how far back to reframe? */
+	if      (centre > 0) 				/* only one screen worth of lines max */
+	{ if (centre > nlines)
+			centre = nlines;
+	} 
+	else if (centre < 0)	/* negative update???? */
+	{ centre += nlines - 1;
+	} 
+	else
+		centre = nlines >> 1;
+																			/* backup to new line at top of window */
+	for (lp = wp->w_dotp; 
+			 ((lp = lback(lp))->l_props & L_IS_HD) == 0 && --centre >= 0; )
+		;
+
+						 /* and reset the current line at top of window */
+	pd_sgarbf = 1;
+	flags |= WFHARD;
+	lp = lforw(lp);
+ret:
+	wp->w_linep = lp;
+
+	return flags;
+}
+
+
 /* Make sure that the display is right. This is a three part process.
  * First scan through all of the windows looking for dirty ones. 
  * Check the framing and refresh the screen. 
@@ -922,16 +1016,16 @@ int /*Pascal*/ update(int force)
 	if (vscreen != NULL
 
 #if GOTTYPEAH || VISMAC == 0
-						&& (force
+						&& (force || ( 1 
 #endif
 #if GOTTYPAH
-				|| ! typahead() 
+				&& ! typahead() 
 #endif
 #if VISMAC == 0
-				|| ! kbd_play(kbdmode)
+				&& pd_kbdrep == 0
 #endif
 #if GOTTYPEAH || VISMAC == 0
-			 )
+			 ))
 #endif
 		 )
 	{ 				/* update any windows that need refreshing */
@@ -949,10 +1043,8 @@ int /*Pascal*/ update(int force)
 				else
 				{ if (set)
 						updall(wp, 1);						/* update all lines */
-					set = (wp == curwp);		/* 1 is WFFORCE */
 				}
 			/* wp->w_changed = null; */
-				wp->w_force = 0;
 				wp->w_flag &= ~WFMODE;
 //			if (set && 1)
 //				wp->w_flag = WFMODE;
@@ -975,97 +1067,6 @@ int Pascal upscreen(int f, int n)
 
 { return update(TRUE);
 }
-
-
-/*	reframe:	check to see if the cursor is on in the window
-			and re-frame it if needed or wanted 	*/
-
-int Pascal reframe(WINDOW * wp)
-
-{
-	LINE *lp;			 /* search pointer */
-	LINE *rp;			 /* reverse search pointer */
-	int i; 			 /* general index/# lines to scroll */
-
-	int nlines = wp->w_ntrows;
-	int centre = wp->w_force;
-  int flags = wp->w_flag;
-												/* if not a requested reframe, check for a needed one */
-	if ((flags & WFFORCE) == 0)
-	{ lp = wp->w_linep;
-		for (i = nlines; --i >= 0; ) 
-		{ 		/* if the line is in the window, no reframe */
-			if (lp == wp->w_dotp)
-				return flags;
-				/* if we are at the end of the file, reframe */
-			if (lp->l_props & L_IS_HD)
-				break;
-				/* on to the next line */
-			lp = lforw(lp);
-		}
-		if	(sscroll && (flags & (WFFORCE+WFHARD)) == 0)
-		{ if		(wp->w_dotp == lp)
-			{ wp->w_linep = lforw(wp->w_linep);
-				return flags | WFTXTD;
-			}
-			else if (lforw(wp->w_dotp) == wp->w_linep
-					&& (wp->w_dotp->l_props & L_IS_HD) == 0)
-			{ wp->w_linep = wp->w_dotp;
-				return flags | WFTXTU;
-			}
-			centre = (nlines >> 2) + 1;
-		}
-	}
-#if 0
-			 /* reaching here, we need a window refresh */
-			 /* search thru the buffer looking for the point */
-		{ int clamp = 0x7fff;  /* why is this being done? */
-			rp = lp;
-			
-			while (lp != wp->w_dotp && rp != wp->w_dotp)
-			{ if			((lp->l_props & L_IS_HD) == 0)
-				lp = lforw(lp);
-				else if (rp->l_props & L_IS_HD)
-					break;
-				if ((rp->l_props & L_IS_HD) == 0)
-					rp = lback(rp);
-						/* problems????? */
-				if (lback(rp) == null)
-				{ adb(57);
-					break;
-				}
-				if (--clamp == 0)
-				{ adb(51);
-					break;
-				}
-			}
-		}
-#endif
-										/* how far back to reframe? */
-	if (centre > 0) 				/* only one screen worth of lines max */
-	{ if (centre > nlines)
-			centre = nlines;
-		centre -= 1;
-	} 
-	else if (centre < 0)	/* negative update???? */
-	{ centre += nlines;
-		if (centre < 0)
-			centre = 0;
-	} 
-	else
-		centre = nlines >> 1;
-						/* backup to new line at top of window */
-	rp = lforw(wp->w_bufp->b_baseline);
-	for (lp = wp->w_dotp; --centre >= 0 && lp != rp; lp = lback(lp))
-		;
-						 /* and reset the current line at top of window */
-	wp->w_linep = lp;
-	sgarbf = 1;
-	return flags | WFHARD;
-}
-
-#undef	centre
-#undef	clamp
 
 /*	updall: update all the lines in a window on the virtual screen */
 
@@ -1091,11 +1092,11 @@ void Pascal updall(WINDOW * wp, int all)
 	for (; sline < zline; ++sline)
 	{ if (all || lp == wp->w_dotp)	/* and update the virtual line */
 		{
-			vtmove(sline, wp->w_fcol, cmt_clr, lp);
+			VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
 
-			vscreen[sline]->v_color = color;
-			vscreen[sline]->v_flag &= ~(VFREQ | VFML);
-			vscreen[sline]->v_flag |= VFCHG | (lp->l_props & Q_IN_CMT);
+			vp->v_color = color;
+			vp->v_flag &= ~(VFREQ | VFML);
+			vp->v_flag |= VFCHG | (lp->l_props & Q_IN_CMT);
 		}
 		if ((lp->l_props & L_IS_HD) == 0)/* if we are not at the end */
 			lp = lforw(lp);
@@ -1128,6 +1129,7 @@ void Pascal updallwnd(int reload)
  */
 #if  MEMMAP == 0
 
+static
 void Pascal updateline(int row)
 	 /* row;		** row of screen to update */
 {
@@ -1152,7 +1154,7 @@ void Pascal updateline(int row)
 	pscreen[row]->v_color = prechrom;
 	pscreen[row]->v_flag = vp1->v_flag;
 
-	if (sgarbf)
+	if (pd_sgarbf)
 		caution = FALSE;
 				
 /* 0 : No special effect
@@ -1242,7 +1244,7 @@ void Pascal updateline(int row)
 	else
 #endif
 
-	if ( revreq > 0 && !sgarbf && cp9 < cpend)
+	if ( revreq > 0 && !pd_sgarbf && cp9 < cpend)
 	{ if (row != term.t_nrowm1 || 1)
 			tcapeeol();
 		else
@@ -1269,8 +1271,6 @@ void Pascal upwind()	/* force hard updates on all windows */
 { orwindmode(WFMODE | WFHARD | WFMOVE, 0);
 }
 
-static int fmtstr_ix;
-
 /* Write a message into the message line. Keep track of the physical cursor
  * position. A small class of printf like format items is handled. 
  * Set the "message line" flag TRUE.	
@@ -1284,18 +1284,13 @@ void Pascal mlout(char c)
 		ttcol -= 2;
 	}
 	else
-	{ if (g_discmd < 0)
-		{  fmtstr[(fmtstr_ix++) & 0x7f] = c;
-			 return;
-		}
-		
-		if (ttcol + 1 >= term.t_ncol)
+	{ if (ttcol + 1 >= term.t_ncol)
 			return;
 		lastmesg[ttcol] = c;
-	}
-	if (g_discmd > 0)
-	{ int notused = g_discmd;
 		lastmesg[ttcol+1] = 0;
+	}
+	if (pd_discmd > 0)
+	{ int notused = pd_discmd;
 		
 		ttputc(/*(char)*/c);
 #if S_WIN32
@@ -1315,16 +1310,18 @@ static int mlputli_width;
 		 */ 
 void Pascal mlputs(const char * s)
 
-{
-	char ch;
+{ int wid = mlputli_width;
 
-	while ((ch = *s++) != 0)
-	{ mlout(ch); 
-		if (--mlputli_width == 0)
-			break;
-	} 
+	if (s != NULL)
+	{	char ch;
+		while ((ch = *s++) != 0)
+		{ mlout(ch); 
+			if (--wid == 0)
+				break;
+		} 
+	}
 		
-	while (--mlputli_width >= 0)
+	while (--wid >= 0)
 		mlout(' ');
 		
 	mlputli_width = 0;
@@ -1374,34 +1371,33 @@ void Pascal mlputf(int s)
 
 int mlwrite(const char * fmt, ...)
 {
-		Bool scoo;
-		int sdiscmd = g_discmd;
-    int ch;
 #define fmtch '%'
 
  va_list ap;
  va_start(ap, fmt);
 
-	mlputli_width = 0;
-	fmtstr_ix = 0;
-
-	if (g_discmd == 0)
+	if      (fmt[0] == '%' && fmt[1] == '!')			/* force display */
+		fmt += 2;
+	else if (pd_discmd == 0)
 		return 0;
-
-	scoo = cursor_on_off(false);
 
 	if (*fmt == 7)
 	{ ++fmt;
 		(void)tcapbeep();
 	}
 
+	mlputli_width = 0;
+
+{	int  ch;
+	int  s_discmd = pd_discmd++;
+	Bool popup = false;
+	Bool scoo = cursor_on_off(false);
+
+
 	if (*fmt != '\001')
 	{ --fmt;
 #if COLOR && 0
 		tcapbfcol(V_BLANK); /* set up the proper colors for the command line */
-#endif
-#if S_WIN32
-		memset(&vscreen[term.t_nrowm1]->v_text[0], 0, term.t_ncol*2);
 #endif
 		tcapmove(term.t_nrowm1, 0);
 		tcapeeol();
@@ -1413,26 +1409,26 @@ int mlwrite(const char * fmt, ...)
 		else 
 		{ while (((unsigned)(ch = *++fmt - '0')) <= 9)
 				mlputli_width = mlputli_width * 10 + ch;
-		{ int radix = 8;
+		{ int radix = 10;
 			switch (ch+'0')
-			{  case 'w': TTflush();
+			{  case '>': pd_discmd = -1;
+#if S_WIN32 == 0
+				 when 'w': TTflush();
 									 millisleep(4800);
-				 when '>': g_discmd = -1;
-				 when 'x': radix += 6;
-				 case 'd': radix += 2;
-				 case 'c': 
-				 case 'o': if (ch == 'c'-'0')
-										 mlout((char)get_arg(int,ap));
-									 else
-										 mlputli((Int)get_arg(int,ap), radix);
-				 when 'D': mlputli(get_arg(Int,ap), 10);
+#endif
+				 when 'c': mlout((char)get_arg(int,ap));
+				 when 'o': radix = 8 - 6;
+				 case 'x': radix += 6;
+				 case 'd':
+									 mlputli((int)get_arg(int,ap), radix);
+				 when 'p': popup = true;
 				 when 's': mlputs(get_arg(char *, ap));
 #if S_MSDOS == 0
 				 when 'f': mlputf(get_arg(double, ap));
 #else
 				 when 'f': mlputf(get_arg(long, ap));
 #endif
-				 otherwise mlout((char)('0'+ch));
+				 otherwise mlout((char)(ch+'0'));
 			}
 			mlputli_width = 0;
 		}}
@@ -1440,45 +1436,43 @@ int mlwrite(const char * fmt, ...)
 	TTflush();
 
 	mpresf = TRUE;
-	if (g_discmd < 0)
-	{ fmtstr[(fmtstr_ix & 0x7f)] = 0; 	/* terminate lastmesg[] */
-		(void)linstr(fmtstr);
+	if (pd_discmd < 0)
+	{ (void)linstr(lastmesg);
 		loglog1("mlw %s", fmtstr);
 	}
+#if S_WIN32
 	else
-	{
-#if _WINDOWS
-		if (vscreen != NULL)
-			for (int mr = ttcol-1; ++mr < term.t_ncol; )
-				vscreen[ttrow]->v_text[mr] = ' ';
+		memset(&vscreen[term.t_nrowm1]->v_text[ttcol], 0, (term.t_ncol-ttcol)*2);
 #endif
-		loglog1("mlw %s", lastmesg);
-	}
-		
-	ch = g_discmd;
-	g_discmd = sdiscmd;
-	(void)cursor_on_off(scoo);
-	return ch < 0 ? fmtstr_ix : ttcol;				/* Number of characters */
-}
 
+	loglog1("mlw %s", lastmesg);
+		
+	pd_discmd = s_discmd;
+	if (popup)
+		mbwrite(lastmesg);
+	(void)cursor_on_off(scoo);
+	return ttcol;															/* Number of characters */
+}}
+
+#if 0
 		/* Force a string out to the message line regardless of the
 			 current $discmd setting. This is needed when $debug is TRUE
 			 and for the write-message and clear-message-line commands
 		*/
 void Pascal mlforce(const char * s)
 
-{ int oldcmd = g_discmd;
-	g_discmd = TRUE;
-//if (gflags & MD_NO_MMI)
-//	g_discmd = FALSE;
+{ ++pd_discmd;
+//if (pd_gflags & MD_NO_MMI)
+//	pd_discmd = FALSE;
 #if S_BORLAND
 	mlwrite(const_cast<char *>(s));
 #else
 	mlwrite(s);
 #endif
-	g_discmd = oldcmd;
+	--pd_discmd;
 }
 
+#endif
 
 /* Erase the message line. This is a special routine because the message line
  * is not considered to be part of the virtual screen. It always works

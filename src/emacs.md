@@ -629,7 +629,6 @@ $zcmd          The last command
   DYNAMIC, RINT, "sup", /* set upper to lower char translation */
   DYNAMIC, RINT, "tim",   /* multiplication */
   MONAMIC, RINT, "tri", /* trim whitespace off the end of a string */
-  MONAMIC, RSTR, "tru",   /* Truth of the universe logical test */
   MONAMIC, RINT, "upp",   /* uppercase string */
   TRINAMIC,RINT, "xla", /* XLATE character string translation */
 

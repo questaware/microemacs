@@ -618,8 +618,8 @@ int Pascal spawncli(int f, int n)
 	/*movecursor(term.t_nrow, 0); 			** Seek to last line. 	*/
 	TTclose(0); 					/* stty to old settings */
 	test( LIB$SPAWN( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
-	sgarbf = TRUE;
 	TTopen(0);
+	pd_sgarbf = TRUE;
 	return TRUE;
 }
 
@@ -628,7 +628,7 @@ static void usehost(char * line, char end)
 
 { TTflush();
 	tcapclose(0);
-	if (!g_clexec)
+	if (g_clexec <= 0)
 		ttputc('\n'); 							 /* Already have '\r' 	 */
 
 	system(line);
@@ -648,7 +648,7 @@ static void usehost(char * line, char end)
 		 ;
 	}
 #endif
-	sgarbf = TRUE;
+	pd_sgarbf = TRUE;
 }
 
 /*
@@ -673,7 +673,7 @@ int Pascal spawn(int f, int n)
 	TTflush();
 
 		/* if we are interactive, pause here */
-	if (g_clexec == FALSE) 
+	if (g_clexec <= 0) 
 	{
 #if S_VMS
 		write(1, "\r\n\n[End2]", 9);
@@ -686,7 +686,7 @@ int Pascal spawn(int f, int n)
 		tcapepage();
 #endif
 	}
-	sgarbf = TRUE;
+	pd_sgarbf = TRUE;
 	return TRUE;
 }
 
@@ -718,7 +718,7 @@ int Pascal execprg(int f, int n)
 	TTflush();
 	while ((s = tgetc()) != '\r' && s != ' ')
 		;
-	sgarbf = TRUE;
+	pd_sgarbf = TRUE;
 	return TRUE;
 }
 
@@ -763,7 +763,7 @@ X test( LIB$SPAWN( descptr( line), DESCPTR( "NL:"), descptr( filnam),
 X 								0, 0, 0, 0, 0, 0, 0, 0));
 X TTopen(0);
 X TTflush();
-X sgarbf = TRUE;
+X pd_sgarbf = TRUE;
 X s = TRUE;
 X
 X if (s != TRUE)
@@ -834,7 +834,7 @@ X test( LIB$SPAWN( descptr( line), descptr( filnam1), descptr( filnam2),
 X 								0, 0, 0, &s, 0, 0, 0, 0));
 X TTopen(0);
 X TTflush();
-X sgarbf = TRUE;
+X pd_sgarbf = TRUE;
 X s &= 1;
 X
 X /* on failure, escape gracefully */
@@ -899,11 +899,10 @@ int pipecmd(int f, int n)
 	if (splitwind(FALSE, 1) == FALSE)
 		return FALSE;
 							/* and read the stuff in */
-	bp = bufflink(filnam, g_clexec);
+	bp = bufflink(filnam, (g_clexec > 0) + 64);
 	if (bp == NULL)
 		return FALSE;
 		
-	swbuffer(bp);
 				 /* make this window in VIEW mode, update all mode lines */
 	curwp->w_bufp->b_flag |= MDVIEW;
 	orwindmode(WFMODE, 0);
@@ -1174,7 +1173,7 @@ X strcpy(bp->b_fname, outstr);
 X bp->b_flag |= BFCHG; 					 /* flag it as changed */
 X free( instr);
 X free( outstr);
-X sgarbf = TRUE;
+X pd_sgarbf = TRUE;
 X status = edit loop();
 X
 Xabortrun:
@@ -1258,7 +1257,7 @@ X test( SYS$SETDDIR( descptr( argv[ 1]), 0, 0));
 X/*
 X Remaining came from command line
 X*/
-X sgarbf = TRUE;
+X pd_sgarbf = TRUE;
 X dcline( argc-2, &argv[ 2], FALSE);
 X return TRUE;
 X}

@@ -47,7 +47,7 @@ extern int g_overmode;			/* from line.c */
 NOSHARE int g_nosharebuffs = FALSE; /* dont allow different files in same buffer*/
 NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
 
-NOSHARE char *execstr = NULL;		/* pointer to string to execute */
+NOSHARE char *g_execstr = NULL;/* pointer to string to execute */
 NOSHARE int g_execlevel = 0;	/* execution IF level		*/
 NOSHARE int g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
@@ -65,7 +65,7 @@ NOSHARE int prenum = 0;		/*     "       "     numeric arg */
 char highlight[64] = "4hello";
 
 NOSHARE int restflag = FALSE;	    /* restricted use?		*/
-NOSHARE int g_newest = 0;         /* choose newest file           */
+//NOSHARE int g_newest = 0;       /* choose newest file */
 //#define USE_SVN
 #ifdef USE_SVN
  NOSHARE int del_svn = 0;
@@ -88,8 +88,6 @@ NOSHARE int eexitval = 0; 	/* and the exit return value	*/
 
 /* uninitialized global definitions */
 
-NOSHARE int currow;	/* Cursor row			*/
-NOSHARE int curcol;	/* Cursor column		*/
 NOSHARE int g_thisflag;	/* Flags, this command		*/
 NOSHARE int g_lastflag;	/* Flags, last command		*/
 NOSHARE WINDOW *curwp; 		/* Current window		*/
@@ -111,7 +109,6 @@ NOSHARE KEYTAB hooks[6];
 */
 
 NOSHARE char *patmatch = NULL;
-NOSHARE int lastdir = 0;
 
 #if	DEBUGM
 				/* vars needed for macro debugging output*/
@@ -129,9 +126,6 @@ NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
 #define GOOD	0
 #endif
 
-char * g_invokenm;
-char * g_homedir;
-
 
 #define MLIX 3
 
@@ -139,10 +133,13 @@ extern char lastline[MLIX+1][NSTRING];
 extern int  ll_ix;
 
 extern int g_timeout_secs;
-extern int macro_last_pos;
 
+char * g_invokenm;
+char * g_homedir;
 
-void Pascal editloop(int c_); /* forward */
+int g_opts = 0;
+
+static void Pascal editloop(int c_); /* forward */
 
 
 //void Pascal load_pat(const char * src);
@@ -154,105 +151,105 @@ void Pascal editloop(int c_); /* forward */
 static
 void Pascal dcline(int argc, char * argv[])
 
-{ BUFFER *bp;
-	char * startfile = EMACSRC;	/* startup file */
+{	int nopipe = iskboard();
+  char * startfile = EMACSRC;	/* startup file */
+	BUFFER *bp;
 	BUFFER * firstbp = NULL;	/* ptr to first buffer in cmd line */
 	int gline = 0; 	 				/* line to goto at start or 0 */
 	int genflag = 0;
 	const char * def_bname = "main";
-	int nopipe = 1;
 	int	carg;
-						/* Parse a command line */
+
 #if S_MSDOS && 0
 	for (carg = argc; --carg > 0; )
 		clean_arg(argv[carg]);
 #endif
-	if (g_invokenm == NULL)
-		g_invokenm = argv[0];
-
+	flook_init(g_invokenm = argv[0]);
+																						/* Parse a command line */
 	for (carg = argc; --carg > 0; )
-	{ char * filev = (++argv)[0];
+	{ char * filev = argv[argc-carg];
+		char * filen = argv[argc-carg+1];						// is this safe?
 		if			(filev[0] == '-')
-			switch (toupper(filev[1]))
+		{	if (in_range(filev[1],'a','z'))
+				g_opts |= (1 << ('z' - filev[1]));
+			switch (filev[1])
 			{ 			/* Process Startup macros */
-				case 'E': genflag |= 4; /* -e process error file */
-				when 'M': gflags |= MD_KEEP_MACROS;
-				when 'X': gflags |= MD_KEEP_CR;
-		 /* when 'Z': gflags |= MD_NO_MMI; */
+//			case 'm': pd_gflags |= MD_KEEP_MACROS;
+//			when 'x': pd_gflags |= MD_KEEP_CR;
+		 /* when 'z': pd_gflags |= MD_NO_MMI; */
 
-		 /* when 'G': gline = atoi(&filev[2]); ** -g for initial goto */
+		 /* when 'g': gline = atoi(&filev[2]); ** -g for initial goto */
 				
-				when 'I': /* -i<var> [<value>] set an initial */
-					/* value for a variable */
-					if (--carg > 0)
-						set_var(&filev[2], (++argv)[0]);
+				when 'i': if (--carg > 0)						/* -i<var> [<value>] set an initial */
+										set_var(&filev[2], filen);
 #if CRYPT 				
-				when 'K': /* -k<key> for code key */
-					if (filev[2] != 0)
-						g_ekey = strdup(&filev[2]);			// visible from command line args
-					g_gmode |= MDCRYPT;
+				when 'k': //if (nopipe)									/* -k<key> for code key */
+									{	if (filev[2] != 0)
+											g_ekey = strdup(filev+2);	//visible from command line
+										g_gmode |= MDCRYPT;
+									}
 #endif						
-				when 'R': /* -r restrictive use */
-					restflag = TRUE;
-				when 'S': /* -/pat for initial search string */
-					genflag |= 1;
+				when 'r': restflag = TRUE;	/* -r restrictive use */
+									
+				when 'b': def_bname = filev+2;
+									genflag |= 1;
+//			when 'v': genflag |= MDVIEW; /* 0x100 */ /* -v for View File */
+//			when 'e': genflag |= 4; 		/* -e process error file */
+//			when 'p': genflag |= 2;			/* -p for search $PATH */
+				when 's': 									/* -/pat for initial search string */
+									genflag |= 2;
 				case '/': 
-					if (filev[2] == 0 && carg > 1)
-					{ filev = (++argv)[0];
-						filev -= 2;
-						--carg;
-					}
-					if (filev[2] == '"')
-					{ filev += 1;
-						filev[strlen(filev)-1] = 0;
-					}
-					
-					strpcpy(&lastline[0][0],
-									strpcpy(&pat[0],filev+2, sizeof(pat)), sizeof(pat));
-					ll_ix = 0;
+									if (filev[2] == 0 && --carg > 0)
+										filev = filen - 2;
 
-				when 'B': def_bname = filev+2;
-					genflag |= BFACTIVE;
-				when 'P': /* -p for search $PATH */
-					genflag |= 2;
-//			when 'T': /* -T for search directory structure */
+									if (filev[2] == '"')
+									{ filev += 1;
+										filev[strlen(filev)-1] = 0;
+									}
+					
+									strcpy(&lastline[0][0],
+												 strpcpy(&pat[0],filev+2, sizeof(pat)));
+									ll_ix = 0;
+
+//			when 't': /* -T for search directory structure */
 //				genflag |= 16;
-				when 'V': /* -v for View File */
-					genflag |= MDVIEW; /* 0x100 */
-				when 'Z': g_newest = 1;
-				when 'W': g_timeout_secs = atoi(&filev[2]);
+									
+//			when 'z': g_newest = 1;
+				when 'w': g_timeout_secs = atoi(&filev[2]);
 									if (g_timeout_secs == 0)
 										g_timeout_secs = 900;			/* 15 minutes */
 			}
+		}
 		else if (filev[0]== '@')
 			startfile = &filev[1];
-		else			/* Process an input file */
+		else																	/* Process an input file */
 		{
 #ifdef USE_SVN
       if (strcmp_right(filev,"https://svn.") == 0)
 				del_svn = 6;
 #endif
-		  if (filev[1] != 0)
-		  { int ignore = 1;
+		{ int ignore = 2;
+			char * s;
+			char ch;
 		  
-  			for ( filev = (filev+2); *filev != 0; ++filev)
-  			{
+  		for ( s = (filev); (ch = *++s) != 0; )
+  		{
+  			if (ch == '@')
+  			{ ignore = 255;
 #ifdef USE_SVN
-  				if (*filev == '@')
-  					del_svn = filev - argv[0] + 1000;
+  				del_svn = ct + 1000;
 #endif
-  				if (*filev == '@')
-  				  ignore = 2;
+				}
+  		  if (--ignore <= 0 && ch == ':')
+#ifdef USE_SVN
+				  if (ct > del_svn)
+#endif
+  		  { *s = 0;
+  				gline = atoi(s+1);
+  				break;
+  		  }
+			}}
 
-  			  if (*filev == ':' && --ignore <= 0 && filev - argv[0] > del_svn)
-  			  { *filev = 0;
-  					gline = atoi(filev+1);
-  					break;
-  			  }
-  			}
-			}
-
-		  filev = argv[0];
 #ifdef USE_SVN
 		  if (del_svn > 0)
 		  { char * spareline = &lastline[0][0];
@@ -266,7 +263,9 @@ void Pascal dcline(int argc, char * argv[])
 				  filev = spareline;
 				  concat(lastline[1],"copy ",filev," .", null);
 				  ttsystem(lastline[1], NULL);
-				  del_svn = 1 - g_newest;
+				  del_svn = 1;
+				  if (is_opt('z'))
+				  	del_svn = 0;
 				}
 				else
 				{ del_svn = del_svn - 1000;
@@ -274,50 +273,48 @@ void Pascal dcline(int argc, char * argv[])
 						
 				  pipefilter('e');
 				}
+		  	lastline[0][0] = 0;
 		  }
 #endif
-		  if (genflag & 2)									// look along path
-		  { filev = (char *)flook(0, filev);
-				if (filev == null)
-					filev = argv[0];
+		  if (is_opt('P'))									// look along path
+		  { char * s = (char *)flook(0, filev);
+				if (s != null)
+					filev = s;
 		  }
 		  bp = bufflink(filev,TRUE/*|(genflag & 16)*/); /* setup buffer for file */
 		  if (bp != NULL)
+			{ if (genflag & 1)
+				{ --genflag;
+			  	zotbuf(bp);
+					bp = bufflink(def_bname, 1 | MSD_DIRY);
+					if (bp != NULL)													// safe against out of memory 
+				  	repl_bfname(bp, filev);
+			  }
 				if (firstbp == NULL)
-				{ if (genflag & BFACTIVE)
-					{ 
-				  	zotbuf(bp);
-						bp = bufflink(def_bname, 1 | MSD_DIRY);
-						if (bp != NULL)													// safe against out of memory 
-					  	repl_bfname(bp, filev);
-				  }
 				  firstbp = bp;
-				}
+			}
 
-		  if (bp != NULL)
-		  	bp->b_flag |= (genflag & MDVIEW);
-		  lastline[0][0] = 0;
+		  if (bp != NULL && is_opt('V'))
+		  	bp->b_flag |= MDVIEW;
 		}
 	} // loop
 
 	if (firstbp == null)
-	{
-		firstbp = bfind(def_bname, TRUE, 0);
-		nopipe = iskboard();
-		if (nopipe == 0)
+	{	firstbp = bfind(def_bname, TRUE, 0);
+		if  (nopipe == 0)
 		{ 
-			firstbp->b_fname = strdup("-");
 			firstbp->b_flag |= g_gmode;
+			firstbp->b_fname = strdup("-");
 		}
 	}
 
 	curwp->w_ntrows = term.t_nrowm1-1; /* "-1" for mode line. */
 	curbp = firstbp;
 	openwind(curwp, curbp);
-					/* if we are C error parsing... run it! */
+
 	carg = startup(startfile);
 #if 0
-	if (gflags & MD_NO_MMI)
+	if (pd_gflags & MD_NO_MMI)
 	{ writeout(null);
 		return 1;
 	}
@@ -334,8 +331,8 @@ void Pascal dcline(int argc, char * argv[])
 		}
 		mbwrite(startfile);
 	}
-	else
-	{ if (genflag & 4)
+	else															/* if we are C error parsing... run it! */
+	{ if (is_opt('E'))
 			carg = startup("error.rc");
 	}
 	if (carg == 13)
@@ -348,15 +345,22 @@ void Pascal dcline(int argc, char * argv[])
 	  	customise_buf(bp);
 	}
 
-	swbuffer(firstbp);
-
 #ifndef _WINDOWS
   tcapepage();
 #endif
+	tcapopen(); 	/* open the screen */
   ttopen();
   tcapkopen();    /* open the keyboard */
   tcaprev(FALSE);
-  sgarbf = TRUE;
+
+	swbuffer(firstbp);
+
+	if (nopipe == 0)
+	{	firstbp->b_fname = null;
+#if S_WIN32
+		MySetCoMo();
+#endif
+	}
 
 	if (g_clring & BCCOMT)
 		addnewbind(CTRL | 'M', indent);
@@ -379,12 +383,9 @@ void Pascal dcline(int argc, char * argv[])
 	}
 #endif
 	
-	if (nopipe == 0)
-		firstbp->b_fname = null;
-
 	(void)gotoline(TRUE, gline);
  
-	if (genflag & 1)
+	if (genflag & 2)
 		(void)forwhunt(FALSE, 0);
 
   g_gmode &= ~MDCRYPT;
@@ -407,20 +408,21 @@ void Pascal dcline(int argc, char * argv[])
 	subprocess would require a similar entrypoint.
 */
 
-#if S_WIN32
-int main_(int argc, char * argv[])
-#elif CALLED
+#if CALLED
 int emacs(int argc, char * argv[])
 #else
 int main(int argc, char * argv[])
 #endif
 {
+#if S_WIN32
+	init_wincon();
+#endif
 #if defined(_DEBUG) || LOGGING_ON
 	log_init("emacs.log", 300000, 0);
 	loglog("***************Started***************");
 #endif
 //char ch  = ttgetc();
-	init_fncmatch();
+	
 	vtinit();
 #if CALLED
 	varinit();		/* user variables */
@@ -428,7 +430,6 @@ int main(int argc, char * argv[])
 #if DIACRIT
 	initchars();		/* character set definitions */
 #endif
-	tcapopen(); 	/* open the screen AGAIN ! */
 
 {	KEYTAB * hpp;
 	for (hpp = &hooks[6]; --hpp >= &hooks[0]; )
@@ -438,9 +439,6 @@ int main(int argc, char * argv[])
 	curwp = (WINDOW *) aalloc(sizeof(WINDOW)); /* First window	*/
 
 	set_var("$incldirs", getenv("INCLUDE"));
-	g_homedir = getenv("HOME");
-	if (g_homedir == NULL)
-		g_homedir = "";
 
 	(void)dcline(argc, argv);
 	do
@@ -473,7 +471,10 @@ int main(int argc, char * argv[])
 #if CLEAN
 	clean();
 #endif
-	return eexitval;
+#if S_LINUX
+	stdin_close();
+#endif
+ 	return eexitval;
 }}
 
 #if CLEAN
@@ -538,12 +539,24 @@ KEYTAB * prevbind;
  */
 static int Pascal execute(int c, int f, int n)
 
-{ register int status;
+{ if (c == (CTRL|'['))
+	{ g_prefix |= META;
+	  prenum = n;
+		predef = f;
+		return TRUE;
+	}
+	
+	if (c == (CTRL|'X'))
+	{ g_prefix |= CTLX;
+  	prenum = n;
+		predef = f;
+		return TRUE;
+	}
+{ int status;
 	KEYTAB *key = getbind(c); /* key entry to execute */
 /*loglog3("L %x T %x c %d", lastbind==NULL ? 0 : lastbind->k_code,key->k_code,keyct);*/
 
-	if (key != lastbind && key->k_ptr.fp != cex
-											&& key->k_ptr.fp != meta)
+	if (key != lastbind)
 	{ prevbind = lastbind;
 		lastbind = key;
 		keyct = 0;
@@ -551,16 +564,17 @@ static int Pascal execute(int c, int f, int n)
 
 	keyct += 1;
 					 
+	g_lastflag = g_thisflag;
+	g_thisflag = 0;
+
 	if		 (key->k_code != 0) /* if keystroke is bound to a function..do it*/
-	{ g_thisflag = 0;
-	
+
 		status = execkey(key, f, n);			// f is 0 or any other value
-	}
+	
 	else if (!in_range(c, ' ', 0xFF)) /* Self inserting.	*/
-	{  /*  TTbeep();*/
-		mlwrite(TEXT19);		/* complain 	*/
+	{//TTbeep();
+		mlwrite(TEXT19);								/* complain 	*/
 					/* [Key not bound]" */
-		g_thisflag = 0; 			/* Fake last flags. */
 		status = FALSE;
 	}
 	else
@@ -587,8 +601,7 @@ static int Pascal execute(int c, int f, int n)
 				(curbp->b_flag & MDCMOD))
 			fmatch(c);
 #endif
-		g_thisflag = 0; 			/* For the future. */
-								 /* check auto-save mode */
+																				 /* check auto-save mode */
 		if (curbp->b_flag & MDASAVE)
 			if (--gacount == 0)
 			{ gacount = gasave;
@@ -596,9 +609,8 @@ static int Pascal execute(int c, int f, int n)
 				filesave(FALSE, 0);
 			}
 	}
-	g_lastflag = g_thisflag;
 	return status;
-}
+}}
 
 
 int g_got_uarg = FALSE;
@@ -609,11 +621,11 @@ int g_got_search = FALSE;
 	arrange to be able to call this from a macro, you will have
 	invented the "recursive-edit" function.
 */
-void Pascal editloop(int c_)
+static
+void Pascal editloop(int c)
 
 { int f; 	/* default flag */
 	int n; 	/* numeric repeat count */
-	int c = c_;
 
 					/* if there is something on the command line, clear it */
 	if (mpresf != FALSE)
@@ -622,51 +634,51 @@ void Pascal editloop(int c_)
 	}
 					/* override the arguments if prefixed */
 	if (g_prefix)
-	{ if (isletter(c & 0xff))
+	{	c |= g_prefix;
+		g_prefix = 0;
+	  if (isletter(c & 0xff))
 			c &= ~0x20;
-		c |= g_prefix;
 		f = predef; 		/* pass it on to the next cmd */
 		n = prenum;
-		g_prefix = 0;
 	} 
 	else
-	{ macro_last_pos = kbdwr;
-	  n = 1;
+	{ n = 1;
 		f = g_got_uarg;
 		if (f)
-		{ n = univct;
-			g_got_uarg = 0;
+		{	g_got_uarg = 0;
+			n = g_univct;
 		}
 	}
-					/* do META-# processing if needed */
+																						/* do META-# processing if needed */
 	if ((c & META) && ((unsigned)((c & 0xff) - '0') <= 9 || (c & 0xff) == '-')
 								 && getbind(c)->k_code == 0)
 	{ n = 0;		/* start with a zero default */
 		f = 1; 		/* there is a # arg */
 							/* current minus flag */
-#define mflag f
+#define sign f
 		c &= ~META; 	/* strip the META */
 		while (true)
 		{ c -= '0';
 			if			(c == '-'-'0')
-			{ if (mflag < 0 || n != 0) /* already hit a minus or digit? */
+			{ if (sign < 0 || n != 0) /* already hit a minus or digit? */
 					break;
-				mflag = -1;
+				sign = -1;
 			}
 			else if ((unsigned)c > 9)
 				break;
 			else
 				n = n * 10 + c;
 			
-			mlwrite(c == '-'-'0' ? "Arg: -" : "Arg: %d", n * mflag);
+			mlwrite(c == '-'-'0' ? "Arg: -" : "Arg: %d", n * sign);
 			c = getkey(); /* get the next key */
 		}
-		n *= mflag;
+		n *= sign;
 		c += '0';
-#undef mflag
+#undef sign
 	}
+
 				/* and execute the command */
-	execute(c, f, n);
+	execute(c, f & 1, n);
 }
 
 
@@ -708,14 +720,14 @@ Pascal quickexit(int f, int n)
 Pascal quit(int f, int n)
 
 { int status = TRUE;
-						/* Argument forces it.	*/
-	if (! f && anycb())
-				/* All buffers clean or user says it's OK. */
+																/* Argument forces it.	*/
+	if (! f && gotfile(NULL) != NULL)
+														/* All buffers clean or user says it's OK. */
 		status = mlyesno(TEXT104);
 								/* "Modified buffers exist. Leave anyway" */
 	if (status)
 	{ tcapmove(term.t_nrowm1, 0);
-//	g_discmd = true;
+//	pd_discmd = true;
 
 #if FILOCK
 		if (lockrel() != TRUE)
@@ -755,11 +767,12 @@ int Pascal nullproc(int f, int n) /* user function that does NOTHING */
 { return OK;
 }
 
+#if	DEBUGM
 
 int Pascal meta(int f, int n) /* set META prefixing pending */
 
 { g_prefix |= META;
-	prenum = n;
+  prenum = n;
 	predef = f;
 	return TRUE;
 }
@@ -767,24 +780,26 @@ int Pascal meta(int f, int n) /* set META prefixing pending */
 int Pascal cex(int f, int n)	/* set ^X prefixing pending */
 
 { g_prefix |= CTLX;
-	prenum = n;
+  prenum = n;
 	predef = f;
 	return TRUE;
 }
 
+#endif
 
 int Pascal uniarg(int f, int n) /* set META prefixing pending */
 
 { char buff[NSTRING+2];
 
-	if (g_clexec)
+	if (g_clexec > 0)
 	{ if (mlreply("", &buff[0], NSTRING) != TRUE)
 			return ABORT;
 						
 		n = atoi(buff);
 	}
 
-	univct = n;
+	g_univct = n;
 	g_got_uarg = TRUE;
 	return TRUE;
 }
+

@@ -246,10 +246,9 @@ int Pascal setekey(CRYPTKEY * key_ref)
 	if (!cc)
 	{	char mykey[NPAT]; 					/* new encryption string */
 		int stt = strlen(strcpy(mykey, int_asc(thread_id())));
-	{	int odisinp = g_disinp;
-		g_disinp = -1; 							/* turn command input echo off */
+		g_disinp -= 7; 							/* turn command input echo off */
 		cc = mlreply(TEXT33, mykey+stt, NPAT - 15);
-		g_disinp = odisinp;
+		g_disinp += 7; 							
 		mlwrite(" ");								/* clear it off the bottom line */
 		if (cc == TRUE)
 		{	if (mykey[stt] == 0)
@@ -264,7 +263,7 @@ int Pascal setekey(CRYPTKEY * key_ref)
 		  initcrypt(0, mykey, strlen(mykey)); /* re-encrypt it, seeding it to start */
 			*key_ref = strdup(mykey);
 		}
-	}}
+	}
 	return cc;
 }
 

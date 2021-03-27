@@ -16,20 +16,10 @@
 #include	"msdir.h"
 #include	"logmsg.h"
 
-
-#if S_WIN32 == 0
-#define INCDIR "/usr/include/"
-#else
-#define INCDIR "C:/Program Files/Microsoft Visual Studio/VC98/include/"
-#endif
-
-
-#define is_bindfunc(ktp) ((Set32)((ktp)->k_ptr.fp) < (Set32)&invokenm)
-/*		(((ktp)->k_code & NOTKEY) == 0) */
-
 extern char *getenv();
 extern char * g_invokenm;
-extern char * g_homedir;
+
+#if 0
 
 static int Pascal cbuf1(int f, int n)  { return execporb(-1,n); }
 static int Pascal cbuf2(int f, int n)  { return execporb(-2,n); }
@@ -69,8 +59,10 @@ static int Pascal cbuf35(int f, int n) { return execporb(-35,n); }
 static int Pascal cbuf36(int f, int n) { return execporb(-36,n); }
 static int Pascal cbuf37(int f, int n) { return execporb(-37,n); }
 static int Pascal cbuf38(int f, int n) { return execporb(-38,n); }
-static int Pascal cbuf39(int f, int n) { return execporb(-39,n); }
-static int Pascal cbuf40(int f, int n) { return execporb(-40,n); }
+static int Pascal cbuf39(int f, int n) { return execporb(-38,n); }
+static int Pascal cbuf40(int f, int n) { return execporb(-38,n); }
+
+#endif
 
 #include	"efunc.h"	/* function declarations and name table */
 
@@ -104,10 +96,10 @@ static KEYTAB keytab[NBINDS+1] =
 	{CTRL|'P',	BINDFNC, backline},
 	{CTRL|'Q',	BINDFNC, quote},
 	{CTRL|'S',	BINDFNC, forwsearch},
-	{CTRL|'X',	BINDFNC, cex},
 	{CTRL|'U',	BINDFNC, uniarg},
+//{CTRL|'X',	BINDFNC, cex},
 	{CTRL|'Z',	BINDFNC, backpage},
-	{CTRL|'[',	BINDFNC, meta},
+//{CTRL|'[',	BINDFNC, meta},
 	{CTLX|CTRL|'B', BINDFNC, listbuffers},
 	{CTLX|CTRL|'C', BINDFNC, quit},
 #if AEDIT
@@ -324,15 +316,15 @@ bind-to-key filter-buffer ^X|
 	{SPEC|CTRL|'Z', BINDFNC, gotobop},
 	{SPEC|CTRL|'V', BINDFNC, gotoeop},
 #endif
-	{SPEC|SHFT|'1', BINDFNC, cbuf1},		// Shift 
-	{SPEC|SHFT|'2', BINDFNC, cbuf2},
-	{SPEC|SHFT|'3', BINDFNC, cbuf3},
-	{SPEC|SHFT|'4', BINDFNC, cbuf4},
-	{SPEC|SHFT|'5', BINDFNC, cbuf5},
-	{SPEC|SHFT|'6', BINDFNC, cbuf6},
-	{SPEC|SHFT|'7', BINDFNC, cbuf7},
-	{SPEC|SHFT|'8', BINDFNC, cbuf8},
-	{SPEC|SHFT|'9', BINDFNC, cbuf9},
+	{SPEC|SHFT|'1', BINDFNC, (Command)1},		// Shift 
+	{SPEC|SHFT|'2', BINDFNC, (Command)2},
+	{SPEC|SHFT|'3', BINDFNC, (Command)3},
+	{SPEC|SHFT|'4', BINDFNC, (Command)4},
+	{SPEC|SHFT|'5', BINDFNC, (Command)5},
+	{SPEC|SHFT|'6', BINDFNC, (Command)6},
+	{SPEC|SHFT|'7', BINDFNC, (Command)7},
+	{SPEC|SHFT|'8', BINDFNC, (Command)8},
+	{SPEC|SHFT|'9', BINDFNC, (Command)9},
 
 #if S_VMS
 	{0x7F,		BINDFNC, backdel},
@@ -356,6 +348,21 @@ static const KEYTAB null_keytab = {0,0};
 static KEYTAB * aux_getbind;		/* only valid if result != null */
 #endif
 
+/*	GETCMD: Get a command from the keyboard. Process all applicable
+		prefix keys
+*/
+int  getcmd()
+
+{ int c = getkey();
+	int pfx = c == (CTRL|'[') ? META :
+						c == (CTRL|'X') ? CTLX : 0;
+	if (pfx != 0)
+		c = getkey();
+																									/* Force to upper */
+	return pfx | (!in_range(c & 0xff,'a','z') ? c : c & ~0x20);
+}
+
+
 									/* This function looks a key binding up in the binding table */
 KEYTAB * Pascal getbind(int c)
 				/* key to find what is bound to it */
@@ -444,15 +451,27 @@ int Pascal addnewbind(int c, int (Pascal *func)(int, int))
 	if (func == ctrlg)						/* if the function is a unique prefix key */
 	 	abortc = c;								  /* reset the appropriate global prefix variable*/
 
-	if (func == meta)							/* if we have rebound the meta key, */
-	  sterm = c;									/* make the search terminator follow it */
-
   return TRUE;
 }}
 
 
-static const short viscod[7] = {CTLX, ALTD, SHFT, MOUS, META, SPEC, CTRL};
-static const char  viskey[14] = "^XA-S-MSM-FN^";		// assume aligned
+typedef struct
+{ short  code;
+	char   key[2];
+} Vis_t;
+
+static Vis_t viskeys[6+MOUSE] = { {CTRL, "^"},
+																	{SPEC, "FN"},
+																	{META, "M-"},
+#if MOUSE
+																	{MOUS, "MS"},
+#endif
+																	{SHFT, "S-"},
+																	{ALTD, "A-"},
+																	{CTLX, "^X"} };
+
+//static const short viscod[7] = {CTLX, ALTD, SHFT, MOUS, META, SPEC, CTRL};
+//static const char  viskey[14] = "^XA-S-MSM-FN^";		// assume aligned
 
 												/* change a key command to a string we can print out */
 char * Pascal cmdstr(char * t, int c) 
@@ -461,12 +480,12 @@ char * Pascal cmdstr(char * t, int c)
 {
 	char * ptr = t;
 	int i;
-	for (i = -1; ++i < 7; )
-    if (c & viscod[i])
-    { ((short*)ptr)[0] = *(short *)&viskey[i*2];
-	     
+	for (i = sizeof(viskeys)/sizeof(viskeys[0]); --i >= 0; )
+    if (c & viskeys[i].code)
+    { ((short*)ptr)[0] = *(short *)&viskeys[i].key;
+
       ptr += 2;
-      if (i == 6)			/* must be last */
+      if (i == 0)
         ptr -= 1;
     }
 					/* and output the final sequence */
@@ -502,12 +521,11 @@ unsigned int Pascal stock(char * keyname)
   int i;
 
   if (in_range(keyname[0], '0','9'))
-    return atoi(keyname);
+    return keyname[0]-'0';
   
-  for (i = -1; ++i < 6; )
-    if (keyname[0] == viskey[i*2] && keyname[1] == viskey[i*2+1] &&
-        (i != 0 || keyname[2] != 0))   /* Key is not bare ^X */
-    { c |= viscod[i];
+	for (i = sizeof(viskeys)/sizeof(viskeys[0]); --i > 0; )
+    if (keyname[0] == viskeys[i].key[0] && keyname[1] == viskeys[i].key[1])
+    { c |= viskeys[i].code;
       keyname += 2;
     }
 				    /* a control char?	(Always upper case) */
@@ -537,14 +555,14 @@ int Pascal getechockey(int mode)
 	char tok[NSTRING];
 								/* check to see if we are executing a command line */
 	int c;
-	if (!g_clexec)
+	if (g_clexec <= 0)
 		c = mode & 1 ? getkey() : getcmd();
 	else
 	{ macarg(tok);	/* get the next token */
 	  c = stock(tok);
 	}
 																	/* change it to something printable */
-  if (g_discmd && (mode & 2) == 0)
+  if ((mode & 2) == 0)
   	mlwrite("\001 %s",cmdstr(&outseq[0], c));	// can be overwritten!
 
   return c;
@@ -552,15 +570,10 @@ int Pascal getechockey(int mode)
 
 
 
-		/* bindtokey: add a new key to the key binding table */
+			/* bindtokey: add a new key to the key binding table */
 int Pascal bindtokey(int f, int n)
 									/* int f, n;	** command arguments [IGNORED] */
 {
-	unsigned int c;/* command key to bind */
-/*KEYTAB *ktp;	 ** pointer into the command table */
-								/* prompt the user to type in a key to bind */
-								/* get the function name to bind it to */
-
 	int (Pascal *kfunc)(int, int) = getname(TEXT15);
 																				/* ": bind-to-key " */
 	if (kfunc == NULL)
@@ -569,11 +582,45 @@ int Pascal bindtokey(int f, int n)
 	  return FALSE;
 	}
 
-  c = getechockey((kfunc == meta) || (kfunc == ctrlg));
+{	int c = getechockey((kfunc == ctrlg));
 
 	return addnewbind(c, kfunc); /* search the table to see if it exists */
-}
+}}
 
+			/* unbindkey: delete a key from the key binding table */
+
+Pascal unbindkey(int f, int n)
+							/* int f, n;	** command arguments [IGNORED] */
+{
+  if (g_clexec <= 0)		/* prompt the user to type in a key to unbind */
+    mlwrite(TEXT18);
+				 /* ": unbind-key " */
+
+{ int c = getechockey(FALSE);					/* get the command sequence to unbind */
+
+  KEYTAB *sktp = getbind(c); 					/* search table to see if it exists */
+
+  if (sktp->k_code == 0)
+  { mlwrite(&TEXT19[1]);
+					/* "[Key not bound]" */
+    return FALSE;
+  }
+{
+#if NBINDS
+  KEYTAB * ktp = getbind(0) - 1;		/* get pointer to end of table */
+			           										/* copy the last entry to the current one */
+  *sktp = *ktp;
+  *ktp = ktp[1];										/* null out the last one */
+
+#else
+  if (in_range(sktp - keytab, 0, upper_index(keytab)))
+    addnewbind(c, NULL);
+  else
+    sktp->k_ptr.fp = NULL;
+#endif
+  return TRUE;
+}}}
+
 #if 0
   What does this do (NOTKEY ?)?
 
@@ -603,40 +650,6 @@ int Pascal macrotokey(int f, int n)
 }}}
 
 #endif
-
-			/* unbindkey: delete a key from the key binding table */
-
-Pascal unbindkey(int f, int n)
-	/* int f, n;	** command arguments [IGNORED] */
-{
-  if (!g_clexec)		/* prompt the user to type in a key to unbind */
-    mlwrite(TEXT18);
-				 /* ": unbind-key " */
-
-{ int c = getechockey(FALSE);					/* get the command sequence to unbind */
-
-  KEYTAB *sktp = getbind(c); 					/* search table to see if it exists */
-
-  if (sktp->k_code == 0)
-  { mlwrite(&TEXT19[1]);
-					/* "[Key not bound]" */
-    return FALSE;
-  }
-{
-#if NBINDS
-  KEYTAB * ktp = getbind(0) - 1;		/* get pointer to end of table */
-			           										/* copy the last entry to the current one */
-  *sktp = *ktp;
-  ktp->k_code   = 0;		/* null out the last one */
-
-#else
-  if (in_range(sktp - keytab, 0, upper_index(keytab)))
-    addnewbind(c, NULL);
-  else
-    sktp->k_ptr.fp = NULL;
-#endif
-  return TRUE;
-}}}
 
 static 
 int Pascal append_keys(const char * name, Emacs_cmd * addr, const char * filt)
@@ -738,12 +751,10 @@ int Pascal buildlist(const char * mstring)
 #endif
   }
 
-  mkdes();
+  (void)mkdes();
   return cc;
 }
 
-#if S_WIN32
-
 void Pascal flook_init(char * cmd)
 
 { g_invokenm = strdup(cmd);
@@ -761,8 +772,6 @@ void Pascal flook_init(char * cmd)
     *sp = 0;
 }}
 
-#endif
-
 
 /*!********************************************************
  bool fexist(char * fname)
@@ -777,16 +786,15 @@ void Pascal flook_init(char * cmd)
 
  Parameters
  ~~~~~~~~~~
- char * fname		the name of the file from the current directory
-			or absolute
+ char * fname		the name of the file from the current directory or absolute
 **********************************************************/
 
 int Pascal name_mode(const char * s)
 
-{	struct stat fstat_;
-	if (stat(s, &fstat_) != OK)
+{	struct stat stat_;
+	if (stat(s, &stat_) != OK)
 	  return 0;
-	return fstat_.st_mode;
+	return stat_.st_mode;
 }
 
 
@@ -850,31 +858,31 @@ char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 }}
 
 
+
 static char fspec[256+2];	/* full path spec to search */
 
+#if 0
 					/* the text in dir following the last / is ignored*/
-char * fex_up_dirs(const char * dir, char * file)
+char * fex_up_dirs(const char * dir, const char * file)
 
 { if (dir != NULL)
   { int clamp;
-
-    for (clamp = -1; ++clamp < sizeof(fspec)-2 && dir[clamp] != 0; )
-      fspec[clamp] = dir[clamp];
-
-    fspec[clamp] = 0;
-
+//	strpcpy(fspec, dir, sizeof(fspec)-2);
+ 		
     for (clamp = 8; --clamp >= 0; )
-    { char * pc = pathcat(&fspec[0], sizeof(fspec), fspec, file);
+    { char * pc = pathcat(fspec, sizeof(fspec), dir, file);
       if (fexist(pc))
         return fspec;
-      (void)pathcat(fspec, sizeof(fspec), fspec, "../a");
+      dir = pathcat(fspec, sizeof(fspec), fspec, "../a");
     }
   }
   
   return NULL;  
 }
 
+#endif
 
+static
 int fex_path(const char * dir, const char * file)
 	
 { 
@@ -923,12 +931,10 @@ const char * Pascal flook(char wh, const char * fname)
 
 #if ENVFUNC
 	  if (wh < 'a')
-	    if (fex_path(g_homedir, fname))
+	    if (fex_path(getenv("HOME"), fname))
 	      return fspec;
 #endif
-	  if (fex_path(INCDIR, fname))
-	    return fspec;
-#if 1
+
 	  if (g_incldirs != NULL)								// gtenv("incldirs");
 	  { char * incls;
 	  	for (incls = g_incldirs; *incls != 0; )
@@ -944,7 +950,7 @@ const char * Pascal flook(char wh, const char * fname)
 	  		incls = ln + (ch != 0);
 	  	}}
 	  }
-#endif
+
 	  return NULL;
 	}
 #if S_VMS
@@ -1027,58 +1033,54 @@ char * Pascal flookdown(char * dir, char * fname)
 
 
 char *Pascal flooknear(knfname, name)
-	char *knfname;	/* known file name */
-	char *name;	/* file to look for */
-{ strpcpy(&fspec[0], knfname, sizeof(fspec));
-  Char * t = &fspec[strlen(fspec)]
+	char *knfname;		/* known file name */
+	char *name;				/* file to look for */
+{ 
+	strpcpy(&fspec[0], knfname, sizeof(fspec));
+{ Char * t = &fspec[strlen(fspec)]
   while (t > fspec && * t != DIRSEPCHR && *t != '/')
     --t;
   strpcpy(&t[0], name, NFILEN - (t - fspec));
   
   return fexist(fspec) ? fspec : NULL;
-}
+}}
 
 #endif
 
-/* getfname:	This function takes a ptr to KEYTAB entry and gets the name
-		associated with it
-*/
+				/* getfname:	This function takes a ptr to KEYTAB entry and gets the name
+										  associated with it
+				*/
 const char *Pascal getfname(int keycode)
-					/* key binding to return a name of */
+											/* key binding to return a name of */
 {	KEYTAB * key = getbind(keycode);
 
-  int (Pascal *func)(int,int) = key->k_ptr.fp; /* ptr to the requested function*/
-  register const NBIND *nptr;	/* pointer into the name binding table */
-  register BUFFER *bp;				/* ptr to buffer to test */
+  Command func = key->k_ptr.fp; 				/* ptr to the requested function*/
 
-  if (key->k_code != 0)				/* if this isn't a valid key, it has no name */
-									      			/* skim the binding table, looking for a match */
+  if (func != 0)
+									      								/* skim the binding table for a match */
     if (key->k_type == BINDFNC)
-      for (nptr = &names[0]-1; (++nptr)->n_func != NULL; ) 
+		{ const NBIND *nptr;										/* pointer into name binding table */
+    	for (nptr = &names[0]-1; (++nptr)->n_func != NULL; ) 
         if (nptr->n_func == func)
           return nptr->n_name;
-    else
-				/* skim the buffer list looking for a match */
+    }
+    else																		/* skim the buffer list for a match */
+		{ BUFFER *bp;
       for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
         if (bp == (BUFFER*)func)
           return bp->b_bname;
+		}
 
   return "";
 }
 
-Map_t namemap = mk_const_map(T_DOMSTR, 0, names);
+Map_t namemap = mk_const_map(T_DOMSTR, 0, names, 1);	//-1: last entry not wanted
 int g_funcnum = 0;
 
-void init_fncmatch()
 
-{	namemap.curr_mult -= 1; 										/* last entry not wanted */
-	namemap.curr_len -= sizeof(names[0]); 			/* last entry not wanted */
-}
-
-
-/* fncmatch:	match fname to a function in the names table and return
-		any match or NULL if none
-*/
+						/* fncmatch:	match fname to a function in the names table and return
+													any match or NULL if none
+						*/
 int (Pascal *Pascal fncmatch(char * fname))(int, int)
 	/* char *fname;	** name to attempt to match */
 {		
@@ -1101,18 +1103,11 @@ const char *Pascal transbind(char * skey)/* string key name to binding name..*/
 					/* execute a function bound to a key */
 int Pascal execkey(KEYTAB * key, int f, int n)	
 
-{	if (key->k_code != 0)
-  {
-  	if (key->k_type == BINDFNC)
-     /* if (is_bindfunc(key)) */
-		  return (*(key->k_ptr.fp))(f, n);
-		  
-		univct = n;
-  {	int cc = dobuf(key->k_ptr.buf,n);
-		if (cc != TRUE)
-		  return cc;
-  }}
-  return TRUE;
+{	return key->k_code == 0 			? TRUE :
+  			 key->k_type != BINDFNC ? dobuf(key->k_ptr.buf,n) :
+		  	 in_range((int)(key->k_ptr.fp), 1,40) 
+				  											? execporb(-(int)(key->k_ptr.fp),n)
+		  													: (*(key->k_ptr.fp))(f, n);
 }
 
 			/* set a KEYTAB to the given name of the given type */
@@ -1134,10 +1129,10 @@ int Pascal help(int f, int n)	/* give me some help!!!!
   static const char emacshlp[] = "emacs.md";
 	       char *fname = (char*)flook(0, emacshlp);
 
-	register BUFFER *bp;
-	if (fname == NULL || (bp = bufflink(fname, g_clexec)) == NULL)
+	BUFFER *bp;
+	if (fname == NULL || (bp = bufflink(fname, (g_clexec > 0) | 64)) == NULL)
 	{ mlwrite(TEXT12);
-					/* "[Help file is not online]" */
+					/* "[Help file missing]" */
 	  return FALSE;
 	}
 #if 0
@@ -1145,7 +1140,6 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 	if (splitwind(FALSE, 1) == FALSE)
 	  return FALSE;
 #endif
-	(void)swbuffer(bp);
 		    /* make this window in VIEW mode, update all mode lines */
 	curbp->b_flag |= MDVIEW;
 	curbp->b_fname = strdup("HELP");  // allow the leakage
@@ -1161,11 +1155,11 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 	mlwrite(TEXT13);
 			  /* ": describe-key " */
 	c = getechockey(2);
-					/* change it to something printable */
-	mlwrite("\001 %d %s ", lastkey, cmdstr(&outseq[0], c));  
-						/* find the right ->function */
-{	const char * ptr = getfname(c);
-					 	/* put the command sequence */
-	ostring(*ptr != 0 ? ptr : "Not Bound");
+
+{	const char * ptr = getfname(c);				/* find the right ->function */
+																				/* change it to something printable */
+	mlwrite("\001 %d %s %s", lastkey, cmdstr(&outseq[0], c),
+																		*ptr != 0 ? ptr : TEXT14);  
+																										/*"Not Bound" */
 	return TRUE;
 }}

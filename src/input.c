@@ -60,24 +60,19 @@ extern char deltaf[HICHAR];
 char lastline[MLIX+1][NSTRING];
 int  ll_ix = MLIX;
 
-char slastline[MLIX+1][NSTRING];
-int  sll_ix;
-char savepat[133];
+static char g_slastline[MLIX+1][NSTRING];
+static int  g_sll_ix;
+static char g_savepat[133];
 
-int g_slastkey;
+static int g_slastkey;
 
-int kbdm[NKBDM];		/* Macro */
+static int g_kbdm[NKBDM];		/* Macro */
 
-static const char text_105[] = TEXT105;
+static LINE * macro_start_line;
+static int    macro_start_col;
 
-/*			"%%Macro already active" */
-
-int    macro_last_pos;
-int    macro_start_col;
-LINE * macro_start_line;
-
-char * pat_sv;
-int slast_dir;
+char * g_pat_sv;
+int    g_slast_dir;
 
 /* Begin a keyboard macro.
  * Error if not at the top level in keyboard processing.
@@ -85,8 +80,8 @@ int slast_dir;
  */
 int ctlxlp(int f, int n)
 
-{ if (kbdmode != STOP)
-	{ mlwrite(text_105);
+{ if (pd_kbdmode != STOP)
+	{ mlwrite(TEXT105);
 		return FALSE;
 	}
 
@@ -94,15 +89,15 @@ int ctlxlp(int f, int n)
 /*		"[Start macro]" */
 	g_got_search = FALSE;
 
-	kbdwr = 0;
-	kbdmode = RECORD;
-	macro_last_pos = 0;
+	pd_kbdwr = 0;
+	pd_kbdmode = RECORD;
+//macro_last_pos = 0;
 	macro_start_col = curwp->w_doto;
 	macro_start_line = curwp->w_dotp->l_bp;
 	
-	if (pat_sv == NULL) pat_sv = malloc(NPAT+10);
-	memcpy(pat_sv,pat,NPAT+10);
-	slast_dir = lastdir;
+	if (g_pat_sv == NULL) g_pat_sv = malloc(NPAT+10);
+	memcpy(g_pat_sv,pat,NPAT+10);
+	g_slast_dir = pd_lastdir;
 	return TRUE;
 }
 
@@ -112,35 +107,36 @@ int ctlxlp(int f, int n)
  */
 int  ctlxrp(int f, int n)
 
-{ if (kbdmode == STOP)
+{ if (pd_kbdmode == STOP)
 	{ mlwrite(TEXT107);
 /*			"%%Macro not active" */
 		return FALSE;
 	}
 
-	if (kbd_record(kbdmode))
+	if (kbd_record(pd_kbdmode))
 	{ /*
 		int ix = kbdwr;
 	  char buf[133];
 		char c1[10], c2[10], c3[10];
-		strcpy(c1, int_asc(kbdm[0]));
-		strcpy(c2, int_asc(kbdm[1]));
-		strcpy(c3, int_asc(kbdm[2]));
+		strcpy(c1, int_asc(g_kbdm[0]));
+		strcpy(c2, int_asc(g_kbdm[1]));
+		strcpy(c3, int_asc(g_kbdm[2]));
 
-		while (--ix > 0 && in_range(kbdm[ix], 1,255))
+		while (--ix > 0 && in_range(g_kbdm[ix], 1,255))
 		  ;
 
 		concat(buf,c1,",",c2,",",c3,",", int_asc(ix), 0);
 		mbwrite(buf);
 			
-	  concat(buf, TEXT108, ":", kbdm, "(", int_asc(kbdwr), ")",0);
+	  concat(buf, TEXT108, ":", g_kbdm, "(", int_asc(kbdwr), ")",0);
 		mbwrite(buf); */
 		
-	  if (macro_last_pos > 0)
-			kbdm[macro_last_pos - 1] = 0;
-		kbdwr = macro_last_pos - 1;
-		kbdrd = 0; 
-		kbdmode = STOP;
+	{ int wrix = pd_kbdwr - 1;
+	  if (wrix >= 0)
+			g_kbdm[wrix] = 0;
+	
+//	pd_kbdrd = 0; 
+		pd_kbdmode = STOP;
 		g_execlevel = 0;
 
 	  mlwrite(TEXT108);
@@ -155,14 +151,16 @@ int  ctlxrp(int f, int n)
 				key = 2114;			// backward-character
 			}
 			while (--n >= 0)
-		    if (kbdwr < NKBDM)
-		      kbdm[(++kbdwr)-1] = key;
+		    if (wrix < NKBDM)
+		      g_kbdm[(++wrix)-1] = key;
 		}
-	}
 
-	memcpy(pat,pat_sv,NPAT+10);
-	mcstr(-1);
-	lastdir = slast_dir;
+		pd_kbdwr = wrix;
+	}}
+
+	memcpy(pat,g_pat_sv,NPAT+10);
+	mk_magic(-1);
+	pd_lastdir = g_slast_dir;
 
 	return TRUE;
 }
@@ -177,32 +175,25 @@ int  ctlxe(int f, int n)
 
 {
 #define MLIX 3
-	extern char lastline[MLIX+1][NSTRING];
-	extern int	ll_ix;
-
-	extern char slastline[MLIX+1][NSTRING];
-	extern int	sll_ix;
-	extern char savepat[133];
-
 	g_slastkey = lastkey;
 
 	if (g_got_search || curwp->w_dotp->l_used > macro_start_col)
 	{
 //	curwp->w_doto = macro_start_col;
 						
-		sll_ix = ll_ix;
-		memcpy(slastline,lastline,sizeof(slastline));
-		strpcpy(savepat,pat,133);
+		g_sll_ix = ll_ix;
+		memcpy(g_slastline,lastline,sizeof(g_slastline));
+		strpcpy(g_savepat,pat,133);
 				 
-		if (kbdmode != STOP)
-		{ mlwrite(text_105);
+		if (pd_kbdmode != STOP)
+		{ mlwrite(TEXT105);
 			return FALSE;
 		}
 
 		if (n > 0)
-		{ kbdrep = n; 	/* remember how many times to execute */
-			kbdmode = PLAY; 	/* start us in play mode */
-			kbdrd = 0;		/*		at the beginning */
+		{ pd_kbdrep = n; 			/* remember how many times to execute */
+			pd_kbdmode = PLAY; 	/* start us in play mode */
+			pd_kbdrd = 0;				/* at the beginning */
 		}
 	}
 
@@ -216,7 +207,7 @@ int  ctlxe(int f, int n)
 int  ctrlg(int f, int n)
 
 { 	 /* TTbeep();*/
-	kbdmode = STOP;
+	pd_kbdmode = STOP;
 	mlwrite(TEXT8);
 /*		"[Aborted]" */
 	return ABORT;
@@ -230,38 +221,38 @@ int  ctrlg(int f, int n)
 int  tgetc()
 
 {				/* if we are playing a keyboard macro back, */
-  if (kbd_play(kbdmode))
+  if (kbd_play(pd_kbdmode))
   {    					/* if there is some left... */
     while (true)		/* once only */				
-    { if (++kbdrd > kbdwr)
-      { kbdrd = 0;	/* reset the macro to the begining for the next rep */
-        if (--kbdrep <= 0)
+    { if (++pd_kbdrd > pd_kbdwr)
+      { pd_kbdrd = 0;	/* reset the macro to the begining for the next rep */
+        if (--pd_kbdrep <= 0)
           break;
       }
-			lastkey = (int)kbdm[kbdrd-1];
+			lastkey = (int)g_kbdm[pd_kbdrd-1];
       return lastkey;
     }
 					/* at the end of last repetition? */
 		g_execlevel = 0;					/* weak code ! */
-    kbdmode = STOP;
+    pd_kbdmode = STOP;
 		lastkey = g_slastkey;
 #if VISMAC == 0
     update(FALSE);		/* force a screen update after all is done */
 #endif
-    strcpy(pat,savepat);
-    ll_ix = sll_ix;
-    memcpy(lastline,slastline,sizeof(slastline));
+    strcpy(pat,g_savepat);
+    ll_ix = g_sll_ix;
+    memcpy(lastline,g_slastline,sizeof(g_slastline));
   }
 
   lastkey = ttgetc();	       /* fetch a character from the terminal driver */
 						   /* record it for $lastkey */
-  if (kbd_record(kbdmode))
+  if (kbd_record(pd_kbdmode))
   {//char buf[30];
-    kbdm[(++kbdwr)-1] = lastkey;
+    g_kbdm[(++pd_kbdwr)-1] = lastkey;
 //  sprintf(buf,"Rec%x",lastkey);
 //  mbwrite(buf);
-    if (kbdwr >= NKBDM)				/* don't overrun the buffer */
-    { kbdmode = STOP;
+    if (pd_kbdwr >= NKBDM)				/* don't overrun the buffer */
+    { pd_kbdmode = STOP;
       TTbeep();
     }
   }
@@ -318,32 +309,6 @@ int  getkey()
   	  		     c;
 }
 
-/*	GETCMD: Get a command from the keyboard. Process all applicable
-		prefix keys
-*/
-int  getcmd()
-
-{ int c = getkey();
-	KEYTAB * key = getbind(c);
-					/* resolve META and CTLX prefixes */
-  if (key->k_code != 0)
-  do
-  { 
-    if	    (key->k_ptr.fp == meta)
-      c = META;
-    else if (key->k_ptr.fp == cex)
-      c = CTLX;
-    else
-      break;
-    c = getkey() | c;
-#if 1
-    if (in_range(c & 0xff,'a','z'))
-      c &= ~0x20;			/* Force to upper */
-#endif
-  } while (0);
-  return c;
-}
-
 /*
  * Ask a yes or no question in the message line. Return either TRUE, FALSE, or
  * ABORT. The ABORT status is returned if the user bumps out of the question
@@ -351,15 +316,12 @@ int  getcmd()
  */
 int  mlyesno(char * prompt)
 
-{ int  c = g_discmd;		/* input character */
-  
-  g_discmd = TRUE;
+{ 
   flush_typah();
 						/* " [y/n]? " */
-  mlwrite("%s%s", prompt, TEXT162, null);
-  g_discmd = c;
+  mlwrite("%!%s%s", prompt, TEXT162, null);
 							/* get the response */
-  c = getcmd();   /* getcmd() lets us check for anything that might */
+{ int c = getcmd();   /* getcmd() lets us check for anything that might */
 			  /* generate a 'y' or 'Y' in case use screws up */
   if (c == ectoc(abortc))		/* Bail out! */
     return ABORT;
@@ -370,7 +332,7 @@ int  mlyesno(char * prompt)
 #endif
 
   return c == 'y' || c == 'Y';
-}
+}}
 
 /*	ectoc:	expanded character to character
 		collapse the CTRL and SPEC flags back into an ascii code   */
@@ -400,7 +362,7 @@ void  homeusr(char buf[])
 { FILE * pw = fopen("/etc/passwd", "r");
   while (true)
   { char * s = &uname[0];
-    register char * ln;
+    char * ln;
     if (pw == NULL || (ln = fgets(&buf[0], NSTRING-1, pw)) == NULL)
     { strcpy(&buf[0], "??");
       break;
@@ -408,7 +370,7 @@ void  homeusr(char buf[])
     while (*ln == *s++ && *ln != 0)
       ++ln;
     if (*ln == ':')
-    { register int iter = 4;
+    { int iter = 4;
       while (--iter >= 0)
       { ++ln;
         while (*ln != ':' && *ln != 0)
@@ -523,9 +485,9 @@ static int comp_name(char * name, int cpos, int wh)
 
 static int  redrawln(char buf[], int clamp)
       
-{ register int len = clamp;
-           char * s;
-  register char c;
+{ int len = clamp;
+  char * s;
+  char c;
 
   for (s = &buf[-1]; (c = *++s) != 0; )
   { 
@@ -622,8 +584,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       { strcat(strpcpy(&combuf[0], g_homedir, NSTRING-1), "/");
       }
       else
-      { strpcpy(&combuf[0], buf, NSTRING-2);
-        homeusr(&combuf[0]);
+      { homeusr(strpcpy(&combuf[0], buf, NSTRING-2));
       }
       buf[0] = 0;
       cpos = 0;
@@ -719,7 +680,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       }
     }
     else if (c <= 'Z'-'@' && ch != quotec || c == (ALTD | 'S'))
-    { autostr = getwtxt(c, &combuf[0], NSTRING-3-cpos);
+    { autostr = fixnull(getwtxt(c, &combuf[0], NSTRING-3-cpos));
     }
     else 
     { int tpos;
@@ -819,7 +780,8 @@ char * complete(char * prompt, char * defval, int type, int maxlen)
 	   that pressing a <SPACE> attempts to complete an unfinished command
 	   name if it is unique.
 	*/
-int ( * getname(char * prompt))(int, int)
+//int ( * getname(char * prompt))(int, int)
+Command getname(char * prompt)
 				/* string to prompt with */
 {
   char *sp = complete(prompt, NULL, CMP_COMMAND, NSTRING);
@@ -853,13 +815,5 @@ char * gtfilename(char * prompt)
 void  outstring(const char * s) /* output a string of input characters */
 
 { if (g_disinp > 0)
-    mlputs(s);
-}
-
-
-void  ostring(const char * s)	/* output a string of output characters */
-
-{
-  if (g_discmd)
     mlputs(s);
 }

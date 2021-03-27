@@ -83,6 +83,9 @@ e.exe : $(LINK32_OBJS)
 main.obj : main.c
 bind.obj : bind.c efunc.h
 
+bind_asm :
+	$(CPP) -I../ -I../../src/ $(CPP_PROJ) /FAbind.asm ../../src/bind.c
+
 testpipe.exe : testpipe.obj sleep.obj
 	$(LINK32) $(LINK32_FLAGS)./testpipe.exe testpipe.obj sleep.obj winmm.lib kernel32.lib user32.lib
 

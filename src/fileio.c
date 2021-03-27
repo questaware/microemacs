@@ -24,6 +24,7 @@
 #include  <direct.h>
 #else
 #include 	<unistd.h>
+#include <termios.h>
 #endif
 #include	"base.h"
 #include	"edef.h"
@@ -33,6 +34,10 @@
 
 #ifndef S_IFCHR
 #define S_IFCHR 0x2000
+#endif
+
+#if S_WIN32
+#define getcwd _getcwd
 #endif
 
 /*int confd = 0;*/
@@ -49,20 +54,22 @@ int g_crlfflag;
 
 int Pascal iskboard()
 
-{ struct stat fstat_;
-  return fstat(0 , &fstat_) != 0 ? 0 : (fstat_.st_mode & S_IFCHR);
+{ struct stat stat_;
+  return fstat(0 , &stat_) != 0 ? 0 : (stat_.st_mode & S_IFCHR);
 }
 
 
 
 #if S_VMS == 0
 
-/*
- * Open a file for reading.
- */
+#if S_LINUX
+struct termios  g_savetty;
+#endif
+
+																			/* Open a file for reading. */
 int Pascal ffropen(const char * fn)
 
-{ 		      /* g_flen, fline private to ffropen, ffclose, ffgetline */
+{ 		      		/* g_flen, fline private to ffropen, ffclose, ffgetline */
   g_flen = 0;		/* force ffgetline to realloc */
   g_crlfflag = FALSE;
 
@@ -82,20 +89,47 @@ int Pascal ffropen(const char * fn)
 #endif
     fclose(stdin);
  
-    if (
+  { int fd =
 #if S_MSDOS
-        open("CON", O_RDONLY+O_BINARY)
+        open("CON", O_RDONLY+O_BINARY);
 #else
-        open("/dev/tty", O_RDONLY)
+        open("/dev/tty", O_RDONLY+O_NOCTTY);
 #endif
-         != 0)
+    if (fd != 0)
     {
       return 0;
     }
-#if S_WIN32
-    MySetCoMo();
-#endif
+#if S_LINUX
+  { struct termios  tty;
+    speed_t     spd;
+    unsigned char   buf[80];
+    int     reqlen = 79;
+    int     rdlen;
+    int     pau = 0;
+    int rc = tcgetattr(fd, &tty);
+    if (rc < 0)
+      adb(88);
+
+    g_savetty = tty;    /* preserve original settings for restoration */
+
+    spd = B115200;
+    cfsetospeed(&tty, (speed_t)spd);
+    cfsetispeed(&tty, (speed_t)spd);
+
+    cfmakeraw(&tty);
+
+    tty.c_cc[VMIN] = 1;
+    tty.c_cc[VTIME] = 10;
+
+    tty.c_cflag &= ~CSTOPB;
+//  tty.c_cflag &= ~CRTSCTS;    /* no HW flow control? */
+    tty.c_cflag |= CLOCAL | CREAD;
+    rc = tcsetattr(fd, TCSANOW, &tty);
+    if (rc < 0)
+      adb(89);
   }
+#endif
+  }}
 
   return g_ffp == NULL ? -1 : FIOSUC;
 }
@@ -120,8 +154,7 @@ int Pascal ffclose()
 {	Cc cc = g_ffp == NULL ? OK : fclose(g_ffp);
 #if S_UNIX5 | S_LINUX | S_HPUX | S_SUN | S_XENIX | S_BSD | (S_MSDOS & (LATTICE | MSC | DTL | TURBO)) | S_OS2
   if (cc != OK)
-  { mlwrite(TEXT156);
-/*			"Error closing file" */
+  { adb(243);
     return FIOERR;
   }
 #endif
@@ -130,6 +163,15 @@ int Pascal ffclose()
 }}
 
 
+#if S_LINUX
+
+void stdin_close()
+
+{ if (g_savetty.c_iflag != 0)
+    tcsetattr(0, TCSANOW, &g_savetty);
+}
+    
+#endif
 
 /* Open a file for writing. Return 1 if all is well,
                                    0 if exists and must not
@@ -222,7 +264,7 @@ int Pascal ffgetline(int * len_ref)
 //		  continue;
 	    if (c == '\r')
 	    { g_crlfflag = TRUE;
-	      if ((gflags & MD_KEEP_CR) == 0)
+	      if (!is_opt('X'))
 	        continue;
 	    } 
 //  }
@@ -254,22 +296,13 @@ int Pascal ffgetline(int * len_ref)
 	    return FIOERR;
 	  }
 	}
-					/* terminate and decrypt the string */
-#if	CRYPT
-	if (curbp->b_flag & MDCRYPT)
-	{	ucrypt(g_fline, i);
-		if (curbp->b_mode & BCRYPT2)
-			double_crypt(g_fline, i);
-	}
-#endif
+
 	return c == EOF ? FIOEOF : FIOSUC;
 }
 
 #endif
 
-
 //extern char * getcwd(char*, int);
-
 
 int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	
@@ -286,12 +319,11 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
    	*tgt++ = '/';
   }
 
-  t = tgt;
+  t = tgt-1;
 
   while (t < &tgt[NFILEN-2])
   { ch = *s++;
-    *t++ = ch;
-    *t = 0;
+    *++t = ch;
 
     if (ch == 0)
       break;
@@ -299,44 +331,45 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
     if      (ch == '*')
       got_star = MSD_DIRY;
     else if (ch == '/' || ch == '\\')
-    {	t[-1] = '/';
-    { int dif = (t - tgt) + 4;
+    {	t[0] = '/';
+    { int dif = (t - tgt) + 3;
       if (dif >= 0)
-      { if (t[-2] == '.')
-      	{ if (t[-3] == '/')			// "/./"
+      { if (t[-1] == '.')
+      	{ if (t[-2] == '/')			// "/./"
 	        { t -= 2;
 	          continue;
 	        }
-      		if (dif > 0 && t[-5] != '.' && t[-4] == '/' && t[-3] == '.') // "x/../"
-	        { for (; --t >= tgt && *t != '/'; )
+      		if (dif > 0 && t[-2] == '.' && t[-3] == '/' && t[-4] != '.' ) // "x/../"
+	        { t -= 4;
+	        	for (; --t >= tgt && *t != '/'; )
 	            ;
-	          t += 1;
 	          continue;
 	        }
       	} 
 			}
     }}
   }
+
+  t[1] = 0;
 {
-#if S_WIN32 && S_BORLAND == 0 && S_CYGWIN == 0
-  const char * cwd_ = _getcwd(tmp, NFILEN);
-#else
   const char * cwd_ = getcwd(tmp, NFILEN);
-#endif
   if (cwd_ == null)
     cwd_ = "/";
 	
-{ const Char * cwdend = &cwd_[strlen(cwd_)];
-  const Char * cw = cwdend;
+{ const Char * cw = &cwd_[strlen(cwd_)];
   int num_dirs = 0;
   t = tgt;
 
-  while (strcmp_right(t, "../") == 0 && cw >= cwd_)
+  while (strcmp_right(t, "../") == 0)
   { t += 3;						  											 /* target forward */
+		++num_dirs;
+
     while (--cw >= cwd_ && *cw != DIRSEPCHAR)	 /* cwd backward */
       ;
-
-		++num_dirs;
+      
+		if (cw >= cwd_)
+			continue;
+		break;
 	}
 
 { int root = cw < cwd_;
@@ -362,11 +395,12 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 		if (deduct >= 0)
 		{ char * tt = tgt - 1;
 			char * s;
+			char ch;
 			if (root)
 				*++tt = '/';
 				
-			for (s = tgt + deduct; *++s != 0 && (*s == '.' || *s == '/'); )
-				*++tt = *s;
+			for (s = tgt + deduct; ((ch = *++s) == '.' || ch == '/'); )
+				*++tt = ch;
 
 			if (*t == '/')
 				++t;
@@ -376,7 +410,6 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 		
   return got_star;
 }}}}
-
 
 
 #if S_MSDOS == 0

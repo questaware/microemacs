@@ -282,8 +282,8 @@ void putpad(const char * str)		/* cheaper version */
 
 /**********************************************************************/
 
-static Map_t keymap = mk_const_map(T_DOMCHAR0+6, 0, keytbl);
-static Map_t capmap = mk_const_map(T_DOMCHAR0+6, 0, captbl);
+static Map_t keymap = mk_const_map(T_DOMCHAR0+6, 0, keytbl, 0);
+static Map_t capmap = mk_const_map(T_DOMCHAR0+6, 0, captbl, 0);
 
 int Pascal use_named_str(name, str)
 	Char *   name;
@@ -316,7 +316,7 @@ int Pascal use_named_str(name, str)
 
 void ttopen()
 
-{ /* if (gflags & MD_NO_MMI)
+{ /* if (pd_gflags & MD_NO_MMI)
       return; */
   const char * s;
 #if USE_SCR_BDY == 0
@@ -897,10 +897,9 @@ void Pascal ttscupdn(int n)
 
 void Pascal mbwrite(const char * src)
 
-{ int sd = g_discmd;
-	g_discmd = 1;
+{ ++pd_discmd;
 	mlwrite(src);
-	g_discmd = sd;
+	--pd_discmd;
 	(void)ttgetc();
 }
 

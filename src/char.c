@@ -17,6 +17,22 @@
 
 #define DIFCASE  ('a'-'A')
 
+#if 0
+
+char * strlast(const char * src, char ch)
+
+{ const char * s = src;
+	const char * res = null;
+	char c;
+	while ((c = *++s) != 0)
+		if (c == ch)
+			res = s;
+
+	return res == NULL ? s : res;
+}
+
+#endif
+
 
 #define get_arg(type,ap) va_arg(ap, type)
 

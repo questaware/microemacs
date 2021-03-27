@@ -133,28 +133,21 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
 			 /* let a user macro get hold of things...if he wants */
 	execkey(&exbhook, FALSE, 1);
 
-#if S_WIN32
-	setconsoletitle(bp->b_fname);
-#endif
 	bp->b_luct = ++g_top_luct;
 
- 	leavewind(curwp);
+ 	leavewind(curwp, 0);
 
 	curbp = bp; 			/* Switch. */
+{ char * fn = bp->b_fname;
+#if S_WIN32
+	setconsoletitle(fn);
+#endif
 
-	if (!(bp->b_flag & BFACTIVE) && bp->b_fname != null)  /* not active yet*/
-	{
-		bp->b_flag |= g_gmode & MDCRYPT;
-		if (bp->b_flag & MDCRYPT)
-			resetkey(&bp->b_key);													/* set up for decryption */
-
-		readin(bp->b_fname, FILE_LOCK);
+	if (!(bp->b_flag & BFACTIVE) && fn != null)  /* not active yet*/
+	{ 
+		readin(fn, FILE_LOCK);
 		curwp->w_flag |= WFFORCE;
 	}
-
-	if (bp->b_nwnd < 0)
-		bp->b_nwnd = 0;
-	++bp->b_nwnd; 		/* First use. */
 
 {	WINDOW *wp = curwp;
 	wp->w_bufp	= bp;
@@ -163,9 +156,9 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
 	for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
 		if (wp->w_bufp == bp)
 #endif
-		{ wp->w_linep 	= bp->b_wlinep;
-			wp->w_dotp		= bp->b_dotp;
+		{ wp->w_dotp		= bp->b_dotp;
 			wp->w_doto		= bp->b_doto;
+			wp->w_linep 	= bp->b_wlinep;
 			wp->mrks			= bp->mrks;
 		/*wp->w_fcol		= bp->b_fcol;*/
 			setcline();
@@ -175,7 +168,7 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
 	
 	execkey(&bufhook, FALSE, 1);
 	return TRUE;
-}}
+}}}
 
 
 
@@ -376,7 +369,7 @@ void Pascal fmt_modecodes(char * t, int mode)
 	well.
 */
 
-Pascal listbuffers(int iflag, int n)
+int Pascal listbuffers(int iflag, int n)
 		 
 { BUFFER * bp;
 	Char line[15+NUMMODES-2] = "Global Modes ";
@@ -409,43 +402,48 @@ Pascal listbuffers(int iflag, int n)
 
 		fmt_modecodes(&line[13], bp->b_flag);
 					/* we could restore lastmesg */
-		mlwrite("%>%c%c%c %s %7D %15s %s\n",
+		mlwrite("%>%c%c%c %s %7d %15s %s\n",
 						bp->b_flag & BFACTIVE ? '@' : ' ',
 						bp->b_flag & BFCHG ? '*' : ' ',
 						bp->b_flag & BFTRUNC ? '#' : ' ',
 						&line[13],
 						nbytes,
 						bp->b_bname,
-						fixnull(bp->b_fname));
+						bp->b_fname);
 	}}
 	curbp->b_flag |= MDVIEW;
 	curbp->b_flag &= ~BFCHG;		/* don't flag this as a change */
 	return gotobob(0,0);
 }
 
-/* Look through the list of
- * buffers. Return TRUE if there
- * are any changed buffers. Buffers
- * that hold magic internal stuff are
- * not considered; who cares if the
- * list of buffer names is hacked.
- * Return FALSE if no buffers
- * have been changed.
- */
-Pascal anycb()
-{
-	register BUFFER *bp;
 
-	for (bp = bheadp; bp != NULL; bp = bp->b_bufp) 
-		if ((bp->b_flag & (BFINVS+BFCHG)) == BFCHG)
-			return TRUE;
+#if 0
 
-	return FALSE;
+static
+void Pascal unqname(char * name)			/* make sure a buffer name is unique */
+									/* name to check on */
+{																			/* check to see if its in the buffer list */
+	while (bfind(name, 0, FALSE) != NULL)
+	{	char *sp, *sp_;
+	  for (sp = name; *sp; ++sp)	/* go to the end of the name */
+		  ;
+		sp_ = sp;
+	 	for (; --sp > name && *sp != '.';)/* go to the last dot */
+		  ;
+		--sp;
+		
+		if (sp >= name && (in_range(*sp, '0','8') || 
+		                   in_range(*sp, 'a','y') ||
+		                   in_range(*sp, 'A','Z')))
+		  *sp += 1;
+		else
+		{ *sp_++ = 'Z';
+		  *sp_ = 0;
+		}
+	}
 }
 
-
-#define BCDEF (BINDENT+BCCOMT)
-#define BPRL	(BINDENT+BCPRL)
+#endif
 
 int g_bfindmade;
 
@@ -453,41 +451,57 @@ int g_bfindmade;
  * If the buffer is not found and the "cflag" is TRUE, create it. 
  * The "bflag" is the settings for the flags in buffer.
  */
-BUFFER *Pascal bfind(const char * bname,
+BUFFER *Pascal bfind(char * bname,
 										 int cflag, int bflag)
 				/* name of buffer to find */
-				/* create it if not found? */
+				/* cflag   1: create it 2: make buffer name unique */
 				/* bit settings for a new buffer */
-{
-#if 0
-	const char nm[][4] = {"c","cpp", "cxx", "cs",	"h","pc","jav", "prl","pl",
-												"for","fre","inc","pre","f", "sql","pas","md"};
-	const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL,
-                  			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
-#endif
-	int cc = -1;
+{	int cc = -1;
 	BUFFER * db = bheadp;
                       			/* find the place in the list to insert this buffer */
 	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_bufp);
 
+//if (cflag & 2)
+//	unqname(bname);                     /* dont conflict with other buffers */
+
 	for (; sb->b_bufp != NULL; sb = sb->b_bufp) 
 	{ cc = strcmp(sb->b_bufp->b_bname, bname);
-#if 0
-  { FILE *track = fopen("emacs.log", "a");
-		fprintf(track, "Cmp %d %s %s\n", cc, sb->b_bufp->b_bname, bname);
-		fclose(track);
-  }
-#endif	
-		if (cc >= 0)
+		if (cc < 0)
+			continue;
+
+		if (cc > 0)
 			break;
-	}
+		if ((cflag & 2) == 0)
+			break;
+		cc = 1;
+	{	
+#if 0
+		char *sp = strlast(bname+1, '.') - 1;
+#else
+		char *sp, *sp_ = null;
+		for (sp = bname; *++sp; )
+		  if (*sp == '.')
+				sp_ = sp;
+		if (sp_ != NULL)
+			sp = sp_;
+		--sp;
+#endif
+		if (in_range(*sp, '0','8') || 
+		    in_range(*sp, 'a','y') ||
+		    in_range(*sp, 'A','Z'))
+		  *sp += 1;
+		else
+		{ *sp++ = 'Z';
+		  *sp = 0;
+		}
+	}}
 	
 	g_bfindmade = cc;
 	
 	if (cc == 0)
 		return sb->b_bufp;
 
-	if (cflag == FALSE)
+	if (!(cflag & 1))
 		return null;
 
 { LINE *lp;

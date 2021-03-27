@@ -186,7 +186,6 @@ struct SREGS {
 # define PATHCHR	':'
 #endif
 
-			/*  Emacs global flag bit definitions (for gflags) */
 					/*	internal constants	*/
 #define NBINDS	220			/* max # of bound keys		*/
 #if AOSVS
@@ -203,7 +202,7 @@ struct SREGS {
 #define	KBLOCK	250			/* sizeof kill buffer chunks	*/
 #define	NBLOCK	16			/* line block chunk size	*/
 #define	NVSIZE	10			/* max #chars in a var name	*/
-#define NMARKS	 2			/* number of marks must be po2  */
+#define NMARKS	 4			/* number of marks must be po2  */
 #define MAXVARS 64
 
 

@@ -1,5 +1,13 @@
 extern Char * match_fn_re(Char*, Char*);
-extern Char * match_fn_re_ic(Char*, Char*, int /*bool */);
+
+#if S_WIN32 == 0
+extern Bool   match_fn_re_ic(Char*, Char*, int /*bool */);
+#define msd_ignore(x) ,x
+#else
+extern Bool   match_fn_re_ic(Char*, Char*);
+#define msd_ignore(x)
+#endif
+
 extern Cc     msimp_fn_re_ic(Char*, Char*, int /*bool */);
 
 extern Cc   msd_init (const Char *, const Char *, int);

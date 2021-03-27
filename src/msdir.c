@@ -111,8 +111,7 @@ Cc ms_intdosx(Char * str, Short code)
 
 #endif
 
-
-
+#if S_WIN32 == 0
 
 void printf2(const char * msg, const char * val)
 
@@ -126,6 +125,8 @@ void printf2(const char * msg, const char * val)
   write(2, "\n", 1);;
 #endif
 }
+
+#endif
 
 #if 0
 X
@@ -163,48 +164,59 @@ X}
 #endif
 
 
-Char * match_fn_re_ic(
-	Char *       tlt_,
-	Char *       pat,
-	int /*Bool*/ ic)
-{ register Char * tlt = tlt_;
-  register Char ch;
+#if S_WIN32
+#define fn_ic 1
+#endif
 
-  for ( ; (ch=*tlt) != 0; ++tlt)
-  { 						/* be stricter later */
-    if (*pat == '*')
-    { register Char pch = pat[1];
-      register Char upch = toupper(pch);
-      while ((ch = *tlt) != 0 && (toupper(ch) != upch || !ic && ch != pch))
-        ++tlt;
-      if (ch == 0 || tlt[1] == 0)
-      { ++pat;
-        break;
-      }
-    /*eprintf(null, "Down %s.%s\n", tlt+1, pat+2);*/
-    { char * t = match_fn_re_ic(tlt+1, pat+2, ic);
-    /*eprintf(null, "Up %s\n", t);*/
-      if (*t != 0)
-        continue;
-      return t;
-    }}
+Bool match_fn_re_ic(Char *       tlt,
+										Char *       pat
+#if S_WIN32 == 0
+									 ,int /*Bool*/ fn_ic
+#endif
+									 )
+{	Char ch,pch;
+	--pat;
+	--tlt;
+  while (1)
+  { pch = *++pat;
+	  ch = *++tlt;
+		if (pch == 0)
+			break;
+#if S_WIN32 == 0
+		if (ch == pch)
+    	continue;
+#endif
+    if (toupper(ch) == toupper(pch) && fn_ic)
+      continue;
+    if (pch == '?')													/* asterix, ? are not in file names */
+    	continue;
+    
+    if (pch != '*')
+    	break;
+		if (pat[1] == 0)
+			return 1;
 
-    if (ch != *pat)
-    { if (! (ic && toupper(ch) == toupper(*pat)) && *pat != '?')
-        break;
-    }
-/*  if (ch == 0 || (! ic ? ch != *pat : toupper(ch) != *pat)
-		   && *pat != '?')
-      break; */
-    ++pat;
-  }
+  { Bool rc = match_fn_re_ic(tlt, pat+1 /*,*/ msd_ignore(fn_ic));
+   	if (rc)
+   		return rc;
+#if S_WIN32 == 0
+    if (toupper(ch) == toupper(pat[1]) && fn_ic)
+#else
+   	if (ch == pat[1])
+#endif
+    	++pat;
+    else
+    	--pat;
+  }}
 
-  return *pat == 0 || *pat == '*' ? tlt : tlt_;
+  return (ch | pch) == 0;						/* ?* ?? */
 }
+
+#undef fn_ic
 
 /*	FILE Directory routines		*/
 
-Bool msd_empty_dir = false;
+// Bool msd_empty_dir = false;
 
 #if S_WIN32
  staticc HANDLE msd_curr = 0;
@@ -231,8 +243,6 @@ Bool msd_empty_dir = false;
 #endif
 
 
-staticc Char msd_startdir[FILENAMESZ+2];
-
 staticc Char * msd_relpath;
 staticc Char   msd_path_[FILENAMESZ+4] = "?/";
 #define msd_path ((char*)&msd_path_[2])	/* printed path to current file */
@@ -245,7 +255,7 @@ staticc Char msd_pat[120];		/* pattern of last component */
 staticc Char msd_pat[10];		/* pattern of last component */
 #endif
 
-#if S_MSDOS
+#if S_MSDOS && S_WIN32 == 0
 staticc Char  rbuf[FILENAMESZ+2];
 #else
 #define rbuf msd_path
@@ -253,22 +263,28 @@ staticc Char  rbuf[FILENAMESZ+2];
 
         Vint    msd_iter;		/* FIRST then NEXT */
 staticc Set16   msd_props;		/* which files to use */
-        Bool    msd_ic = S_MSDOS;	/* Ignore case in file names */
-
+#if S_MSDOS			
+#define msd_ic 1
+#else
+        Bool    msd_ic;				/* Ignore case in file names */
+#endif
         Set16   msd_attrs;		/* attributes of result: MSD_xxx */
-
-        Cc msd_cc;
-staticc Short msd_ix = 0;
 
 struct stat msd_stat;
 
 
 #define MAX_TREE 18
 
+#if S_MSDOS == 0
 staticc int   msd_nlink[MAX_TREE+1];		/* stack of number of dirs */
+#endif
 
-#if NOPUSHPOP == 0
-					/* preincrement with 0 unoccupied */
+#if NOPUSHPOP 
+#define msd_ix 0
+#else
+
+staticc Cc msd_cc;
+staticc Short msd_ix = 0;					/* preincrement with 0 unoccupied */
 
 staticc Short msd_lenstk[MAX_TREE+1];		/* stack of filename lengths */
 						/* includes trailing / or // */
@@ -287,6 +303,9 @@ staticc Short msd_chd = -1;		/* last chdir MINUS one*/
 staticc Short msd_chd = -1;		/* last chdir MINUS one*/
 #endif
 
+staticc Bool msd_nochdir = 0; /* dont use chdir */
+staticc Char msd_startdir[FILENAMESZ+2];
+
 #if S_MSDOS+S_VMS == 0
  staticc ino_t  msd_inos[MAX_TREE];
 
@@ -300,11 +319,7 @@ staticc Short msd_chd = -1;		/* last chdir MINUS one*/
  }*/
  
 #endif
-
 #endif
-
-staticc int/*bool*/ msd_nochdir = 0; /* dont use chdir */
-
 
 #if READAHEAD == 0
 
@@ -341,9 +356,7 @@ static void ra_pop()
 
 #endif
 
-
 #if NOPUSHPOP == 0
-
 
 Cc msd_push()
 
@@ -456,7 +469,6 @@ Char * msd_pop()
 
   /*eprintf(null, "PPop (%d) %s(%d)\n", msd_ix, msd_path, msd_lenstk[msd_ix]);*/
 
-#if S_MSDOS == 0 || S_WIN32
     msd_curr = msd_stk[msd_ix+1];
     msd_nlink[msd_ix+1] -= 1;
 
@@ -483,59 +495,15 @@ Char * msd_pop()
 
     { Cc cc = chdir(tgt);
       if (cc != OK)
-        printf2( "Fatal chdir error ", tgt);
+        adb(77);			// printf2( "Fatal chdir error ", tgt);
       msd_relpath = msd_chd < 0 ? msd_path : &msd_path[msd_lenstk[msd_chd]];
     {/*char cwdb[300];
       eprintf(null, "POPDIR %d %d %s %s RP %s\n", msd_ix+1, msd_chd,
       			tgt, getcwd(cwdb, 299), msd_relpath);*/
     }}}
-#else
-    if (/*msd_ix > 0 && */ *tt != 0 && *tt != '*')
-    { Char enynm[41];
-      Char * res;
-      Set16 save_props = msd_props;
-      register Short i;
-      for (i = sizeof(enynm); --i >= 0; )
-      { enynm[i] = tt[i];
-        if (enynm[i] == '/' || enynm[i] == '\\')
-		  	  enynm[i] = 0;
-      }
-  
-      *tt = 0;
-    
-      msd_init(msd_path, msd_pat, (save_props & ~MSD_SHOWDIR)|MSD_INTERNAL);
-    /*eprintf(null, "TGT %s\n", &enynm[0]);*/
-      
-      while (true)
-      { int trash;
-        register Char * t = &enynm[0];
-		  	Char * s = &dta[0x1e];
-      /*eprintf(null, "DD %s : %s DD\n", t, s);*/
-        for (; (i = *s) != 0 && toupper(*t) == toupper(i); ++s)
-		  	  ++t;
-        if (*t == 0)
-  			  break;
-        res = msd_nfile(&trash);   
-        if (res == null)
-        {
-#if NOPUSHPOP == 0
-          if (msd_ix >= 0)
-            (void)msd_pop();
-#endif    
-          res = "FileLost";
-          break;
-        }
-      }
-    /*
-      if (res == null || ((msd_attrs & MSD_DIRY) == 0)
-        eprintf(stderr,"POP FAILED\n");
-    */
-      msd_props = save_props;
-    }
-#endif
   }
 
-  msd_empty_dir = false;
+//msd_empty_dir = false;
   msd_attrs |= MSD_POST;
   msd_attrs &= ~MSD_DIRY;
 
@@ -560,6 +528,8 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 { Char ch;
   short pe;
   short pe_last_sl = -1;
+
+  msd_relpath = msd_path;
 												/* msd_path often == diry */
   for ( pe = -1; ++pe < FILENAMESZ && (msd_path[pe] = (ch = diry[pe])) != 0; )
   { if (ch == '\\' || ch == '/')
@@ -579,16 +549,20 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
   msd_path[pe] = 0;
   g_pathend = pe;
 
-  for (pe = -1; (ch = pat[++pe]) != 0 && pe < sizeof(msd_pat)-2; )
 #if S_MSDOS && S_WIN32 == 0
+
+  for (pe = -1; (ch = pat[++pe]) != 0 && pe < sizeof(msd_pat)-2; )
     msd_pat[pe] = toupper(ch);
-#else
-    msd_pat[pe] = ch;
-#endif
+
   msd_pat[pe] = 0;
+#else
+  strpcpy(msd_pat, pat, sizeof(msd_pat)-1);
+#endif
 
   loglog2("PATH %s PAT  %s", msd_path, msd_pat);
 /*eprintf(null, "PATH %s\nPAT  %s\n", msd_path, msd_pat);*/
+
+#if NOPUSHPOP == 0
 
   if ((props & MSD_INTERNAL) == 0)
   {
@@ -602,14 +576,14 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 
     rr_head = msd_ra_top;
 #endif
-    msd_ix = 0;
-    msd_relpath = msd_path;
-    msd_empty_dir = false;
+//  msd_empty_dir = false;
+
+#if S_MSDOS	== 0
     msd_ic = msd_props & MSD_IC;
+#endif
+
+    msd_ix = 0;
     msd_nochdir = (props & (MSD_NOCHD+MSD_STAY));
-
-#if NOPUSHPOP == 0
-
     msd_lenstk[0] = strlen(msd_path);
 #if S_MSDOS == 0 || S_WIN32
     msd_chd = -1;
@@ -621,17 +595,15 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
   /*eprintf(null, "Startdir %s\n", msd_startdir);*/
     msd_slink[0] = 0;		/* this can be wrong ! */
 #endif
-#endif
   }
+#endif
 
   msd_props = props;
   msd_attrs = 0;
   msd_iter = DOS_FFILE;
-#if S_MSDOS && 0
+#if S_MSDOS && S_WIN32 == 0
   rbuf[0] = 0;
 #endif
-  msd_cc = -100;
-
   pe = g_pathend;
 
 #if S_MSDOS & S_WIN32 == 0
@@ -645,7 +617,8 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 /*eprintf(null, "DFF %d\n", msd_cc);*/
   return msd_cc;
 #else
-{ register char * dir;
+{ Cc msd_cc;
+	char * dir;
   
 #if   S_WIN32
   dir = pe == 0 ? "./*.*" : msd_relpath;
@@ -674,11 +647,10 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
   if (msd_curr == NULL)
   {/*char cwdb[160];*/
   /*eprintf(null, "OPen Empty %d %s, CWD %s\n", errno, dir, getcwd(cwdb, 159));*/
-    msd_empty_dir = true;
+//  msd_empty_dir = true;
     return EDENIED;
   }
 #endif
-
 
 #if NOPUSHPOP == 0
 /*eprintf(null, "PTRY %d %d %d\n", msd_ix, msd_chd, msd_nlink[msd_ix]);*/
@@ -953,18 +925,12 @@ static Bool extract_fn(int * fnoffs)
   { 
     tl[-1] = '/';
     tl[0] = 0;
-#if S_MSDOS == 0 | S_WIN32
-    if (msd_attrs & MSD_SLINK)
-    { tl[0] = '/';
-      tl[1] = 0;
-    }
-#endif
   }
 
   loglog2("Match %s %s", msd_pat, s);
 
   if      (msd_pat[0] == 0 ||
-	  !*match_fn_re_ic(s,msd_pat, S_MSDOS ? true : msd_ic)
+				   match_fn_re_ic(s,msd_pat /*,*/msd_ignore(msd_ic))
           )
     msd_attrs |= MSD_MATCHED;
   else if (! ((msd_attrs & MSD_DIRY) && (msd_attrs & MSD_SHOWDIR)))
@@ -979,21 +945,14 @@ static Bool extract_fn(int * fnoffs)
         return false;
 #endif
 #endif
-  }
+}
     
 /*eprintf(null, "M %x.%s %s\n", match[0], match, &dta[0x1e]);*/
 /*eprintf(null, msd_attrs & MSD_DIRY ? "YY %s %x %x\n"
 			      : "DD %s %x %x\n", msd_path, msd_attrs, 0**msd_stat.st_mode**);*/
-#if S_MSDOS
+#if S_MSDOS && S_WIN32 == 0
   strpcpy(&rbuf[0], &msd_path[0], sizeof(rbuf));
-  
-#if S_WIN32 == 0
-{ register int ix;
-  for (ix = -1; rbuf[++ix] != 0; )
-    if (in_range(rbuf[ix], 'A', 'Z'))
-       rbuf[ix] += 'a' - 'A';
-}
-#endif
+	mkul(0, rbuf);													/* make string lower case */
 #endif
   return true;
 }
@@ -1004,8 +963,10 @@ Char * msd_nfile(int * fnoffs)
 
 { 
   while (true)
-  {
-#if NOPUSHPOP == 0
+  { 
+#if NOPUSHPOP 
+		Cc msd_cc = OK;
+#else
     if ((msd_attrs & MSD_DIRY) && ! (msd_props & MSD_STAY))
     { msd_cc = OK; 
       msd_push();
@@ -1058,11 +1019,35 @@ int msd_getprops(Char * fn)
 
 { struct stat mstat;
   return ( stat(fn, &mstat) != OK             ? MSD_NOPERM :
-	  (mstat.st_mode & S_IFMT) == S_IFDIR ? MSD_DIRY   :
-	  (mstat.st_mode & S_IWRITE) == 0     ? MSD_ROFILE : 0) | 
-	       /* crude!*/
-	  ( s[0] == '.' ? MSD_HIDFILE : 0);
+				  (mstat.st_mode & S_IFMT) == S_IFDIR ? MSD_DIRY   :
+				  (mstat.st_mode & S_IWRITE) == 0     ? MSD_ROFILE : 0) | 
+	    		   /* crude!*/
+				  ( s[0] == '.' ? MSD_HIDFILE : 0);
 }
 
 #endif
+#endif
+
+#define STANDALONE 0
+#if STANDALONE
+
+#include        <stdio.h>*/
+
+int main(int argc, char * argv[])
+
+{ char * pat = NULL;
+  char * file = NULL;
+  int carg;
+  for (carg = argc; --carg > 0; )
+	{ char * filev = argv[argc-carg];
+		if (pat == NULL)
+			pat = filev;
+		else
+			file = filev;
+	}
+	
+{	Bool rc = match_fn_re_ic(file, pat /*,*/ msd_ignore(0));
+	printf("Res %d\n", rc);
+}}
+
 #endif

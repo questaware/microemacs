@@ -1,7 +1,7 @@
 /* The functions in this file implement commands that perform incremental
  * searches in the forward and backward directions.  This "ISearch" command
  * is intended to emulate the same command from the original EMACS 
- * implementation (ITS).  Contains references to routines internal to
+ * implementation (ITS).	Contains references to routines internal to
  * SEARCH.C.
  *
  * HISTORY:
@@ -11,11 +11,11 @@
  *
  *	John M. Gamble 5-Oct-86
  *	- Made iterative search use search.c's scanner() routine.
- *	  This allowed the elimination of bakscan().
- *	- Put isearch constants into estruct.h
+ *		This allowed the elimination of bakscan().
+ *	- Put  isearch constants into estruct.h
  *	- Eliminated the passing of 'status' to scanmore() and
- *	  checknext(), since there were no circumstances where
- *	  it ever equalled FALSE.
+ *		checknext(), since there were no circumstances where
+ *		it ever equalled FALSE.
  */
 
 #include	<stdio.h>
@@ -24,26 +24,9 @@
 #include	"etype.h"
 #include	"elang.h"
 
-#if	ISRCH
+#if ISRCH
 
-/*
- * Incremental search defines.
- */
-#define IS_ABORT	0x07	/* Abort the isearch */
-#define IS_BACKSP	0x08	/* Delete previous char */
-#define	IS_TAB		0x09	/* Tab character (allowed search char) */
-#define IS_NEWLINE	0x0D	/* New line from keyboard (Carriage return) */
-#define	IS_QUOTE	0x11	/* Quote next character */
-#define IS_REVERSE	0x12	/* Search backward */
-#define	IS_FORWARD	0x13	/* Search forward */
-#define	IS_VMSQUOTE	0x16	/* VMS quote character */
-#define	IS_VMSFORW	0x18	/* Search forward for VMS */
-#define	IS_QUIT		0x1B	/* Exit the search */
-#define	IS_RUBOUT	0x7F	/* Delete previous character */
-
-/* IS_QUIT is no longer used, the variable metac is used instead */
-
-void Pascal reeat(int ch);
+extern void Pascal reeat(int ch);
 
 
 /* A couple more "own" variables for the command string */
@@ -52,15 +35,15 @@ void Pascal reeat(int ch);
  cmdbuflen too big
 #endif
 
-NOSHARE char pat[NPAT+10];		/* Search pattern	*/
+NOSHARE char pat[NPAT+10];		/* Search pattern */
 
 
 /*#define cmd_buff ((int*)gs_buf) ** Save the command args here */
 
 typedef struct
 { short cmd_buff[CMDBUFLEN];
-  int   cmd_offset;		/* Current offset into command buff */
-  int   cmd_reexecute;	        /* > 0 if re-executing command */
+	int 	cmd_offset; 						/* Current offset into command buff */
+	int 	cmd_reexecute;					/* > 0 if re-executing command */
 } T_is;
 
 static T_is g_isb;
@@ -71,126 +54,69 @@ int Pascal echochar(int c, int col)
 					/* character to be echoed */
 					/* column to be echoed in */
 {
-  tcapmove(term.t_nrowm1,col);
-  switch (c)
-  {
+	tcapmove(term.t_nrowm1,col);
+	switch (c)
+	{
 #if 0
 	case '\r':
-	  col += 3;
-	  mlputs("<NL>");
+		col += 3;
+		mlputs("<NL>");
 #endif
 	when '\t':
-	  col += 4;
-	  mlputs("<TAB>");
+		col += 4;
+		mlputs("<TAB>");
 
 	when 0x7F:
-    c = '?' - 'A' + 1;
+		c = '?' - 'A' + 1;
 					/* drop through */
 	default:
-    if (c < ' ')
-	  { c += 'A' - 1;
-	    col++;
-	    mlout('^');
-	  }
-	  mlout(c);
-  }
+		if (c < ' ')
+		{ c += 'A' - 1;
+			col++;
+			mlout('^');
+		}
+		mlout(c);
+	}
 #if S_MSDOS == 0
-  TTflush();
+	TTflush();
 #endif
-  return col+1;
+	return col+1;
+}
+
+	/*
+	 * Routine to get the next character from the input stream.  If we're reading
+	 * from the real terminal, force a screen update before we get the char. 
+	 * Otherwise, we must be re-executing the command string, so just return the
+	 * next character.
+	 */
+static
+int Pascal get_char()
+
+{		int c;
+//	T_is * is = &g_isb;
+								/* See if we're re-executing: */
+
+		if (g_isb.cmd_reexecute >= 0) 	/* Is there an offset?					*/
+			if ((c = g_isb.cmd_buff[g_isb.cmd_reexecute++]) != 0)
+				return c; 		/* Yes, return any character	*/
+
+				 /* We're not re-executing (or aren't any more).	Try for a real char */
+
+		update(FALSE);										/* Pretty up the screen 				*/
+
+		g_isb.cmd_reexecute = -1; 				/* Say we're in real mode again */
+		if (++g_isb.cmd_offset >= CMDBUFLEN)
+		{// mlwrite(TEXT166);
+		 // 		/* " too long" */
+			return 0;
+		}
+		g_isb.cmd_buff[g_isb.cmd_offset] = '\0';		/* terminate the buffer 	 */
+									 															/* Save char for next time */
+		return g_isb.cmd_buff[g_isb.cmd_offset-1] = getkey();
 }
 
 
-
-/* Subroutine to do incremental search.
- */
-
-int Pascal fisearch(int f, int n)
-
-{ /*char  pat_save[NPAT+1];         * Saved copy of the old pattern str */
-    Lpos_t save = *(Lpos_t*)&curwp->w_dotp;/* Save the current position */
-    T_is * is = &g_isb;
-				    /* Initialize starting conditions */
-    is->cmd_reexecute = -1; 	/* We're not re-executing (yet?)      */
-    is->cmd_offset = 0;		/* Start at the beginning of the buff */
-    is->cmd_buff[0] = '\0'; 	/* Init the command buffer	      */
-  /*strpcpy(pat_save, pat, NPAT);* Save the old pattern string	      */
-
-{   int srchres;
-    while ((srchres = isearch(f, n)) <= 0)
-    {	rest_l_offs(&save);		/* Reset the position	      */
-      if (srchres == 0) break;
-      /*strpcpy(pat, pat_save, NPAT);	 * Restore the old search str */
-			is->cmd_reexecute = 0;		/* Start the whole mess over  */
-    }
-    if (srchres)
-      mlerase();			/* If happy, just erase the cmd line  */
-    else 
-    { curwp->w_flag |= WFMOVE;
-			update(FALSE);
-			mlwrite (TEXT79);
-					/* "Not found" */
-    }
-    return srchres;
-}}
-
-
-
-int Pascal risearch(int f, int n)
-
-{ return fisearch(f, n == 0 ? -1 : -n);
-}
-
-
-/* Trivial routine to ensure that the next character in the search string is
- * still true to whatever we're pointing to in the buffer.  This routine will
- * not attempt to move the "point" if the match fails, although it will 
- * implicitly move the "point" if we're forward searching, and find a match,
- * since that's the way forward isearch works.
- *
- * If the compare fails, we return FALSE and assume the caller will call
- * scanmore or something.
- */
-static int Pascal checknext(int poffs, int dir)/* Check next search string chars */
-					/* Next char to look for	      */
-					/* Search direction		      */
-{
-			       /* setup the local scan pointer to current "." */
-	  Lpos_t cur = *(Lpos_t*)&curwp->w_dotp;
-	  LINE * lp = cur.curline;
-    int offs = cur.curoff;
-   	int buffchar;		/* character at current position      */
-	  int i;
-
-    /* dir > 0 => searching forward */
-    
-    for (i = dir <= 0 ? -1 : poffs-2; pat[++i] != 0;)/* for all of pattern */
-    {
-			if (offs != llength(lp)) /* If at end of line        */
-	  	  buffchar = lgetc(lp, offs++); /* Get the next char */
-			else
-			{	lp = lforw(lp);
-				if (lp->l_props & L_IS_HD)
-					return FALSE;        /* Abort if at end of buffer    */
-				offs = 0;
-				cur.line_no += 1;
-				buffchar = '\r';        /* And say the next char is NL  */
-			}
-			if (!myeq(buffchar, pat[i]))  /* Is it what we're looking for?*/
-				return FALSE;            /* Nope, just punt it then        */
-			if (dir > 0)
-			{	cur.curline = lp;
-				cur.curoff = offs;
-        rest_l_offs(&cur);        /* point to the matched character     */
-        curwp->w_flag |= WFMOVE;
-        break;
-      }
-    }
-    return TRUE;
-}
-
-
-/* Subroutine to do an incremental search.  In general, this works similarly
+/* Subroutine to do an incremental search.	In general, this works similarly
  * to the older micro-emacs search function, except that the search happens
  * as each character is typed, with the screen and cursor updated with each
  * new search character.
@@ -198,15 +124,15 @@ static int Pascal checknext(int poffs, int dir)/* Check next search string chars
  * While searching forward, each successive character will leave the cursor
  * at the end of the entire matched string.  Typing a Control-S or Control-X
  * will cause the next occurrence of the string to be searched for (where the
- * next occurrence does NOT overlap the current occurrence).  A Control-R will
+ * next occurrence does NOT overlap the current occurrence).	A Control-R will
  * change to a backwards search, META will terminate the search and Control-G
  * will abort the search.  Rubout will back up to the previous match of the
  * string, or if the starting point is reached first, it will delete the
  * last character from the search string.
  *
  * While searching backward, each successive character will leave the cursor
- * at the beginning of the matched string.  Typing a Control-R will search
- * backward for the next occurrence of the string.  Control-S or Control-X
+ * at the beginning of the matched string.	Typing a Control-R will search
+ * backward for the next occurrence of the string.	Control-S or Control-X
  * will revert the search to the forward direction.  In general, the reverse
  * incremental search is just like the forward incremental search inverted.
  *
@@ -214,93 +140,105 @@ static int Pascal checknext(int poffs, int dir)/* Check next search string chars
  * will stall until the pattern string is edited back into something that
  * exists (or until the search is aborted).
  */
-int Pascal isearch(int f, int n)
+static
+int Pascal isearch(int n)
 
-{ register int c;
-  register int cpos = 0;
-           int col = 0;
+{ int cpos = 0;
+	int col = 0;
 
-  /*char  tpat[NPAT+20]; */
-  int  cc = -1;
+	/*char	tpat[NPAT+20]; */
+	int  cc = -1;
 
-  if (!g_clexec) 
-  { /*expandp(&tpat[0],TEXT165,pat,"]<META>: ",NPAT/2-5);** add old pattern */
-     col = mlwrite(TEXT165/*tpat*/);
+	if (!g_clexec) 
+	{ /*expandp(&tpat[0],TEXT165,pat,"]<META>: ",NPAT/2-5);** add old pattern */
+		 col = mlwrite(TEXT165/*tpat*/);
 							/*			"ISearch: " */
-				      /* ask the user for the text of a pattern */
-  }
+							/* ask the user for the text of a pattern */
+	}
 
-  if (n < 0)
-    backchar(FALSE, 1);
- /*
-    Get the first character in the pattern. If we get an initial Control-S
-    or Control-R, re-use the old search string and find the first occurrence
-  */
-  for (;;)			/* ISearch per character loop */
-  {
-		c = get_char();
-										/* Check for special characters first: */
-										/* Most cases here change the search */
-		switch (c)				/* dispatch on the input char */
-		{ case -1:
-		    return TRUE;
-		  case IS_ABORT:			/* If abort search request    */
-		    return FALSE;			/* Quit searching again       */
+	if (n < 0)
+		backchar(FALSE, 1);
+	  
+	/* Get the first character in the pattern. If we get an initial Control-S
+		 or Control-R, re-use the old search string and find the first occurrence
+	 */
+	for (;;)			/* ISearch per character loop */
+	{ int raw = get_char();
+		if (raw == sterm)
+			 return TRUE;
+	{ int c = ectoc(raw);
+													/* Check for special characters first: */
+		switch (c)						/* Most cases here change the search */
+		{ 
+			case IS_ABORT:			/* If abort search request		*/
+				return FALSE; 		/* Quit searching again 			*/
 
-		  case IS_FORWARD:
 #if S_VMS
-		  case IS_VMSFORW:
+			case IS_VMSFORW: c = IS_FORWARD;
 #endif
-		  case IS_REVERSE:
-		    n = c == IS_REVERSE ? -1 : 1;
-		    if (cpos == 0)
-		    { backchar (TRUE, 1); 									/* Be defensive about EOB  */
-     	    for (cpos = -1; (c = pat[++cpos]) != 0; ) 	/* find the length */
-					 	col = echochar(c, col); 						/* and re-echo the string */
-		    }
-   
-		    goto sm;				/* Start the search again     */
+			case IS_REVERSE:
+			case IS_FORWARD: n = (c - IS_REVERSE)*2 - 1;
 
-		  case IS_QUOTE:
+				if (cpos == 0)
+				{ char ch;
+					backchar (TRUE, 1); 											/* Be defensive about EOB  */
+					for (cpos = -1; (ch = pat[++cpos]) != 0; )/* find the length */
+						col = echochar(ch, col);								/* and re-echo the string */
+				}
+	 
+				goto sm;
+#if 0
+			case IS_QUOTE:
 #if S_VMS
-		  case IS_VMSQUOTE:
+			case IS_VMSQUOTE:
 #endif
-		    c = get_char();			/* Get the next char	      */
+				c = ectoc(get_char());						/* Get the next char*/
+#endif
+			case IS_NEWLINE:
+			case IS_TAB:
+			case '\n':
+				break;														/* Make sure we use it */
 
-  		case IS_NEWLINE:
-		  case IS_TAB:
-		  case '\n':
-		    break;				/* Make sure we use it	      */
+			case IS_BACKSP:
+			case IS_RUBOUT:
+				g_isb.cmd_offset -= 2;				/* Back up over the Rubout */
+				if (g_isb.cmd_offset <= 0)		/* Anything to delete?		 */
+					return TRUE;							/* No, just exit				*/
 
-		  case IS_BACKSP:
-		  case IS_RUBOUT:
-		    g_isb.cmd_offset -= 2;				/* Back up over the Rubout */
-		    if (g_isb.cmd_offset <= 0)		/* Anything to delete?	   */
-					return TRUE;							/* No, just exit	      */
+				g_isb.cmd_buff[g_isb.cmd_offset] = '\0';/* Yes, delete last char	 */
+				return -1;
 
-		    g_isb.cmd_buff[g_isb.cmd_offset] = '\0';/* Yes, delete last char   */
-		    return -1;
-
-		  default:
-		    if (c < ' ')			/* Is it printable?	      */
-		    {					/* Nope.		      */
-					reeat(c);			/* Re-eat the char	      */
+			default:
+				if (c < ' ')			/* Is it printable? 			*/
+				{ 				/* Nope.					*/
+//				reeat(c); 		/* Re-eat the char				*/
 					return TRUE;
-		    }
+				}
 		}  /* Switch */
 
 		pat[cpos] = c;				/* put the char in the buffer */
-		pat[++cpos] = 0;			/* null terminate the buffer  */
-		if (cpos >= NPAT-1)			/* too many chars in string?  */
-		{					/* Yup.  Complain about it    */
-// 		mlwrite(TEXT166);
+		pat[++cpos] = 0;			/* null terminate the buffer	*/
+		if (cpos >= NPAT-1) 		/* too many chars in string?	*/
+		{ 																		/* Yup.  Complain about it		*/
+//		mlwrite(TEXT166);
 					/* "? Search string too long" */
-	    return TRUE;			/* Return an error	      */
+			return TRUE;
 		}
-		col = echochar(c,col);			/* Echo the character	      */
-		if (cc == 0 ||
-	    checknext(cpos, n))			/* See if match	      	      */
-	  continue;
+		col = echochar(c,col);								/* Echo the character 			*/
+		if (cc == 0)
+			continue;
+		if (n > 0)
+			c = 0;
+		else
+		{ forwchar(TRUE, cpos+1);
+			cc = scanner(-1, 2);
+			if (cc)
+				continue;
+			forwchar(TRUE, -(cpos+1));
+		}
+//	 ||
+//			checknext(cpos, n)) 							/* See if match 						*/
+//			continue;
 sm:
 /*
  * This hack will search for the next occurrence of <pat> in the buffer, either
@@ -310,49 +248,55 @@ sm:
  * we do find a match, "point" will be at the end of the matched string for
  * forward searches and at the beginning of the matched string for reverse
  * searches.
- */					/* search forward or back for pattern */
-						/* direction to search		      */
-		if (!mcstr(0))
-		  return FALSE;
+ */ 				/* search forward or back for pattern */
+						/* direction to search					*/
 
-	 	cc = scanner(n < 0 ? REVERSE : FORWARD, false);
+		cc = scanner(n, (c == IS_FORWARD) | 2);
 		if (!cc)
-		  TTbeep();	/* Beep if search fails       */
-	} /* for {;;} */
+			TTbeep(); /* Beep if search fails 			*/
+	}} /* for {;;} */
 }
 
 
-/*
- * Routine to get the next character from the input stream.  If we're reading
- * from the real terminal, force a screen update before we get the char. 
- * Otherwise, we must be re-executing the command string, so just return the
- * next character.
+
+
+/* Subroutine to do incremental search.
  */
 
-int Pascal get_char ()
-{
-    register int c;				/* A place to get a character */
-//  T_is * is = &g_isb;
-    						/* See if we're re-executing: */
+int Pascal fisearch(int f, int n)
 
-    if (g_isb.cmd_reexecute >= 0)		/* Is there an offset?		      */
-			if ((c = g_isb.cmd_buff[g_isb.cmd_reexecute++]) != 0)
-	  	  return ectoc(c);			/* Yes, return any character  */
+{ /*char	pat_save[NPAT+1]; 				* Saved copy of the old pattern str */
+		Lpos_t save = *(Lpos_t*)&curwp->w_dotp;/* Save the current position */
+		T_is * is = &g_isb;
+						/* Initialize starting conditions */
+		is->cmd_reexecute = -1;						/* We're not re-executing (yet?)	*/
+		is->cmd_offset = 0; 							/* Start at the beginning of the buff */
+		is->cmd_buff[0] = '\0';						/* Init the command buffer		 */
+	/*strpcpy(pat_save, pat, NPAT);			 * Save the old pattern string */
 
-         /* We're not re-executing (or aren't any more).  Try for a real char */
+{ 	int srchres;
+		while ((srchres = isearch(n)) <= 0)
+		{ rest_l_offs(&save); 						/* Reset the position 			*/
+			if (srchres == 0) break;
+			/*strpcpy(pat, pat_save, NPAT);  * Restore the old search str */
+			is->cmd_reexecute = 0;					/* Start the whole mess over	*/
+		}
+		if (srchres)
+			mlerase();											/* If happy, just erase the cmd line */
+		else 
+		{ // curwp->w_flag |= WFMOVE;
+			// update(FALSE);
+			mlwrite (TEXT79);
+					/* "Not found" */
+		}
+		return srchres;
+}}
 
-    g_isb.cmd_reexecute = -1; 		/* Say we're in real mode again       */
-    update(FALSE);			/* Pretty up the screen 	      */
-    if (g_isb.cmd_offset >= CMDBUFLEN-1)
-    {
-//		mlwrite(TEXT166);
-//					/* " too long" */
-			return -1;
-    }
-    g_isb.cmd_buff[++g_isb.cmd_offset] = '\0';	/* And terminate the buffer   */
-    c = getkey();                               /* Save char for next time */
-    g_isb.cmd_buff[g_isb.cmd_offset-1] = c;
-    return c == sterm ? -1 : ectoc(c);
+
+
+int Pascal risearch(int f, int n)
+
+{ return fisearch(f, n ^ 0x80000000);
 }
 
 #endif

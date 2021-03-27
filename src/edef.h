@@ -20,6 +20,7 @@
 #define	BINDFNC	0		/* key bound to a function		*/
 #define	BINDBUF	1		/* key bound to a buffer		*/
 
+typedef int (*Command)(int f, int n);
 
 #if 0
 #ifndef null_sct
@@ -138,21 +139,6 @@ extern char nulls[];
 #define BCSQL   0x10    /* sql style comments */
 #define BCPAS   0x20		/* pascal style comments */
 #define BCML    0x40    /* Markup language */
-
-
-/*	Macro argument token types			*/
-
-#define TKNUL	0	/* end-of-string		*/
-#define	TKARG	1	/* interactive argument		*/
-#define	TKBUF	2	/* buffer argument		*/
-#define	TKVAR	3	/* user variables		*/
-#define	TKENV	4	/* environment variables	*/
-#define	TKFUN	5	/* function....			*/
-#define	TKDIR	6	/* directive			*/
-#define	TKLBL	7	/* line label			*/
-#define	TKLIT	8	/* numeric literal		*/
-#define	TKSTR	9	/* quoted string literal	*/
-#define	TKCMD  10	/* command name			*/
 
 /*
  * Modes of working
@@ -170,17 +156,17 @@ extern char nulls[];
 
 #define CMDBUFLEN	100	/* Length of our command buffer */
 
-#define IS_ABORT	0x07	/* Abort the isearch */
-#define IS_BACKSP	0x08	/* Delete previous char */
-#define	IS_TAB		0x09	/* Tab character (allowed search char) */
-#define IS_NEWLINE	0x0D	/* New line from keyboard (Carriage return) */
-#define	IS_QUOTE	0x11	/* Quote next character */
-#define IS_REVERSE	0x12	/* Search backward */
-#define	IS_FORWARD	0x13	/* Search forward */
-#define	IS_VMSQUOTE	0x16	/* VMS quote character */
-#define	IS_VMSFORW	0x18	/* Search forward for VMS */
-#define	IS_QUIT		0x1B	/* Exit the search */
-#define	IS_RUBOUT	0x7F	/* Delete previous character */
+#define IS_ABORT	 ('G'- '@')	/* Abort the isearch */
+#define IS_BACKSP	 ('H'- '@')	/* Delete previous char */
+#define	IS_TAB		 ('I'- '@')	/* Tab character (allowed search char) */
+#define IS_NEWLINE ('M'- '@')	/* New line from keyboard (Carriage return) */
+#define	IS_QUOTE	 ('Q'- '@')	/* Quote next character */
+#define IS_REVERSE ('R'- '@')	/* Search backward */
+#define	IS_FORWARD ('S'- '@')	/* Search forward */
+#define	IS_VMSQUOTE ('V'- '@')/* VMS quote character */
+#define	IS_VMSFORW ('X'- '@')	/* Search forward for VMS */
+#define	IS_QUIT		 0x1B				/* Esc Exit the search */
+#define	IS_RUBOUT	 0x7F	      /* Delete previous character */
 
 /* IS_QUIT is no longer used, the variable metac is used instead */
 
@@ -188,7 +174,7 @@ extern char nulls[];
 
 typedef struct
 { struct LINE * curline;
-  short	        curoff;
+  int		        curoff;
   unsigned int  line_no;
 } Lpos_t;
 
@@ -212,16 +198,16 @@ typedef struct MARKS
  * character.
  */
 typedef struct	WINDOW
-{	struct	WINDOW *w_wndp; 	/* Next window			*/
-	struct	BUFFER *w_bufp; 	/* Buffer displayed in window	*/
-	struct	LINE *w_linep;		/* Top line in the window	*/
+{	struct	LINE *w_dotp;			/* Line containing "."		*/
+	int	          w_doto;
+	unsigned int  w_line_no;	/* Lpos_t isomorphism ends      */
   struct  MARKS mrks;
-	struct	LINE *w_dotp;			/* Line containing "."		*/
-	int	          w_doto; 		/* offset for "."; isomorphism ends */
-	unsigned int w_line_no;		/* Lpos_t isomorphism ends      */
+	struct	WINDOW *w_wndp; 	/* Next window			*/ /* isomorphism ends */
+	struct	LINE *w_linep;		/* Top line in the window	*/
+	struct	BUFFER *w_bufp; 	/* Buffer displayed in window	*/
 	char	w_toprow;		/* Origin 0 top row of window	*/
 	char	w_ntrows;		/* # of rows in window inc MLine*/
-	char	w_force;		/* If NZ, forcing row.		*/
+	char	w_force;		/* If NZ, forcing row. */
 	char	w_flag; 		/* Flags.			*/
 #if	0
 	int   w_color;		/* current colors		*/
@@ -242,12 +228,12 @@ typedef char * CRYPTKEY;
  * have not been read in yet. These get read in at "use buffer" time.
  */
 typedef struct	BUFFER
-{	struct	BUFFER *b_bufp; 	/* Link to next BUFFER		*/
-	struct	LINE *b_baseline;	/* Link to the header LINE	*/
-	struct	LINE *b_wlinep;		/* Link top LINE in last window */
-  struct  MARKS mrks;
-	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
+{	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
 	int	  				b_doto; 		/* offset of "."; isomorphism ends */
+	struct	LINE *b_baseline;	/* Link to the header LINE	*/
+  struct  MARKS mrks;
+	struct	BUFFER *b_bufp; 	/* Link to next BUFFER		*/
+	struct	LINE *b_wlinep;		/* Link top LINE in last window */
 	struct	LINE *b_narlims[2];/* Link to narrowed top, bottom text */
 	char    			b_langprops;/* type of language of contents */
   signed char		b_nwnd; 		/* Count of windows on buffer	*/
@@ -382,6 +368,19 @@ extern Paren_t paren;
 
 /* from MAIN.C */
 
+#define OPT_M    1
+#define OPT_P    8
+#define OPT_R   16
+#define OPT_S   32
+#define OPT_V  256
+#define OPT_X 1024
+#define OPT_Z 4096
+
+extern int g_opts;
+
+#define val_opt(ch) ((g_opts >> ('Z' - ch)) & 1)
+#define is_opt(ch)  (g_opts & (1 << ('Z' - ch)))
+
 extern int kinsert_n;
 extern int g_got_uarg;
 extern int g_got_search;
@@ -392,12 +391,12 @@ NOSHARE extern int g_clexec;	/* command line execution flag	*/
 NOSHARE extern int g_nosharebuffs;  /* dont allow different files in same buffer */
 
 NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
-NOSHARE extern char *execstr;		/* pointer to string to execute */
+NOSHARE extern char *g_execstr;		/* pointer to string to execute */
 NOSHARE extern char golabel[];		/* current line to go to	*/
 NOSHARE extern int g_execlevel;		/* execution IF level		*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
 extern const NBIND names[];	/* name to function table	*/
-NOSHARE extern int g_colours;		/* backgrnd (black*256) + foreground (white) */
+NOSHARE extern int g_colours;		/* backgrnd (black*16) + foreground (white) */
 NOSHARE extern int mpresf;		/* Stuff in message line	*/
 NOSHARE extern int ttinit;		/* => ttrow is wrong */
 NOSHARE extern int ttrow;		/* Row location of HW cursor	*/
@@ -412,7 +411,7 @@ NOSHARE extern char highlight[64];	/* the highlight string */
 
 NOSHARE extern int cryptflag;		/* currently encrypting?	*/
 NOSHARE extern int restflag;		/* restricted use?		*/
-NOSHARE extern int g_newest;            /* choose newest file           */
+//NOSHARE extern int g_newest;  /* choose newest file           */
 NOSHARE extern Int envram;		/* # of bytes current in use by malloc */
 
 const extern char g_logm[3][8];
@@ -425,8 +424,6 @@ NOSHARE extern int eexitflag;		/* EMACS exit flag */
 
 /* uninitialized global external declarations */
 
-NOSHARE extern int currow;	/* Cursor row			*/
-NOSHARE extern int curcol;	/* Cursor column		*/
 NOSHARE extern int g_thisflag;	/* Flags, this command		*/
 NOSHARE extern int g_lastflag;	/* Flags, last command		*/
 NOSHARE extern int curgoal;	/* Goal for C-P, C-N		*/
@@ -444,7 +441,6 @@ NOSHARE	extern char upcase[HICHAR];	/* upper casing map		*/
 #endif
 
         extern char pat[NPAT+10];	/* Search pattern		*/
-NOSHARE extern char tap[NPAT+10];	/* Reversed pattern array.	*/
 NOSHARE extern char rpat[NPAT+10];	/* replacement pattern		*/
 
 				extern char *g_file_prof;	/* profiles of files */
@@ -453,7 +449,6 @@ NOSHARE extern char rpat[NPAT+10];	/* replacement pattern		*/
 NOSHARE extern KEYTAB hooks[6];		/* executed on all file reads */
 
 NOSHARE extern char *patmatch;
-NOSHARE extern int lastdir;
 
 #if	DEBUGM
 /*	vars needed for macro debugging output	*/
@@ -461,8 +456,6 @@ NOSHARE extern char outline[];	/* global string to hold debug line text */
 #endif
 
 NOSHARE extern TERM	term;		/* Terminal information.	*/
-extern int g_cliplife;
-
 
 #define readhook hooks[0]	/* executed on all file reads */
 #define wraphook hooks[1]	/* executed when wrapping text */

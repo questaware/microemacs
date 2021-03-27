@@ -66,20 +66,21 @@ extern NOSHARE int predefvars[];
 #define EVYPOS		 62
 #define EVZCMD		 63
 
-#define pd_fillcol predefvars[EVFILLCOL]
-#define gasave  predefvars[EVASAVE]
 #define gacount predefvars[EVACOUNT]
-#define col1ch  predefvars[EVCOL1CH]
-#define col2ch  predefvars[EVCOL2CH]
-#define lastkey predefvars[EVLASTKEY]
-#define seed    predefvars[EVSEED]
-#define g_gmode	predefvars[EVGMODE]
-#define univct 	predefvars[EVUARG]
-#define gflags 	predefvars[EVGFLAGS]
-#define rval	predefvars[EVRVAL]
-#define xpos	predefvars[EVXPOS]
-#define ypos	predefvars[EVYPOS]
-#define keyct   predefvars[EVKEYCT]
+#define pd_cliplife predefvars[EVCLIPLIFE]
+#define pd_fillcol  predefvars[EVFILLCOL]
+#define pd_lastdir	predefvars[EVLASTDIR]
+#define gasave   predefvars[EVASAVE]
+#define col1ch   predefvars[EVCOL1CH]
+#define col2ch   predefvars[EVCOL2CH]
+#define lastkey  predefvars[EVLASTKEY]
+#define seed     predefvars[EVSEED]
+#define g_gmode	 predefvars[EVGMODE]
+#define g_univct predefvars[EVUARG]
+#define pd_gflags predefvars[EVGFLAGS]
+#define xpos	   predefvars[EVXPOS]
+#define ypos	   predefvars[EVYPOS]
+#define keyct    predefvars[EVKEYCT]
 #define tabsize	 predefvars[EVHARDTAB]
 //#define stabsize predefvars[EVSOFTTAB]
 #define hjump	     predefvars[EVHJUMP]
@@ -87,7 +88,7 @@ extern NOSHARE int predefvars[];
 //#define flickcode predefvars[EVFLICKER]
 #define macbug	   predefvars[EVDEBUG]
 #define cmdstatus  predefvars[EVSTATUS]
-#define g_discmd	 predefvars[EVDISCMD]  /* 0 : nowt, -1 record only */
+#define pd_discmd	 predefvars[EVDISCMD]  /* 0 : nowt, -1 record only */
 #define g_disinp	 predefvars[EVDISINP]
 #define sscroll    predefvars[EVSSCROLL]
 #define ssave      predefvars[EVSSAVE]
@@ -95,18 +96,18 @@ extern NOSHARE int predefvars[];
 #define hscroll    predefvars[EVHSCROLL]
 #define diagflag   predefvars[EVDIAGFLAG]
 #define mouseflag  predefvars[EVMSFLAG]
-#define predef    predefvars[EVLINE] /* stolen */
-#define quotec    predefvars[EVPOPUP]
-#define saveflag  predefvars[EVMATCH]
-#define sgarbf    predefvars[EVBUFHOOK]
-#define minfcol   predefvars[EVFCOL]
+#define predef     predefvars[EVLINE] /* stolen */
+#define quotec     predefvars[EVPOPUP]
+#define saveflag   predefvars[EVMATCH]
+#define pd_sgarbf  predefvars[EVBUFHOOK]
+#define minfcol    predefvars[EVFCOL]
 
-#define kbdmode   predefvars[EVCBFLAGS]
-#define kbdrd     predefvars[EVCBUFNAME]
-#define kbdwr     predefvars[EVCFNAME]
-#define kbdrep    predefvars[EVCMODE]
+#define pd_kbdmode predefvars[EVCBFLAGS] /* stolen */
+#define pd_kbdrd   predefvars[EVCBUFNAME]
+#define pd_kbdwr   predefvars[EVCFNAME]
+#define pd_kbdrep  predefvars[EVCMODE]
 
-#define nclicks   predefvars[EVPENDING]
+#define nclicks    predefvars[EVPENDING]
 
 #if 0
 					/* overloading variables */

@@ -30,20 +30,15 @@ char * mallocz(int n)
 
 char * Pascal remallocstr(char * * res_ref, const char * val, int len)
 
-{ char * res = null;
-	int n = len;
-  if (n == 0)
-    n = val == NULL ? NSTRING : strlen(val)+1;
-  res = (char*)malloc(n);
-  if (res != null && val != NULL)
-    strcpy(res, val);
-  if (*res_ref != null)
+{ if (len == 0)
+    len = val == NULL ? NSTRING : strlen(val)+1;
+{ char * res = (char*)malloc(len);
+
+  res = res == NULL || val == NULL ? res : strcpy(res, val);
+	if (*res_ref != null)
     free(*res_ref);
-
-  *res_ref = res;
-
-  return res;
-}
+  return *res_ref = res;
+}}
 
 
 
@@ -69,10 +64,52 @@ int Pascal gotoeol(int f, int n)
 
 
 
+/* nextch -- retrieve the current/previous character in the buffer,
+ *					 and advance/retreat the point.
+ *      		 The asymmetry of forward and back is mysterious!!
+ */
+int Pascal nextch(Lpos_t * lpos, int dir)
+
+{	char c = '\n';
+  LINE * lp = lpos->curline;
+  int	off = lpos->curoff;
+  int ct = dir == 0 ? 1 : dir;
+
+  if (dir >= FORWARD)
+  { while (--ct >= 0)
+  	{	if (off != llength(lp)) 	    	/* if at EOL */
+	      c = lgetc(lp, off++);					/* get the char */
+	    else
+	    { lp = lforw(lp);	/* skip to next line */
+	      lpos->line_no += 1;
+	      off = 0;
+			}
+    }
+  }
+  else		       								/* Reverse.*/
+  { while (++ct <= 0)
+	  { if (off != 0)
+				c = lgetc(lp, --off);
+	    else
+			{	lpos->line_no -= 1;
+				lp = lback(lp);
+	      off = llength(lp);
+	    }
+		}
+  }
+  lpos->curoff = off;
+  lpos->curline = lp;
+  return lp->l_props & L_IS_HD ? -1 : c & 0xff;
+}
+
+
 int Pascal forwchar(int f, int n)
 
 { WINDOW * wp = curwp;
-
+#if 1
+  wp->w_flag |= WFMOVE;
+	return nextch((Lpos_t*)wp, n) >= 0;
+#else
 	if (n < 0)
 	{ while (n++)
 	    if (wp->w_doto > 0)
@@ -97,8 +134,8 @@ int Pascal forwchar(int f, int n)
 	    }
 		} 
 
-  wp->w_flag |= WFMOVE;
   return TRUE;
+#endif
 }
 
 
@@ -109,7 +146,7 @@ int Pascal backchar(int f, int n)
 }
 
 
-static 
+static
 int Pascal gotobob_()
 
 { WINDOW * wp = curwp;
@@ -304,7 +341,7 @@ int Pascal forwpage(int f, int n)
 #endif
 
 #if 1
-  sgarbf = -1;
+  pd_sgarbf = -1;
 #endif
 
   return mvupwind(FALSE, -n);
@@ -329,11 +366,12 @@ static MARK  g_rem;
 int Pascal setmark(int f, int n)
 
 { n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1);
-  mlwrite(TEXT9, n);
-/*		"[Mark %d set]" */
 {	MARK * mrk = &curwp->mrks.c[n];
   g_rem = *mrk;
   *mrk = *(MARK*)&curwp->w_dotp;
+
+  mlwrite(TEXT9, n);
+			  /* "[Mark %d set]" */
   return TRUE;
 }}
 
@@ -342,9 +380,9 @@ int Pascal setmark(int f, int n)
 int Pascal remmark(int f, int n)
 
 { n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1);
+  curwp->mrks.c[n].markp = NULL;
   mlwrite(TEXT10, n);
 				/* "Mark %d removed]" */
-  curwp->mrks.c[n].markp = NULL;
   return TRUE;
 }
 
@@ -368,10 +406,10 @@ int Pascal swapmark(int f, int n)
 
 int Pascal gotomark(int f, int n)
 
-{ WINDOW * wp = curwp;
-  n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1); /* make sure it is in range */
+{ n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1); /* make sure it is in range */
 
-{	MARK * mrk = &wp->mrks.c[n];
+{ WINDOW * wp = curwp;
+	MARK * mrk = &wp->mrks.c[n];
   if (mrk->markp == NULL)
   { mlwrite(text11, n);
 					/* "No mark %d in this window" */

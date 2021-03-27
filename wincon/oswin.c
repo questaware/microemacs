@@ -150,7 +150,7 @@ X				/* get an event from the input buffer */
 void ttopen()
 
 {
-/*if (gflags & MD_NO_MMI)
+/*if (pd_gflags & MD_NO_MMI)
 	  return; */
 	long miaddr;	/* mouse interupt routine address */
 
@@ -586,6 +586,34 @@ static int g_got_ctrl = false;
 #endif
 
 
+void setMyConsoleIP()
+
+{// int clamp = 2;
+
+//if (GetConsoleMode(g_ConsIn, &mode))
+//{ mlwrite("Mode before %x", mode);
+//	mbwrite(NULL);
+//}
+
+//while (--clamp >= 0)
+	{ g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
+	  if (g_ConsIn < 0)					                    /* INVALID_HANDLE_VALUE */
+  	  flagerr("Piperr");
+
+	{ Cc rc = SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);	// Allowed to fail
+		if (rc)
+			return;
+#if _DEBUG
+	  flagerr("Ewi");
+#endif
+//	millisleep(50);
+	}}
+}
+
+
+#if 0
+
+static
 BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
 
 { INPUT_RECORD rec_;
@@ -612,16 +640,7 @@ BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
   return true;
 }
 
-
-
-void setMyConsoleIP()
-
-{ g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
-  if (g_ConsIn < 0)					                    /* INVALID_HANDLE_VALUE */
-    flagerr("Piperr");
-
-  (void)SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);	// Allowed to fail
-}
+#endif
 
 
 void Pascal MySetCoMo()
@@ -633,12 +652,12 @@ void Pascal MySetCoMo()
                         &sa,
                         OPEN_EXISTING,
                         0, NULL); // ignored
-	if(h == INVALID_HANDLE_VALUE || !SetStdHandle(STD_INPUT_HANDLE, h))
+	if (h == INVALID_HANDLE_VALUE || !SetStdHandle(STD_INPUT_HANDLE, h))
     flagerr("SCCFSHErr");
 
 	setMyConsoleIP();
 
-  SetConsoleCtrlHandler(MyHandlerRoutine, true);
+//SetConsoleCtrlHandler(MyHandlerRoutine, true);
 #if 0
 { HWND mwh = GetForegroundWindow();
   if (mwh == NULL)
@@ -739,9 +758,8 @@ int Pascal ttgetc()
 						  {	DWORD errn = GetLastError();
 								millisleep(10); // _sleep(10);
 						   	if (errn != 6)
-								{	mlwrite("Error %d %d %d ", cc, g_ConsIn, errn);
-									mbwrite(NULL);
-								}
+									mlwrite("%pError %d %d ", cc, errn);
+
 						    continue;
 						  }
 							break;
@@ -981,7 +999,7 @@ error error
 #define WL_NOIHAND 0x4000
 
 static																						/* flags: above */
-Cc WinLaunch(Cc *sysRet, int flags,
+Cc WinLaunch(int flags,
 						 const char *app, const char * ca, 
           	 const char *in_data, const char *infile, const char *outfile 
           	 // char *outErr
@@ -1051,7 +1069,7 @@ Cc WinLaunch(Cc *sysRet, int flags,
   sa.bInheritHandle = TRUE;         //allow inheritable handles
 	pi.hProcess = 0;
 
-	sgarbf = TRUE;
+	pd_sgarbf = TRUE;
 //memset(&pi, 0, sizeof(pi));
 	memset(&si, 0, sizeof(si));
 	si.cb = sizeof(si);
@@ -1072,50 +1090,39 @@ Cc WinLaunch(Cc *sysRet, int flags,
 																 CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
 			if (si.hStdOutput <= 0)
 				mbwrite("CFOut Failed");
-#if 1
-			else
-			{	HANDLE cur_proc = GetCurrentProcess();
-									 
-				BOOL s = DuplicateHandle(cur_proc,si.hStdOutput,
-																 cur_proc,&si.hStdError,0,TRUE,
-																 DUPLICATE_SAME_ACCESS) ;
-			}
-	  // mbwrite("IHAND");
-#endif	  
 		}
 		if (si.hStdInput > 0 || si.hStdOutput > 0)
 			si.dwFlags |= STARTF_USESTDHANDLES;
 	}
 	else
-	{	HANDLE newstdout = 0;								
-		if (!CreatePipe(&read_stdout,&newstdout,&sa,0))  //create stdout pipe
+	{	if (!CreatePipe(&read_stdout,&si.hStdOutput,&sa,0))  //create stdout pipe
 	  	return -1000 + flagerr("CreatePipe");
 	
-		if (!CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
+		if ((in_data != NULL || infile != NULL)
+		  && !CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
 			wcc = -2000 + flagerr("CreatePipe");
 		else
 		{ // mbwrite("Created WSO");
-
 // 		GetStartupInfo(&si);      //set startupinfo for the spawned process
 			si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
 		  si.wShowWindow = SW_HIDE;
 //	  si.lpTitle = "Emsub";
-		  si.hStdOutput = newstdout;
-#if 1
-		  si.hStdError = newstdout;     //set the new handles for the child process
-#else
-			if (si.hStdOutput != 0)
-			{	HANDLE cur_proc = GetCurrentProcess();
-									 
-				BOOL s = DuplicateHandle(cur_proc,si.hStdOutput,
-																 cur_proc,&si.hStdError,0,TRUE,
-																 DUPLICATE_SAME_ACCESS) ;
-			}
-	  // mbwrite("IHAND");
-#endif	  
+//	  si.hStdInput = g_ConsIn;
 	  }
 	  flags |= WL_IHAND;
 	}
+
+	if (si.hStdOutput > 0)
+#if 1
+		si.hStdError = si.hStdOutput;
+#else
+	{	HANDLE cur_proc = GetCurrentProcess();
+									 
+		BOOL s = DuplicateHandle(cur_proc,si.hStdOutput,
+														 cur_proc,&si.hStdError,0,TRUE,
+														 DUPLICATE_SAME_ACCESS) ;
+	}
+#endif	  
 
 //mbwrite(app == NULL ? "<no app>" : app);
 //mbwrite(ca == NULL ? "<no args>" : ca);
@@ -1176,7 +1183,7 @@ Cc WinLaunch(Cc *sysRet, int flags,
 			{ int	 i[64];
 				char buf[512];
 			} l;
-			FILE * ip_ = infile == NULL ? NULL : fopen(infile, "r");
+			FILE * ip_ = infile == NULL   ? NULL  : fopen(infile, "r");
 			FILE * ip = ip_;
 	  	FILE * op = outfile == NULL ? NULL_OP : fopen(outfile, "w");
 			const char * ipstr = in_data == NULL ? "" : in_data;
@@ -1247,13 +1254,13 @@ Cc WinLaunch(Cc *sysRet, int flags,
 
 				if (*ipstr == 0)
 		    {	if (ip != 0)
-			    { ipstr = fgets(&fbuff[0], sizeof(fbuff)-1-bwrote, ip);
-			    	if (ipstr == NULL)
-			    	{	ip = NULL;
-			    		ipstr = "";
+				  {	ipstr = fgets(&fbuff[0], sizeof(fbuff)-1-bwrote, ip);
+				    if (ipstr == NULL)
+				    {	ip = NULL;
+				    	ipstr = "";
 							continue;
-						}
-			    }
+				    }
+					}
 				}
 			{	int sl = *ipstr;
 				if (sl != 0)
@@ -1289,8 +1296,7 @@ Cc WinLaunch(Cc *sysRet, int flags,
 				if (sct >= 0)
 			  {	char sch = l.buf[sl];
 			    l.buf[sl] = 0;
-			  	mlwrite("Sending %d %x %s",sl, l.buf[sl-1], l.buf);
-					mbwrite(NULL);
+			  	mlwrite("%pSending %d %x %s",sl, l.buf[sl-1], l.buf);
 			    l.buf[sl] = sch;
 			  }
 #endif
@@ -1320,17 +1326,26 @@ Cc WinLaunch(Cc *sysRet, int flags,
   
 //printf("Exitted %d\n", exit);
   
-  CloseHandle(pi.hProcess);
+	if (pi.hProcess)
+	{	if (exit == STILL_ACTIVE)
+		{ int rc = TerminateProcess(pi.hProcess, 1);
+#if _DEBUG
+			if (rc == 0)
+				mbwrite("Rogue Process");
+#endif
+		}
+	  CloseHandle(pi.hProcess);
+	}
+
   CloseHandle(si.hStdInput);
   CloseHandle(si.hStdOutput);
-  CloseHandle(si.hStdError);
+//CloseHandle(si.hStdError);
   CloseHandle(read_stdout);
   CloseHandle(write_stdin);
 	setMyConsoleIP();
 
-  *sysRet = sentz < 0 ? -1 : (Cc)exit;
   return wcc != OK ? wcc :
-  			 sentz < 0 ? -1  : OK;
+  			 sentz < 0 ? -1  : (Cc)exit;
 }}}
 
 
@@ -1338,11 +1353,13 @@ Cc WinLaunch(Cc *sysRet, int flags,
 int ttsystem(const char * cmd, const char * data)
 
 { Cc cc;
+#if 0
   if (data == NULL)
   { cc = system(cmd);
 		setMyConsoleIP();
 	}
   else
+#endif
   { char app[140];
     
 		char * t = strpcpy(app, cmd, sizeof(app)) - 1;
@@ -1351,9 +1368,9 @@ int ttsystem(const char * cmd, const char * data)
 	  *t = 0;
 //  if (*(cmd + (t-app)) != ' ')
 //   	mbwrite("No space");
-  	cc = WinLaunch(&cc, WL_SPAWN+WL_CNC+WL_AWAIT_PROMPT,
-  										app, cmd+(t-app),
-  										data,null,null);
+  	cc = WinLaunch(WL_SPAWN+WL_CNC+WL_AWAIT_PROMPT,
+  								 app, cmd+(t-app),
+  								 data == null ? "<" : data,null,null);
   }
 
 	return cc;
@@ -1367,8 +1384,7 @@ int ttsystem(const char * cmd, const char * data)
  */
 int spawncli (int f, int n)
 {
-  Cc rc;
-	return WinLaunch(&rc, WL_SHELL+WL_CNPG+WL_NOIHAND,   // +WL_SHOWW,
+	return WinLaunch(WL_SHELL+WL_CNPG+WL_NOIHAND,   // +WL_SHOWW,
 										NULL, NULL, NULL, NULL, NULL);
 //return WinLaunchProgram(NULL, LAUNCH_SHELL, NULL, NULL, NULL, &rc EXTRA_ARG);
 }
@@ -1393,8 +1409,7 @@ int pipefilter(wh)
 	if (restflag) 					/* don't allow this command if restricted */
 		return resterr();
 
-{ Cc sysRet;
-	Cc cc;
+{ Cc cc;
 	char prompt[2];
 	prompt[0] = wh;
 	wh -= '@';											
@@ -1470,12 +1485,10 @@ int pipefilter(wh)
 		cc |= LAUNCH_STDIN;
 	}
 #endif
-	cc = WinLaunch(&sysRet, cc,
-								 app[0] == 0 ? NULL : app, s, NULL, fnam1, fnam2);
+	cc = WinLaunch(cc,app[0] == 0 ? NULL : app, s, NULL, fnam1, fnam2);
 	if (cc != OK)
-	{	if (cc == -1)
-			mbwrite("Gave up");
-		sysRet = -1;
+	{	mlwrite("%p"TEXT3" %d", cc); 							/* "[Execution failed]" */
+		return FALSE;
 	}
 
 {/*int fid = open(tmpnam, O_RDONLY);			// did the output file get generated?
@@ -1498,32 +1511,27 @@ int pipefilter(wh)
 		upmode();
 																	/* and get rid of the temporary file */
 	}
-	cc = FALSE;
+{	Cc rc = FALSE;
 	if (wh == '!'-'@')
 	{ FILE * ip = fopen(fnam2, "rb");
 		if (ip != NULL)
 		{ char * ln;
 			while ((ln = fgets(&line[0], NSTRING+NFILEN*2-1, ip))!=NULL)
-			{ int len = strlen(ln);
-				if (len > 0)
-					ln[len-1] = 0;
-				puts(ln);
-			}
-			if (sysRet == OK)
-			{ puts("[End]");
-				ttgetc();
+				fputs(ln, stdout);
+
+			puts("[End]");
+			ttgetc();
 			/*homes();*/
-				sgarbf = TRUE;
-			}
+
 			fclose(ip);
-			cc = TRUE;
+			rc = TRUE;
 		}
 	}
 	else													/* on failure, escape gracefully */ 		
 	{ BUFFER * bp = curbp;
 		char * sfn = bp->b_fname;
 		bp->b_fname = null;									/* otherwise it will be freed */
-		cc = readin(fnam2, 0);
+		rc = readin(fnam2, 0);
 		bp->b_fname = sfn; 									/* restore name */
 		bp->b_flag |= BFCHG; 								/* flag it as changed */
 //  if (fnam3 != null)
@@ -1531,18 +1539,14 @@ int pipefilter(wh)
 		if (wh == '#'-'@')
 			flush_typah();
 	}
-	if (sysRet != 0 || !cc)
-		mlwrite(TEXT3); 							/* "[Execution failed]" */
-/*else																						
-		mbwrite("ExecSucc");*/
 																	/* get rid of the temporary files */
 	if (fnam1 != NULL)
 		unlink(fnam1);							
 	unlink(fnam2);
 //if (wh == 'E' - '@')
 //	unlink(fnam3);
-	return cc != FALSE;
-}}}}
+	return rc;
+}}}}}
 
 	/* Pipe a one line command into a window
 	 * Bound to ^X @
@@ -1596,8 +1600,6 @@ X#endif
 
 // Clipboard Functions
 
-int g_cliplife = CLIP_LIFE;
-
 static HANDLE	g_hClipData;
 
 static int g_clix = 0;
@@ -1614,7 +1616,7 @@ Cc ClipSet(char * data)
 		return -1;
 
 	if (thread)
-	{	millisleep(g_cliplife * 1000);
+	{	millisleep(pd_cliplife * 1000);
 
 //	if (mwh != GetTopWindow(NULL))
 //		return -1;
@@ -1644,7 +1646,7 @@ Cc ClipSet(char * data)
 	}
 
 #if 1
-	if (!thread && g_cliplife != 0)
+	if (!thread && pd_cliplife != 0)
   {	HANDLE thread = CreateThread(NULL, 0, ClipThread, (void*)-(++g_clix),0,NULL);
   }
 #endif

@@ -46,7 +46,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT9	  "Mark %d set"
 #define	TEXT10	"Mark %d removed"
 #define	TEXT11	"No mark %d here"
-#define	TEXT12	"Help file not found"
+#define	TEXT12	"Help file missing"
 #define	TEXT13	": describe-key "
 #define	TEXT14	"Not Bound"
 #define	TEXT15	"Command to use "
@@ -89,7 +89,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT56	"Variable list"
 #define	TEXT57	"Can not display variable list"
 #define	TEXT59	"[Fill column is %d]"
-#define	TEXT60	"Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x"
+#define	TEXT60	"Line %d/%d Col %d/%d Char %d/%d (%d%%) char = 0x%x"
 #define	TEXT61	"%%Negative argument to kill is illegal"
 #define	TEXT62	"Global mode to "
 #define	TEXT63	"Mode to "
@@ -161,7 +161,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT139	"[Reading file]"
 #define	TEXT140	"Read "
 #define	TEXT141	"I/O ERROR, "
-#define	TEXT142	""
+#define	TEXT142	"[no tag file]"
 #define	TEXT143	" line"
 #define	TEXT144	"Write file: "
 #define	TEXT145	"No file name"
@@ -179,8 +179,8 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT157	"Write I/O error"
 #define	TEXT158	"File read error"
 #define	TEXT159	"\001Wait ..."
-#define	TEXT160	""								// not in use
-#define	TEXT161	""								// not in use
+#define	TEXT160	"No More Tags"
+#define	TEXT161	"[tag %s not in tagfiles]"
 #define	TEXT162	" [y/n]? "
 #define	TEXT163	""								// not in use
 #define	TEXT164	"[search failed]"
@@ -224,7 +224,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT203	"Nothing there"
 #define	TEXT204	"Cannot delete window"
 #define	TEXT205	"Cannot split a %d line window"
-#define	TEXT206	"Only one window"
+#define	TEXT206	""
 #define	TEXT207	"Impossible change"
 #define	TEXT208	"[No such window exists]"
 #define	TEXT209	"Impossible screen size"
@@ -242,3 +242,6 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define TEXT222 "No Password"
 #define TEXT223 "Cannot save .e2"
 #define TEXT224 " ? extra INCLS path or CR:"
+																				/* Must have 5 ../ */
+#define TAGFNAME "/../../../../../tags"
+#define TAGFNLEN 4

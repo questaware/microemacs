@@ -4,17 +4,6 @@
 		written 1986 by Daniel Lawrence
 */
 
-/*	structure to hold user variables and their definitions	*/
-
-typedef struct UVAR
-{	char u_name[NVSIZE + 1];	       /* name of user variable */
-	char *u_value;				/* value (string) */
-} UVAR;
-
-/*	current user variables (This structure will probably change)	*/
-
-UVAR NOSHARE uv[MAXVARS + 1];	/* user variables */
-
 /*	list of recognized environment variables	*/
 
 NOSHARE const char * envars[] = {
@@ -147,7 +136,6 @@ NOSHARE const UFUNC funcs[] = {
 	DYNAMIC, RRET, "sup",		/* set upper to lower char translation */
 	DYNAMIC, RINT, "tim", 	/* multiplication */
 	MONAMIC, RRET, "tri",		/* trim whitespace off the end of a string */
-	MONAMIC, RSTR, "tru", 	/* Truth of the universe logical test */
 	MONAMIC, RRET, "upp", 	/* uppercase string */
 	TRINAMIC,RRET, "xla",	/* XLATE character string translation */
 };
@@ -198,7 +186,5 @@ NOSHARE const UFUNC funcs[] = {
 #define	UFSUPPER	39
 #define UFTIMES 	40
 #define	UFTRIM		41
-#define UFTRUTH 	42
-#define UFUPPER 	43
-#define UFXLATE 	44
-
+#define UFUPPER 	42
+#define UFXLATE 	43

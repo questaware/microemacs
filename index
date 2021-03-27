@@ -60,7 +60,6 @@ src/etype.h
 src/eval.c
 src/evar.h
 src/exec.c
-src/execasm.c
 src/file.c
 src/fileio.c
 src/map.h

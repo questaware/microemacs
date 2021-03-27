@@ -339,7 +339,7 @@ ttselect()
 
 ttopen(int wh)
 
-{ /* if (gflags & MD_NO_MMI)
+{ /* if (pd_gflags & MD_NO_MMI)
 			return; */
 	const char * s;
 #if USE_SCR_BDY == 0
@@ -434,7 +434,7 @@ void Pascal tcapopen()
 tcapclose(int wh)
 
 { 		/* send end-of-keypad-transmit string if defined */
- /* if (gflags & MD_NO_MMI)
+ /* if (pd_gflags & MD_NO_MMI)
 		return; */
 #if COLOR
 	tcapchrom(0);
@@ -472,7 +472,7 @@ int Pascal ttgetc()
 					/* otherwise... get the char for now */
 			/*loginfo("GETKEY");*/
 { int c = get1key();
-			/*loginfo2("GOTKEY %x %d", c, kbdwr);*/
+			/*loginfo2("GOTKEY %x %d", c, pd_kbdwr);*/
 
 	if (CTRL & c) 		 /* unfold the control bit back into the character */
 		c = (c & ~ CTRL) - '@';

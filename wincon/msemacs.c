@@ -28,6 +28,41 @@ long unsigned int thread_id(void)
 }
 
 
+int init_wincon()
+
+{	
+#if 0
+  SC_CHAR buf[129];
+	HINSTANCE hInstance = GetModuleHandle(NULL);	 // Grab An Instance For Window
+	GetModuleFileName(hInstance, buf, sizeof(buf)-1);
+
+#if VS_CHAR8
+#else
+	(void)wchar_to_char(buf);
+#endif
+	flook_init(argv[0]);
+#endif
+																							// reduces memory but slows startup
+	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
+
+											      /* Get display screen information, clear the screen.*/
+	g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
+
+#if 0
+  if (SetConsoleMode(g_ConsOut, ENABLE_PROCESSED_OUTPUT) == 0)
+    flagerr("SCMO %d");
+#endif
+
+	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
+//GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfoO );
+
+	SetConsoleTextAttribute(g_ConsOut, BG_GREY);
+		 
+//tcapepage();
+//SetConsoleTextAttribute(g_ConsOut, BG_GREY);
+}
+
+
 int Pascal tcapbeeol(int row, int col) /* erase to eol or whole page */
 
 { DWORD     Dummy;
@@ -114,43 +149,6 @@ wchar_t * char_to_wchar(char const * src, int sz, wchar_t * tgt)
 
 #endif
 
-
-
-int main(int argc, char * argv[])
-
-{	SC_CHAR modulename[129];
-	HINSTANCE hInstance = GetModuleHandle(NULL);	 // Grab An Instance For Window
-	GetModuleFileName(hInstance, modulename, sizeof(modulename)-1);
-
-#if VS_CHAR8
-#else
-	(void)wchar_to_char(modulename);
-#endif
-	flook_init(modulename);
-																							// reduces memory but slows startup
-	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
-
-											      /* Get display screen information, clear the screen.*/
-	g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
-
-#if 0
-  if (SetConsoleMode(g_ConsOut, ENABLE_PROCESSED_OUTPUT) == 0)
-    flagerr("SCMO %d");
-#endif
-
-	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
-//GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfoO );
-
-	SetConsoleTextAttribute(g_ConsOut, BG_GREY);
-		 
-	tcapepage();
-//SetConsoleTextAttribute(g_ConsOut, BG_GREY);
-
-	return main_(argc, argv);
-
- /*tcapclose(); */
- /*CloseHandle( g_ConsOut );*/
-}
 
 
 void Pascal setconsoletitle(char * title)
@@ -326,11 +324,8 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
   { if (ch != '\b')
     { col += 1; 
       if (col >= csbiInfo.dwSize.X)
-      { int sd = g_discmd;
-      	g_discmd = 0;
-				mlwrite("Row %d Col %d Lim %d", ttrow, col, csbiInfo.dwSize.X);
+      { mlwrite("Row %d Col %d Lim %d", ttrow, col, csbiInfo.dwSize.X);
 				mbwrite(lastmesg);
-				g_discmd = sd;
 				return;
       }
     }

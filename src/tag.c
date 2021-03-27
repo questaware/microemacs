@@ -44,6 +44,7 @@
 #include "estruct.h"
 #include "edef.h"
 #include "etype.h"
+#include "elang.h"
 
 #else
 									/* test rig */
@@ -142,40 +143,29 @@ char * pathcat(char * t, int bufsz, char * dir, char * file)
   }}
   return t;
 }
-
-
-static char fspec[256+2];	/* full path spec to search */
-
-					/* the text in dir following the last / is ignored*/
-char * fex_up_dirs(const char * dir, const char * file)
-
-{ if (dir != NULL)
-  { register int clamp;
-
-    for (clamp = -1; ++clamp < sizeof(fspec)-2 && dir[clamp] != 0; )
-      fspec[clamp] = dir[clamp];
-
-    fspec[clamp] = 0;
-
-    for (clamp = 8; --clamp >= 0; )
-    { char * pc = pathcat(&fspec[0], sizeof(fspec), fspec, file);
-      loglog1("Trytag %s", pc);
-      if (fexist(pc))
-        return fspec;
-      (void)pathcat(fspec, sizeof(fspec), fspec, "../a");
-    }
-  }
-  
-  return NULL;  
-}
-
 										/* end test rig */
 #endif
+
+
+#define TAGBUFFSZ 1024
+
+static int get_to_newline(char * buf, FILE * fp)
+
+{	char ch;
+	char * ln = fgets(buf, TAGBUFFSZ-1, fp);
+	if (ln != NULL && ln[0])
+		while ((ch = *++ln) != 0)
+		  if (ch <= '\r')
+			*ln = 0;
+
+	return ln - buf;
+}
+
 
 #if MEOPT_TAGS || STANDALONE
 
 #define TAG_MIN_LINE 6
-static char * g_tagLastFile = NULL;
+static int	  g_taglastClamp;
 static int    g_tagLastStart = 0;
 static char * g_tagLastName = NULL;
 
@@ -191,100 +181,62 @@ static char * g_tagLastName = NULL;
 static int
 findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 
-{  int fd_cc = 1;
-
-  char keybuf[100];
-  int iter;
-  FILE * fp = fopen((char *)tags, "rb");
+{ FILE * fp = fopen((char *)tags, "rb");
   if (fp == NULL)
     return 2 ;
 
-  strpcpy(keybuf, key, sizeof(keybuf));
+{ int last_pos = 1;
+  int fd_cc = 1;
+  int start = *stt_ref;			/* points after newline */
+  int end = start;
+  int pos = start;
+  int seq = start;				/* < 0 : chop, 0 : never, > 0 seek to here */
+  if (start < 0)
+  { start = 0;
+	fseek(fp, 0L, 2);
+    end = ftell(fp);			/* points after newline */
+  }
 
-  for (iter = 2; --iter >= 0; )
-                    	     /* Read in the tags file */
-  { fseek(fp, 0L, 2);
-
-  { char linebuf[1025];
-    int end = ftell(fp);						/* points after newline */
-    int start = *stt_ref;						/* points after newline */
-    int pos = (start+end) >> 1;
-    linebuf[0] = 0;
-
-    for (;;)
-    { /*mlwrite("%d Seek %s from %d in %d\n", start, key, pos, end);ttgetc();*/
-      fseek(fp, pos, 0);
-      if (pos > start)
-      { while (++pos < end && (fgetc(fp) != '\n'))
-	      ;
-	  }
-	  if (pos >= end)
-	  {/*mlwrite("B %d %d %d\n", pos, start, end); ttgetc();*/
-	    if (pos == start)
-	      break ;
-		pos = start ;
-	  }
-	  else				     /* Get line of info */
-	  { int ix;
-	    char * ln = fgets(linebuf, sizeof(linebuf)-1, fp);
-	    if (ln == NULL || ln[0] == 0)
-		  break;
-
-	  /*mlwrite("Try %d %s\n", pos, ln);ttgetc();*/
-		for (ix = -1; linebuf[++ix] != 0; )
-			if (linebuf[ix] == '\t')
-				linebuf[ix] = 0;
-		  ;
-		if (linebuf[ix-1] == '\n')
-		{ if (ix == 1)
-		  { pos += 1;
-			if (pos >= end)
-			  pos = start;
-			continue;
-		  }
+  do
+  { if (seq < 0)
+  	{ pos = (start+end) >> 1;
+	  fseek(fp, pos, 0);
 		
-		  linebuf[ix-1] = 0;
-		}
-	  { int tmp = strcmp(keybuf, linebuf);
-	  /*mlwrite("%d Cmp %s,%s\n", tmp, key, linebuf);ttgetc();*/
-	    if (!tmp)						/* found */
-	    { end = pos;
-	      fd_cc = 0;
-	    /*mlwrite("Fd %s\n", linebuf+strlen(linebuf)+1);ttgetc();*/
-		  memcpy(tagline, linebuf, ix+2);
-		  *stt_ref = pos+ix;			/* point after newline */
-		}
-		else if (tmp > 0)				/* forward */
-		  start = pos+ix;
-		else 
-		  end = pos;
-		pos = ((start+end) >> 1) ;
-	  }}
-    } /* loop */
-    if (fd_cc == 0)
-      break;
-  { int ix;
-    char * ln;
-	if (linebuf[0] == 0)
-	  break;
-	ln = fgets(linebuf, sizeof(linebuf)-1, fp);
-	if (ln == NULL)
-	  break;
+      if (pos > start && pos < end)
+	  {	int got = get_to_newline(tagline, fp);	/* read part line */
+		pos += got;
+	  }
+	
+  	  if (last_pos == pos)		/* converged */
+	  { pos = start;
+  	    seq = pos;
+	  }
+	  last_pos = pos;
+  	}
+  	if (seq > 0)
+	{ fseek(fp, seq, 0);
+	  seq = 0;
+	}
+	  											     /* Get line of info */
+  { int got = get_to_newline(tagline, fp);
+	pos += got;
 
-    for (ix = -1; linebuf[++ix] != 0 && linebuf[ix] != ':'; )
-	  ;
-		
-    if (linebuf[ix] == 0 || keybuf[ix] != 0)
-      break;
-    linebuf[ix] = 0;
-    strpcpy(keybuf+ix, "::", 100-ix);
-    strpcpy(keybuf+ix+2, linebuf, 98-ix);
-  /*mbwrite(keybuf);*/
-  }}}
+    fd_cc = strcmp(key, tagline);
+	if 		(fd_cc > 0)					/* forward */
+	  start = pos;
+	else if (fd_cc < 0)					/* backward */
+	  end = pos - got;
+	else
+	{ end = pos;
+	  *stt_ref = pos;					/* point after newline */
+	  if (seq >= 0)
+	  	break;
+	}
+  }} while (start <= end);
 
   fclose(fp);
   return fd_cc;
-}
+}}
 
 
 #if STANDALONE
@@ -296,66 +248,177 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 #define MLWRITE(a,b) mlwrite(a,b)
 
 #endif
-/*
- * Find the function in the tag file.  From Mike Rendell.
- * Return the line of the tags file, and let do_tag handle it from here.
- * Note file must be an array meBUF_SIZE_MAX big
- */
-static Bool
-findTagSearch(const char * fromfile, const char *key, char *tagline)
+
+
+static
+int findTagExec(const char key[])
 {
-    static char tagf[] = "../tags";
-           char * tagFile;
-    	   int clamp = 4;
+    char tagline[TAGBUFFSZ+1];
+    char tagfile[NFILEN];
+    char * fn = curbp->b_fname == NULL ? "." : curbp->b_fname;
+	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
 
-    if (g_tagLastName != NULL && strcmp(g_tagLastName, key) == 0)
-      tagFile = g_tagLastFile;
-    else
-    { g_tagLastStart = 0;
-      tagFile = fex_up_dirs(fromfile, tagf+3);
-      if (tagFile == NULL && fexist(tagf+3))
-        tagFile = tagf+3;
-      if (tagFile == NULL)
-	  { mlwrite("[no tag file]");
-	    return false;
-	  }
-	  if (g_tagLastFile != NULL)
-	    free(g_tagLastFile);
-	  g_tagLastFile = NULL;
-	  g_tagLastName = NULL;
-    }
-   
-    for (; tagFile != NULL && --clamp >= 0; )
-    {	        /* Get the current directory location of our file and use this
-                 * to locate the tag file. */
-	/*mbwrite(tagFile);*/
-    { int ii = findTagInFile(tagFile, key, &g_tagLastStart, tagline);
-      if (ii == 0)			/* found tag */
-      {	int sl_tf = strlen(tagFile);
-		int sl_tl = strlen(tagline);
-		g_tagLastFile = malloc(sl_tf+sl_tl+260*2);
-		strcpy(g_tagLastFile,tagFile);
-		g_tagLastName = strcpy(g_tagLastFile+sl_tf+260, tagline);
-		return true;
-      }
-      else	  /* continue search. Ascend tree by getting the directory path */
-      {           /* component of our current path position */
-        pathcat(tagFile, 260, tagFile, tagf);
-
-		tagFile = fex_up_dirs(tagFile, tagf+3);
-		if (tagFile == NULL)
-		  break;
-		g_tagLastStart = 0;
-	  /*printf("Next tag file %s\n", tagFile);*/
-	  }
+	int clamp = g_taglastClamp + 1;
+	int state = g_taglastClamp > 0 &&
+				g_tagLastName != NULL && strcmp(g_tagLastName, key) == 0;
+	if (state)
+		state |= 4;
+	else
+	{   g_tagLastStart = -1;
+		clamp = 6;
+	}
+			
+	while (--clamp >= 0)
+	{
+        if (!fexist(pathcat(tagfile, 260, fn, 
+        					clamp == 0 ? "./" : TAGFNAME+1+clamp*3)))
+        	continue;
+		
+		state |= 2;
+	{	int z = findTagInFile(tagfile, key, &g_tagLastStart, tagline);
+		if (z == 0)			/* found tag */
+			break;
+	    state &= ~1;
     }}
+
+	g_taglastClamp = clamp;
+	if (clamp < 0)
+	{	MLWRITE(state == 0 ? TEXT142 : /* "[no tag file]" */
+				state & 4  ? TEXT160 : /* "No More Tags" */ 
+							 TEXT161, key); /* "[tag %s not in tagfiles]" */
+	    return false;
+	}
     
-    MLWRITE(g_tagLastFile != null ? "No More Tags" : "[tag %s not in tagfiles]", key);
-	g_tagLastName = NULL;
-    return false;
+	if (g_tagLastName == NULL)
+		g_tagLastName = malloc(sl_);
+	strcpy(g_tagLastName, tagline);
+
+	fn = tagline;
+	
+{   int ix;
+	char * file = skipspaces(fn + strlen(fn) + 1, tagline + TAGBUFFSZ);
+
+	for (ix = -1; file[++ix] > ' '; ) /* to next tab */
+	  ;
+
+	fn = file + ix;
+	fn[file[ix] == 0] = 0;
+#if 0
+    if (file[0] == '=')						/* but in which file ? */
+    {	for (ix = 0; file[++ix] > 0xd; )
+        	;
+    	file[ix] = 0;
+	    mlwrite("%s %s", tagline, file);
+        return true;
+    }
+#endif
+{	char filenm[256];
+    BUFFER * bp = bufflink(pathcat(filenm,sizeof(filenm), tagfile, file),
+				   		   1 + 64);
+	if (bp == NULL)
+	{	mlwrite(TEXT214, filenm);
+    	return false;
+    }
+
+	file = skipspaces(fn + strlen(fn) + 1, tagline + TAGBUFFSZ);
+
+		    			/* convert search pattern to magic search string */
+	        	/* if the first char is '/' search forwards, '?' for backwards */
+{	char typ = *file;
+	if (typ == '?')
+		gotoeob(0, 0);
+	else
+		gotobob(0, 0);
+
+	strpcpy(tagline,pat,1024);			/* save for restore */
+
+	if (typ == 0)	
+	    strcat(strpcpy(pat, key, sizeof(pat)-20), "[^A-Za-z0-9_]");
+	
+	else	/* look for end '/' or '?' - start at end and look backwards*/
+	{	char ch;
+#if 0
+		char * dd = strlast(file+1,ee);
+		*dd = 0;
+#else
+		char * dd = NULL;
+		char * s = file;
+		while (*++s != 0)
+			if (*s == typ)
+				dd = s;
+
+		if (dd != NULL)
+			*dd = 0;
+#endif		
+		dd = pat - 1;
+		
+		while ((ch=*++file) != 0 && dd < pat + sizeof(pat) - 3)
+		{
+			*++dd = ch ;
+			if (ch == '\\') 	/* backslash must be escaped */
+		   	    *++dd = '\\' ;
+		}
+
+		*++dd = 0 ;
+	}
+
+    mk_magic(MDMAGIC);
+
+{   int rc = hunt(typ != '?' ? 1 : -1, 1);
+    strcpy(pat,tagline);
+    mk_magic(-1);
+    return rc;
+}}}}}
+
+/*ARGSUSED*/
+
+int
+findTag(int f, int n)
+{
+    char  tag[1024+1];
+					    	/* If we are not in a word get a word from the user.*/
+    if ((n & 0x02) || !inword())
+    {											/*---	Get user word. */
+    	int cc = mltreply("Tag? ", tag, sizeof(tag)-1);
+    	if (cc != true)
+            return false;
+    }
+    else
+    {	char * ss = curwp->w_dotp->l_text;
+		int  ll   = curwp->w_dotp->l_used;
+        int  offs = curwp->w_doto;
+												/* Go to the start of the word.*/
+        while (--offs >= 0 && (ss[offs] == ':' || isword(ss[offs])))
+            ;
+        ll -= offs;
+        if (ll >= sizeof(tag)-1)
+          ll = sizeof(tag)-2;
+        
+    {	char ch;
+    	int len;
+        for (len = -1; ++len <= ll && ((ch = ss[++offs]) == ':' || isword(ch));)
+            tag[len] = ch;
+        tag[len] = 0 ;
+        while (--len >= 0 && tag[len] == ':')
+        	tag[len] = 0;
+
+		if ((g_clring & BCCOMT) == 0)
+			if ((g_clring & BCFOR) || atoi(gtusr("uctags")))
+        		mkul(1, tag);
+    }}
+
+    return findTagExec(tag);
 }
 
 #if STANDALONE
+
+typedef BUFF 
+{	char * b_fname;
+} BUFF;
+
+BUFF buffer;
+
+BUFF * curbp = &buffer;
 
 void explain()
 
@@ -375,7 +438,9 @@ int main(int argc, char * argv[])
 	char tagline[1025];
     strcpy(tagline, "NOVAL");
     
-    while (findTagSearch(".", tag, tagline) && --clamp >= 0)
+    while (findTagExec(tag)
+
+    findTagSearch(".", tag, tagline) && --clamp >= 0)
 	{	char * tl = tagline+strlen(tagline);
 		while (*++tl != 0 && is_space(*tl))
 		  ;
@@ -383,144 +448,6 @@ int main(int argc, char * argv[])
 	}
 	return 0;
 }}
-
-
-#else
-
-
-static	int
-findTagExec(const char tag[])
-{
-	char * file;	/* File name */
-    int  ix;
-    char tagline[1025];
-    char fullfilename[256+1];
-    char * fn = curbp->b_fname == NULL ? "." : curbp->b_fname;
-    
-    if (!findTagSearch(fn, tag, tagline))
-        return false ;
-    
-    file = skipspaces(tagline + strlen(tagline) + 1, tagline+1024);
-
-    if (file[0] == '=')
-    {	for (ix = -1; file[++ix] > 0xd; )
-        	;
-    	file[ix] = 0;
-	    mlwrite("%s = %s", tagline, file+2);
-        return true;
-    }
-
-	for (ix = -1; file[++ix] > ' '; ) /* to tab */
-	  ;
-		      
-	file[ix+(file[ix] == 0)] = 0;
-
-{	char * fn = pathcat(fullfilename, sizeof(fullfilename), g_tagLastFile, file);
-    BUFFER * bp = bufflink(fn, true);
-    if (bp == NULL)
-    {	mlwrite("Cannot find file %s", file);
-    	return false;
-    }
-
-	swbuffer(bp);
-			    /* now convert the tag file search pattern into a magic search string */
-{
-	char cc, *dd, ee ;
-    char * ss = skipspaces(file+ix+1, tagline+sizeof(tagline)-1);	/* magic pattern */
-
-        /* if the first char is a '/' then search forwards, '?' for backwards */
-    ee = *ss++ ;
-    if (ee == '?')
-		gotoeob(0, 0);
-    else
-    {   gotobob(0, 0);
-		if (ee != '/')
-		{
-		    ss = "";
-		}
-	}
-
-    strpcpy(tagline,pat,1024);
-
-	if (ss[0] == 0)	
-	    strcat(strpcpy(pat, tag, sizeof(pat)-20), "[^A-Za-z0-9_]");
-	
-	else			/* look for the end '/' or '?' - start at the end and look backwards */
-	{	dd = ss + strlen(ss) ;
-	    while (--dd != ss)
-	      if (*dd == ee)
-	      { *dd = 0;
-	        break ;
-	      }
-		    
-		dd = pat - 1;
-		
-		while ((cc=*ss++) != 0 && dd - pat < sizeof(pat) - 3)
-		{
-			*++dd = cc ;
-			if (cc == '\\')         // What was intended here? double backslash?
-	    	    *++dd = '\\' ;
-		}
-	
-		*++dd = 0 ;
-	}
-
-    mcstr(MDMAGIC);
-
-    ix = hunt(ee != '?' ? 1 : -1, 1);
-    strcpy(pat,tagline);
-    mcstr(-1);
-    return ix;
-}}}
-
-/*ARGSUSED*/
-
-int
-findTag(int f, int n)
-{
-    char  tag[1024+1];
-    
-    /* Determine if we are in a word. If not then get a word from the user. */
-    if ((n & 0x02) || !inword())
-    {
-	/*---	Get user word. */
-		strcpy(tag, "Tag? ");   
-    {   int cc = mltreply(tag, tag, sizeof(tag)-1);
-    	if (cc != true)
-            return false;
-    }}
-    else
-    {	char * ss = curwp->w_dotp->l_text;
-		int  ll   = curwp->w_dotp->l_used;
-        int  offs = curwp->w_doto;
-												/* Go to the start of the word.*/
-        while (--offs >= 0 && (ss[offs] == ':' || isword(ss[offs])))
-            ;
-        ++offs;
-        ll -= offs;
-        if (ll >= sizeof(tag))
-          ll = sizeof(tag)-1;
-        
-    {	int len = 0;
-        for (len = -1; ++len < ll && (ss[offs] == ':' || isword(ss[offs])); )
-            tag[len] = ss[offs++] ;
-        tag[len] = 0 ;
-        if (len > 1 && tag[len-1] == ':' && tag[len-2] != ':') tag[len-1] = 0;
-    {   char * uctag;
-        const char * sw = (g_clring & BCFOR)  ? "1" : 
-                          (g_clring & BCCOMT) ? "0" : gtusr("uctags");
-        if (!in_range(*sw, '0', '1'))
-          sw = "0";
-//      mlwrite("Sw is >%s<", sw);
-//      ttgetc();
-        if (sw != NULL && atoi(sw) != 0)
-          for (uctag = tag; *uctag != 0; ++uctag)
-            if (in_range(*uctag, 'a', 'z'))
-              *uctag += 'A' - 'a';
-    }}}
-
-    return findTagExec(tag);
-}
 
 #endif
 

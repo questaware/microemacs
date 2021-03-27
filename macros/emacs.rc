@@ -41,7 +41,7 @@ btk execute-macro-1 
   !if &not %goon
     !force last-buffer
   !endif
-  !if &not $status
+  !if &seq %mybuf $cbufname
     !force next-buffer
   !endif
   !if &or &not $status &seq %mybuf $cbufname
@@ -267,17 +267,15 @@ btk execute-macro-18 M-^]	; CTRL {}
 btk execute-macro-19 ^O
 
 20 store-macro ; get pw
-
+	set %scl $cliplife
+	set $cliplife 25
   end-of-line
   search-reverse "pw:"
   3 forward-character
-  search-forward [A-Za-z0-9_!œ$()/][A-Za-z0-9_!.œ$()/]*
-  set-mark
-  set %ml &length $match
-%ml forward-character
-  kill-kill
-  copy-region
+  search-forward [A-Za-z0-9_!œ$()/]
+	copy-word
 	beginning-of-line
+	set $cliplife %scl
 !endm
 
 btk execute-macro-20 ^P

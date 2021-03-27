@@ -201,8 +201,6 @@ union REGS {
 # define DIRSEPCHAR	'/'
 #endif
 
-			/*  Emacs global flag bit definitions (for gflags) */
-#define GFREAD	1
 					/*	internal constants	*/
 #define NBINDS	210			/* max # of bound keys		*/
 #if AOSVS

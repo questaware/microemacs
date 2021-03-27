@@ -7,7 +7,7 @@
 */
 
 #define PROGNAME	"Edm"
-#define	VERSION		"2.8"
+#define	VERSION		"2.9"
 
 
 /*	Machine/OS definitions			*/
@@ -142,7 +142,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define MINIMAP
 
 #define PSCP_CMD "c:\\bbin\\pscp.exe "
-#define CLIP_LIFE 120					// seconds
+#define CLIP_LIFE 300					// seconds
 
 #include "../src/base.h"
 #endif /* BUILDINC */

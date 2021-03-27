@@ -67,7 +67,9 @@ LINE *Pascal mk_line(const char * src, int sz, int lsrc)
 {
   register LINE *lp = (LINE *)aalloc(sizeof(LINE)+sz);
   if (lp == NULL)
+  { mlwrite(TEXT99);		/* "[OUT OF MEMORY]" */
     return NULL;
+  }
   lp->l_props = 0;
   lp->l_used  = lsrc;
   lp->l_spare = sz - lsrc;
@@ -104,7 +106,7 @@ void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
         wp->w_linep = new_;
     
     if (wp->w_dotp == old || wh < 0 && wp->w_bufp == (BUFFER*)old)
-      switch (wh)
+    { switch (wh)
       { case -1:wp->w_linep = new_;
         case -2:wp->w_flag |= (WFHARD|WFMODE);
         case 0: wp->w_dotp  = new_;
@@ -151,6 +153,7 @@ void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
                       }
             }
           }
+			}
     }
     if (wp == (WINDOW*)curbp)
       break;
@@ -185,20 +188,17 @@ int header_scan = 0;
  */
 void Pascal lchange(int flag)
 
-{	WINDOW *wp;
-
-  if (curbp->b_nwnd != 1) 		/* Ensure hard. 	*/
-    flag = WFHARD;
+{
   if ((curbp->b_flag & BFCHG) == 0)	/* First change, so	*/
 	{	curbp->b_flag |= BFCHG;
   /*mbwrite(curbp->b_fname);*/
     TTbeep();
     flag = WFHARD;
   }
-			   /* make sure all the needed windows get this flag */ 
-  (void)orwindmode(flag, 0);
+												   /* make sure all the needed windows get this flag */ 
+  (void)orwindmode(curbp->b_nwnd != 1 ? WFHARD : flag, 0);
 
-  wp = curwp;
+{ WINDOW * wp = curwp;
 
   if (g_inhibit_scan == 0)
   {	LINE * lp = wp->w_dotp;
@@ -227,7 +227,7 @@ void Pascal lchange(int flag)
 		  updall(wp, 0);
 		}
   }
-}
+}}
 
 #define EXPANSION_SZ 8
 
@@ -269,7 +269,7 @@ int Pascal lnewline()
   return TRUE;
 }}}
 
-int newlinect = 0;
+static int g_newlinect = 0;
 
 int g_overmode;
 
@@ -282,14 +282,16 @@ int g_overmode;
  */
 int Pascal linsert(int n, char c)
 
-{ int ins = n;
-  if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
+{ if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
     return rdonly();		/* we are in read only mode	*/
-/*if (! (curbp->b_flag & BFCHG)	&& g_discmd)
+/*if (! (curbp->b_flag & BFCHG)	&& pd_discmd > 0)
     TTbeep();		
 */
-  if (c == '\n')
-  { ++newlinect;  
+{ int ins = n;
+	if      (ins == 0)
+		return TRUE;
+  else if (c == '\n')
+  { ++g_newlinect;  
     return lnewline();
   }
   else
@@ -301,7 +303,7 @@ int Pascal linsert(int n, char c)
 			(unsigned short)curwp->w_doto % curbp->b_tabsize == (curbp->b_tabsize - 1)))
     ins = 0;
 
- 	{ register int  doto;
+ 	{ int  doto;
 	  LINE * newlp;
 
     if (ins <= lp->l_spare)
@@ -347,7 +349,7 @@ int Pascal linsert(int n, char c)
     lchange(WFEDIT);
     return TRUE;
 	}}
-}
+}}
 
 int Pascal insspace(int f, int n)/* insert spaces forward into text */
 
@@ -367,11 +369,11 @@ int Pascal linstr(const char * instr_)
 
 	if (instr != NULL && *instr != 0)
 	{ g_inhibit_scan += 1;
-	  newlinect = 1;
+	  g_newlinect = 1;
 	  
 	  while (*instr)
 	  { status = linsert(1, *instr);
-							/* Insertion error? */
+																							/* Insertion error? */
 /*	    if (! status)
 	    { mlwrite(TEXT99);
  *					"%%Can not insert string" *
@@ -379,7 +381,7 @@ int Pascal linstr(const char * instr_)
 	  } */
 	    instr++;
 	  }
-	  header_scan = newlinect;
+	  header_scan = g_newlinect;
 	  g_inhibit_scan -= 1;
 	}
 	return status;
@@ -423,19 +425,18 @@ int kinsert_n;		/* parameter to kinsert, used in region.c */
 /* This function deletes "n" bytes, starting at dot. It understands how to deal
  * with end of lines, etc. It returns TRUE if all of the characters were
  * deleted, and FALSE if they were not (because dot ran into the end of the
- * buffer. The "kflag" is TRUE if the text should be put in the kill buffer.
+ * buffer. The "tokill" is TRUE if the text should be put in the kill buffer.
  */
 int Pascal ldelchrs(Int n, int tokill)
 								 /* Int n; 		  * # of chars to delete */
 								 /* int tokill;	* put killed text in kill buffer flag */
-{
-  int res = TRUE;
-
-  if (curbp->b_flag & MDVIEW)     /* don't allow this command if  */
+{  if (curbp->b_flag & MDVIEW)     /* don't allow this command if  */
     return rdonly();              /* we are in read only mode     */
 
   g_inhibit_scan += 1;
-/* if (! (curbp->b_flag & BFCHG) && g_discmd)
+
+{ int res = TRUE;
+/* if (! (curbp->b_flag & BFCHG) && pd_discmd > 0)
      TTbeep();             
 */
   while (n > 0)
@@ -494,15 +495,15 @@ int Pascal ldelchrs(Int n, int tokill)
   lchange(WFEDIT);
   g_inhibit_scan -= 1;
   return res;
-}
+}}
 
 /* getctext:	grab and return a string with the text of
 		the current line
 */
-char *Pascal getctext(char * t)
+char * Pascal getctext(char * t)
 
 {
-	char *tgt = t;	/* string pointer into returned line */
+	register char *tgt = t;	/* string pointer into returned line */
 
 		     /* find the contents of the current line and its length */
 	LINE * lp = curwp->w_dotp;
@@ -655,7 +656,7 @@ char *Pascal getkill()
 }
 
 
-char last_was_yank;
+// char last_was_yank;
 
 /* When (N = -n) > 0 then the repeat count else the kill buffer to use.
  * Yank text back from the kill buffer. Bound to "C-Y".
@@ -663,8 +664,6 @@ char last_was_yank;
 int Pascal yank(int f, int n)
 
 {
-  register int	len;
-  register char	*sp;					/* pointer into string to insert */
   int ix = 0;
 
   if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
@@ -679,11 +678,13 @@ int Pascal yank(int f, int n)
     n = 1;
   }
   
-  last_was_yank = true;
+//last_was_yank = true;
 				/* make sure there is something to yank */
   while (n--)
-  { 
-    newlinect = 1;
+  { int	len;
+  	char	*sp;					/* pointer into string to insert */
+
+    g_newlinect = 1;
     g_inhibit_scan += 1;
 
 #if S_WIN32
@@ -709,7 +710,7 @@ int Pascal yank(int f, int n)
       }
     }
 
-    header_scan = newlinect;
+    header_scan = g_newlinect;
     g_inhibit_scan -= 1;
     lchange(WFEDIT);
 #if S_WIN32

@@ -350,23 +350,19 @@ register int	row;
  * LINE structure is pointed to by "lp".
  */
 
-Pascal mouseoffset(wp, lp, col)
-
-register WINDOW *wp;
-register LINE	*lp;
-register int	col;
+Pascal mouseoffset(WINDOW * wp, LINE * lp, int col)
 
 {							/* to be updated */
-	register int	c;
-	register int	offset;
-	register int	curcol;
-	register int	newcol;
+	int	c;
+	int	offset;
+	int	oldcol;
+	int	newcol;
 
 	offset = 0;
-	curcol = 0;
+	oldcol = 0;
 	col += wp->w_fcol;	/* adjust for extended lines */
 	while (offset != llength(lp)) {
-		newcol = curcol;
+		newcol = oldcol;
 		if ((c=lgetc(lp, offset)) == '\t')
 			newcol += -(newcol % tabsize) + (tabsize - 1);
 		else if (c<32)	/* ISCTRL */
@@ -374,18 +370,18 @@ register int	col;
 		++newcol;
 		if (newcol > col)
 			break;
-		curcol = newcol;
+		oldcol = newcol;
 		++offset;
 	}
-	return(offset);
+	return offset;
 }
 
 Pascal ismodeline(wp, row)
 WINDOW	*wp;
 {
 	if (row == wp->w_toprow+wp->w_ntrows)
-		return(TRUE);
-	return(FALSE);
+		return TRUE;
+	return FALSE;
 }
 
 /* The mouse has been used to resize the physical window. Now we need to
