@@ -322,7 +322,7 @@ int Pascal narrow(int f, int n)
 	  }
 }
 #endif
-	setcline(0);
+	setcline();
 
 	mlwrite(TEXT73);
 				/* "[Buffer is narrowed]" */
@@ -367,7 +367,7 @@ int Pascal widen(int f, int n)
 	  }
 	}
 
-	setcline(0);
+	setcline();
 	orwindmode(WFHARD|WFMODE, 0);
 
 	mlwrite(TEXT75);

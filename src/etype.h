@@ -42,7 +42,7 @@ char * Pascal repl_bfname(BUFFER*, const char *);
 char *Pascal bytecopy();
 char *Pascal complete();
 char *Pascal envval();
-void Pascal expandp(char *, char *, char *, int);
+//void Pascal expandp(char *, char *, char *, int);
 const char * USE_FAST_CALL fixnull(const char * s);
 const char * Pascal flook(char, const char *);
 char * Pascal flookdown(char *, char *);
@@ -124,7 +124,7 @@ int Pascal scanner(int, int);
 void setMyConsoleIP(void);
 #define setconsoletitle(title) SetConsoleTitle(title);
 #else
-void Pascal setconsoletitle(char * title)
+void Pascal setconsoletitle(char * title);
 #endif
 int Pascal handletab(int, int);
 int Pascal setlower(char*,char*);
