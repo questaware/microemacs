@@ -47,11 +47,13 @@ btk execute-macro-1 
   !if &or &not $status &seq %mybuf $cbufname
     !force exit-emacs
   !endif
-  !force delete-buffer %mybuf
-  !if &not $status
-    !force select-buffer %mybuf
-  !endif
-  !force delete-window
+  !if $status
+	  !force delete-buffer %mybuf
+  	!if &not $status
+   	 !force select-buffer %mybuf
+  	!endif
+  	!force delete-window
+	!endif
   set $discmd %disc
 !endm
 
@@ -148,7 +150,7 @@ btk execute-macro-9 A-C
   !endif
 !endm
 
-btk end-macro A-FNx
+btk end-macro A-FN^\
 btk execute-macro-10 FN2
 btk execute-macro-10 FN^2
 
@@ -272,8 +274,12 @@ btk execute-macro-19 ^O
   end-of-line
   search-reverse "pw:"
   3 forward-character
-  search-forward [A-Za-z0-9_!œ$()/]
-	copy-word
+	!if &les $curchar 33
+		forward-character
+	!endif
+	set-mark
+  end-of-line
+	copy-region
 	beginning-of-line
 	set $cliplife %scl
 !endm

@@ -255,7 +255,7 @@ Pascal movemu(f, n)
 				return TRUE;
 		}
 				/* don't allow the bottom modeline to move */
-		if (lastwp->w_wndp == NULL)
+		if (lastwp->w_next == NULL)
 			return FALSE;
 						/* shrink the current window */
 		if (deltay > 0)
@@ -267,7 +267,7 @@ Pascal movemu(f, n)
 		}
 							/* or grow it */
 		if (deltay < 0)
-		{	if (wp != lastwp->w_wndp)
+		{	if (wp != lastwp->w_next)
 				return FALSE;
 			curwp = lastwp;
 			curbp = lastwp->w_bufp;
@@ -298,19 +298,14 @@ Pascal movemu(f, n)
  * considered to be part of the window.
  */
 
-WINDOW *Pascal mousewindow(row)
+WINDOW *Pascal mousewindow(int row)
 
-register int	row;
+{ WINDOW *wp;
 
-{
-	register WINDOW *wp;
-
-	wp = wheadp;
-	while (wp != NULL) {
-		if (row < wp->w_ntrows+1)
+	for (wp = wheadp; wp != NULL; wp = wp->w_next)
+	{	if (row < wp->w_ntrows+1)
 			return(wp);
 		row -= wp->w_ntrows+1;
-		wp = wp->w_wndp;
 	}
 	return(NULL);
 }
@@ -324,23 +319,20 @@ register int	row;
  * text in the buffer.
  */
 
-LINE *Pascal mouseline(wp, row)
-
-register WINDOW *wp;
-register int	row;
+LINE *Pascal mouseline(WINDOW * wp, int row)
 
 {
-	register LINE	*lp;
+	LINE	*lp;
 
 	row -= wp->w_toprow;
 	if (row >= wp->w_ntrows)
 		return(NULL);
-	lp = wp->w_linep;
-	while (row--) {
+	for (lp = wp->w_linep; row--; lp = lforw(lp))
+	{
 		if (lp->l_props & L_IS_HD) /* Hit the end. */
-			return(NULL);
-		lp = lforw(lp);
+			return NULL;
 	}
+
 	return(lp);
 }
 
@@ -361,8 +353,8 @@ Pascal mouseoffset(WINDOW * wp, LINE * lp, int col)
 	offset = 0;
 	oldcol = 0;
 	col += wp->w_fcol;	/* adjust for extended lines */
-	while (offset != llength(lp)) {
-		newcol = oldcol;
+	while (offset != llength(lp))
+	{	newcol = oldcol;
 		if ((c=lgetc(lp, offset)) == '\t')
 			newcol += -(newcol % tabsize) + (tabsize - 1);
 		else if (c<32)	/* ISCTRL */
@@ -376,26 +368,21 @@ Pascal mouseoffset(WINDOW * wp, LINE * lp, int col)
 	return offset;
 }
 
-Pascal ismodeline(wp, row)
-WINDOW	*wp;
-{
-	if (row == wp->w_toprow+wp->w_ntrows)
-		return TRUE;
-	return FALSE;
+Pascal ismodeline(WINDOW	*wp, int row)
+
+{ return row == wp->w_toprow+wp->w_ntrows;
 }
 
 /* The mouse has been used to resize the physical window. Now we need to
    let emacs know about the new size, and have him force a re-draw
 */
 
-Pascal resizm(f, n)
-
-int f, n;	/* these are ignored... we get the new size info from
-		   the mouse driver */
+Pascal resizm(int f, int n) /* these are ignored... we get the new size info from
+														   the mouse driver */
 {
 	(*term.t_eeop)();
 	newdims(xpos, ypos);
-	return(TRUE);
+	return TRUE;
 }
 
 #else

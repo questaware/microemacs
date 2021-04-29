@@ -53,26 +53,24 @@ extern int ttgetraw(void);
 
 extern char deltaf[HICHAR];
 #define combuf ((char*)deltaf)
+
+extern int   g_cursor_on;
 
 
-#define MLIX 3
+LL g_ll;
 
-char lastline[MLIX+1][NSTRING];
-int  ll_ix = MLIX;
+static LL g_sll;
 
-static char g_slastline[MLIX+1][NSTRING];
-static int  g_sll_ix;
-static char g_savepat[133];
+static char g_savepat[NPAT+2];
 
-static int g_slastkey;
+//static int g_slastkey;
 
 static int g_kbdm[NKBDM];		/* Macro */
 
 static LINE * macro_start_line;
 static int    macro_start_col;
 
-char * g_pat_sv;
-int    g_slast_dir;
+static int    g_slast_dir;
 
 /* Begin a keyboard macro.
  * Error if not at the top level in keyboard processing.
@@ -86,18 +84,18 @@ int ctlxlp(int f, int n)
 	}
 
 	mlwrite(TEXT106);
-/*		"[Start macro]" */
+				/* "[Start macro]" */
+
+	macro_start_col = getccol();
+	macro_start_line = curwp->w_dotp;
+	
+	g_slast_dir = pd_lastdir;
+	memcpy(g_savepat,pat,NPAT+2);
+
 	g_got_search = FALSE;
 
 	pd_kbdwr = 0;
 	pd_kbdmode = RECORD;
-//macro_last_pos = 0;
-	macro_start_col = curwp->w_doto;
-	macro_start_line = curwp->w_dotp->l_bp;
-	
-	if (g_pat_sv == NULL) g_pat_sv = malloc(NPAT+10);
-	memcpy(g_pat_sv,pat,NPAT+10);
-	g_slast_dir = pd_lastdir;
 	return TRUE;
 }
 
@@ -109,58 +107,28 @@ int  ctlxrp(int f, int n)
 
 { if (pd_kbdmode == STOP)
 	{ mlwrite(TEXT107);
-/*			"%%Macro not active" */
+					/* "%%Macro not active" */
 		return FALSE;
 	}
 
-	if (kbd_record(pd_kbdmode))
-	{ /*
-		int ix = kbdwr;
-	  char buf[133];
-		char c1[10], c2[10], c3[10];
-		strcpy(c1, int_asc(g_kbdm[0]));
-		strcpy(c2, int_asc(g_kbdm[1]));
-		strcpy(c3, int_asc(g_kbdm[2]));
-
-		while (--ix > 0 && in_range(g_kbdm[ix], 1,255))
-		  ;
-
-		concat(buf,c1,",",c2,",",c3,",", int_asc(ix), 0);
-		mbwrite(buf);
-			
-	  concat(buf, TEXT108, ":", g_kbdm, "(", int_asc(kbdwr), ")",0);
-		mbwrite(buf); */
-		
-	{ int wrix = pd_kbdwr - 1;
-	  if (wrix >= 0)
-			g_kbdm[wrix] = 0;
+	if (!kbd_record(pd_kbdmode))					// cmd to be ignored 
+		return TRUE;
 	
-//	pd_kbdrd = 0; 
-		pd_kbdmode = STOP;
-		g_execlevel = 0;
+	pd_kbdmode = STOP;
+	g_execlevel = 0;
 
-	  mlwrite(TEXT108);
-/*			"[End macro]" */
-		n = macro_start_col - curwp->w_doto;
+	g_kbdm[pd_kbdwr] = 0;								// includes the sequence for this cmd!
 
-		if (n != 0 && !g_got_search &&	macro_start_line == curwp->w_dotp->l_bp)
-		{ int key = 2118;		// forward-character
-			curwp->w_doto = macro_start_col;
-			if (n < 0)
-			{ n = -n;
-				key = 2114;			// backward-character
-			}
-			while (--n >= 0)
-		    if (wrix < NKBDM)
-		      g_kbdm[(++wrix)-1] = key;
-		}
+	if (g_got_search)
+		macro_start_col = -1;
 
-		pd_kbdwr = wrix;
-	}}
-
-	memcpy(pat,g_pat_sv,NPAT+10);
-	mk_magic(-1);
 	pd_lastdir = g_slast_dir;
+
+	memcpy(pat,g_savepat,NPAT+2);
+//mk_magic(-1);
+
+  mlwrite(TEXT108);
+					/* "[End macro]" */
 
 	return TRUE;
 }
@@ -173,16 +141,16 @@ int  ctlxrp(int f, int n)
  */
 int  ctlxe(int f, int n)
 
-{
+{ int col = getccol();
 #define MLIX 3
-	g_slastkey = lastkey;
+//g_slastkey = lastkey;
 
-	if (g_got_search || curwp->w_dotp->l_used > macro_start_col)
+	if (col >= macro_start_col)
 	{
-//	curwp->w_doto = macro_start_col;
+		if (macro_start_col >= 0)
+			curwp->w_doto = getgoal(curwp->w_dotp,macro_start_col);
 						
-		g_sll_ix = ll_ix;
-		memcpy(g_slastline,lastline,sizeof(g_slastline));
+		g_sll = g_ll;
 		strpcpy(g_savepat,pat,133);
 				 
 		if (pd_kbdmode != STOP)
@@ -209,7 +177,7 @@ int  ctrlg(int f, int n)
 { 	 /* TTbeep();*/
 	pd_kbdmode = STOP;
 	mlwrite(TEXT8);
-/*		"[Aborted]" */
+				/* "[Aborted]" */
 	return ABORT;
 }
 
@@ -235,17 +203,16 @@ int  tgetc()
 					/* at the end of last repetition? */
 		g_execlevel = 0;					/* weak code ! */
     pd_kbdmode = STOP;
-		lastkey = g_slastkey;
+//	lastkey = g_slastkey;
 #if VISMAC == 0
     update(FALSE);		/* force a screen update after all is done */
 #endif
     strcpy(pat,g_savepat);
-    ll_ix = g_sll_ix;
-    memcpy(lastline,g_slastline,sizeof(g_slastline));
+		g_ll = g_sll;
   }
 
-  lastkey = ttgetc();	       /* fetch a character from the terminal driver */
-						   /* record it for $lastkey */
+  lastkey = ttgetc();	   			 /* fetch a character from the terminal driver */
+													  	 /* record it for $lastkey */
   if (kbd_record(pd_kbdmode))
   {//char buf[30];
     g_kbdm[(++pd_kbdwr)-1] = lastkey;
@@ -267,34 +234,29 @@ int  getkey()
 
 { int c = tgetc();
 
-#if 1				 /* if it exists, process an escape sequence */
-  if (c == 0)
+  if (c == 0)								/* if it exists, process an escape sequence */
   { 
-#define upper c
-    upper = tgetc();	/* get the event type */
+    c = tgetc();				/* get the event type */
 #if 0
-    if (upper & (MOUS >> 8))
+    if (c & (MOUS >> 8))
     {			      /* mouse events need us to read in the row/col */
       xpos = tgetc();		/* grab the x/y position of the mouse */
       ypos = tgetc();
     }
-#endif				/* get the event code */
-    c = tgetc() | (upper << 8);
+#endif				
+    c = tgetc() | (c << 8);					/* get the event code */
   /*loglog2("AK %x %d", c, c);*/
   }
 	/* yank out the control prefix */
-#endif
-/* was	return (c & 255) < 0x00 || (c & 255) > 0x1F ? c : CTRL | (c+'@'); */
+
   return (c & 255) <= 0x1f ? CTRL | (c+'@') :
 		  	 (c & 255) == 0x88 ? CTRL | '\\':
 #if S_MSDOS == 0
-  	 (c & 255) == 0xa7 ? SPEC | CTRL | 'Y' :
-  	 (c & 255) == 0xdb ? SPEC | CTRL | 'P' :
-  	 (c & 255) == 0xdd ? SPEC | CTRL | 'C' :
+  	 (c & 255) == 0xa7 ? SPEC | CTRL | 'Y' :	 /* next page */
+  	 (c & 255) == 0xdb ? SPEC | CTRL | 'P' :	 /* previous page!! */
+  	 (c & 255) == 0xdd ? SPEC | CTRL | 'C' :	 /* copy prev line */
 #if 0
->   	 (c & 255) == 0xa7 ? SPEC | CTRL | 'Y' : /* next page */
 >   	 (c & 255) == 0xdb ? SPEC | CTRL | 'O' : /* previous page!! */
->   	 (c & 255) == 0xdd ? SPEC | CTRL | 'C' : /* copy prev line */
 >    	 (c & 255) == 0x90 ? SPEC | CTRL | 'B' : /* not used */
 >    	 (c & 255) == 0x91 ? SPEC | CTRL | 'P' : /* search reverse */
 >    	 (c & 255) == 0x92 ? SPEC | CTRL | 'F' : /* search where ? */
@@ -309,8 +271,17 @@ int  getkey()
   	  		     c;
 }
 
-/*
- * Ask a yes or no question in the message line. Return either TRUE, FALSE, or
+/*	ectoc:	expanded character to character
+		collapse the CTRL and SPEC flags back into an ascii code   */
+
+int  USE_FAST_CALL ectoc(int c)
+	
+{ if (c & CTRL)
+    c &= ~(CTRL | 0x40);
+  return c & SPEC ? c & 255 : c;
+}
+
+/* Ask a yes or no question in the message line. Return either TRUE, FALSE, or
  * ABORT. The ABORT status is returned if the user bumps out of the question
  * with a ^G. Used any time a confirmation is required.
  */
@@ -320,10 +291,10 @@ int  mlyesno(char * prompt)
   flush_typah();
 						/* " [y/n]? " */
   mlwrite("%!%s%s", prompt, TEXT162, null);
-							/* get the response */
-{ int c = getcmd();   /* getcmd() lets us check for anything that might */
-			  /* generate a 'y' or 'Y' in case use screws up */
-  if (c == ectoc(abortc))		/* Bail out! */
+														/* get the response */
+{ int c = getcmd();   			/* getcmd() lets us check for anything that might */
+													  /* generate a 'y' or 'Y' in case use screws up */
+  if (c == abortc)
     return ABORT;
 
 #if	FRENCH
@@ -331,18 +302,9 @@ int  mlyesno(char * prompt)
     return TRUE;
 #endif
 
-  return c == 'y' || c == 'Y';
+  return (c | 0x20) == 'y';
 }}
 
-/*	ectoc:	expanded character to character
-		collapse the CTRL and SPEC flags back into an ascii code   */
-
-int  ectoc(int c)
-	
-{ if (c & CTRL)
-    c &= ~(CTRL | 0x40);
-  return c & SPEC ? c & 255 : c;
-}
 
 /*	ctoec:	character to extended character
 		pull out the CTRL and SPEC prefixes (if possible)	*/
@@ -369,22 +331,21 @@ void  homeusr(char buf[])
     }
     while (*ln == *s++ && *ln != 0)
       ++ln;
-    if (*ln == ':')
+    if (*ln == ':')				// entry found
     { int iter = 4;
       while (--iter >= 0)
       { ++ln;
         while (*ln != ':' && *ln != 0)
           ++ln;
       }
-      iter = NSTRING - 1;
+
       if (*ln != 0)
         ++ln;
     
     { char * t = &buf[0];
       
-      while (--iter > 0 && (*t = *ln) != ':' && *ln++ != 0)
-	++t;
-      *t++ = '/';
+      while ((*t = *ln++) != ':' && *t != 0)
+				++t;
       *t = 0;
       break;
     }}
@@ -403,10 +364,10 @@ void  homeusr(char buf[])
 #define lwr(x) tolower(x)
 #endif
 
-	    /*	comp_command:	Attempt a completion on a command name	*/
+									    	/*	comp_command:	Attempt completion on a command name */
 static int comp_name(char * name, int cpos, int wh)
-			/* command containing the current name to complete */
-			/* ptr to position of next character to insert */
+													/* command containing the current name to complete */
+													/* ptr to position of next character to insert */
 {
 	int trash;
 	int i;															/* index into strings */
@@ -414,13 +375,15 @@ static int comp_name(char * name, int cpos, int wh)
 
             /* start attempting completions, one character at a time */
   for ( ; cpos < NSTRING; ++cpos)
-  { Bool match = false;
+  { int match = 1;
     BUFFER *bp = bheadp;                		/* trial buffer to complete */
     int curbind = g_numcmd;
 
     if (wh == CMP_FILENAME)
     {   
-      strcpy(&name[cpos], "*");
+//    strcpy(&name[cpos], "*");
+			name[cpos] = '*';
+			name[cpos+1] = 0;
    /* mbwrite2("MSD_INIT:",name); */
       msd_init(name, NULL, 
                   MSD_DIRY| MSD_REPEAT| MSD_STAY| MSD_HIDFILE| MSD_SYSFILE);
@@ -435,7 +398,7 @@ static int comp_name(char * name, int cpos, int wh)
       else if (wh == CMP_BUFFER)
       {        
         eny = bp->b_bname;
-        bp = bp->b_bufp;
+        bp = bp->b_next;
       }
       else /* if (wh == CMP_FILENAME) */
       { 
@@ -453,21 +416,21 @@ static int comp_name(char * name, int cpos, int wh)
 			}
                                                         /* if it is a match */
       if (i == cpos)
-      {               /* if this is the first match, simply record it */
-        if (! match)
-        { match = true;
+      {               				/* if this is the first match, simply record it */
+        if      (match > 0)
+        { --match;
           name[i] = lwr(eny[i]);
           if (wh == CMP_FILENAME) name[i+1] = 0;
         }
                                         /* if there's a difference, stop here */
-        if (lwr(name[i]) != lwr(eny[i]))
+        else if (lwr(name[i]) != lwr(eny[i]))
           return i;
       }
     } /* while over entries */
                                                /* with no match, we are done */
-    if (! match)
+    if (match > 0)
     { if (comflag == FALSE)      /* beep if we never matched */
-      TTbeep();
+    	  TTbeep();
       break;
     }
                               /* if we have completed all the way... go back */
@@ -492,8 +455,8 @@ static int  redrawln(char buf[], int clamp)
   for (s = &buf[-1]; (c = *++s) != 0; )
   { 
     if (c == '\r')
-    { if ((len -= 4) >= 0)
-        outstring("<CR>");		/* put out <CR> for <ret> */
+    { if ((len -= 4) >= 0 && g_disinp > 0)
+        mlputs("<CR>");		/* put out <CR> for <ret> */
     }  
     else
     { if (c < ' ')
@@ -514,7 +477,7 @@ static int  redrawln(char buf[], int clamp)
 }
 
 int g_txt_woffs;
-int g_chars_since_shift;
+int g_chars_since_ctrl;
 
 
 int gs_keyct;
@@ -523,7 +486,6 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 	  
 { int llix = -1;
   int llcol = -1;
-  int c;             /* current input character */
   int fulllen = 0;    /* maximum buffer position */
   int cpos = 0;
   char * autostr = "";
@@ -534,12 +496,13 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
   buf[0] = 0;
 
-  g_chars_since_shift = 10000;
+  g_chars_since_ctrl = 1000;
   gs_keyct = 0;
   g_txt_woffs = curwp->w_doto;
 
   for (;;)
-  { if (redo & 1)
+  {	int c;             													/* current input character */
+  	if (redo & 1)
     { c = buf[cpos];			/* reseek */
       buf[cpos] = 0;
       tcapmove(term.t_nrowm1, promptlen + redrawln(buf, 0));
@@ -550,7 +513,6 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     if (ch != 0)
     { ++autostr;
       gs_keyct += 1;
-      c = ectoc(ch);
       goto getliteral;
     }
 
@@ -573,33 +535,33 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
                           /* if we default the buffer, return FALSE */
       return FALSE;
     }
+
+    if (ch == abortc)
+    	return ctrlg(FALSE, 0);    /* Abort any kb macro */
+
     gs_keyct += 1;
                      /* change from command form back to character form */
     c = ectoc(ch);
 #if S_MSDOS == 0
     if (c == '/' && twid && gs_type == CMP_FILENAME)
-    { extern char * g_homedir;
+    { char * homedir = getenv("HOME");
       buf[cpos] = 0;
-      if (cpos == 1)
-      { strcat(strpcpy(&combuf[0], g_homedir, NSTRING-1), "/");
+      if (cpos == 1 && homedir != NULL)
+      { strpcpy(&combuf[0], homedir, NSTRING-1);
       }
       else
       { homeusr(strpcpy(&combuf[0], buf, NSTRING-2));
       }
       buf[0] = 0;
       cpos = 0;
-      autostr = &combuf[0];
+      autostr = strcat(combuf,"/");
       redo = 3;
       twid = FALSE;
       continue;
     }               
 #endif
-    if (c == ectoc(abortc))
-    { ctrlg(FALSE, 0);    /* Abort the input? */
-      return ABORT;
-    }
 
-    if (c==0x7F || c==0x08 || c==0x15)         /* rubout/erase */
+    if      (c==0x7F || c==0x08 || c==0x15)         /* rubout/erase */
     { if (cpos > 0)
       { int tpos;
       	--cpos;
@@ -609,11 +571,11 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 				redo = 3;
       }
     }
-    else if (ch == (CTRL | 'A') && gs_type >= 0)
-    { buildlist(null);
-      return ABORT;
+    else if (c == 'A'-'@' && gs_type >= 0)
+    { return buildlist(null);
+//    return ABORT;
     }
-    else if (ch == (CTRL | 'F'))
+    else if (c == 'F'-'@')
     { int tpos,ix;
       char mybuf[256];
       buf[cpos+1] = 0;
@@ -623,15 +585,15 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
       ix = comp_name(mybuf, cpos - tpos - 1, CMP_FILENAME);
       if (ix > cpos - tpos)
-      { memcpy(buf+tpos+1,mybuf,ix);
-        buf[tpos+1+ix] = 0;
-        cpos = tpos+1+ix;
+      { cpos = tpos+1+ix;
         fulllen = cpos;
+        buf[cpos] = 0;
+        memcpy(buf+tpos+1,mybuf,ix);
       }
     }
-    else if (gs_type >= 0 && cpos > 0 &&
-    				 (c == ' '|| c == ectoc(sterm) || c == '\t'))
-    { int tpos = comp_name(buf, cpos, gs_type);    /* attempt a completion */
+    else if ((c == ' '|| c == '\t') && gs_type >= 0 && cpos > 0)
+    { 
+    	int tpos = comp_name(buf, cpos, gs_type);    /* attempt a completion */
       if (tpos > 0 && buf[tpos - 1] == 0)
         break;
       cpos = tpos;
@@ -644,32 +606,32 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       { case (SPEC | 'F'): tpos += 1;
         when (SPEC | 'B'): tpos -= 1;
         when (SPEC | '<'): 
-        	{ if 			(tpos != 0 || promptlen == 0)
-        			tpos = 0;
-        		else if (gs_type < 0)
-        		{ strpcpy(buf, lastmesg, nbuf);
-							fulllen += promptlen;
-        			promptlen = 0;
-        			cpos = 0;
-				      tcapmove(term.t_nrowm1, 0);
-        			continue;
-        		}
-        	}
+								         { if 			(tpos != 0 || promptlen == 0)
+								        		 tpos = 0;
+								        	 else if (gs_type < 0)
+								        	 { strpcpy(buf, lastmesg, nbuf);
+														 fulllen += promptlen;
+								        		 promptlen = 0;
+								        		 cpos = 0;
+												     tcapmove(term.t_nrowm1, 0);
+								        		 continue;
+								        	 }
+								         }
         	
 				when (SPEC | '>'): tpos = fulllen;
         when (SPEC | 'P'):
         case (SPEC | 'N'):	/* up or down arrows */
-          { if (llcol >= 0)		/* remove the old */
-            { cpos = llcol;
-              fulllen = cpos;
-              buf[cpos] = 0;
-            }
-            llcol = cpos;
-            llix += ch - (SPEC | 'O');
-            autostr = &lastline[(ll_ix-llix) & MLIX][0];
-            redo = 3;
-            continue;
-          }
+								         { if (llcol >= 0)		/* remove the old */
+								           { cpos = llcol;
+								             fulllen = cpos;
+								             buf[cpos] = 0;
+								           }
+								           llcol = cpos;
+								           llix += ch - (SPEC | 'O');
+								           autostr = &g_ll.lastline[(g_ll.ll_ix-llix) & MLIX][0];
+								           redo = 3;
+								           continue;
+								         }
       }
       
       if (tpos < 0 || tpos > fulllen)
@@ -687,10 +649,11 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     	char mybuf[3];
 
       if (ch == quotec)
-      { ch = getkey();     /* get a character from the user */
-        c = ectoc(ch);
-      }
+      	ch = getkey();     /* get a character from the user */
+      
 getliteral:
+      c = ectoc(ch);
+
       if (fulllen >= nbuf-1)
       { autostr = "";
         continue;
@@ -722,8 +685,8 @@ getliteral:
 #endif
     }
   }}
-  ll_ix += 1;
-  strpcpy(&lastline[ll_ix & MLIX][0], buf, NSTRING-1);
+  g_ll.ll_ix += 1;
+  strpcpy(&g_ll.lastline[g_ll.ll_ix & MLIX][0], buf, NSTRING-1);
   return TRUE;
 }
 
@@ -734,11 +697,11 @@ getliteral:
 int  getstring(char * buf, int nbuf, const char * prompt)
 
 {				  /* prompt the user for the input string */
-  Bool scoo = cursor_on_off(false);
-  int res = getstr(buf, nbuf, mlwrite(prompt), -1);
-  (void)cursor_on_off(scoo);
+  --g_cursor_on;
+{ int res = getstr(buf, nbuf, mlwrite(prompt), -1);
+  ++g_cursor_on;
   return res;
-}
+}}
 
 
 char gs_buf[NSTRING+2];		/* buffer to hold tentative name */
@@ -748,32 +711,29 @@ char * complete(char * prompt, char * defval, int type, int maxlen)
 					/* default value to display to user */
 				/* type of what we are completing */
 				/* maximum length of input field */
-{
+{ int cc;
 		 /* if executing a command line get the next arg and match it */
   if (g_clexec)
-    return macarg(gs_buf) != TRUE ? NULL : gs_buf;
+    return macarg(gs_buf) <= FALSE ? NULL : gs_buf;
 
 #if COMPLET == 0
   strcpy(gs_buf, prompt);
   if (type != CMP_COMMAND && defval)
     concat(&gs_buf[0], "[", defval, "]", null);
 
-{ int cc = mlreply(strcat(&gs_buf[0], ": "), gs_buf, maxlen);
-  return cc == ABORT	          	? NULL   : 
-         defval && gs_buf[0] == 0 ? defval : gs_buf;
-}
+  cc = mlreply(strcat(&gs_buf[0], ": "), gs_buf, maxlen);
 #else
 { int plen = ! prompt ? 0
 											: mlwrite(type==CMP_COMMAND ? "%s"	 :
 															  defval	    			? "%s[%s]: " :
 																			              "%s: ",   prompt, defval);
-  Bool scoo = cursor_on_off(false);
-  int cc = getstr(gs_buf, NSTRING-2, plen, type);
-  (void)cursor_on_off(scoo);
-  return cc == FALSE && defval ? defval :
-         cc == ABORT	         ? null   : gs_buf;
+  --g_cursor_on;
+  cc = getstr(gs_buf, NSTRING-2, plen, type);
+  ++g_cursor_on;
 }
 #endif
+  return cc < 0				          	? NULL   : 
+         defval && gs_buf[0] == 0 ? strpcpy(gs_buf,defval,NSTRING) : gs_buf;
 }
 
 	/* get a command name from the command line. Command completion means
@@ -806,14 +766,9 @@ BUFFER * getcbuf(char *prompt, char *defval, int createflag)
 }
 
 
-char * gtfilename(char * prompt)
+char * USE_FAST_CALL gtfilename(char * prompt)
 				/* prompt to user on command line */
 {
   return complete(prompt, NULL, CMP_FILENAME, NFILEN);
 }
-
-void  outstring(const char * s) /* output a string of input characters */
 
-{ if (g_disinp > 0)
-    mlputs(s);
-}

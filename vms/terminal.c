@@ -668,11 +668,12 @@ int Pascal get1key()
 	return ecco(CTRL | '[');
 }}}
 
-
+/*
 Bool Pascal cursor_on_off(Bool on)
 
 { return !on;
 }
+*/
 
 static char tgt_res[20];
 

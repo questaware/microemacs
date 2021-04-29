@@ -154,11 +154,18 @@ btk execute-macro-10 FN2
 btk execute-macro-10 FN^2
 
 11 store-macro		; kill line
-  beginning-of-line
-  1 kill-to-end-of-line 
+  !if &equ $lastkey 260
+	  beginning-of-line
+	!else
+		newline
+		beginning-of-line
+		backward-line
+	!endif
+	1 kill-to-end-of-line 
 !endm
 
 btk execute-macro-11 ^D
+btk execute-macro-11 M-^H
 
 ; 12 store-macro		; Not in use
 
@@ -259,16 +266,15 @@ btk execute-macro-18 M-^]	; CTRL {}
 btk execute-macro-19 ^O
 
 20 store-macro ; get pw
-
   end-of-line
   search-reverse "pw:"
   3 forward-character
-  search-forward [A-Za-z0-9_!œ$()/][A-Za-z0-9_!.œ$()/]*
-  set-mark
-  set %ml &length $match
-%ml forward-character
-  kill-kill
-  copy-region
+	!if &les $curchar 33
+		forward-character
+	!endif
+	set-mark
+  end-of-line
+	copy-region
 	beginning-of-line
 !endm
 

@@ -13,14 +13,15 @@
 
 int g_c_cmt, g_s_cmt, g_f_cmt, g_p_cmt;
 
-int Pascal setcline() 			/* get the current line number */
+
+int Pascal setcline(void) 			/* get the current line number */
 
 {																 /* starting at the beginning of the buffer */
 	LINE *tgt = curwp->w_dotp;
 	LINE *lp;
 	int numlines = 1;
 				
-	for ( lp = curbp->b_baseline;
+	for ( lp = &curbp->b_baseline;
 			 ((lp = lforw(lp))->l_props & L_IS_HD) == 0 && lp != tgt; )
 		++numlines;
 
@@ -80,20 +81,23 @@ int Pascal getccol()
  * column, but the column that would be used on an infinite width display.
  * Normally this is bound to "C-X =".
  */
+
 int Pascal showcpos(int f, int n)
 
-{	LINE 		*lp;						/* current line */
-	int		numchars = 0; 	/* # of chars in file */
+{	int		numchars = 0; 	/* # of chars in file */
 	int		numlines = 0; 	/* # of lines in file */
 	int		predchars;			/* # chars preceding point */
-	int		predlines = 0;			/* # lines preceding point */
+	int		predlines = -1;			/* # lines preceding point */
+	int   savepos = curwp->w_doto;
+	LINE * tgt = curwp->w_dotp;
+  LINE * lp;						/* current line */
 															/* starting at the beginning of the buffer */
 																			/* start counting chars and lines */
-	for (lp = curbp->b_baseline; ((lp = lforw(lp))->l_props & L_IS_HD) == 0; )
+	for (lp = &curbp->b_baseline; ((lp = lforw(lp))->l_props & L_IS_HD) == 0; )
 	{ ++numlines;
-		if (lp == curwp->w_dotp)		 /* record we are on the current line */
+		if (lp == tgt)		 /* record we are on the current line */
 		{ predlines = numlines;
-			predchars = numchars + curwp->w_doto;
+			predchars = numchars + savepos;
 		}
 																							/* on to the next line */
 		numchars += llength(lp) + 1;
@@ -104,24 +108,17 @@ int Pascal showcpos(int f, int n)
 		predchars = numchars;
 	}
 															/* Get real column and end-of-line column. */
-{	int savepos = curwp->w_doto;
-	int cch = curwp->w_dotp->l_used == savepos ? '\r' 
-																						 : lgetc(curwp->w_dotp, savepos);
-	curwp->w_doto = llength(curwp->w_dotp);
-	curwp->w_line_no = predlines;
-{	int ecol = getccol();
-	curwp->w_doto = savepos;
-	if (numchars != 0)
-	{ int ratio = (100L*predchars) / numchars;
+{	int len = llength(tgt);
+	int ecol = getgoal(tgt, - len);
 
-		mlwrite(TEXT60,
+	mlwrite(TEXT60,
 					/* "Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x" */
 						predlines, numlines, getccol(), ecol,
-						predchars, numchars, ratio, cch);
-	}
-	return (int)numchars;
-}}}
+						predchars, numchars, (int)((100L*predchars) / (numchars + 1)), 
+						len == savepos ? '\r' : lgetc(tgt, savepos));
 
+	return (int)numchars;
+}}
 
 
 #if FLUFF
@@ -147,8 +144,7 @@ int Pascal twiddle(int f, int n)
 {	int cr = lgetc(dotp, doto);
 	lputc(dotp, doto, lgetc(dotp, doto-1));
 	lputc(dotp, doto-1, cr);
-	lchange(WFEDIT);
-	return TRUE;
+	return lchange(WFEDIT);
 }}
 
 #endif
@@ -205,14 +201,14 @@ int Pascal detabline()
 
 int Pascal detab(int f, int n) /* change tabs to spaces */
 
-{ if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
+{	int tabsz = curbp->b_tabsize;
+	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
 		return rdonly();							/* we are in read only mode 		*/
 
 	if ((f & 0x7fff) == FALSE)
 		n = reglines();
 
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sgn(n)] */
-	int tabsz = curbp->b_tabsize;
 
 	for (; n; n -= inc)
 	{ LINE * dotp = curwp->w_dotp;
@@ -258,8 +254,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 		
 	curwp->w_doto = 0;			/* to the begining of the line */
 //thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
-	lchange(WFEDIT);				/* yes, we have made at least an edit */
-	return TRUE;
+	return lchange(WFEDIT);	/* yes, we have made at least an edit */
 }}
 
 
@@ -303,9 +298,8 @@ int Pascal trim_white(int f, int n)
 																				/* advance/or back to the next line */
 		forwline(TRUE, inc);
 	}
-	lchange(WFEDIT);
 //thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
-	return TRUE;
+	return lchange(WFEDIT);
 }}
 #endif
 
@@ -407,7 +401,7 @@ int Pascal openline(int f, int n)
 		return n == 0;
 
 	i = n;																	/* Insert newlines. 		*/
-	while ((s = lnewline()) == TRUE && --i > 0)
+	while ((s = lnewline()) > FALSE && --i > 0)
 		;
 
 	if (i > 0)															/* Then back up overtop */
@@ -443,7 +437,7 @@ int Pascal ins_newline(int f, int n)
 		execkey(&wraphook, FALSE, 1);
 																						/* insert some lines */
 	while (--n >= 0)
-		if ((s=lnewline()) != TRUE)
+		if ((s=lnewline()) <= FALSE)
 			return s;
 
 	return TRUE;
@@ -466,7 +460,7 @@ int Pascal forwdel(int f, int n)
 	if (n < 0)
 	{ n = -n;
 	{ int s = backchar(f, n);
-		if (s != TRUE)
+		if (s <= FALSE)
 			return s;
 	}}
 
@@ -536,7 +530,7 @@ int Pascal killtext(int f, int n)
 }}
 
 static 
-int Pascal adjustmode(int kind, int global) /* change the editor mode status */
+int USE_FAST_CALL adjustmode(int kind, int global) /* change the editor mode */
 				/* int kind;		** 0 = delete, 1 = set, 2 = toggle */
 				/* int global;	** true = global flag,	false = current buffer flag */
 {
@@ -553,7 +547,7 @@ int Pascal adjustmode(int kind, int global) /* change the editor mode status */
 /*														 "toggle: " */
 
 	status = mlreply(cbuf, cbuf, NPAT - 1);
-	if (status != TRUE)
+	if (status <= FALSE)
 		return status;
 
 //mlerase();
@@ -692,7 +686,7 @@ int Pascal writemsg(int f, int n)
 
 	int status = mlreply(TEXT67, buf, NSTRING - 1);
 															/* "Message to write: " */
-	if (status == TRUE)
+	if (status > FALSE)
 		mlwrite(buf);
 
 	return status;
@@ -703,20 +697,20 @@ Paren_t paren;
 int Pascal init_paren(const char * str,
 										  int len
 										 )
-{ int c_cmt = (curbp->b_langprops & BCCOMT);
+{	int p_cmt = (curbp->b_langprops & BCPAS);
 	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL+BCPAS));
 	int s_cmt = (f_cmt							& BCSQL);
-	int p_cmt = (curbp->b_langprops & BCPAS);
+	int c_cmt = (curbp->b_langprops & BCCOMT);
 		
+	paren.olcmt = c_cmt ? '/' :
+								s_cmt ? '-' : 
+								p_cmt ? ')' : (char)-1;
 	paren.nest = 1;							// reinitialised by sinc.cpp
 //paren.nestclamped = 1;			// initialised by sinc.cpp
 	paren.sdir = 1;
 	paren.in_mode = 0;
 	paren.prev = 0;
 	paren.complex = false;
-	paren.olcmt = c_cmt ? '/' :
-								s_cmt ? '-' : 
-								p_cmt ? ')' : (char)-1;
 	paren.ch = toupper(*str);
 	
 { char ch = paren.ch;
@@ -754,11 +748,11 @@ int Pascal init_paren(const char * str,
 		case 'B':
 							if (len < 2)
 								return 0;
-							if (ch == 'T' ? toupper(str[1]) != 'H' : 
-									ch == 'S' ? toupper(str[1]) != 'E' :
-									ch == 'B' ? toupper(str[1]) != 'E' :
-															toupper(str[1]) != 'O' ? true :
-																len > 2 && ch == 'L' && toupper(str[2]) != 'O')
+							if ((ch == 'T' ? toupper(str[1]) - 'H' : 
+									 ch == 'S' ? toupper(str[1]) - 'E' :
+									 ch == 'B' ? toupper(str[1]) - 'E' :
+															 toupper(str[1]) - 'O') ||
+									 ch == 'L' && len > 2 && toupper(str[2]) != 'O')
 								return 0;
 							paren.complex = true;
 							paren.fence = 'E';
@@ -1211,13 +1205,12 @@ int Pascal getfence(int f, int n)
 				fd.blk_type = paren.fence;
 			}
 			else
-			{ if (!(fd.blk_type == 'T' && ch == 'H' ||
-							fd.blk_type == 'C' && ch == 'A' ||
-							fd.blk_type == 'B' && ch == 'E' && s_cmt + p_cmt != 0 ||
-							( !s_cmt &&
-							 (fd.blk_type == 'S' && ch == 'E' ||
-							  fd.blk_type == 'D' && ch == 'O' ||
-							  fd.blk_type == 'L' && ch == 'O'))))
+			{ if (fd.blk_type == 'T' && ch != 'H' ||
+						fd.blk_type == 'C' && ch != 'A' ||
+						fd.blk_type == 'B' && ( (ch != 'E') || s_cmt + p_cmt == 0 ) ||
+						fd.blk_type == 'S' && ch != 'E' ||
+						fd.blk_type == 'D' && ch != 'O' ||
+						fd.blk_type == 'L' && ch != 'O')
 					rc = FALSE;
 				if (fd.blk_type == 'C')
 					fd.blk_type = 'B';
@@ -1403,16 +1396,34 @@ int Pascal fmatch(ch)
 #endif
 
 
-
 																/* increment or decrement a number */
 int Pascal arith(int f, int n)
 				/* int f, n;		** not used */
 { 
+#if 1
+	endword(0,1);
+	endword(0,-1);
+//update(1);
+  copyword(0,1);
+{	char* src = getkill();
+	if (in_range(*src,  '0', '9') || 
+			in_range(src[1],'0', '9'))
+	{	int val = atoi(src);
+		int olen = strlen(src);
+		char * tgt = int_asc(val+n);
+		int len = strlen(tgt);
+		int offs = curwp->w_doto;
+		if (offs > 0 && isspace(curwp->w_dotp->l_text[offs-1]) &&
+		    len > olen)
+			forwdel(0,-1);
+		forwdel(0,olen);
+		linstr(tgt);
+	}
+}
+#else
 	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
 	char * lstr = lgets(s.curline, s.curoff);
 	int len = llength(s.curline) - s.curoff;
-	
-	static int rads[] = {1,10,100,1000,10000,100000,1000000,10000000};
 	
 	if (len > 10) 
 		len = 10;
@@ -1428,32 +1439,8 @@ int Pascal arith(int f, int n)
 		
 	{	int val = atoi(buf) + n;
 		int	olen = t - buf;
-#if 1
 		char * src = int_asc(val);
 		len = strlen(src);
-#else
-#define src buf
-		int q,r;
-		e = buf - 1;
-		if (val < 0)
-		{ *++e = '-';
-			val = -val;
-		}
-
-		len = 1;
-		r = 10;
-		while (r <= val)
-		{ ++len;
-			r = r * 10;
-		}
-		while (--len >= 0)
-		{ q = val / rads[len];
-			val = val - q * rads[len];
-			*++e = '0' + q;
-		}
-		*++e = 0;
-		len = e - buf;
-#endif
 
 		if (len > olen)
 		{ if (s.curoff > 0 && *(lstr-1) == ' ')
@@ -1461,8 +1448,7 @@ int Pascal arith(int f, int n)
 		}
 		forwdel(f,olen);
 		linstr(src);
-#undef src
 	}}
-
+#endif
 	return TRUE;
 }

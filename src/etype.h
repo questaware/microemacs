@@ -51,7 +51,7 @@ char *Pascal funval();
 char *Pascal getctext(char *);
 const char *Pascal getfname(int);
 char *Pascal getkill(void);
-char *Pascal getreg(char * t);
+const char *Pascal getreg(char * t);
 extern char getvalnull[];
 char *Pascal getval(char *, char *);
 
@@ -59,7 +59,7 @@ char *Pascal getval(char *, char *);
  const
 #endif
        char *Pascal gtenv(const char *);
-char *Pascal gtfilename(char *);
+char * USE_FAST_CALL gtfilename(char *);
 #if S_HPUX == 0 || 1
  const
 #endif
@@ -68,15 +68,10 @@ char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
 void init_fncmatch(void);
 char *Pascal int_asc(int);
-#if S_HPUX == 0 || 1
- const
-#endif
-	 char *Pascal ltos(int);
 int Pascal makename(char *, const char *);
 char *Pascal mkkey(const char *);
 char *Pascal mkul(int, char *);
 char *Pascal namval();
-BUFFER * Pascal bmfind(int, int);
 int Pascal pipefilter(char);
 BUFFER * Pascal prevele(BUFFER*, BUFFER*);
 char *Pascal timeset();
@@ -91,7 +86,7 @@ int Pascal desfunc(int,int);
 int Pascal desvars(int, int);
 int Pascal dispvar(int,int);
 int Pascal echochar(int,int);
-int Pascal myeq(int, int);
+int USE_FAST_CALL myeq(int, int);
 int Pascal ernd(void);
 int Pascal execkey(KEYTAB *, int, int);
 int Pascal execporb(int isp, int n);
@@ -111,7 +106,7 @@ int init_wincon();
 int Pascal mk_magic(int);
 int Pascal mkdes();
 int Pascal nmlze_fname(char *, const char *, char *);
-void Pascal openwind(WINDOW *, BUFFER*);
+void Pascal openwind(WINDOW *);
 int Pascal openwindbuf(char *);
 int Pascal orwindmode(int, int);
 char * Pascal pathcat(char *, int, const char *, const char *);
@@ -122,20 +117,22 @@ int Pascal reglines();
 void Pascal release(char * mp);
 int Pascal remmark(int, int);
 int Pascal risearch(int, int);
-void Pascal rpl_all(LINE*, LINE*, int, int, int);
+void Pascal rpl_all(int, int, LINE*, LINE*, int);
 int Pascal scan_for_sl(LINE * lp);
 int Pascal scanner(int, int);
 #if S_WIN32
 void setMyConsoleIP(void);
+#define setconsoletitle(title) SetConsoleTitle(title);
+#else
+void Pascal setconsoletitle(char * title)
 #endif
-void Pascal setconsoletitle(char * title);
 int Pascal handletab(int, int);
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);
 int Pascal set_var(char *, char *);
 int Pascal sindex(char *, char *);
-int Pascal stol(char * s);
+int USE_FAST_CALL stol(char * s);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
 void Pascal tcapsetsize(int wid, int dpth);
@@ -192,7 +189,7 @@ char *Pascal dir_entry_name();
 int Pascal dobuf(BUFFER*, int);
 extern BUFFER * g_dofilebuff;
 void Pascal double_crypt(char *, int);
-int Pascal ectoc(int);
+int Pascal USE_FAST_CALL ectoc(int);
 void Pascal edinit(void);
 int Pascal endword(int, int);
 int Pascal enlargewind(int, int);
@@ -267,7 +264,7 @@ int Pascal killregion(int, int);
 int Pascal killtext(int, int);
 int Pascal kinsert(char);
 int Pascal lastbuffer(int, int);
-void Pascal lchange(register int);
+int Pascal lchange(register int);
 int Pascal ldelchrs(Int, int);
 int Pascal ldelnewline();
 void Pascal leavewind(WINDOW *, int);
@@ -282,7 +279,6 @@ int Pascal macarg(char * tok);
 //int Pascal macrotokey(int, int);
 int main_(int argc, char * argv[]);
 void Pascal mbwrite(const char *);
-void Pascal mcclear();
 int Pascal meta(int, int);
 void Pascal mlerase();
 void Pascal mlforce(const char *);
@@ -320,7 +316,6 @@ int Pascal onlywind(int, int);
 #if FLUFF
 int Pascal openline(int, int);
 #endif
-void Pascal outstring(const char *);
 int Pascal ovstring(int, int);
 int Pascal pipecmd(int, int);
 int Pascal prevwind(int, int);

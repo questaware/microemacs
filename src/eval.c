@@ -13,12 +13,11 @@
 #include	"map.h"
 #include	"logmsg.h"
 
+#if S_WIN32
+#include <windows.h>
+#endif
 
 // extern char *getenv();
-
-#define MLIX 3
-extern char lastline[MLIX+1][NSTRING];
-extern int  ll_ix;
 
 #define	TKVAR	3	/* user variables		*/
 #define	TKENV	4	/* environment variables	*/
@@ -128,6 +127,14 @@ static int USE_FAST_CALL absv(int x) /* take the absolute value of an integer */
 {
   return x < 0 ? -x : x;
 }
+
+
+static 
+const char * USE_FAST_CALL ltos(int val)	/* numeric logical to string logical */
+			/* value to translate */
+{
+  return g_logm[val == 0 ? 0 : 1];
+}
 
 char *Pascal mkul(int wh, char * str)	/* make a string lower or upper case */
 				/* 0 => lower */
@@ -218,7 +225,7 @@ static char * push_arg(char * src, int fnum)
 }}
 
 
-int Pascal stol(char * val)					/* convert a string to a numeric logical */
+int USE_FAST_CALL stol(char * val)					/* convert a string to a numeric logical */
 {
   return val[0] == 'T' || atoi(val) != 0;	/* check for logical values */	 
 }
@@ -239,7 +246,6 @@ char *Pascal int_asc(int i)
 	if (v < 0)
 	  v = -v;
 
-	*sp = 0;
 	do 
 	{ *(--sp) = '0' + v % 10;	/* and install the new digit */
 	  v = v / 10;
@@ -310,7 +316,7 @@ static const char *Pascal gtfun(char * fname)/* evaluate a function */
 		case UFCAT:   return arg1;
 
 		when UFGTCMD:	return cmdstr(&arg1[0], getcmd());
-		when UFBIND:	return transbind(arg1);
+		when UFBIND:  return getfname(stock(arg1));
 		when UFFIND:
 #if	ENVFUNC
 		case UFENV:		
@@ -509,7 +515,7 @@ const char *Pascal gtenv(const char * vname)
 	  
 	  when EVLINE:	   return getctext(&result[0]);
 	  when EVSTERM:    return cmdstr(&result[0], sterm);
-	  when EVLASTMESG: return strcpy(result,lastmesg,NPAT);
+	  when EVLASTMESG: return strpcpy(result,lastmesg,NPAT);
 	  when EVFCOL:	   res = curwp->w_fcol;
 
 	  when EVBUFHOOK:
@@ -521,7 +527,7 @@ const char *Pascal gtenv(const char * vname)
 						   		   return getfname(-ix);
 	  when EVVERSION:  return VERSION;
 	  when EVLANG:	   return LANGUAGE;
-    when EVZCMD:     return lastline[ll_ix & MLIX];
+    when EVZCMD:     return g_ll.lastline[g_ll.ll_ix & MLIX];
 #if S_WIN32
 	  when EVWINTITLE: return null;	// getconsoletitle();
 #endif
@@ -602,7 +608,7 @@ int Pascal setvar(int f, int n)	/* set a variable */
 	if (g_clexec <= 0)
 	{ cc = getstring(&var[0], NVSIZE+1, TEXT51);
 /*				 "Variable to set: " */
-	  if (cc != TRUE)
+	  if (cc <= 0)
 	    return ABORT;
 	} 
 	else				/* grab token and skip it */
@@ -616,7 +622,7 @@ int Pascal setvar(int f, int n)	/* set a variable */
 	if 	    (f != FALSE)
 	  strcpy(&var[cc+1], int_asc(n));
 	else if (var[cc+1] == 0)
-	{ if (mlreply(TEXT53, &var[cc+1], NSTRING-cc+1) != TRUE)
+	{ if (mlreply(TEXT53, &var[cc+1], NSTRING-cc+1) <= 0)
 /*				 "Value: " */
 	    return ABORT;
 	}
@@ -703,15 +709,14 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    	               	 free(g_file_prof);
 				               g_file_prof = strdup(value);
 				
-	    when EVCURCHAR:	 ldelchrs(1L, FALSE);	/* delete 1 char */
+	    when EVCURCHAR:	 ldelchrs(1, FALSE);		/* delete 1 char */
 			                 linsert(1, (char)val);
 				               backchar(FALSE, 1);
 											 updline(FALSE);
 	    when EVWLINE:	   cc = resize(FALSE, val);
 	    when EVCWLINE:	 cc = forwline(FALSE, val - getwpos());
-	    when EVSEARCH:	 //mcclear();
-											 strpcpy(pat,value,NPAT);
-	    when EVREPLACE:	 strpcpy(rpat,value,NPAT);
+	    when EVSEARCH:
+	    case EVREPLACE:	 strpcpy(vnum == EVSEARCH ? pat : rpat,value,NPAT);
 	    when EVHIGHLIGHT:strpcpy(highlight,value,sizeof(highlight));
 	    when EVLASTMESG: strpcpy(lastmesg,value,NSTRING);
 	    when EVPALETTE:	 strpcpy(palstr,value,sizeof(palstr));
@@ -822,7 +827,7 @@ char *Pascal getval(char * tgt, char * tok)
 		        ++pd_discmd;							/* echo it always! */
 					{	Cc cc = getstring(&tgt[0], NSTRING, tok);
 						--pd_discmd;
-						return cc == ABORT ? getvalnull : tgt;
+						return cc < 0 ? getvalnull : tgt;
 		      }
 	  case TOKBUF:															/* buffer contents fetch */
 																						/* grab the right buffer */
@@ -830,10 +835,9 @@ char *Pascal getval(char * tgt, char * tok)
 						if (bp == NULL)
 						  return getvalnull;
 						  
-						if (bp == curbp)
-							leavewind(curwp,0);
-																		/* if the buffer is displayed, get the window
-													      			 vars instead of the buffer vars */
+						if (bp == curbp)			/* if the buffer is displayed get the window */
+							leavewind(curwp,0); /* vars instead of the buffer vars */
+													      			 
 					{ LINE * lp = bp->b_dotp;
 						src = &lp->l_text[0];
 						if ((lp->l_props & L_IS_HD) == 0)
@@ -841,7 +845,7 @@ char *Pascal getval(char * tgt, char * tok)
 							bp->b_doto = 0;
 							bp->b_dotp = lforw(lp);
 																	/* if displayed buffer, reset window ptr vars */
-							rpl_all(lp, bp->b_dotp, -2, 0, 0);
+							rpl_all(-1, 0, lp, bp->b_dotp, 0);
 						}
 						if (lp->l_used + 1 < NSTRING)
 						  blen = lp->l_used + 1;
@@ -866,14 +870,6 @@ char *Pascal getval(char * tgt, char * tok)
 										 : strpcpy(tgt, src, blen);
 }
 
-
-
-
-const char *Pascal ltos(int val)	/* numeric logical to string logical */
-			/* value to translate */
-{
-  return g_logm[val == 0 ? 0 : 1];
-}
 
 
 int Pascal ernd()	/* returns a random integer */
@@ -946,7 +942,7 @@ int Pascal mkdes()
 
 { curbp->b_flag |= MDVIEW;
   curbp->b_flag &= ~BFCHG;										/* don't flag this as a change */
-  curwp->w_dotp = lforw(curbp->b_baseline);     /* back to the beginning */
+  curwp->w_dotp = lforw(&curbp->b_baseline);     /* back to the beginning */
   curwp->w_doto = 0;
 //upmode();
   mlerase();					/* clear the mode line */

@@ -24,6 +24,8 @@
 #define millisleep(n) Sleep(n)
 #endif
 
+extern int   g_cursor_on;
+
 #define MARGIN	8 		/* size of minimim margin and */
 #define SCRSIZ	64			/* scroll size for extended lines */
 
@@ -519,7 +521,7 @@ void Pascal modeline(WINDOW * wp)
 	  char c[NLINE+24]; /* buffer for mode line */
 	}   tline;
 
-	if (wp->w_dotp == g_lastlp /* and wp->w_wndp == NULL */)
+	if (wp->w_dotp == g_lastlp /* and wp->w_next == NULL */)
 	{ if (wp->w_fcol == g_lastfcol && (wp->w_flag & WFMODE == 0))
 			return;
 	}
@@ -842,7 +844,7 @@ void Pascal updline(int force)
 
 /*	upddex: de-extend any line that deserves it 	*/
 
-	for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
+	for (wp = wheadp; wp != NULL; wp = wp->w_next)
 	{ lp = wp->w_linep;
 		i = wp->w_toprow;
 	{ int zline = i + wp->w_ntrows; 			/* zero based */
@@ -1029,7 +1031,7 @@ int /*Pascal*/ update(int force)
 #endif
 		 )
 	{ 				/* update any windows that need refreshing */
-		for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
+		for (wp = wheadp; wp != NULL; wp = wp->w_next)
 			if (wp->w_flag) 			 				/* if the window has changed, service it */
 			{ int set = reframe(wp) & ~( WFMOVE+WFMODE); 
 														 				/* check the framing */
@@ -1109,7 +1111,7 @@ void Pascal updallwnd(int reload)
 
 { WINDOW * wp;
 
-	for (wp = wheadp; reload && wp != NULL; wp = wp->w_wndp)
+	for (wp = wheadp; reload && wp != NULL; wp = wp->w_next)
 	{ updall(wp, true);
 		modeline(wp);
 	}
@@ -1140,11 +1142,10 @@ void Pascal updateline(int row)
 	short *cp1 = &vp1->v_text[0];
 	short *cp9 = &cp1[term.t_ncol];
 	short *cpend = cp9-1;
-	int postchrom = CHROM_OFF;
 	int revreq = vp1->v_flag & VFREQ;		/* reverse video flags */
 	int caution = ((revreq ^ pscreen[row]->v_flag) & VFREQ) ||
-										vp1->v_color != pscreen[row]->v_color 		||
-										(vp1->v_flag & VFML) != 0;
+										vp1->v_color != pscreen[row]->v_color;
+								// (vp1->v_flag & VFML) != 0;
 
 	vp1->v_flag &= ~(VFCHG+VFREQ/*+VFML*/);/* flag this line is unchanged */
 
@@ -1391,8 +1392,7 @@ int mlwrite(const char * fmt, ...)
 {	int  ch;
 	int  s_discmd = pd_discmd++;
 	Bool popup = false;
-	Bool scoo = cursor_on_off(false);
-
+	--g_cursor_on;
 
 	if (*fmt != '\001')
 	{ --fmt;
@@ -1450,7 +1450,8 @@ int mlwrite(const char * fmt, ...)
 	pd_discmd = s_discmd;
 	if (popup)
 		mbwrite(lastmesg);
-	(void)cursor_on_off(scoo);
+
+	++g_cursor_on;
 	return ttcol;															/* Number of characters */
 }}
 

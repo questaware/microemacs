@@ -5,11 +5,12 @@ endif
 ifneq ($(DEBUG),1)
 
 CPP=cl.exe
-CPP_PROJ=/nologo /W3 /O1 /Os /Og /Oy /GF $(C_FLG) /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "NDEBUG" /D "_CONSOLE" /c 
+CPP_PROJ=/nologo /W3 /O1 /Os /Og /Oy /GF /Gs9192 $(C_FLG) /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "NDEBUG" /D "_CONSOLE" /c 
 RSC=rc.exe
 
-LINK32=cl.exe
-LINK32_FLAGS=/nologo /Fm $(C_FLG) /Fe
+LINK32=link
+LINK32_FLAGS=/nologo /map /stack:0xc000 /out:
+#LINK32_FLAGS=/nologo /Fm $(C_FLG) /Fe
 
 else
 
@@ -107,6 +108,12 @@ clean :
 inc :
 	rem $(INCLUDE)
 
-test.exe : ../test.c
-	$(CPP) -o doit.exe ../test.c
+test.exe : ../test.c ../testa.c
+	$(CPP) /c /Gf ../test.c
+	$(CPP) /c /Gf ../testa.c
+	$(LINK32) $(LINK32_FLAGS)./doit.exe test.obj testa.obj
+
+cplusplus.exe : ../cplusplus.cpp
+	$(CPP) -o cplusplus.exe ../cplusplus.cpp
+
 

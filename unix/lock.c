@@ -40,9 +40,9 @@ int lockchk(fname)
 /*                      "LOCK ERROR: Lock table full" */
 	  return ABORT;
 	}
-						/* next, try to lock it */
+										/* next, try to lock it */
 	cc = lock(fname);
-	if (cc == ABORT)	/* file is locked, no override */
+	if (cc < 0)				/* file is locked, no override */
 	  return ABORT;
 	if (cc == FALSE)	/* locked, overriden, dont add to table */
 	  return TRUE;
@@ -103,7 +103,7 @@ int lock(fname)
 				  locker),
 				  TEXT177);
 /*                  ", overide?" */
-	return mlyesno(msg) == TRUE ? FALSE : ABORT;	/* ask them */
+	return mlyesno(msg) > 0 ? FALSE : ABORT;	/* ask them */
 }
 
 			/* Unlock a file this only warns the user if it fails */

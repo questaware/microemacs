@@ -23,7 +23,7 @@ int Pascal thischar()
 
 int Pascal isword(char ch)
 	
-{ return isalpha(ch) || ch == '_' || ch == '$' || in_range(ch, '0', '9');
+{ return isalnum(ch) || ch == '_' || ch == '$' || ch == '-';
 }
 
 
@@ -170,11 +170,9 @@ int Pascal nextword(int f, int n)
 static int Pascal ccaseword(int n, int low)
 
 {	if (low != 3 && (curbp->b_flag & MDVIEW)) /* disallow this command if */
-		return rdonly();	                 /* we are in read only mode */
-  if (n < 0)
-    return FALSE;
+		return rdonly();	                 			/* we are in read only mode */
 
-	while (--n >= 0)
+  while (--n >= 0)
   { int lo = low;
     while (!inword())
       if (forwchar(FALSE, 1) == FALSE)
@@ -182,6 +180,8 @@ static int Pascal ccaseword(int n, int low)
 
     while (TRUE)
     { int ch = thischar();
+			if (!isword(ch))
+				break;
       if (lo == 0 && !islower(ch) ||
           lo < 3  &&  islower(ch))
       { lputc(curwp->w_dotp,curwp->w_doto, chcaseunsafe(ch));
@@ -191,11 +191,9 @@ static int Pascal ccaseword(int n, int low)
         lo = 3;  
       if (forwchar(FALSE, 1) == FALSE)
         return FALSE;
-
-			if (isword(ch))
-				break;
 		}
 	}
+
 	return TRUE;
 }
 
@@ -230,8 +228,9 @@ int Pascal capword(int f, int n)
 }
 
 /*
- * Move forward to the end of the nth next word. Error if you move past
- * the end of the buffer.
+ * Move forward to the end of the nth next word. -ve move to the beginng of the
+ * nth previous word.
+ * Error if you move past the end of the buffer.
  */
 int Pascal endword(int f, int n)
 
@@ -367,7 +366,7 @@ Pascal fillpara(int f, int n)/* Fill the current paragraph according to the
 					    /* insert the reformatted paragraph back into the current buffer */
 {	int cc = linstr(reform(para+1));
 	lnewline();		/* add the last newline to our paragraph */
-	if (cc == TRUE)	/* reposition us to the same place */
+	if (cc > FALSE)	/* reposition us to the same place */
 	  cc = forwchar(FALSE, back);
 
 	free(para);
@@ -393,7 +392,7 @@ Pascal killpara(int f, int n)/* delete n paragraphs starting with the current on
 		curwp->w_doto = 0;	/* force us to the beginning of line */
 							    /* and delete it */
 		cc = killregion(FALSE, 1);
-		if (cc != TRUE)
+		if (cc <= FALSE)
 		  return cc;
 					   /* and clean up the 2 extra lines */
 		ldelchrs(2L, TRUE);

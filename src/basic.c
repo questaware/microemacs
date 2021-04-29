@@ -15,14 +15,21 @@
 void adb(int n)
 
 { mlwrite("\007ADB(%d)", n);
+#if S_WIN32
+	mbwrite(NULL);
+#else
   ttgetc();
+#endif
 }
 
 
 char * mallocz(int n)
 
 { char * res = malloc(n);
-  if (res != NULL)
+  if (res == NULL)
+    mlwrite(TEXT99);
+					/* "out of memory " */
+	else
     memset(res, 0, n);
   return res;
 }
@@ -32,9 +39,10 @@ char * Pascal remallocstr(char * * res_ref, const char * val, int len)
 
 { if (len == 0)
     len = val == NULL ? NSTRING : strlen(val)+1;
-{ char * res = (char*)malloc(len);
+{ char * res = (char*)mallocz(len);
 
-  res = res == NULL || val == NULL ? res : strcpy(res, val);
+  if (res != NULL && val != NULL)
+  	strcpy(res, val);
 	if (*res_ref != null)
     free(*res_ref);
   return *res_ref = res;
@@ -45,8 +53,8 @@ char * Pascal remallocstr(char * * res_ref, const char * val, int len)
 BUFFER * Pascal prevele(BUFFER * bl, BUFFER * bp)
 
 {
-  while (bl != NULL && bl->b_bufp != bp)
-    bl = bl->b_bufp;
+  while (bl != NULL && bl->b_next != bp)
+    bl = bl->b_next;
   return bl;
 }
 
@@ -108,7 +116,12 @@ int Pascal forwchar(int f, int n)
 { WINDOW * wp = curwp;
 #if 1
   wp->w_flag |= WFMOVE;
-	return nextch((Lpos_t*)wp, n) >= 0;
+{	LINE * lp = wp->w_dotp;
+  if (n < 0 && wp->w_doto == 0)
+  	lp = lback(lp);
+  return (lp->l_props & L_IS_HD) ? FALSE
+  															 : nextch((Lpos_t*)wp, n) >= 0;
+}
 #else
 	if (n < 0)
 	{ while (n++)
@@ -152,7 +165,7 @@ int Pascal gotobob_()
 { WINDOW * wp = curwp;
   
   wp->w_flag |= WFHARD;
-  wp->w_dotp  = lforw(curbp->b_baseline);
+  wp->w_dotp  = lforw(&curbp->b_baseline);
   wp->w_linep = wp->w_dotp;
   wp->w_doto  = 0;
   wp->w_line_no = 1;
@@ -174,7 +187,7 @@ int Pascal gotoline(int f, int n)	/* move to a particular line.
   if (!f)
   { int cc = mlreply(TEXT7, arg, sizeof(arg)-1);
 									/* "Line to GOTO: " */
-    if (cc != TRUE)
+    if (cc <= FALSE)
     { mlwrite(TEXT8);
 						/* "[Aborted]" */
       return cc;
@@ -192,19 +205,20 @@ int Pascal gotoline(int f, int n)	/* move to a particular line.
 
 int Pascal gotoeob(int f, int n)
 
-{ (void)gotobob_();
-
-{ int ct;
-  LINE * lp = curbp->b_baseline;
-  curwp->w_dotp  = lp;
+{ WINDOW * wp = curwp;
+  int ct;
+  LINE * lp = &wp->w_bufp->b_baseline;
+  wp->w_dotp = lp;
+  wp->w_doto = 0;
+  wp->w_flag |= WFHARD;
   setcline();
-  for (ct = curwp->w_ntrows; --ct > 0; )
+  for (ct = wp->w_ntrows; --ct >= 0; )
     lp = lp->l_bp;
 
-  curwp->w_linep = lp;
+  wp->w_linep = lp;
 
   return TRUE;
-}}
+}
 
 
 extern KEYTAB * prevbind;
@@ -213,7 +227,7 @@ int Pascal forwline(int f, int n_)
 							/* if we are on the last line as we start....fail the command */
 { int n = n_;
   LINE * dlp = curwp->w_dotp;
-  LINE * lim = curbp->b_baseline;
+  LINE * lim = &curbp->b_baseline;
 //int inc = 0;
 
 	static int g_curgoal;
@@ -269,8 +283,7 @@ int Pascal gotobop(int f, int n) /* go back to beginning of current paragraph
 int Pascal gotoeop(int f, int n)  /* go forword to end of current paragraph
 													    			 look for <NL><NL>, <NL><TAB> or <NL><SPACE>
 																		 to delimit the beginning of a paragraph */
-{ WINDOW * wp = curwp;
-  LINE * ln;
+{ LINE * ln;
   int dir = 1;
 
   if (n < 0)	/* the other way...*/
@@ -282,9 +295,8 @@ int Pascal gotoeop(int f, int n)  /* go forword to end of current paragraph
   {	char suc;														/* first scan until we are in a word */
     while ((suc = forwchar(FALSE, dir)) && !inword())
       ;
-												/* and go to the B-O-Line */
-    wp->w_doto = 0;			/* of next line if not at EOF */
-    ln = wp->w_dotp;
+	{ WINDOW * wp = curwp;								/* and go to the B-O-Line */
+    ln = wp->w_dotp;										/* of next line if not at EOF */
     if (dir > 0 && suc)				
       ln = lforw(ln);
 				 		     				/* and scan forword until we hit a <NL><NL> or <NL><TAB>
@@ -300,6 +312,7 @@ int Pascal gotoeop(int f, int n)  /* go forword to end of current paragraph
     }
 
     wp->w_dotp = ln;
+    wp->w_doto = 0;											
 	  wp->w_flag |= WFMOVE; /* force screen update */
  
     if (dir < 0 && (ln->l_props & L_IS_HD))
@@ -311,7 +324,7 @@ int Pascal gotoeop(int f, int n)  /* go forword to end of current paragraph
 
     if (dir > 0)	        
       wp->w_doto = llength(wp->w_dotp);	/* and to the EOL */
-  }
+  }}
 
   return TRUE;
 }

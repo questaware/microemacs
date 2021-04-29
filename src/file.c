@@ -104,22 +104,23 @@ void Pascal customise_buf(BUFFER * bp)
 {
 #if 0
 		const char * pat = strlast(bp->b_bname,'.');
-    if (*pat++ != 0 && g_file_prof != NULL)
 #else
-	  const char * pat = suftag+5;
+	  const char * pat = "";
 		const char * fn = bp->b_bname - 1;
     while (*++fn != 0)
       if (*fn == '.')
         pat = fn;
 
-    if (*++pat != 0 && g_file_prof != NULL)
 #endif
+    if (*pat != 0)
     {  
-        char * pr = g_file_prof - 1;
+			if (g_file_prof != NULL)
+    	{	
+    		char * pr = g_file_prof - 1;
         while (*++pr != 0)
         { if (*pr != '.') continue;
         
-        { const char * p = pat - 1;
+        { const char * p = pat;
 
           while (*++p != 0 && *++pr == *p)
             ;
@@ -139,10 +140,14 @@ void Pascal customise_buf(BUFFER * bp)
 				  }
           
         { int tabsz = atoi(pr+2);
-          bp->b_tabsize = tabsz <= 0 ? tabsize : tabsz;
+          if (tabsz > 0)
+          	 bp->b_tabsize = tabsz;
           break;
         }}}}
-   }
+      }
+      if (strcmp(".e2", pat) == 0)
+      	bp->b_mode |= BCRYPT2;
+		}
 }
 
 
@@ -201,7 +206,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
     if (srch & MSD_DIRY)
       fn = LFN_to_8dot3(LFN_from_83, 0, fn, &fname[0]);
 #endif
-    for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+    for (bp = bheadp; bp != NULL; bp = bp->b_next)
       if ((bp->b_flag & BFINVS)==0 &&
           bp->b_fname != null && strcmp(fn, bp->b_fname) == 0)
 				break;
@@ -230,7 +235,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 				  { int cc = mlreply(concat(&text[0], TEXT136, bname, "):", null),
 								     							  bname, NBUFN);
                                             /* "Buffer (" */
-				    if (cc == ABORT) 		  /* ^G to just quit	*/
+				    if (cc < 0) 		  /* ^G to just quit	*/
 				      return firstbp;
 				    if (cc != FALSE) 		  /* CR to clobber it	*/
 				      continue;
@@ -355,7 +360,7 @@ int Pascal viewfile(int f, int n)	/* visit a file in VIEW mode */
 BUFFER * Pascal gotfile(const char * fname)
 					/* file name to find */
 { BUFFER *bp;
-	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 	{ if (bp->b_flag & BFINVS)
 			continue;
 
@@ -498,7 +503,7 @@ int Pascal readin(char const * fname, int props)
 	}
 
 #if	FILOCK
-	if ((props & FILE_LOCK) && lockchk(fname) == ABORT)
+	if ((props & FILE_LOCK) &&  lockchk(fname) < 0)
 	  return ABORT;
 #endif
 
@@ -510,7 +515,7 @@ int Pascal readin(char const * fname, int props)
 { BUFFER * bp = curbp;
   if (!ins)
 	{ Cc cc = bclear(bp);
-  	if (cc != TRUE)			/* Changes not discarded */
+  	if (cc <= FALSE)			/* Changes not discarded */
   	  return cc;
 
   	bp->b_flag &= ~(BFINVS|BFCHG);
@@ -603,7 +608,7 @@ int Pascal readin(char const * fname, int props)
 	int   fno;
  	int   nline = 0;
  	char * sfline = NULL;
-  LINE * nextline = ins == 0 ? bp->b_baseline : lforw(curwp->w_dotp);
+  LINE * nextline = ins == 0 ? &bp->b_baseline : lforw(curwp->w_dotp);
 #if S_MSDOS == 0
 	diry = ffisdiry();
 #elif S_WIN32 == 0
@@ -693,18 +698,15 @@ out:
 	  bp->b_flag |= BFACTIVE;			/* code added */
 //  swb_luct = topluct() + 1;
 //  bp->b_luct = swb_luct;
-	  bp->b_dotp = lforw(bp->b_baseline);
+	  bp->b_dotp = lforw(&bp->b_baseline);
 	  bp->b_wlinep = bp->b_dotp;
 
-	  for (wp = wheadp; wp != NULL; wp=wp->w_wndp)
+	  for (wp = wheadp; wp != NULL; wp=wp->w_next)
 	    if (wp->w_bufp == bp)
-	    { openwind(wp, bp);
-	      wp->w_flag |= WFMODE|WFHARD;
-	    /*wp->w_fcol = bp->b_fcol;*/
-	    }
+	      openwind(wp);
   }
 
-{	LINE * lp = bp->b_baseline;
+{	LINE * lp;
  	int clamp = 3;
 
 #if	CRYPT
@@ -718,8 +720,9 @@ out:
 	}
 #endif
 
-	while (((lp=lforw(lp))->l_props & L_IS_HD) == 0 && --clamp != 0)
-	{	
+	for (lp = &bp->b_baseline;
+			 ((lp=lforw(lp))->l_props & L_IS_HD) == 0 && --clamp != 0; )
+	{
 #if	CRYPT
 		if (clamp < 0)
 		{	int len = lp->l_used;
@@ -761,12 +764,12 @@ int Pascal filewrite(int f, int n)
 	if (restflag)		/* don't allow this command if restricted */
 		return resterr();
 
-	if ((cc = mlreply(TEXT144, fname, NFILEN)) != TRUE)
+	if ((cc = mlreply(TEXT144, fname, NFILEN)) <= FALSE)
 /*		       "Write file: " */
 		return cc;
 
 	cc = writeout(fname);
-	if (cc == TRUE)
+	if (cc > FALSE)
 	{	repl_bfname(curbp, fname);
 		curbp->b_flag &= ~BFCHG;
 		upmode();			/* Update mode lines.	*/
@@ -789,23 +792,24 @@ int Pascal filesave(int f, int n)
 	if ((bp->b_flag & BFCHG) == 0)	/* Return, no changes.	*/
 		return TRUE;
     					/* complain about truncated files */
-  if      ((bp->b_flag & BFTRUNC) && mlyesno(TEXT146) == FALSE)
+  if      ((bp->b_flag & BFTRUNC) && mlyesno(TEXT146) <= 0)
 /*			    "Narrowed Buffer..write it out" */
     ;
-  else if ((bp->b_flag & BFNAROW) && mlyesno(TEXT147) == FALSE)
+  else if ((bp->b_flag & BFNAROW) && mlyesno(TEXT147) <= 0)
 /*			    "Truncated file..write it out" */
     ;
   else
   {	if (bp->b_fname == null)		/* Must have a name.	*/
 		{	mlwrite(TEXT145);
-	/*			"No file name" */
+						/* "No file name" */
 			return FALSE;
 	  }
 	{	char * fn = bp->b_fname;
 		char * cmd = bp->b_remote;
     if (cmd != NULL)
 		{	fn = cmd;
-      if (*fn == 0)
+		{	int sl = strlen(fn);
+      if (sl == 0)
 		  { mlwrite(TEXT102);
 		  	return FALSE;
 		  }
@@ -814,13 +818,13 @@ int Pascal filesave(int f, int n)
 #if _DEBUG
       mbwrite(fn);
 #endif
-      for (fn = &fn[strlen(fn)]; *--fn != ' '; )
+      for (fn = &fn[sl]; *--fn != ' '; )
         ;
       ++fn;
-    }
+    }}
 
   {	int rc = writeout(fn);
-		if (rc == TRUE)
+		if (rc > FALSE)
 		{ bp->b_flag &= ~BFCHG;
 		  upmode();		/* Update mode lines.	*/
 
@@ -916,9 +920,9 @@ int Pascal writeout(const char * fn)
 	caution = ssave && cc >= 0 || !w;
 	if (caution && stat_.st_nlink > 1 || !w)
 	{ cc = mlyesno(w ? TEXT218 : TEXT221);
-	  if (cc == ABORT)
+	  if (cc < 0)
   	  return cc;
-  	caution = cc != FALSE;
+  	caution = cc;
 	}
 }
 #endif
@@ -944,10 +948,11 @@ int Pascal writeout(const char * fn)
 
 		g_crlfflag = bp->b_flag & MDMS;
 												/* write the current buffer's lines to the disk file */
-		lp = bp->b_baseline;
+		
 		cc = OK;
 		nline = 0;					/* track the Number of lines		*/
-		while (((lp = lforw(lp))->l_props & L_IS_HD) == 0)
+		for (lp = &bp->b_baseline;
+				((lp = lforw(lp))->l_props & L_IS_HD) == 0; )
 		{ if ((cc = ffputline(&lp->l_text[0], llength(lp))) != FIOSUC)
 				break;
 			++nline;
@@ -998,13 +1003,13 @@ int Pascal filename(int f, int n)
 	if (restflag) 	/* don't allow this command if restricted */
 		return resterr();
 		
-{ int s = mlreply(TEXT151, fname, NFILEN);				/* "Name: " */
-	if (s == ABORT)
-		return s;
+{ int rc = mlreply(TEXT151, fname, NFILEN);				/* "Name: " */
+	if (rc < 0)
+		return rc;
 
 	curbp->b_flag &= ~MDVIEW; 		 /* no longer read only mode */
 
-	repl_bfname(curbp, s == FALSE ? "" : fname);
+	repl_bfname(curbp, rc == FALSE ? "" : fname);
 
 	upmode();       /* Update mode lines. */
 	return TRUE;

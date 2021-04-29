@@ -155,7 +155,7 @@ static int get_to_newline(char * buf, FILE * fp)
 	char * ln = fgets(buf, TAGBUFFSZ-1, fp);
 	if (ln != NULL && ln[0])
 		while ((ch = *++ln) != 0)
-		  if (ch <= '\r')
+		  if (ch <= '\r')				// TAB, CR, LF
 			*ln = 0;
 
 	return ln - buf;
@@ -190,7 +190,7 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
   int start = *stt_ref;			/* points after newline */
   int end = start;
   int pos = start;
-  int seq = start;				/* < 0 : chop, 0 : never, > 0 seek to here */
+  int seq = start;				/* < 0 : chop, 0 : never, > 0 fseek to here */
   if (start < 0)
   { start = 0;
 	fseek(fp, 0L, 2);
@@ -202,7 +202,7 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
   	{ pos = (start+end) >> 1;
 	  fseek(fp, pos, 0);
 		
-      if (pos > start && pos < end)
+      if (end > start)
 	  {	int got = get_to_newline(tagline, fp);	/* read part line */
 		pos += got;
 	  }
@@ -255,7 +255,7 @@ int findTagExec(const char key[])
 {
     char tagline[TAGBUFFSZ+1];
     char tagfile[NFILEN];
-    char * fn = curbp->b_fname == NULL ? "." : curbp->b_fname;
+    char * fn = curbp->b_fname;
 	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
 
 	int clamp = g_taglastClamp + 1;
@@ -296,7 +296,7 @@ int findTagExec(const char key[])
 	fn = tagline;
 	
 {   int ix;
-	char * file = skipspaces(fn + strlen(fn) + 1, tagline + TAGBUFFSZ);
+	char * file = skipspaces(fn + strlen(fn) + 1, fn + TAGBUFFSZ);
 
 	for (ix = -1; file[++ix] > ' '; ) /* to next tab */
 	  ;

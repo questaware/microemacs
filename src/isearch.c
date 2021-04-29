@@ -35,8 +35,6 @@ extern void Pascal reeat(int ch);
  cmdbuflen too big
 #endif
 
-NOSHARE char pat[NPAT+10];		/* Search pattern */
-
 
 /*#define cmd_buff ((int*)gs_buf) ** Save the command args here */
 

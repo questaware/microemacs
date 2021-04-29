@@ -67,7 +67,7 @@ char deltaf[NSTRING+2];		/* available for sharing */
 
 #define MCNIL	0	/* Like the '\0' for strings.*/
 #define	LITCHAR	1	/* Literal character, or string.*/
-#define	ANY	2
+//#define	ANY	2
 #define	CCL	3
 #define	NCCL (NOT_PAT+CCL)
 #define	BOL	4
@@ -91,23 +91,23 @@ char deltaf[NSTRING+2];		/* available for sharing */
  * and the meta-character structure for MAGIC mode searching (MC).
  */
 
-typedef char BITMAP;
+typedef unsigned short BITMAP;
 
 typedef struct
 {	char   mc_type;
 	char   lchar;
 } MC;
 
-static char * cclarray[NPAT / 16 /* say */ ];
-static int cclarr_ix;
+static BITMAP * cclarray[NPAT / 16 /* say */ ];
+static int cclarr_ix = 0;
 
 static MC   g_pats[NPAT+2];
 static int	g_pats_top;
 
 static unsigned int g_Dmatchlen = 0;
 
-#define ERR_SYN   (-1)
-#define ERR_OOMEM (-2)
+#define ERR_SYN   (0)
+#define ERR_OOMEM (-1)
 
 /* cclmake -- create the bitmap for the character class.
  *	patix is left pointing to the end-of-character-class character,
@@ -116,25 +116,28 @@ static unsigned int g_Dmatchlen = 0;
  */
 static int Pascal cclmake(int patix, MC *  mcptr)
 	
-{	BITMAP  * p_bmap;
-	
-	int to = ++cclarr_ix;
-	if (to >= sizeof(cclarray)/sizeof(char*) || 
-	    (p_bmap = aalloc(HICHAR >> 3)) == NULL)
+{ int to = cclarr_ix;
+	BITMAP * p_bmap = cclarray[to];
+
+	if (to >= sizeof(cclarray)/sizeof(BITMAP*) ||
+			 p_bmap == NULL &&
+	    (p_bmap = (BITMAP*)aalloc(HICHAR >> 3)) == NULL)
 	{ 
 	  return ERR_OOMEM;
 	}
 
 	cclarray[ to ] = p_bmap;
 	mcptr->lchar = to;
-	mcptr->mc_type = CCL;							/* Test the initial character(s) in ccl for
+	mcptr->mc_type = CCL;
+	++cclarr_ix;
+																		/* Test the initial character(s) in ccl for
 																		 * special cases - negate ccl, or an end ccl
 																		 * character as a first character.
 																		 * Anything else gets set in the bitmap. */
 {	int from;
-	for ( ; (from = pat[++patix]) != MC_ECCL && from != 0; )
+	for ( ; (from = pat[++patix]) != 0 && from != MC_ECCL; )
 	{
-		if (from == MC_NCCL)
+		if (from == MC_NCCL)		/* '^' */
 		{ mcptr->mc_type |= NOT_PAT;
 			continue;
 		}
@@ -146,14 +149,10 @@ static int Pascal cclmake(int patix, MC *  mcptr)
 	    to = from;
 
 	  for ( --from ; ++from <= to; )
-	    p_bmap[from >> 3] |= (1 << (from & 7));
+	    p_bmap[from >> 4] |= (1 << (from & 15));
 	}
-
-	if (from == 0)
-	{ 
-		return ERR_SYN;
-	}
-	return patix;
+	
+	return from == 0 ? from : patix;
 }}
 
 
@@ -180,16 +179,6 @@ int Pascal get_hex2(int * res_ref, const char * s)
 }
 
 
-/*
- * mcclear -- Free up any CCL bitmaps, and MCNIL the MC search arrays.
- */
-void Pascal mcclear()
-
-{	
-//mcpat[0].mc_type = tapcm[0].mc_type = MCNIL;
-}
-
-
 /* mcstr -- Set up the 'magic' array.  The closure symbol is taken as
  *	a literal character when (1) it is the first character in the
  *	pattern, and (2) when preceded by a symbol that does not allow
@@ -207,7 +196,7 @@ int Pascal mk_magic(int mode)
 //mcpat[0].mc_type = MCNIL;
 	g_pats[NPAT].mc_type = -1;	/* a barrier */
 
-	cclarr_ix = -1;						/* reset magical. */
+	cclarr_ix = 0;						/* reset magical. */
 
 	if (mode < 0)
 		mode = curbp->b_flag;
@@ -223,46 +212,42 @@ int Pascal mk_magic(int mode)
 		if (pchr == 0)
 			break;
 
-		if ((mode & MDMAGIC) == 0)
-		  goto litcase;
+		if (mode & MDMAGIC)
+		  switch (pchr)
+		  {	case MC_CCL:		/* [ */
+					magical = DOES_CL;
+		  		patix = cclmake(patix, mcptr);
+					if (patix <= 0)
+						break;	  		
+					continue;
+						
+			  when MC_ANY:		/* . */
+					magical = DOES_CL;
+			  	mcptr->mc_type = LITCHAR | NOT_PAT;
+			  	mcptr->lchar = '\n';
+					continue;
+				        
+			  when MC_CLOSURE:/* * */			/* Does the closure symbol mean closure here?
+																		 * If so, back up to the previous element
+																		 * and indicate it is enclosed. */
+					if (magical)
+					{	(--mcptr)->mc_type |= CLOSURE;
+						magical = 0;
+						continue;
+					}
+	
+			  when MC_ESC:		/* \ */
+					if (pat[patix+1] != 0)
+					{ pchr = pat[patix+1];
+					  ++patix;
+						if (pchr == '0') 
+							patix += get_hex2(&pchr, &pat[patix+1]);
+					}
+			}
 
-	  switch (pchr)
-	  {	case MC_CCL:		/* [ */
-				magical = DOES_CL;
-	  		patix = cclmake(patix, mcptr);
-				if (patix < 0)
-					break;	  		
-		  
-		  when MC_ANY:		/* . */
-				magical = DOES_CL;
-		  	mcptr->mc_type = ANY;
-			        
-		  when MC_CLOSURE:/* * */			/* Does the closure symbol mean closure here?
-																	 * If so, back up to the previous element
-																	 * and indicate it is enclosed. */
-				if (!magical)
-				  goto litcase;
-				mcptr--;
-				mcptr->mc_type |= CLOSURE;
-				magical = 0;
-
-		  when MC_ESC:		/* \ */
-		  	pchr = pat[patix+1];
-				if (pchr == 0)
-				  pchr = MC_ESC;
-				else
-				{ ++patix;
-					if (pchr == '0') 
-						patix += get_hex2(&pchr, &pat[patix+1]);
-				}
-			
-		  default:				/* drop through */
-litcase:mcptr->mc_type = LITCHAR;
-				mcptr->lchar   = pchr;
-				magical = 0;
-				if (pchr != '\n')
-				  magical = DOES_CL;
-		}
+		mcptr->mc_type = LITCHAR;
+		mcptr->lchar   = pchr;
+		magical = pchr - '\n';
 	}	/* End of while.*/
 
 		/* Set up the reverse array, if the status is good.  Please note
@@ -270,8 +255,7 @@ litcase:mcptr->mc_type = LITCHAR;
 		 * If the status is not good, nil out the meta-pattern.
 		 * The only way the status would be bad is from the cclmake()
 		 * routine, and the bitmap for that member is guarenteed to be
-		 * freed.  So we stomp a MCNIL value there, and call mcclear()
-		 * to free any other bitmaps.
+		 * freed.  So we stomp a MCNIL value there.
 		 */
 	if (patix < 0)
 	{ mlwrite(patix == ERR_SYN ? TEXT97		/* Out of Memory */
@@ -296,6 +280,7 @@ litcase:mcptr->mc_type = LITCHAR;
 /*
  * expandp -- Expand control key sequences for output.
  */
+static 
 void Pascal expandp(char * deststr, char * srcstr, char * tailstr, int maxlength)
 	/* char	*deststr;	** destination of expanded string (concat) */
 	/* char	*srcstr;	** string to expand */
@@ -353,30 +338,22 @@ void Pascal expandp(char * deststr, char * srcstr, char * tailstr, int maxlength
 static
 int Pascal readpattern(const char * prompt, char apat[])
 
-{   char tpat[NSTRING+20];
-    							/* add old pattern */
+{   char tpat[NPAT+50];
+    																				/* add old pattern */
     expandp(concat(tpat, prompt, " [", null), 
-    				strlen(apat) < 30 ? apat : "\"",  "] ",  NSTRING+16);
+    				strlen(apat) < 30 ? apat : "\"",  "] ",  sizeof(tpat)-1);
 
-	     /* Read a pattern.  Either we get one,
-	      * or we just get the META charater, and use the previous pattern.
-	      * Then, if it's the search string, make a reversed pattern.
-	      * *Then*, make the meta-pattern, if we are defined that way.
-	      */ 
-{		Cc cc = mltreply(tpat, tpat, NSTRING);
-    if (cc != ABORT)
+					     /* Read a pattern.  Either we get one, or
+		    			  * we just get the META charater, and use the previous pattern */ 
+{		Cc cc = mltreply(tpat, tpat, NPAT);
+    if (cc >= 0)
     { extern int gs_keyct;		 /* from getstring */
       if (cc || gs_keyct > 0)
-      { /*cc = TRUE;*/
         strcpy(apat, tpat);
-      }
 
-/*    if (curwp->w_bufp->b_flag & MDMAGIC) */
       cc = TRUE;
-      if (apat == pat)
-        cc = mk_magic(-1);
-/*    else
-        mcclear();*/
+//    if (apat == pat)
+//      cc = mk_magic(-1);
     }
 
     return cc;
@@ -481,7 +458,7 @@ int Pascal forwsearch(int f, int n)
 	 * search for the pattern for as long as n is positive
 	 * (n == 0 will go through once, which is just fine).
 	 */
-	int cc = readpattern(n < 0 ? TEXT81 : TEXT80, &pat[0]);
+	int cc = readpattern(n >= 0 ? TEXT80 : TEXT81, &pat[0]);
 												             /* "Search" */
 	if (cc == TRUE)
 	  cc = hunt(n, FALSE);
@@ -507,53 +484,50 @@ int Pascal backsearch(int f, int n)
  * eq -- Compare two characters.  The "bc" comes from the buffer, "pc"
  *	from the pattern.  If we are not in EXACT mode, fold out the case.
  */
-int Pascal myeq(int a, int b)
+int USE_FAST_CALL myeq(int a, int b)
 
 {
   return a==b ||
         (curbp->b_flag & MDEXACT) == 0 && isletter(a)
-	   && ((a ^ b) & ~0x20) == 0;
+     && ((a ^ b) & ~0x20) == 0;         
 }
  
  
 #define eq(a, b) (((a ^ b) & ~0x20) == 0 && myeq(a,b))
-
-
-/*
- * biteq -- is the character in the bitmap?
- */
-static int Pascal biteq(int bc, int ix)
-	
-{
-  return /*bc <= HICHAR && */(cclarray[ix][bc >> 3] >> (bc & 7)) & 1;
-}
 
 /* mceq -- meta-character equality with a character.  In Kernighan & Plauger's
  *	Software Tools, this is the function omatch(), but i felt there
  *	were too many functions with the 'match' name already.
  */
-static int Pascal mceq(int bc, MC * mt)
+static int mceq(int bc, int mctype, int lchar)
 {
 	int result;
 
-	switch (mt->mc_type & MASKPAT)
-	{ case LITCHAR: return eq(bc, (int)mt->lchar);
-
-	  when ANY:			if (bc != '\n')
-			              return true;
-
-	  when CCL:	result = biteq(bc, mt->lchar);
-							if (!result)
-							  if ((curbp->b_flag & MDEXACT) == 0 && isletter(bc))
-							    result = biteq(CHCASE(bc), mt->lchar);
-
-							if (mt->mc_type & NOT_PAT)
-								result ^= 1;
-
-							return result;
+	if      (bc < 0)
+		return 0;
+	else if ((mctype & MASKPAT) == LITCHAR)
+		result = eq(bc, (int)lchar);
+	else
+	{
+#if _DEBUG
+		if ((mctype & MASKPAT) != CCL)
+		{	adb(41);
+			result = 0;
+		}
+		else
+#endif
+	  {	BITMAP * pbm = cclarray[lchar];
+			result = pbm[bc >> 4];
+			if ((curbp->b_flag & MDEXACT) == 0 && isletter(bc))
+				result |= pbm[(bc >> 4) ^ 2];
+			result = (result >> (bc & 15)) & 1;
+		}
 	}
 
-	return false;
+	if (mctype & NOT_PAT)
+		result ^= 1;
+
+	return result;
 }
 
 /*
@@ -604,23 +578,21 @@ int Pascal amatch(MC * mcptr, int direct, Lpos_t * pcwlpos)
 //  { if (lpos.curoff != llength(lpos.curline))
 //      return FALSE;
 //	}
-		else if (type == LITCHAR)
-	  { int ch = nextch(&lpos, direct);
-	    if (! eq(ch, (int)mcptr->lchar))
-	      return FALSE;
-	    g_Dmatchlen++;
-	  }
-	  else if ((type & CLOSURE) == 0)
-	  { if (!mceq(nextch(&lpos, direct), mcptr))
-	      return FALSE;
-	    g_Dmatchlen++;
-	  }
 	  else												/* Try to match as many characters as possible */
 	  {														/* against the current meta-character.
 																 * A newline never matches a closure. */
-	    type = 0;
-	    while (mceq(nextch(&lpos, direct), mcptr))
-	      type++;
+	    int ct = 0;
+	    while (mceq(nextch(&lpos, direct), mcptr->mc_type, mcptr->lchar))
+	    { ++ct;
+	  		if ((type & CLOSURE) == 0)
+	  			break;
+	  	}
+	  	if ((type & CLOSURE) == 0)
+	  	{	if (ct == 0)
+	  			return FALSE;
+	    	g_Dmatchlen++;
+	    	continue;
+	    }
 												/* We are now at the character that made us fail.
 												 * Try to match the rest of the pattern, shrinking
 												 * the closure by one for each failure.
@@ -631,11 +603,11 @@ int Pascal amatch(MC * mcptr, int direct, Lpos_t * pcwlpos)
 	    { nextch(&lpos, -direct);
 
 	      if (amatch(mcptr+direct, direct, &lpos))
-	      { g_Dmatchlen += type;
+	      { g_Dmatchlen += ct;
 	        goto success;
 	      }
 
-	      if (--type < 0)
+	      if (--ct < 0)
 	        return FALSE;
 	    }
 	  }
@@ -684,8 +656,7 @@ int Pascal scanner(int direct, int again)
   init_paren("",0);
   paren.sdir = direct;
   
-  if (again & 2)
-  	(void)mk_magic(0);
+  (void)mk_magic(-1);
   
   if ((again & 1) ? direct > 0 : (lpos.curline->l_props & L_IS_HD))
     nextch(&lpos, direct);    /* Advance the cursor.*/
@@ -700,7 +671,7 @@ int Pascal scanner(int direct, int again)
   { /*if (direct == FORWARD ? lpos.curoff == llength(lpos.curline) &&
 				(lforw(lpos.curline)->l_props & L_IS_HD)
 		 	  :  ** lpos.curoff == 0	&& */
-			     /* lpos.curline  == lforw(curbp->b_baseline) && */
+			     /* lpos.curline  == lforw(&curbp->b_baseline) && */
     if (ch < 0)
       return false;
 		  	  /* Save the current position in case we need to restore it on a match. 
@@ -726,10 +697,6 @@ int Pascal scanner(int direct, int again)
       nextch(&sm, -direct);  /* restore the cursor.*/
       break;
     }
-    else if (ptyp == BOL && lpos.curoff == 0)
-    	mcpatrn += direct;
-//  else if (ptyp == EOL && lpos.curoff == llength(lpos.curline))
-//   	mcpatrn += direct;
     else
     { sm = lpos;
     	got = 1;
@@ -801,7 +768,7 @@ int Pascal replaces(int kind, int f, int n)
 	/* int	n;	    * # of repetitions wanted */
 {
 	int cc;
-	char tpat[NPAT];
+	char tpat[NPAT*2+20];
 
 	if (curbp->b_flag & MDVIEW)
 	  return rdonly();
@@ -819,7 +786,7 @@ int Pascal replaces(int kind, int f, int n)
 					   /* Ask for the replacement string. */
 	cc = readpattern(TEXT84, &rpat[0]);
 									/* "with" */
-	if (cc == ABORT)
+	if (cc < 0)
 	  return cc;
 															/* Find the length of the replacement string. */
 { int inhib; 
@@ -827,21 +794,23 @@ int Pascal replaces(int kind, int f, int n)
 														   * a recursive replace on the last line. */
   int numsub = 0;
   int lenold = 0;
+  int lastins = 0;
 
 	Lpos_t orig = *(Lpos_t*)&curwp->w_dotp;
 	Lpos_t last;		/* position of last replace */
 
 //orig.curline = lback(orig.curline);
 	last.curline = NULL;
-																/* Build query replace question string */
+																		/* Build query replace question string */
 											/* "Replace '" */
-	expandp(strcpy(tpat, TEXT87), &pat[0], TEXT88, NPAT-9);
+	expandp(strcpy(tpat, TEXT87), pat, TEXT88, NPAT-9);
 													/* "' with '" */
 	expandp(tpat, rpat, "'? ", NPAT-4);
 
 	while (--n >= 0 && scanner(1, FALSE))
-	{							     				/* Search for the pattern.
-				  				   				 * If we search with a regular expression,
+	{							     				/* Search for the pattern. */
+#if 0
+				  				   				/* If we search with a regular expression,
 												     * g_Dmatchlen is reset to the true length of
 												     * the matched string. */
 														/* Check if we are on the last line */
@@ -849,6 +818,7 @@ int Pascal replaces(int kind, int f, int n)
         g_Dmatchlen > 0 &&
 	      pat[g_Dmatchlen - 1] == '\n')
 	    n = -1;
+#endif
 
 	  if (kind)			/* Check for query */
 	  {	if (getwpos() + 2 >= curwp->w_ntrows)
@@ -878,22 +848,14 @@ qprompt:
 					continue;
 
 			  when 'U':		   /* undo last and re-prompt */
-					if (last.curline == NULL)
-							 /* There is nothing to undo.*/
-					  TTbeep();
-					else		    
+					if (last.curline != NULL)
 			  	{ rest_l_offs(&last);			/* Restore old position. */
-					  last.curline = NULL;
-							   									
-					  cc = strlen(&rpat[0]);	/* Delete the new string. */
-#if _DEBUG
-					  if (cc != lenold)
-					  	adb(148);
-#endif
-					  backchar(FALSE, cc);
-					  cc = delins(cc, patmatch, FALSE);
-					  if (cc != TRUE)
-					    return cc;
+					  last.curline = NULL;	   									
+
+					  backchar(FALSE, lastins);
+					  cc = delins(lastins, patmatch, 0);
+					  if (cc < 0)
+					    return FALSE;
 						       /* Record one less substitution,
 										* backup, save our place, and reprompt. */
 					  --numsub;
@@ -925,9 +887,9 @@ qprompt:
 
 			   /* Delete the sucker, and insert its replacement. */
 		lenold = g_Dmatchlen;
-	  cc = delins(lenold, &rpat[0], TRUE);
-	  if (cc != TRUE)
-	    return cc;
+	  lastins = delins(lenold, &rpat[0], MC_DITTO);
+	  if (lastins < 0)
+	    return FALSE;
 	  			  /* Save our position, since we may undo this*/
 		if (inhib)
 		{ // --g_inhibit_scan;
@@ -959,28 +921,16 @@ qprompt:
 								 *	replacement meta-array. */
 static
 int Pascal delins(int dlength, char * instr, int use_meta)
-	
-{					       					/* Zap what we gotta, and insert its replacement. */
-  char buf[120];
-  int ix;
-  char ch;
+						       					
+{	extern int g_overmode;
+	--g_overmode;							/* Zap what we gotta, and insert its replacement. */
 
-	for (ix = -1; ! use_meta && (ch = instr[++ix]) != 0; )
-		if (ch == '\n' || ch == MC_ESC || ch == MC_DITTO)
-		{ ix = -1;
-			break;
-		}
+{	int len = 0;
+  int cc = ldelchrs((Int)dlength, FALSE);
+	if (cc == TRUE)
+	{ int ix = -1;
+	  char buf[120];
 
-{ extern int g_overmode;		// from line.c
-	int sov = g_overmode;
-
-  g_overmode = ix == dlength; 
-{	int cc = g_overmode ? TRUE : ldelchrs((Int)dlength, FALSE);
-	if (cc != TRUE)
-	  mlwrite(TEXT93);
-					/* "%%ERROR deleting" */
-	else
-	{ ix = -1;
 	  for ( ; ; ++instr)
 	  { if (instr[0] == MC_ESC && instr[1] != 0 && use_meta)
 	    { int chr = *++instr;
@@ -990,19 +940,20 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 	      buf[++ix] = chr;
 	      continue;
 	    }
-	    if (instr[0] == MC_DITTO && use_meta || 
-	        instr[0] == 0                    ||
+	    if (instr[0] == use_meta || 
+	        instr[0] == 0        ||
 	        ix > sizeof(buf) - 4 )
 	    { buf[++ix] = 0;
+	    	len += ix;
 	      cc = linstr(buf);
 	      if (cc != TRUE || instr[0] == 0)
 	        break;
 	      ix = -1;
-	      if (instr[0] == MC_DITTO && use_meta)
-	      { cc = linstr(patmatch);
+	      if (instr[0] == use_meta)
+	      { len += strlen(patmatch);
+	      	cc = linstr(patmatch);
 	        if (cc != TRUE)
 	          break;
-	        ix = -1;
 	        continue;
 	      }
 	    }
@@ -1011,16 +962,16 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 	  }
 	}
 
-  g_overmode = sov;
-	  
-	return cc;
-}}}
+	++g_overmode;
+
+	return len;
+}}
 
 static int get_word(char * t, char * s, int ct)
 
 { char * t_ = t;
 
-  while (--ct >= 0 && (isalpha(*s) || isdigit(*s) || *s == '_'))
+  while (--ct >= 0 && (isalnum(*s) || *s == '_'))
 	{ *t++ = *s++; 
 	}
 	*t = 0;
@@ -1037,22 +988,21 @@ int Pascal wordsearch(int f, int n)
 
 { Lpos_t sv = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
 
-  char buff[132];
-  int offs = curwp->w_doto;
-  int len = 0;
-  char * s = lgets(curwp->w_dotp, offs);
+  char * stt = lgets(sv.curline, 0);
+  char * s = stt + sv.curoff;
   
-  while (--offs >= 0)
-  { char ch = *--s;
-  	if (!isalpha(ch) && !isdigit(ch) && ch != '_')
+  while (--s >= stt)
+  { char ch = *s;
+  	if (!isalnum(ch) && ch != '_')
     	break;
-    ++len;
   }
 
+{	char buff[132];
+  int len = stt - ++s + sv.curoff;
   if (len >= sizeof(buff))
 		len = sizeof(buff)-1;
 
-{ int ix = get_word(buff, s+1, len);
+{ int ix = get_word(buff, s, len);
 
 //mbwrite(buff);
   if (ix > 0)
@@ -1060,15 +1010,15 @@ int Pascal wordsearch(int f, int n)
     while (backword(1, 1))
     {
     	int doto = curwp->w_doto;
-      char * s = &curwp->w_dotp->l_text[doto];
+      char * w = &curwp->w_dotp->l_text[doto];
       int len = curwp->w_dotp->l_used - doto;
-      if (len >= sizeof(buff)) 
-				len = sizeof(buff) - 1;
       
-      if (s[0] == buff[0])
-        if (strcmp_right(s,buff) == 0)
+      if (w[0] == buff[0])
+        if (strcmp_right(w,buff) == 0)
         { 
-					get_word(buff, s, len);
+		      if (len >= sizeof(buff)) 
+						len = sizeof(buff) - 1;
+					get_word(buff, w, len);
 				  ix = -ix;
           break;
         }
@@ -1087,7 +1037,7 @@ int Pascal wordsearch(int f, int n)
   }
 
   return OK;
-}}
+}}}
 
 #if 0
 
@@ -1113,6 +1063,27 @@ static int get_indt(LINE * lp)
 
 #endif
 
+
+static int get_indent(LINE * lp, int tabsz)
+
+{ char * s = lgets(lp, 0) - 1;
+	int    ct = lp->l_used;
+	int offs = 0;
+
+  while (--ct >= 0)
+  { char ch = *++s;
+    if      (ch == ' ')
+      offs += 1;
+    else if (ch == 9)
+	    offs = ((offs + tabsz-1)/tabsz)*tabsz;
+    else
+      break;
+  }
+  
+  return offs;
+}
+
+
 /*
  * indentsearch -- Reverse search for an indent less than current.
  */
@@ -1125,21 +1096,9 @@ int Pascal indentsearch(int f, int n)
 //sprintf(buff,"offs %d", offs);
 //mbwrite(buff);
 
-  char * s = lgets(lp, 0) - 1;
-  int ct = lp->l_used;
-	int off = 0;
-  
-  while (--ct >= 0)
-  { char ch = *++s;
-    if      (ch == ' ')
-      off += 1;
-    else if (ch == 9)
-      off = ((off + tabsz-1)/tabsz)*tabsz;
-    else
-      break;
-  }
+	int off = get_indent(lp,tabsz);
 
-  if (n > 0 && off > 0)
+  if (off > 0 && n > 0)
   { int moved = 0;
 		int offs = 0;
 
@@ -1151,17 +1110,7 @@ int Pascal indentsearch(int f, int n)
 
       moved += 1;
 
-      s = lgets(lp, 0) - 1;
-      ct = lp->l_used;
-      while (--ct >= 0)
-      { char ch = *++s;
-        if      (ch == ' ')
-          offs += 1;
-        else if (ch == 9)
-		      offs = ((offs + tabsz-1)/tabsz)*tabsz;
-        else
-          break;
-      }
+ 			offs = get_indent(lp, tabsz);
 
 		} while (offs >= off);
 

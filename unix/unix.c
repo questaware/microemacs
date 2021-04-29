@@ -506,7 +506,7 @@ int pipecmd(int f, int n)
   bp = bfind(bname, FALSE, 0);
 	if (bp != FALSE) 
 	{		/* try to make sure we are off screen */
-	  for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
+	  for (wp = wheadp; wp != NULL; wp = wp->w_next)
 	    if (wp->w_bufp == bp)
 	    { onlywind(FALSE, 1);
 	      break;

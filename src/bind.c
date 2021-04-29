@@ -82,7 +82,7 @@ static KEYTAB keytab[NBINDS+1] =
 {
 	{CTRL|'A',	BINDFNC, gotobol},
 	{CTRL|'B',	BINDFNC, backchar},
-	{CTRL|'E',	BINDFNC, gotoeol},
+	{CTRL|'E',	BINDFNC, endword},
 	{CTRL|'H',	BINDFNC, backdel},
 	{CTRL|'I',	BINDFNC, handletab},
 	{CTRL|'J',	BINDFNC, indent},
@@ -282,7 +282,7 @@ bind-to-key filter-buffer ^X|
 	{META|'W',	BINDFNC, copyregion},
 	{META|'X',	BINDFNC, namedcmd},
 #if S_MSDOS == 0
-	{META|'Z',	BINDFNC, quickexit},
+	{META|'Z',	BINDFNC, wordsearch},
 #endif
 //{META|0x7F, BINDFNC, delbword},
 #if MOUSE
@@ -632,7 +632,7 @@ int Pascal macrotokey(int f, int n)
 	char outseq[NBUFN+20]; 
 																				/* ": macro-to-key " */
 {	int cc = mlreply(strcpy(outseq, TEXT215), &bufn[1], NBUFN-2);
-	if (cc != TRUE)
+	if (cc <= FALSE)
 	  return cc;
 																     /* build the response string for later */
 	strcat(outseq, &bufn[1]);
@@ -700,7 +700,7 @@ int Pascal apro(int f, int n)	/*Apropos (List functions that match a substring)*
    mstring[0] = 0;
 {  int cc = mlreply(TEXT20, mstring, NSTRING - 1);
 /*			 "Apropos string: " */
-   return cc == ABORT ? ABORT : buildlist(mstring);
+   return cc < 0 ? cc : buildlist(mstring);
 }}
 #else
 { return OK;
@@ -725,7 +725,7 @@ int Pascal buildlist(const char * mstring)
   openwindbuf(TEXT21);
 			  
   if (mstring == NULL)
-  { if (linstr(bltbl) != TRUE)
+  { if (linstr(bltbl) <= FALSE)
       cc = FALSE;
   }
   else    
@@ -738,7 +738,7 @@ int Pascal buildlist(const char * mstring)
 	{ BUFFER * BP; 								/* add blank line between key and macro lists */
 		lnewline();
 									 							/* scan buffers for macros and their bindings*/
-		for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+		for (bp = bheadp; bp != NULL; bp = bp->b_next)
 		{																					/* add in the command name */
 		  if (bp->b_bname[0] != '[')							/* is this buffer a macro? */
 		    continue;
@@ -816,12 +816,11 @@ int Pascal fexist(const char * fname)	/* does <fname> exist on disk? */
 
 char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 	
-{ 
+{ if (dir == NULL || file[0] == '/' || file[0] == '\\')
+    dir = file;
+	else
   if (dir[0]=='.' && dir[1]=='/' && dir[2]=='.' && dir[3]=='.' && dir[4]=='/')
     dir += 2;
-
-  if (file[0] == '/' || file[0] == '\\')
-    dir = file;
 
 { int tix = -1;
 
@@ -978,8 +977,8 @@ const char * Pascal flook(char wh, const char * fname)
 	  for (; *path != 0; ++path)
 	  { int ix;
 
-	    if (path[0] == '-' && path[1] == 'I'
-	     || path[0] == '.' && path[1] == '/')
+	    if (// path[0] == '-' && path[1] == 'I' ||
+	     		   path[0] == '.' && path[1] == '/')
 	      path += 2;
 
 /*	    fspec[0] = 0;
@@ -996,7 +995,7 @@ const char * Pascal flook(char wh, const char * fname)
 	      fspec[++ix] = *path++;
 	    
 	    if (path[-1] != DIRSEPCHAR)
-	      fspec[++ix] = '/';
+	      fspec[++ix] = DIRSEPCHAR;
 	        
 	    fspec[ix+1] = 0;	        
 /*	{ char buf[200];
@@ -1066,7 +1065,7 @@ const char *Pascal getfname(int keycode)
     }
     else																		/* skim the buffer list for a match */
 		{ BUFFER *bp;
-      for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+      for (bp = bheadp; bp != NULL; bp = bp->b_next)
         if (bp == (BUFFER*)func)
           return bp->b_bname;
 		}
@@ -1090,14 +1089,6 @@ int (Pascal *Pascal fncmatch(char * fname))(int, int)
 
 	return last_fnum < 0 ? NULL : names[last_fnum].n_func;
 }}
-
-
-
-const char *Pascal transbind(char * skey)/* string key name to binding name..*/
-					/* name of key to get binding for */
-{ const char *bindname = getfname(stock(skey));
-  return *bindname == 0 ? g_logm[2] : bindname;
-}
 
 
 					/* execute a function bound to a key */

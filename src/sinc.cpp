@@ -377,7 +377,7 @@ static int Pascal bufappline(BUFFER * base, int indent, const char * str)
 
   memset(&inslp->l_text[0], ' ', indent);
   memcpy(&inslp->l_text[indent], str, sz);
-  ibefore(base->b_baseline->l_fp, inslp);
+  ibefore(base->b_baseline.l_fp, inslp);
   return TRUE;
 }
 
@@ -968,7 +968,7 @@ int Sinc::srchdeffile(const char * fname, char * target, int depth)
                 lp = prev)
 #else
   Lpos_t save = *(Lpos_t*)&wp->w_dotp;
-  LINE * lp = lback(bp->b_baseline);
+  LINE * lp = lback(&bp->b_baseline);
 
   loglog3("cwp %x lp %x ? %x", wp, save.curline, 0);
   if (fname[0] == 0)
@@ -1500,7 +1500,7 @@ int Pascal searchIncls(int f, int n)
 int Pascal getIncls(int f, int n)
 
 { char bi_nm[20];
-  int at_end = curwp->w_dotp - curbp->b_baseline;
+  int at_end = curwp->w_dotp - &curbp->b_baseline;
 	if (at_end == 0)
 		curwp->w_dotp = curwp->w_dotp->l_bp;
 	
@@ -1518,7 +1518,7 @@ int Pascal getIncls(int f, int n)
 	Sinc::g_outbuffer = bp;
 
   cc = searchIncls(f, n);
-  if (bp->b_baseline->l_fp != bp->b_baseline)
+  if (bp->b_baseline.l_fp != &bp->b_baseline)
   { bp->b_flag |= BFACTIVE;
     swbuffer(bp);
   }

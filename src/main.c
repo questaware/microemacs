@@ -95,7 +95,9 @@ NOSHARE BUFFER *curbp; 		/* Current buffer		*/
 NOSHARE WINDOW *wheadp;		/* Head of list of windows	*/
 NOSHARE BUFFER *bheadp;		/* Head of list of buffers 	*/
 
-NOSHARE char rpat[NPAT+10];	/* replacement pattern		*/
+NOSHARE char  pat[NPAT+2];	/* search pattern		*/
+NOSHARE char rpat[NPAT+2];	/* replacement pattern		*/
+NOSHARE LL g_ll;
 
 /*	Various "Hook" execution variables	*/
 
@@ -127,15 +129,9 @@ NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
 #endif
 
 
-#define MLIX 3
-
-extern char lastline[MLIX+1][NSTRING];
-extern int  ll_ix;
-
 extern int g_timeout_secs;
 
 char * g_invokenm;
-char * g_homedir;
 
 int g_opts = 0;
 
@@ -160,6 +156,7 @@ void Pascal dcline(int argc, char * argv[])
 	const char * def_bname = "main";
 	int	carg;
 
+	g_ll.ll_ix = -1;
 #if S_MSDOS && 0
 	for (carg = argc; --carg > 0; )
 		clean_arg(argv[carg]);
@@ -207,9 +204,9 @@ void Pascal dcline(int argc, char * argv[])
 										filev[strlen(filev)-1] = 0;
 									}
 					
-									strcpy(&lastline[0][0],
+									strcpy(&g_ll.lastline[0][0],
 												 strpcpy(&pat[0],filev+2, sizeof(pat)));
-									ll_ix = 0;
+									g_ll.ll_ix = 0;
 
 //			when 't': /* -T for search directory structure */
 //				genflag |= 16;
@@ -258,11 +255,11 @@ void Pascal dcline(int argc, char * argv[])
 					--sl;
 				if (del_svn < 1000)
 				{ concat(spareline,"svncone ",filev," tmpdir", null);
-				  ttsystem(spareline, NULL);
+				  ttsystem(spareline, "");
 				  concat(spareline,"tmpdir/",&filev[sl+1], null);
 				  filev = spareline;
 				  concat(lastline[1],"copy ",filev," .", null);
-				  ttsystem(lastline[1], NULL);
+				  ttsystem(lastline[1], "");
 				  del_svn = 1;
 				  if (is_opt('z'))
 				  	del_svn = 0;
@@ -310,7 +307,7 @@ void Pascal dcline(int argc, char * argv[])
 
 	curwp->w_ntrows = term.t_nrowm1-1; /* "-1" for mode line. */
 	curbp = firstbp;
-	openwind(curwp, curbp);
+	openwind(curwp);
 
 	carg = startup(startfile);
 #if 0
@@ -338,14 +335,14 @@ void Pascal dcline(int argc, char * argv[])
 	if (carg == 13)
 		exit(1);
 																								/* we now have the .rc file */
-	for (bp = bheadp; bp != NULL; bp = bp->b_bufp)
+	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 	{ bp->b_flag |= g_gmode;
 		bp->b_color = g_colours;
 	  if (bp->b_fname != NULL)
 	  	customise_buf(bp);
 	}
 
-#ifndef _WINDOWS
+#if S_WIN32 == 0
   tcapepage();
 #endif
 	tcapopen(); 	/* open the screen */
@@ -465,7 +462,7 @@ int main(int argc, char * argv[])
 #ifdef USE_SVN
 	if (del_svn)
 	{ 
-		ttsystem("rmdir /s/q tmpsvndir", NULL);
+		ttsystem("rmdir /s/q tmpsvndir", "");
 	}
 #endif
 #if CLEAN
@@ -490,7 +487,7 @@ Pascal clean()
 
 	wp = wheadp;			/* first clean up the windows */
 	while (wp)
-	{ WINDOW * tp = wp->w_wndp;
+	{ WINDOW * tp = wp->w_next;
 		free(wp);
 		wp = tp;
 	}
@@ -504,9 +501,6 @@ Pascal clean()
 
 	kdelete(0,0); 		/* and the kill buffer */
 
-#if MAGIC
-	mcclear();			/* clear some search variables */
-#endif
 	if (patmatch != NULL)
 	{ free(patmatch);
 		patmatch = NULL;
@@ -694,7 +688,7 @@ Pascal quickexit(int f, int n)
 	BUFFER *oldcb = curbp; /* original current buffer */
 	int status;
 
-	for (bp = bheadp; bp != NULL; bp = bp->b_bufp) 
+	for (bp = bheadp; bp != NULL; bp = bp->b_next) 
 	{
 		if ((bp->b_flag & (BFCHG+BFINVS)) == BFCHG &&
 				bp->b_fname != null)
@@ -702,7 +696,7 @@ Pascal quickexit(int f, int n)
 			mlwrite(TEXT103,bp->b_fname);
 /*				"[Saving %s]\n" */
 			status = filesave(f, n);
-			if (status != TRUE)
+			if (status <= FALSE)
 			{ curbp = oldcb;	/* restore curbp */
 				return status;
 			}
@@ -725,7 +719,7 @@ Pascal quit(int f, int n)
 														/* All buffers clean or user says it's OK. */
 		status = mlyesno(TEXT104);
 								/* "Modified buffers exist. Leave anyway" */
-	if (status)
+	if (status > 0)
 	{ tcapmove(term.t_nrowm1, 0);
 //	pd_discmd = true;
 
@@ -792,7 +786,7 @@ int Pascal uniarg(int f, int n) /* set META prefixing pending */
 { char buff[NSTRING+2];
 
 	if (g_clexec > 0)
-	{ if (mlreply("", &buff[0], NSTRING) != TRUE)
+	{ if (mlreply("", &buff[0], NSTRING) <= FALSE)
 			return ABORT;
 						
 		n = atoi(buff);

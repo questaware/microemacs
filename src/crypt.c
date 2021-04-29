@@ -250,14 +250,14 @@ int Pascal setekey(CRYPTKEY * key_ref)
 		cc = mlreply(TEXT33, mykey+stt, NPAT - 15);
 		g_disinp += 7; 							
 		mlwrite(" ");								/* clear it off the bottom line */
-		if (cc == TRUE)
+		if (cc > FALSE)
 		{	if (mykey[stt] == 0)
 				strpcpy(mykey+stt, g_ekey, NPAT-15);
 			else
-			{ extern int g_chars_since_shift;
+			{ extern int g_chars_since_ctrl;
 
-				if (g_chars_since_shift < 10000)
-					strcat(mykey,int_asc(g_chars_since_shift));
+				if (g_chars_since_ctrl < 1000)
+					strcat(mykey,int_asc(g_chars_since_ctrl));
 			}
 
 		  initcrypt(0, mykey, strlen(mykey)); /* re-encrypt it, seeding it to start */
@@ -272,7 +272,7 @@ int Pascal setekey(CRYPTKEY * key_ref)
 int Pascal setuekey(int f, int n)/* reset encryption key of current buffer */
 
 {	int cc = setekey(&curbp->b_key);
-	if (cc == TRUE)
+	if (cc > FALSE)
 		curbp->b_flag |= MDCRYPT;
 	else
 		curbp->b_flag &= ~MDCRYPT;
@@ -289,7 +289,7 @@ void Pascal resetkey(CRYPTKEY * key_ref)	/* reset the encryption key if needed *
 
 {	if (!got_key(key_ref))
     *key_ref = g_ekey;
-  if (setekey(key_ref) == TRUE)
+  if (setekey(key_ref) > FALSE)
   { char * key = strdup(*key_ref);
     int sl  = strlen(key);
     int tl = strlen(int_asc(thread_id()));

@@ -65,11 +65,10 @@ X}}
 
 LINE *Pascal mk_line(const char * src, int sz, int lsrc)
 {
-  register LINE *lp = (LINE *)aalloc(sizeof(LINE)+sz);
+  LINE *lp = (LINE *)aalloc(sizeof(LINE)+sz);
   if (lp == NULL)
-  { mlwrite(TEXT99);		/* "[OUT OF MEMORY]" */
     return NULL;
-  }
+
   lp->l_props = 0;
   lp->l_used  = lsrc;
   lp->l_spare = sz - lsrc;
@@ -89,11 +88,11 @@ void Pascal ibefore(LINE * tline, LINE * new_line)
   tline->l_bp = (Lineptr)new_line;
 }
 
-void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
+void Pascal rpl_all(int wh, int noffs, LINE * old, LINE * new_, int offs)
 	
 { WINDOW *wp;
 
-  for (wp = wheadp; ; wp = wp->w_wndp) 
+  for (wp = wheadp; ; wp = wp->w_next) 
   { if      (wp == NULL) 
     { wp = (WINDOW*)curbp;		/* complete just this loop */
       if (wp->w_linep == old)
@@ -105,54 +104,42 @@ void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
       if (wp->w_linep == old)
         wp->w_linep = new_;
     
-    if (wp->w_dotp == old || wh < 0 && wp->w_bufp == (BUFFER*)old)
-    { switch (wh)
-      { case -1:wp->w_linep = new_;
-        case -2:wp->w_flag |= (WFHARD|WFMODE);
-        case 0: wp->w_dotp  = new_;
-                wp->w_doto  = noffs;
-               
-        when 1: wp->w_dotp = new_;
-                if (wp == curwp || wp->w_doto >= offs)
-                  wp->w_doto += noffs;
-
-        otherwise
-        				if (wp->w_doto >= offs)
-        					if (wh == 2)
-                	{ wp->w_dotp = new_;
-	                  wp->w_doto -= offs;
-  	              }
-    	            else
-      	          { wp->w_doto -= noffs;
-        	          if (wp->w_doto < offs)
-          	          wp->w_doto = offs;
-            	    }
-      }
-      
-      if (wh != -2)
-      { MARK * m;
-        for (m = &wp->mrks.c[NMARKS]; --m >= &wp->mrks.c[0]; ) 
-          if (m->markp == old || wh < 0)
-          { switch (wh)
-            { case -1:
-              case 0: m->markp = new_;
-  			              m->marko = noffs;
-
-		  	      when 1: m->markp = new_;
-        	    	      if (m->marko >= offs)
-  	      		          m->marko += noffs;
-		  	      when 2: if (m->marko >= offs)
-                      { m->markp = new_;
-                        m->marko -= offs;
-                      }
-              otherwise
-                      if (m->marko >= offs)
-                      { m->marko -= noffs;
-                        if (m->marko < offs)
-                          m->marko = offs;
-                      }
-            }
-          }
+    { MARK * m;
+      for (m = &wp->mrks.c[NMARKS];; )
+			{	if (--m < &wp->mrks.c[0]) 
+				{ if (m < (MARK*)wp)
+						break;
+					m = (MARK*)wp;
+				}
+        if (m->markp == old || 
+						m == (MARK*)wp && (LINE*)(wp->w_bufp) == old)	// => wh == -1)
+        {	
+        	if      (wh == 1)
+        	{	m->markp = new_;
+        		if (m->marko >= offs)
+        			m->marko += noffs;
+        	}
+        	else if (wh <= 0)
+        	{ if (wh < 0)
+        		{	wp->w_flag |= (WFHARD|WFMODE);
+        			wp->w_linep = new_;
+        		}
+            m->markp = new_;
+			      m->marko = noffs;
+        	}
+   	      else if (m->marko >= offs)
+	      	 	if      (wh - 2 < 0)
+	      	 		m->marko += noffs;
+	      	 	else if (wh - 2 == 0)
+	  	    	{	m->markp = new_;
+	            m->marko -= offs;
+	          }
+	          else
+	          {	m->marko -= noffs;
+    	        if (m->marko < offs)
+      	       	m->marko = offs;
+	          }
+				}
 			}
     }
     if (wp == (WINDOW*)curbp)
@@ -168,7 +155,7 @@ void Pascal rpl_all(LINE * old, LINE * new_, int wh, int offs, int noffs)
 LINE * Pascal lfree(LINE * lp, int noffs)
 
 { LINE * nlp = lforw(lp);
-  rpl_all(lp, nlp, 0, noffs, noffs);
+  rpl_all(0, noffs, lp, nlp, noffs);
   lback(lp)->l_fp = (Lineptr)nlp;
   nlp->l_bp = lp->l_bp;
 
@@ -186,7 +173,7 @@ int header_scan = 0;
  * if the buffer is displayed in more than 1 window we change EDIT to HARD.
  * Set MODE if the mode line needs to be updated (the "*" has to be set).
  */
-void Pascal lchange(int flag)
+int Pascal lchange(int flag)
 
 {
   if ((curbp->b_flag & BFCHG) == 0)	/* First change, so	*/
@@ -264,9 +251,8 @@ int Pascal lnewline()
     curwp->w_line_no += 1;
   }
 
-  rpl_all(lp1, inslp, 2, doto, 0);
-  lchange(WFHARD);
-  return TRUE;
+  rpl_all(2, 0, lp1, inslp, doto);
+  return lchange(WFHARD);
 }}}
 
 static int g_newlinect = 0;
@@ -297,7 +283,7 @@ int Pascal linsert(int n, char c)
   else
   { LINE * lp = curwp->w_dotp;		/* Current line */
 
-   if (g_overmode &&
+   if (g_overmode > 0 && 
        curwp->w_doto < lp->l_used  &&
 			(lgetc(lp, curwp->w_doto) != '\t' ||
 			(unsigned short)curwp->w_doto % curbp->b_tabsize == (curbp->b_tabsize - 1)))
@@ -345,9 +331,8 @@ int Pascal linsert(int n, char c)
       free((char *) lp);
     }
 
-    rpl_all(lp, newlp, 1, doto, n);
-    lchange(WFEDIT);
-    return TRUE;
+    rpl_all(1, n, lp, newlp, doto);
+    return lchange(WFEDIT);
 	}}
 }}
 
@@ -393,10 +378,10 @@ int Pascal istring(int f, int n)	/* ask for and insert a string into the current
 																	   buffer at the current point */
 { char tstring[NPAT+1];	/* string to add */
 
-	int status = mltreply(stoi_msg[g_overmode], tstring, NPAT);
+	int status = mltreply(stoi_msg[g_overmode & 1], tstring, NPAT);
 											/* "String to insert<META>: " */
 											/* "String to overwrite<META>: " */
-	if (status == TRUE)
+	if (status > FALSE)
 	{	if (f == FALSE)
 		  n = 1;
 
@@ -433,7 +418,8 @@ int Pascal ldelchrs(Int n, int tokill)
 {  if (curbp->b_flag & MDVIEW)     /* don't allow this command if  */
     return rdonly();              /* we are in read only mode     */
 
-  g_inhibit_scan += 1;
+  --g_overmode;
+  ++g_inhibit_scan;
 
 { int res = TRUE;
 /* if (! (curbp->b_flag & BFCHG) && pd_discmd > 0)
@@ -462,7 +448,7 @@ int Pascal ldelchrs(Int n, int tokill)
 
     n -= chunk;
     if (n <= 0)
-      rpl_all(dotp, dotp, 3, doto, chunk);
+      rpl_all(3, chunk, dotp, dotp, doto);
 
     if (tokill)
   	{ char * cp1 = &dotp->l_text[doto];
@@ -493,7 +479,8 @@ int Pascal ldelchrs(Int n, int tokill)
     ClipSet(getkill());
 #endif
   lchange(WFEDIT);
-  g_inhibit_scan -= 1;
+  ++g_overmode;
+  --g_inhibit_scan;
   return res;
 }}
 

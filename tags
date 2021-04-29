@@ -939,7 +939,7 @@ anycb	./src/buffer.c
 append_keys	./src/bind.c
 app_kbdm	./src/input.c
 apro	./src/bind.c
-b	./src/sinc.cpp
+arith	./src/random.c
 b_linep	./mtgdi/estruct.h
 b_linep	./unix/estruct.h
 b_linep	./wincon/estruct.h
@@ -1064,7 +1064,7 @@ ctlxe	./src/main.c
 ctlxlp	./src/main.c
 ctlxrp	./src/main.c
 ctoec	./src/input.c
-ctrlg	./src/main.c
+ctrlg	./src/input.c
 cursor_on_off	./unix/terminal.c
 cursor_on_off	./wincon/msemacs.c
 customise_buf	./src/file.c
@@ -1206,7 +1206,7 @@ getc	./wincon/estruct.h
 getcbuf	./src/input.c
 getccol	./src/random.c
 getckey	./src/bind.c
-getcmd	./src/input.c
+getcmd	./src/bind.c
 getconsoletitle	./wincon/msemacs.c
 getctext	./src/line.c
 getcwd	./src/msdir.c
@@ -1629,6 +1629,7 @@ stock	./src/bind.c
 stol	./src/eval.c
 storemac	./src/exec.c
 storeproc	./src/exec.c
+strcmp_right	./src/char.c
 strdup	./unix/estruct.h
 strdup	./wincon/estruct.h
 strinclude	./src/bind.c
@@ -1684,6 +1685,7 @@ tidyup	./unix/unix.c
 timeset	./unix/unix.c
 timeset	./wincon/oswin.c
 tkn	./src/exec.c
+to_kill_buff	./src/region.c
 toggmode	./src/random.c
 togmod	./src/random.c
 token	./src/exec.c

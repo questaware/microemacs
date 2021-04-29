@@ -220,6 +220,8 @@ int	ctrans[] =		/* ansi to ibm color translation table */
 #define M_BOLD 1
 #define M_REV  2 /* must be 2 */
 
+  int  g_cursor_on = 0;
+
   Char key_bspace;
 
 static short tc_state;
@@ -329,9 +331,9 @@ void ttopen()
 #endif
   putpad(s[0] == 0 ? "\033[m\033[2J" : s);
 
-  if (captbl[K_CSR].p_seq[0] != 0)
-  { putpad(mytgoto(captbl[K_CSR].p_seq, sctop, scbot));
-  }
+{ int top = sctop;
+  sctop = -1;
+  tcapscreg(top, scbot);
  
 #if FTRACE
   if (ftrace != 0) fprintf(ftrace, "K_KICH1: %s\n", captbl[K_KICH1].p_seq); 
@@ -340,7 +342,7 @@ void ttopen()
 
   ttrow = 2;     /* must be in range */
   ttcol = 2;
-}
+}}
 
 
 /**********************************************************************/
@@ -434,7 +436,7 @@ int Pascal get1key(); /* forward */
 */
 
 
-int g_chars_since_shift; /* these do not work in unix */
+int g_chars_since_ctrl; /* these do not work in unix */
 int g_timeout_secs = 0;
 
 int Pascal ttgetc()
@@ -533,10 +535,10 @@ static short kbtl = 0;
 int Pascal get1key()
 
 {
-  register int c;     /* also index into termcap binding table */
-           short skbtl;
-	   char cseq[10];		/* current sequence being parsed */
-	   TBIND * btbl;
+  int c;     /* also index into termcap binding table */
+  short skbtl;
+	char cseq[10];		/* current sequence being parsed */
+	TBIND * btbl;
 
 	bgetk(c);
 	if (c != A_ESC)
@@ -586,41 +588,22 @@ int Pascal get1key()
 	  }
 	}
 
-#if FTRACE
-	if (ftrace != 0)
-		fprintf(ftrace, "MCT %d\n", mct);
-#endif
-
 	for (ix = 1; mct > 0 && ++ix <= 6; )
 	{ bgetk(c);
 	  cseq[ix] = c;
-#if FTRACE
-		if (ftrace != 0)
-		fprintf(ftrace, "STT %c ", c);
-#endif
 	  for (btbl = &keytbl[NTBINDS]; --btbl >= &keytbl[0];)
 		{ if (!btbl->p_name)
 				continue;
-#if FTRACE
-			if (ftrace != 0)
-				fprintf(ftrace, "MM %c %d\n", btbl->p_seq[ix], btbl-&keytbl[0]);
-#endif
+
 			if (btbl->p_seq[ix] != c)
       { btbl->p_name = false;
-#if FTRACE
-				if (ftrace != 0)
-					fprintf(ftrace, "FAILS\n");
-#endif
+
         if (--mct <= 0)
         	break;
 			}
 			else
 			{	if (btbl->p_seq[ix+1] == 0)
 				{ 
-#if FTRACE
-					if (ftrace != 0)
-						fprintf(ftrace, "YES %d\n", btbl->p_code);
-#endif
           return ecco(btbl->p_code);
 				}
 			}
@@ -633,10 +616,12 @@ int Pascal get1key()
 }}}
 
 
+/*
 Bool Pascal cursor_on_off(Bool on)
 
 { return !on;
 }
+*/
 
 static char tgt_res[20];
 
@@ -646,8 +631,8 @@ static char * mytgoto(cmd, p1, p2)
 	int    p1, p2;
 { int stack[8];
   int six = 1;
-  register char * t = &tgt_res[0];
-  register char * s = &cmd[0];
+  char * t = &tgt_res[0];
+  char * s = &cmd[0];
   stack[0] = p2;
   stack[1] = p1;
 
@@ -687,8 +672,7 @@ static char * mytgoto(cmd, p1, p2)
 
 
 
-void tcapmove(row, col)
-      register int row, col;
+void tcapmove(int row, int col)
 {
 #if 1
   if (col == 0 && row == ttrow + 1 && row <= scbot) 
@@ -710,8 +694,7 @@ void tcapmove(row, col)
 
 
 
-void tcapmoveline(row)
-      register int row;
+void tcapmoveline(int row)
 {
 #if 1
   if (row == ttrow + 1 /* && row < scbot*/) 
@@ -728,8 +711,7 @@ void tcapmoveline(row)
 
 
 
-void Pascal tcapscreg(row1, row2)
-      register int row1, row2;
+void Pascal tcapscreg(int row1, int row2)
 {
   if (sctop != row1 || scbot != row2)
   { sctop = row1;
@@ -744,8 +726,8 @@ void Pascal tcapscreg(row1, row2)
 void Pascal tcapsetsize(int width, int length)
 
 { char buf[40];
-  sprintf(buf, "\033[8;%d;%dt", length, width);
-  putpad(buf);
+//sprintf(buf, "\033[8;%d;%dt", length, width);
+  putpad(concat(buf, "\033[8;", int_asc(length),";",int_asc(width),"t",null));
   scbot = length - 2;
 }
 
@@ -806,39 +788,62 @@ void tcapsetfgbg(int chrom)
 
 
 
+typedef union
+{ char   c[12];
+  struct
+  { char prefix[4];
+    struct
+    { char a[8];
+    } rest;
+  }     d;
+} Col_pat;
+
+
 void tcapchrom(short chroms)
 
-{ static char chromattrs[20] = "\033[";
-	static short last_chm;
-				 int tix = 2;
-				 short chm = chroms & 0x7f;	/* background,foreground */
-	if (chm == 0 || (chroms & CHROM_OFF))
-		chm = def_colour;
+{ static Col_pat chromattrs;
+  static short last_chm;
 
-	if (chm != last_chm)
-	{
-		if			(chroms & CHROM_OFF)
-		{ if (last_chm == 0)
-				return;
-			if (last_chm & 8)
-			{ chromattrs[2] = 'm';
-				chromattrs[3] = 0;
-				putpad(chromattrs);
-			}
-		}
+  int tix = 4;
+  short chm = chroms & 0x7f;  /* background,foreground */
+  if (chm == 0 || (chroms & CHROM_OFF))
+    chm = def_colour;
 
-		if (chm & 8)		// bold
-			chromattrs[2] = '4';					// Only underline works
-		else
-		{ sprintf(&chromattrs[2], "4%d;3%d", (chm & 0x70) >> 4, chm & 0x7);
-			tix += 4;
-		}
-		
-		chromattrs[++tix] = 'm';
-		chromattrs[++tix] = 0;
-		putpad(chromattrs);
-		last_chm = chm;
-	}
+  if (chm != last_chm)
+  { Col_pat chroma;
+    chroma.c[2] = '\033';
+    chroma.c[3] = '[';
+    chroma.d.rest = chromattrs.d.rest;
+
+    if      (chroms & CHROM_OFF)
+    { if (last_chm == 0)
+        return;
+      if (last_chm & 8)
+      { chroma.c[4] = 'm';
+        chroma.c[5] = 0;
+        putpad(chroma.c+2);
+      }
+    }
+
+    chroma.c[4] = '4';          // Only underline works
+    if (chm & 8) ;    // bold
+    else
+    { chroma.c[5] = '0' + ((chm & 0x70) >> 4);
+      chroma.c[6] = ';';
+      chroma.c[7] = '3';
+      chroma.c[8] = '0' + (chm & 0x7);
+//    sprintf(&chromattrs[2], "4%d;3%d", (chm & 0x70) >> 4, chm & 0x7);
+//    concat(&chromattrs[3], int_asc((chm & 0x70) >> 4), ";3",
+//                           int_asc(chm & 0x7), null);
+      tix += 4;
+    }
+
+    chroma.c[++tix] = 'm';
+    chroma.c[++tix] = 0;
+    chromattrs.d.rest = chroma.d.rest;
+    last_chm = chm;
+    putpad(chroma.c+2);
+  }
 }
 
 
@@ -858,11 +863,7 @@ void Pascal ttscupdn(int n)
 
 { if (n > 0)					/* reverse */
   { if (captbl[K_CSR].p_seq[0] != 0)
-    { tcapmove(sctop, 0);
-      putpad(captbl[K_RI].p_seq);
-
-      tcapmove(scbot,0);
-	    tcapeeol();
+    { putpad(captbl[K_RI].p_seq);
 			tcapmove(sctop, 0);
     }
     else
@@ -877,8 +878,8 @@ void Pascal ttscupdn(int n)
 #endif
   }
   else						/* forward */
-  { if (captbl[K_CSR].p_seq[0] != 0)
-    { tcapmove(scbot, 0);
+  { if (captbl[K_CSR].p_seq[0] != 0 && 0)
+    { tcapmove(scbot, 0);										// Does not work
       putpad(captbl[K_IND].p_seq);
     }
     else

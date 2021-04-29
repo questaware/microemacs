@@ -161,6 +161,7 @@ abort-command                 abort to the command line
 add-global-mode          M-M  Add colours or modes to the default mode
 add-mode                 ^XM  Add colours or modes to the buffer/window mode
 apropos                  M-A  list commands
+arith                         increment/decrement a number
 backward-character       ^B
                          FNB
 backward-delete-character^H
@@ -488,6 +489,7 @@ $col2ch        Highest palette selector character
                If a character is within the range of the two characters
                above then a colour is selected from $palette
 $curchar       The current character code. &chr $curchar is the current char.
+							 The usage is set $curchar &asc "A".
 $curcol        The current column
 $curline       The Current line number
 $curwidth      The width of the screen
@@ -598,37 +600,37 @@ $zcmd          The last command
   DYNAMIC, RINT, "bxo",   /* bitwise xor   9-10-87  jwm */
   DYNAMIC, RINT, "cat",   /* concatinate string */
   MONAMIC, RINT, "chr",   /* integer to char conversion */
-  DYNAMIC, RINT, "dir", /* replace tail of filename with filename */
-  NILNAMIC, RINT, "dit",  /* the character in the line above */
+  DYNAMIC, RINT, "dir",		/* replace tail of filename with filename */
+  NILNAMIC,RINT, "dit",   /* the character in the line above */
   DYNAMIC, RINT, "div",   /* division */
   MONAMIC, RINT, "env",   /* retrieve a system environment var */
   DYNAMIC, RSTR, "equ",   /* logical equality check */
   MONAMIC, RSTR, "exi",   /* check if a file exists */
   MONAMIC, RINT, "fin",   /* look for a file on the path... */
   DYNAMIC, RSTR, "gre",   /* logical greater than */
-  NILNAMIC, RINT, "gtc",  /* get 1 emacs command */
-  NILNAMIC, RINT, "gtk",  /* get 1 charater */
+  NILNAMIC,RINT, "gtc",   /* get 1 emacs command */
+  NILNAMIC,RINT, "gtk",   /* get 1 charater */
   MONAMIC, RINT, "ind",   /* evaluate indirect value */
   DYNAMIC, RINT, "lef",   /* left string(string, len) */
   MONAMIC, RINT, "len",   /* string length */
   DYNAMIC, RSTR, "les",   /* logical less than */
   MONAMIC, RINT, "low",   /* lower case string */
-  TRINAMIC, RINT, "mid",  /* mid string(string, pos, len) */
+  TRINAMIC,RINT, "mid",   /* mid string(string, pos, len) */
   DYNAMIC, RINT, "mod",   /* mod */
   MONAMIC, RINT, "neg",   /* negate */
   MONAMIC, RSTR, "not",   /* logical not */
-  DYNAMIC, RSTR, "or",  /* logical or */
+  DYNAMIC, RSTR, "or",  	/* logical or */
   DYNAMIC, RINT, "rig",   /* right string(string, pos) */
   MONAMIC, RINT, "rnd",   /* get a random number */
   DYNAMIC, RSTR, "seq",   /* string logical equality check */
   DYNAMIC, RSTR, "sgr",   /* string logical greater than */
   DYNAMIC, RINT, "sin",   /* find the index of one string in another */
   DYNAMIC, RSTR, "sle",   /* string logical less than */
-  DYNAMIC, RINT, "slo", /* set lower to upper char translation */
+  DYNAMIC, RINT, "slo", 	/* set lower to upper char translation */
   DYNAMIC, RINT, "sub",   /* subtraction */
-  DYNAMIC, RINT, "sup", /* set upper to lower char translation */
+  DYNAMIC, RINT, "sup", 	/* set upper to lower char translation */
   DYNAMIC, RINT, "tim",   /* multiplication */
-  MONAMIC, RINT, "tri", /* trim whitespace off the end of a string */
+  MONAMIC, RINT, "tri", 	/* trim whitespace off the end of a string */
   MONAMIC, RINT, "upp",   /* uppercase string */
-  TRINAMIC,RINT, "xla", /* XLATE character string translation */
+  TRINAMIC,RINT, "xla", 	/* XLATE character string translation */
 

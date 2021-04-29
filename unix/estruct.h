@@ -261,9 +261,9 @@ union REGS {
 #define malloc	allocate
 #define strdup  duplicate
 #define free	release
-#define aalloc(x) callocate(x)
+#define aalloc(x) mallocz(x)
 #else
-#define aalloc(x) calloc(((x)+SIZEOF_PTR-1)/SIZEOF_PTR, SIZEOF_PTR)
+#define aalloc(x) mallocz(((x)+SIZEOF_PTR-1)/SIZEOF_PTR, SIZEOF_PTR)
 #endif
 
 

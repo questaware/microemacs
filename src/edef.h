@@ -46,9 +46,9 @@ extern char nulls[];
 #define false 0
 #define true  1
 
+#define ABORT	-1	/* ^G, abort, etc.	*/
 #define FALSE	 0
 #define TRUE	 1
-#define ABORT	 2	/* ^G, abort, etc.	*/
 
 	 /* order is important */
 #define	PLAY   (-1)	/*		  playing	*/
@@ -172,101 +172,7 @@ extern char nulls[];
 
 #endif
 
-typedef struct
-{ struct LINE * curline;
-  int		        curoff;
-  unsigned int  line_no;
-} Lpos_t;
-
-typedef struct MARK
-{ struct LINE *markp;	/* Line containing "mark"	*/
-  int	         marko;	/* Byte offset for "mark"	*/
-} MARK;
-
-typedef struct MARKS
-{ struct MARK c[NMARKS];	
-}    MARKS;
-
-
-/*
- * There is a window structure allocated for every active display window. The
- * windows are kept in a big list, in top to bottom screen order, with the
- * listhead at "wheadp". Each window contains its own values of dot and mark.
- * The flag field contains some bits that are set by commands to guide
- * redisplay. Although this is a bit of a compromise in terms of decoupling,
- * the full blown redisplay is just too expensive to run for every input
- * character.
- */
-typedef struct	WINDOW
-{	struct	LINE *w_dotp;			/* Line containing "."		*/
-	int	          w_doto;
-	unsigned int  w_line_no;	/* Lpos_t isomorphism ends      */
-  struct  MARKS mrks;
-	struct	WINDOW *w_wndp; 	/* Next window			*/ /* isomorphism ends */
-	struct	LINE *w_linep;		/* Top line in the window	*/
-	struct	BUFFER *w_bufp; 	/* Buffer displayed in window	*/
-	char	w_toprow;		/* Origin 0 top row of window	*/
-	char	w_ntrows;		/* # of rows in window inc MLine*/
-	char	w_force;		/* If NZ, forcing row. */
-	char	w_flag; 		/* Flags.			*/
-#if	0
-	int   w_color;		/* current colors		*/
-#endif
-	int		w_fcol; 		/* first column displayed	*/
-}	WINDOW;
-
-
-typedef char * CRYPTKEY;
-
-/* Text is kept in buffers. A buffer header, described below, exists for every
- * buffer in the system. The buffers are kept in a big list, so that commands
- * that search for a buffer by name can find the buffer header. There is a
- * safe store for the dot and mark in the header, but this is only valid if
- * the buffer is not being displayed (that is, if "b_nwnd" is 0). The text for
- * the buffer is kept in a circularly linked list of lines, with a pointer to
- * the header line in "b_linep"	Buffers may be "Inactive" which means the files associated with them
- * have not been read in yet. These get read in at "use buffer" time.
- */
-typedef struct	BUFFER
-{	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
-	int	  				b_doto; 		/* offset of "."; isomorphism ends */
-	struct	LINE *b_baseline;	/* Link to the header LINE	*/
-  struct  MARKS mrks;
-	struct	BUFFER *b_bufp; 	/* Link to next BUFFER		*/
-	struct	LINE *b_wlinep;		/* Link top LINE in last window */
-	struct	LINE *b_narlims[2];/* Link to narrowed top, bottom text */
-	char    			b_langprops;/* type of language of contents */
-  signed char		b_nwnd; 		/* Count of windows on buffer	*/
-	short	  			b_flag; 		/* Flags and modes  */
-	short   			b_luct;			/* last use count		*/ 
-	unsigned char b_mode;	    /* Flags and modes (extra) */
-	unsigned char b_tabsize;	/* size of hard tab		*/
-#if	COLOR
-	int   	b_color;					/* current colors		*/
-#endif
-#if	CRYPT
-	CRYPTKEY b_key;
-#endif
-	char *  b_fname;					/* malloc'd and owned by BUFFER */
-	char *	b_remote;					/* remote command 		*/
-	char	  b_bname[1]; 			/* Buffer name			*/
-}	BUFFER;
-				/* for compatibility: */
-#define b_linep b_baseline
-
-/*
- * The starting position of a region, and the size of the region in
- * characters, is kept in a region structure.  Used by the region commands.
- */
-typedef struct	{
-	struct	LINE *r_linep;		/* Origin LINE address. 	*/
-	short	r_offset;		/* Origin LINE offset.		*/
-	long	r_size; 		/* Length in characters.	*/
-	int	r_lines;		/* number of lines in the buffer*/
-}	REGION;
-
-/*
- * All text is kept in circularly linked lists of "LINE" structures. These
+/* All text is kept in circularly linked lists of "LINE" structures. These
  * begin at the header line (which is the blank line beyond the end of the
  * buffer). This line is pointed to by the "BUFFER". Each line contains a the
  * number of bytes in the line (the "used" size), the size of the text array,
@@ -294,8 +200,110 @@ typedef struct	LINE {
 
 #define Lineptr		struct LINE *  
 
+
+typedef struct
+{ struct LINE * curline;
+  int		        curoff;
+  unsigned int  line_no;
+} Lpos_t;
+
+typedef struct MARK
+{ struct LINE *markp;	/* Line containing "mark"	*/
+  int	         marko;	/* Byte offset for "mark"	*/
+} MARK;
+
+typedef struct MARKS
+{ struct MARK c[NMARKS];	
+} MARKS;
+
+
 /*
- * The editor communicates with the display using a high level interface. A
+ * There is a window structure allocated for every active display window. The
+ * windows are kept in a big list, in top to bottom screen order, with the
+ * listhead at "wheadp". Each window contains its own values of dot and mark.
+ * The flag field contains some bits that are set by commands to guide
+ * redisplay. Although this is a bit of a compromise in terms of decoupling,
+ * the full blown redisplay is just too expensive to run for every input
+ * character.
+ */
+typedef struct	WINDOW
+{	struct	LINE *w_dotp;			/* Line containing "."		*/
+	int	          w_doto;
+	unsigned int  w_line_no;	/* Lpos_t isomorphism ends      */
+  struct  MARKS mrks;
+	struct	LINE *w_linep;		/* Top line in the window	*/
+	struct	WINDOW *w_next; 	/* Next window			*/
+	struct	BUFFER *w_bufp; 	/* Buffer displayed in window	*/
+	char	w_toprow;		/* Origin 0 top row of window	*/
+	char	w_ntrows;		/* # of rows in window inc MLine*/
+	char	w_force;		/* If NZ, forcing row. */
+	char	w_flag; 		/* Flags.			*/
+#if	0
+	int   w_color;		/* current colors		*/
+#endif
+	int		w_fcol; 		/* first column displayed	*/
+}	WINDOW;
+
+
+typedef char * CRYPTKEY;
+
+/* Text is kept in buffers. A buffer header, described below, exists for every
+ * buffer in the system. The buffers are kept in a big list, so that commands
+ * that search for a buffer by name can find the buffer header. There is a
+ * safe store for the dot and mark in the header, but this is only valid if
+ * the buffer is not being displayed (that is, if "b_nwnd" is 0). The text for
+ * the buffer is kept in a circularly linked list of lines, with a pointer to
+ * the header line in "b_linep"	Buffers may be "Inactive" which means the files associated with them
+ * have not been read in yet. These get read in at "use buffer" time.
+ */
+typedef struct	BUFFER
+{	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
+	int	  				b_doto; 		/* offset of "."; isomorphism to MARK ends */
+	int						b_spare;
+  struct  MARKS mrks;
+	struct	LINE *b_wlinep;		/* top LINE in last window */
+	struct	BUFFER *b_next; 	/* next BUFFER		*/   /* isomorphism ends */
+	struct	LINE  b_baseline;	/* the header LINE	*/
+	struct	LINE *b_narlims[2];/*narrowed top, bottom text */
+	char    			b_langprops;/* type of language of contents */
+  signed char		b_nwnd; 		/* Count of windows on buffer	*/
+	short	  			b_flag; 		/* Flags and modes  */
+	short   			b_luct;			/* last use count		*/ 
+	unsigned char b_mode;	    /* Flags and modes (extra) */
+	unsigned char b_tabsize;	/* size of hard tab		*/
+#if	COLOR
+	int   	b_color;					/* current colors		*/
+#endif
+#if	CRYPT
+	CRYPTKEY b_key;
+#endif
+	char *  b_fname;					/* malloc'd and owned by BUFFER */
+	char *	b_remote;					/* remote command 		*/
+	char	  b_bname[1]; 			/* Buffer name			*/
+}	BUFFER;
+				/* for compatibility: */
+
+typedef struct	WUFFER
+{	struct	LINE *w_dotp;			/* Line containing "."		*/
+	int	          w_doto;
+	unsigned int  w_line_no;	/* Lpos_t isomorphism ends      */
+  struct  MARKS mrks;
+	struct	LINE *w_linep;		/* Top line in the window	*/
+//struct	WINDOW *w_next; 	/* Next window			*/
+} WUFFER;
+
+/*
+ * The starting position of a region, and the size of the region in
+ * characters, is kept in a region structure.  Used by the region commands.
+ */
+typedef struct	{
+	struct	LINE *r_linep;		/* Origin LINE address. 	*/
+	short	r_offset;		/* Origin LINE offset.		*/
+	long	r_size; 		/* Length in characters.	*/
+	int	r_lines;		/* number of lines in the buffer*/
+}	REGION;
+
+/* The editor communicates with the display using a high level interface. A
  * "TERM" structure holds useful variables, and indirect pointers to routines
  * that do useful operations. The low level get and put routines are here too.
  * This lets a terminal, in addition to having non standard commands, have
@@ -342,6 +350,13 @@ typedef struct KILL {
 	struct KILL *d_next;   /* link to next chunk, NULL if last */
 	char d_chunk[KBLOCK];	/* deleted text */
 } KILL;
+
+#define MLIX 3
+
+typedef struct LL
+{	int  ll_ix;						// = MLIX;
+	char lastline[MLIX+1][NSTRING];
+} LL;
 
 typedef struct Paren_s
 { 
@@ -434,14 +449,15 @@ NOSHARE extern BUFFER *curbp; 		/* Current buffer		*/
 NOSHARE extern WINDOW *wheadp;		/* Head of list of windows	*/
 NOSHARE extern BUFFER *bheadp;		/* Head of list of buffers	*/
 NOSHARE extern BUFFER *blistp;		/* Buffer for C-X C-B		*/
+NOSHARE extern LL	g_ll;
 
 #if	DIACRIT
 NOSHARE	extern char lowcase[HICHAR];	/* lower casing map		*/
 NOSHARE	extern char upcase[HICHAR];	/* upper casing map		*/
 #endif
 
-        extern char pat[NPAT+10];	/* Search pattern		*/
-NOSHARE extern char rpat[NPAT+10];	/* replacement pattern		*/
+        extern char pat[NPAT+2];	/* Search pattern		*/
+NOSHARE extern char rpat[NPAT+2];	/* replacement pattern		*/
 
 				extern char *g_file_prof;	/* profiles of files */
 

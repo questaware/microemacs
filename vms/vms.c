@@ -749,7 +749,7 @@ X 		if (wp->w_bufp == bp) {
 X 			onlywind(FALSE, 1);
 X 			break;
 X 		}
-X 		wp = wp->w_wndp;
+X 		wp = wp->w_next;
 X 	}
 X 	if (zotbuf(bp) != TRUE)
 X		 	return FALSE;
@@ -783,7 +783,7 @@ X wp = wheadp;
 X while (wp != NULL) 
 X {
 X 	wp->w_flag |= WFMODE;
-X 	wp = wp->w_wndp;
+X 	wp = wp->w_next;
 X }
 XX 	 /* and get rid of the temporary file */
 X	delete(filnam);
@@ -884,7 +884,7 @@ int pipecmd(int f, int n)
 	bp = bfind(bname, FALSE, 0);
 	if (bp != FALSE) 
 	{ 	/* try to make sure we are off screen */
-		for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
+		for (wp = wheadp; wp != NULL; wp = wp->w_next)
 			if (wp->w_bufp == bp)
 			{ onlywind(FALSE, 1);
 				break;

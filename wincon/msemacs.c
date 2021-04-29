@@ -63,33 +63,24 @@ int init_wincon()
 }
 
 
-int Pascal tcapbeeol(int row, int col) /* erase to eol or whole page */
+void Pascal tcapeeol()
 
-{ DWORD     Dummy;
-  int sz = csbiInfo.dwSize.X-col;
-	if (row < 0)
-	{ row = 0;
-	  sz *= csbiInfo.dwSize.Y;
-	}
 { COORD     Coords;
-  Coords.Y = row;
-  Coords.X = col;
+  Coords.Y = ttrow;
+  Coords.X = ttcol;
+{ int sz = csbiInfo.dwSize.X-ttcol;
+	DWORD     Dummy;
   
   FillConsoleOutputCharacter(g_ConsOut, ' ',sz,Coords,&Dummy );
   return OK;
 }}
 
-
-void Pascal tcapeeol()
-
-{ tcapbeeol(ttrow, ttcol);
-}
-
-
+/*
 void Pascal tcapepage()
 
 { tcapbeeol(-1,0);
 }
+*/
 
 
 #if 0
@@ -151,20 +142,17 @@ wchar_t * char_to_wchar(char const * src, int sz, wchar_t * tgt)
 
 
 
+#if VS_CHAR8 == 0
+
 void Pascal setconsoletitle(char * title)
 
 {
-#if VS_CHAR8
-#define txt title
-#else
-#define txt buf
 	wchar_t buf[100];
 	swprintf(buf, 100, L"%S", title == null ? "" : title);
-#endif
-  SetConsoleTitle( title == NULL ? "" : txt);
-#undef txt
+  SetConsoleTitle(buf);
 }
 
+#endif
 
 // char * Pascal getconsoletitle()
 
@@ -220,19 +208,18 @@ void Pascal tcapsetsize(int wid, int dpth)
 #endif
 }}}
 
-
-static Bool  g_cursor_on = true;
+			 int   g_cursor_on = 0;
 static COORD g_oldcur;
 static WORD  g_oldattr = BG_GREY;
 
 
-
+/*
 Bool Pascal cursor_on_off(Bool on)
 
 { Bool res = g_cursor_on;
   g_cursor_on = on;
   return res;
-}
+}*/
 
 
 void Pascal tcapmove(int row, int col)
@@ -253,7 +240,7 @@ void Pascal tcapmove(int row, int col)
   ttcol = col;
   Coords.X = ttcol;
 
-  if (g_cursor_on)
+  if (g_cursor_on >= 0)
   { WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
     WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );
 

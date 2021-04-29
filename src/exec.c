@@ -55,26 +55,22 @@ void logstr(char * str)
 
 #endif
 
+static
 BUFFER * Pascal bmfind(int create, int n)
 
 { char ebuffer[NBUFN+1];
+	strcpy(ebuffer, "[Macro xx");
   																			/* make the buffer name */
 	if (n > 0)					
-	{ strcpy(ebuffer, "[Macro xx");
-	  ebuffer[7] = '0' + (n / 10);
+	{ ebuffer[7] = '0' + (n / 10);
 	  ebuffer[8] = '0' + (n % 10);
 	}
-	else
+	else /* n is 0 or -1 */
 	{																				/* find buffer user wants to execute */
 		int cc = mlreply(n ? TEXT115 : TEXT117, &ebuffer[-n], NBUFN);
 											/* "Execute procedure: " */
-		if (cc != TRUE)
+		if (cc <= FALSE)
 		  return NULL;
-
-		if (n)
-		{ ebuffer[0] = '[';			/* construct the buffer name */
-	  	
-		}
 	}
 					/* find the pointer to that buffer */
 	return bfind(strcat(ebuffer, "]"), create, n <= 0 ? 0 : BFINVS);
@@ -156,7 +152,7 @@ int Pascal docmd(char * cline)
 	g_thisflag = 0;
 
 	cc = macarg(tkn);
-	if (cc == TRUE)
+	if (cc > FALSE)
 		if (*(tkn) < 'A')
 		{ f = TRUE;
 		  n = atoi(getval(tkn, tkn));
@@ -164,7 +160,7 @@ int Pascal docmd(char * cline)
 		  cc = macarg(tkn);
 		}  
 
-	if (cc == TRUE)
+	if (cc > FALSE)
 	{	fnc = fncmatch(tkn);					/* and match the token to see if it exists */
 		if (fnc != NULL)
 		{ 
@@ -201,7 +197,7 @@ int Pascal execcmd(int f, int n)
 	char cmdnm[NSTRING];		/* string holding command to execute */
 						      /* get the line wanted */
 	int cc = mlreply(": ", cmdnm, NSTRING);
-	if (cc != TRUE)
+	if (cc > FALSE)
 	  return cc;
 
 	g_execlevel = 0;
@@ -336,9 +332,9 @@ int Pascal storeproc(int f, int n)
 																							/* get the name of the procedure */
 {	int cc = mlreply(TEXT114, &bname[1], NBUFN-2);
 								/* "Procedure name: " */
-	return cc != TRUE ? cc
+	return cc <= FALSE ? cc
 																							/* set up the new macro buffer */
-				 						: common_return(bfind(strcat(bname, "]"), TRUE, BFINVS));
+				 						 : common_return(bfind(strcat(bname, "]"), TRUE, BFINVS));
 }}
 
 #endif
@@ -428,7 +424,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	g_dobuf = bp;
 	g_univct = iter;
 
-  while (--iter >= 0 && cc == TRUE)
+  while (--iter >= 0 && cc > FALSE)
 	{ LINE *lp;						/* pointer to line to execute */
 		int dirnum;					/* directive index */
 		char *ebuf = smalleline;	/* initial value of eline */
@@ -442,7 +438,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 		int nest_level = 0;
 		g_execlevel = 0;		/* clear IF level flags/while ptr */
 
-		for (lp = bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; ) 
+		for (lp = &bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; ) 
 		{ 					   													/* scan the current line */
 																						/* trim leading whitespace */
 		  eline = skipleadsp(lp->l_text, lp->l_used);
@@ -493,7 +489,7 @@ failexit:
 								/* let the first command inherit the flags from the last one..*/
 		g_thisflag = g_lastflag;
 																	/* starting at the beginning of the buffer */
-		lp = bp->b_baseline; 
+		lp = &bp->b_baseline; 
 		while (1)
 		{	if (msg != NULL)
 			{ mlwrite(msg);
@@ -503,7 +499,7 @@ failexit:
 			if (ebuf != smalleline)
 		    free(ebuf);
 
-	    if (eexitflag || cc != TRUE ||
+	    if (eexitflag || cc <= FALSE ||
 				  ((lp = lforw(lp))->l_props & L_IS_HD) != 0)
 				break;
 																	/* allocate eline and copy macro line to it */
@@ -557,7 +553,7 @@ failexit:
 		      continue;
 		    }
 																		/* attach the line to the end of the buffer */
-        ibefore(g_bstore->b_baseline, mp);
+        ibefore(&g_bstore->b_baseline, mp);
 		    continue;
 		  }
 																		/* now, execute directives */
@@ -582,7 +578,7 @@ failexit:
 						{ g_execstr = eline;
 							cc = macarg(tkn);
 							g_execstr = s_execstr;
-							if (cc != TRUE || stol(tkn))
+							if (cc <= FALSE || stol(tkn))
 								continue;
 																							/* expression evaluated false */
 						  if (dirnum == DIF)
@@ -628,7 +624,7 @@ failexit:
 						//eline = g_execstr
 							g_execstr = s_execstr;
 						  
-						  for (lp = bp->b_baseline; 
+						  for (lp = &bp->b_baseline; 
 						      ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
 						    if (*lp->l_text == '*' &&
 										strcmp_right(&lp->l_text[1],golabel) == 0)
@@ -660,7 +656,7 @@ failexit:
 						continue;
 					when DENDM:
 		    		if (g_bstore != NULL)
-		    		{ g_bstore->b_dotp = lforw(g_bstore->b_baseline);
+		    		{ g_bstore->b_dotp = lforw(&g_bstore->b_baseline);
 				    	g_bstore = NULL;
 				    }
 		  	    continue;
@@ -673,10 +669,10 @@ failexit:
 			  if (dirnum == DFORCE)	/* FORCE directive */
 			    cc = TRUE;
 																							/* check for a command error */
-			  if (cc != TRUE)
-			  {	rpl_all((LINE*)bp, lp, -2, 0, 0);		/* point window(s) at line */
+			  if (cc <= FALSE)
+			  {	rpl_all(-1, 0, (LINE*)bp, lp, 0);		/* point window(s) at line */
 #if 0
-			    for (wp = wheadp; wp != NULL; wp = wp->w_wndp)
+			    for (wp = wheadp; wp != NULL; wp = wp->w_next)
 			      if (wp->w_bufp == bp)	     /* and point it */
 			      { wp->w_dotp = lp;
 							wp->w_doto = 0;
@@ -825,11 +821,11 @@ static int Pascal dofile(const char * fname)
 				                  		/* and try to read in the file to execute */
 { Cc cc = readin(fname, 0);
   curbp = scb;								/* restore the current buffer */
-  if (cc != TRUE)
+  if (cc <= FALSE)
     return cc;
 							/* go execute it! */
   cc = dobuf(dfb,1);
-  if (cc == TRUE &&
+  if (cc > FALSE &&
       dfb->b_nwnd == 0)
             		    /* not displayed, remove the now unneeded buffer and exit */
   { zotbuf(dfb);
