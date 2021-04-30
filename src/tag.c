@@ -20,15 +20,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-/*
- * Created:     Unknown
- * Synopsis:    Find tag positions.
- * Authors:     Mike Rendell of ROOT Computers Ltd, Jon Green & Steven Phillips.
- * Description:
- *     Find tags from a tag file. Requires a 'tags' file listing all defined
- *     tgas in the form:
- *         tag<tab>file<tab>search-pattern
- */
 
 #define	__TAGC			/* Define filename */
 
@@ -153,21 +144,24 @@ static int get_to_newline(char * buf, FILE * fp)
 
 {	char ch;
 	char * ln = fgets(buf, TAGBUFFSZ-1, fp);
-	if (ln != NULL && ln[0])
-		while ((ch = *++ln) != 0)
-		  if (ch <= '\r')				// TAB, CR, LF
-			*ln = 0;
+	if (ln == NULL || ln[0] == 0)
+		return 0;
+	while ((ch = *++ln) != 0)
+	  if (ch <= '\r')				// TAB, CR, LF
+		*ln = 0;
 
 	return ln - buf;
 }
 
-
 #if MEOPT_TAGS || STANDALONE
-
+							// A challenge with this code is to reduce the
+							// number of get_to_newline invocation points
 #define TAG_MIN_LINE 6
 static int	  g_taglastClamp;
 static int    g_tagLastStart = 0;
 static char * g_tagLastName = NULL;
+
+#define LOOK_BACK 2048
 
 /* findTagInFile
  * 
@@ -185,54 +179,70 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
   if (fp == NULL)
     return 2 ;
 
-{ int last_pos = 1;
-  int fd_cc = 1;
+{ int fd_cc = 1;
   int start = *stt_ref;			/* points after newline */
   int end = start;
   int pos = start;
   int seq = start;				/* < 0 : chop, 0 : never, > 0 fseek to here */
-  if (start < 0)
-  { start = 0;
-	fseek(fp, 0L, 2);
-    end = ftell(fp);			/* points after newline */
-  }
-
-  do
-  { if (seq < 0)
-  	{ pos = (start+end) >> 1;
-	  fseek(fp, pos, 0);
-		
-      if (end > start)
-	  {	int got = get_to_newline(tagline, fp);	/* read part line */
-		pos += got;
-	  }
-	
-  	  if (last_pos == pos)		/* converged */
-	  { pos = start;
-  	    seq = pos;
-	  }
-	  last_pos = pos;
-  	}
-  	if (seq > 0)
-	{ fseek(fp, seq, 0);
-	  seq = 0;
-	}
-	  											     /* Get line of info */
+  if (seq >= 0)
+  { if (seq > 0)
+	  fseek(fp, seq, 0);
+	tagline[0] = 0;
   { int got = get_to_newline(tagline, fp);
-	pos += got;
+    pos += got;
+    *stt_ref = pos;					/* point after newline */
+	if (got)
+      fd_cc = strcmp(key, tagline);
+  }}
+  else
+  {	start = 0;
+	fseek(fp, 0L, 2);
+    end = ftell(fp);						/* points after newline */
+  
+    do
+  	{ if (seq < 0)
+	  { pos = (start+end) >> 1;
+	    fseek(fp, pos, 0);
+		
+	  { int got = get_to_newline(tagline, fp);	/* read part line */
+		pos += got;
+  	  }}
+	  											/* Get line of info */
+    { int got = get_to_newline(tagline, fp);
+	  pos += got;
 
-    fd_cc = strcmp(key, tagline);
-	if 		(fd_cc > 0)					/* forward */
-	  start = pos;
-	else if (fd_cc < 0)					/* backward */
-	  end = pos - got;
-	else
-	{ end = pos;
-	  *stt_ref = pos;					/* point after newline */
-	  if (seq >= 0)
-	  	break;
-	}
-  }} while (start <= end);
+      fd_cc = got == 0 ? 0 : strcmp(key, tagline);
+	  if 		(fd_cc > 0)					/* forward */
+	    start = pos;
+	  else if (fd_cc < 0)					/* backward */
+	  { end = pos - got;
+	    if (seq >= 0)
+	  	  break;
+	  }
+	  else
+	  { end = pos;
+	    *stt_ref = pos;							/* point after newline */
+	    if (seq >= 0)
+	  	  break;
+
+	    seq = pos;								/* No more seeking */
+
+		while (1)
+		{ seq =- LOOK_BACK;
+		  if (seq < 0)
+		    seq = 0;
+	  	  fseek(fp, seq, 0);
+		  if (seq > 0)
+		  { seq += get_to_newline(tagline, fp);	/* read part line */
+		  { int g = get_to_newline(tagline, fp);/* read next line */
+			if (g > 0 && strcmp(key, tagline) == 0)
+			  continue;
+		  }}
+		  break;									/* at 0 or before target */
+		}
+	  }
+    }} while (1);
+  }
 
   fclose(fp);
   return fd_cc;
@@ -407,8 +417,19 @@ findTag(int f, int n)
         		mkul(1, tag);
     }}
 
-    return findTagExec(tag);
-}
+{	int res = findTagExec(tag);
+	if (!res)
+	{	char * s = tag - 1;
+		char ch;
+		while ((ch = *++s) != 0 && ch != ':')
+			;
+		if (ch != 0)
+		{	*s = 0;
+			res = findTagExec(tag);
+		}
+	}
+	return res;
+}}
 
 #if STANDALONE
 
