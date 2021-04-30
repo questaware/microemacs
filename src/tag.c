@@ -195,7 +195,8 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
       fd_cc = strcmp(key, tagline);
   }}
   else
-  {	start = 0;
+  {	int last_pos = -1;
+	start = 0;
 	fseek(fp, 0L, 2);
     end = ftell(fp);						/* points after newline */
   
@@ -211,11 +212,16 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
     { int got = get_to_newline(tagline, fp);
 	  pos += got;
 
-      fd_cc = got == 0 ? 0 : strcmp(key, tagline);
+	  
+		
+
+      fd_cc = got == 0 					 ? 0 : 
+			  last_pos == pos && seq < 0 ? 0 : strcmp(key, tagline);
 	  if 		(fd_cc > 0)					/* forward */
 	    start = pos;
 	  else if (fd_cc < 0)					/* backward */
-	  { end = pos - got;
+	  { last_pos = pos;
+		end = pos - got;
 	    if (seq >= 0)
 	  	  break;
 	  }
