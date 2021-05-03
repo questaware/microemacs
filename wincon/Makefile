@@ -6,7 +6,6 @@ ifneq ($(DEBUG),1)
 
 CPP=cl.exe
 CPP_PROJ=/nologo /W3 /O1 /Os /Og /Oy /GF /Gs9192 $(C_FLG) /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "NDEBUG" /D "_CONSOLE" /c 
-RSC=rc.exe
 
 LINK32=link
 LINK32_FLAGS=/nologo /map /stack:0xc000 /out:
@@ -16,8 +15,7 @@ else
 
 CPP=cl.exe
 #CPP_PROJ=/nologo /Yd /W3 /Zi /MDd /Od /I "../src" /D "WIN32_LEAN_AND_MEAN" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FD /c 
-CPP_PROJ=/nologo /YX /Yd /W3 /Zi /MDd /Od /I "../src" /D WIN32_LEAN_AND_MEAN /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /c 
-RSC=rc.exe
+CPP_PROJ=/nologo /YX /Yd /W3 /Zi /MDd /Od /D WIN32_LEAN_AND_MEAN /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /c 
 LINK32=link
 LINK32_FLAGS=/nologo /debug /out:
 

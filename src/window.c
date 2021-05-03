@@ -67,12 +67,14 @@ int Pascal openwindbuf(char * bname)
   if (splitwind(FALSE, 1) == FALSE)
     return FALSE;
 					        
+	curbp->b_nwnd -= 1;
   curbp = bfind(bname, TRUE, 0);		/* and get a buffer for it */
   if (curbp == NULL)
     return FALSE;
 
   if (bclear(curbp))
-  { leavewind(curwp, 0);
+  { 
+		leavewind(curwp, 0);
     openwind(curwp);
   
     curbp->b_flag &= ~MDVIEW;

@@ -27,7 +27,8 @@
 #include <stdlib.h>
 #pragma warning(disable : 4996)
 
-
+extern "C"
+{
 #define STANDALONE 0
 
 #if STANDALONE == 0
@@ -136,32 +137,52 @@ char * pathcat(char * t, int bufsz, char * dir, char * file)
 }
 										/* end test rig */
 #endif
+}
 
+#if MEOPT_TAGS || STANDALONE
 
 #define TAGBUFFSZ 1024
 
-static int get_to_newline(char * buf, FILE * fp)
+class Tag
+{
+#define LOOK_BACK 2048
+#define TAG_MIN_LINE 6
+	static int	  g_lastClamp;
+	static int    g_LastStart;
+	static char * g_LastName;
+	static char * g_tagline;
+	static char * g_tagfile;
+
+	static FILE * g_fp;
+
+	static int get_to_newline(void);
+	static int findTagInFile(const char *key);
+ public:
+	static int findTagExec(const char key[]);
+};
+
+int	  Tag::g_lastClamp;
+int   Tag::g_LastStart = 0;
+char *Tag::g_LastName = NULL;
+char *Tag::g_tagline;
+char *Tag::g_tagfile;
+
+FILE *Tag::g_fp;
+
+int Tag::get_to_newline(void)
 
 {	char ch;
-	char * ln = fgets(buf, TAGBUFFSZ-1, fp);
+	char * ln = fgets(g_tagline, TAGBUFFSZ-1, g_fp);
 	if (ln == NULL || ln[0] == 0)
 		return 0;
 	while ((ch = *++ln) != 0)
 	  if (ch <= '\r')				// TAB, CR, LF
 		*ln = 0;
 
-	return ln - buf;
+	return ln - g_tagline;
 }
-
-#if MEOPT_TAGS || STANDALONE
 							// A challenge with this code is to reduce the
 							// number of get_to_newline invocation points
-#define TAG_MIN_LINE 6
-static int	  g_taglastClamp;
-static int    g_tagLastStart = 0;
-static char * g_tagLastName = NULL;
-
-#define LOOK_BACK 2048
 
 /* findTagInFile
  * 
@@ -172,25 +193,25 @@ static char * g_tagLastName = NULL;
  *    1 - Found tag file but not tag
  *    2 - Found nothing
  */
-static int
-findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
+int Tag::findTagInFile(const char *key)
 
-{ FILE * fp = fopen((char *)tags, "rb");
+{ FILE * fp = g_fp = fopen(g_tagfile, "rb");
   if (fp == NULL)
     return 2 ;
 
 { int fd_cc = 1;
-  int start = *stt_ref;			/* points after newline */
+  char * tagline = Tag::g_tagline;
+  int start = Tag::g_LastStart;			/* points after newline */
   int end = start;
   int pos = start;
   int seq = start;				/* < 0 : chop, 0 : never, > 0 fseek to here */
   if (seq >= 0)
   { if (seq > 0)
 	  fseek(fp, seq, 0);
-	tagline[0] = 0;
-  { int got = get_to_newline(tagline, fp);
+
+  { int got = get_to_newline();
     pos += got;
-    *stt_ref = pos;					/* point after newline */
+//  Tag::g_LastStart = pos;					/* point after newline */
 	if (got)
       fd_cc = strcmp(key, tagline);
   }}
@@ -204,17 +225,12 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
   	{ if (seq < 0)
 	  { pos = (start+end) >> 1;
 	    fseek(fp, pos, 0);
-		
-	  { int got = get_to_newline(tagline, fp);	/* read part line */
+	  { int got = get_to_newline();
 		pos += got;
-  	  }}
+	  }}
 	  											/* Get line of info */
-    { int got = get_to_newline(tagline, fp);
+    { int got = get_to_newline();
 	  pos += got;
-
-	  
-		
-
       fd_cc = got == 0 					 ? 0 : 
 			  last_pos == pos && seq < 0 ? 0 : strcmp(key, tagline);
 	  if 		(fd_cc > 0)					/* forward */
@@ -226,11 +242,11 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 	  	  break;
 	  }
 	  else
-	  { end = pos;
-	    *stt_ref = pos;							/* point after newline */
+	  { // Tag::g_LastStart = pos;				/* point after newline */
 	    if (seq >= 0)
 	  	  break;
 
+//		end = pos;
 	    seq = pos;								/* No more seeking */
 
 		while (1)
@@ -239,8 +255,8 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 		    seq = 0;
 	  	  fseek(fp, seq, 0);
 		  if (seq > 0)
-		  { seq += get_to_newline(tagline, fp);	/* read part line */
-		  { int g = get_to_newline(tagline, fp);/* read next line */
+		  { seq += get_to_newline();
+		  { int g = get_to_newline();
 			if (g > 0 && strcmp(key, tagline) == 0)
 			  continue;
 		  }}
@@ -249,6 +265,8 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 	  }
     }} while (1);
   }
+
+  Tag::g_LastStart = pos;					/* point after newline */
 
   fclose(fp);
   return fd_cc;
@@ -266,24 +284,27 @@ findTagInFile(const char *tags, const char *key, int * stt_ref, char * tagline)
 #endif
 
 
-static
-int findTagExec(const char key[])
-{
-    char tagline[TAGBUFFSZ+1];
-    char tagfile[NFILEN];
+int Tag::findTagExec(const char key[])
+
+{	char tagfile[NFILEN];
+	char tagline[TAGBUFFSZ+1];
+
     char * fn = curbp->b_fname;
 	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
 
-	int clamp = g_taglastClamp + 1;
-	int state = g_taglastClamp > 0 &&
-				g_tagLastName != NULL && strcmp(g_tagLastName, key) == 0;
+	int clamp = Tag::g_lastClamp + 1;
+	int state = Tag::g_lastClamp > 0 &&
+				Tag::g_LastName != NULL && strcmp(Tag::g_LastName, key) == 0;
 	if (state)
 		state |= 4;
 	else
-	{   g_tagLastStart = -1;
+	{   Tag::g_LastStart = -1;
 		clamp = 6;
 	}
-			
+
+	g_tagline = tagline;
+	g_tagfile = tagfile;
+	
 	while (--clamp >= 0)
 	{
         if (!fexist(pathcat(tagfile, 260, fn, 
@@ -291,13 +312,13 @@ int findTagExec(const char key[])
         	continue;
 		
 		state |= 2;
-	{	int z = findTagInFile(tagfile, key, &g_tagLastStart, tagline);
+	{	int z = Tag::findTagInFile(key);
 		if (z == 0)			/* found tag */
 			break;
 	    state &= ~1;
     }}
 
-	g_taglastClamp = clamp;
+	Tag::g_lastClamp = clamp;
 	if (clamp < 0)
 	{	MLWRITE(state == 0 ? TEXT142 : /* "[no tag file]" */
 				state & 4  ? TEXT160 : /* "No More Tags" */ 
@@ -305,9 +326,9 @@ int findTagExec(const char key[])
 	    return false;
 	}
     
-	if (g_tagLastName == NULL)
-		g_tagLastName = malloc(sl_);
-	strcpy(g_tagLastName, tagline);
+	if (Tag::g_LastName == NULL)
+	  Tag::g_LastName = (char*)malloc(sl_);
+	strcpy(Tag::g_LastName, tagline);
 
 	fn = tagline;
 	
@@ -388,6 +409,9 @@ int findTagExec(const char key[])
 
 /*ARGSUSED*/
 
+extern "C"
+{
+
 int
 findTag(int f, int n)
 {
@@ -415,15 +439,15 @@ findTag(int f, int n)
         for (len = -1; ++len <= ll && ((ch = ss[++offs]) == ':' || isword(ch));)
             tag[len] = ch;
         tag[len] = 0 ;
-        while (--len >= 0 && tag[len] == ':')
-        	tag[len] = 0;
+//      while (--len >= 0 && tag[len] == ':')
+//       	tag[len] = 0;
 
 		if ((g_clring & BCCOMT) == 0)
 			if ((g_clring & BCFOR) || atoi(gtusr("uctags")))
         		mkul(1, tag);
     }}
 
-{	int res = findTagExec(tag);
+{	int res = Tag::findTagExec(tag);
 	if (!res)
 	{	char * s = tag - 1;
 		char ch;
@@ -431,7 +455,7 @@ findTag(int f, int n)
 			;
 		if (ch != 0)
 		{	*s = 0;
-			res = findTagExec(tag);
+			res = Tag::findTagExec(tag);
 		}
 	}
 	return res;
@@ -465,9 +489,7 @@ int main(int argc, char * argv[])
 	char tagline[1025];
     strcpy(tagline, "NOVAL");
     
-    while (findTagExec(tag)
-
-    findTagSearch(".", tag, tagline) && --clamp >= 0)
+    while (findTagExec(tag) && --clamp >= 0)
 	{	char * tl = tagline+strlen(tagline);
 		while (*++tl != 0 && is_space(*tl))
 		  ;
@@ -480,3 +502,4 @@ int main(int argc, char * argv[])
 
 #endif
 
+}

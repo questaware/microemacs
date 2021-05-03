@@ -61,7 +61,6 @@ BTBREAK	./src/edef.h
 BTWHILE	./src/edef.h
 BUILDINC	./mtgdi/BUILD.H
 BUILDINC	./wincon/BUILD.H
-Bool	./src/tag.c
 CALLED	./mtgdi/BUILD.H
 CALLED	./wincon/BUILD.H
 CANCHOWN	./mtgdi/base.h
@@ -469,7 +468,7 @@ MINIMAP	./mtgdi/BUILD.H
 MINIMAP	./wincon/BUILD.H
 MININT	./mtgdi/base.h
 MLIX	./src/input.c
-MLWRITE	./src/tag.c
+MLWRITE	./src/tag.cpp
 MMOVE	./src/mouse.c
 MNONE	./src/mouse.c
 MONAMIC	./src/evar.h
@@ -711,7 +710,6 @@ SREGS	./unix/estruct.h
 SREGS	./wincon/estruct.h
 STACK_GROWS_UP	./mtgdi/BUILD.H
 STACK_GROWS_UP	./wincon/BUILD.H
-STANDALONE	./src/tag.c
 STDIPCHAN	./unix/unix.c
 STOP	./src/edef.h
 S_AMIGA	./mtgdi/BUILD.H
@@ -749,7 +747,7 @@ SetParentFocus	./wincon/oswin.c
 SetWPos	./wincon/oswin.c
 Short	./wincon/oswin.c
 SynchSpawn	./wincon/oswin.c
-TAG_MIN_LINE	./src/tag.c
+TAG_MIN_LINE	./src/tag.cpp
 TBUFSIZ	./unix/unix.c
 TELKEYS	./unix/build.h
 TELNET	./unix/build.h
@@ -808,6 +806,7 @@ TYPEAH	./wincon/BUILD.H
 T_DOMCHAR	./src/map.h
 T_DOMINT	./src/map.h
 T_DOMSTR	./src/map.h
+Tag	./src/tag.cpp
 UESZ	./src/display.c
 UFABS	./src/evar.h
 UFADD	./src/evar.h
@@ -923,7 +922,6 @@ __EXTENSIONS__	./src/msdir.c
 __GUICON_H__	./wincon/useful.c
 __STDC__	./mtgdi/BUILD.H
 __STDC__	./wincon/BUILD.H
-__TAGC	./src/tag.c
 __THREADS_H__	./mtgdi/threads.h
 aalloc	./unix/estruct.h
 aalloc	./wincon/estruct.h
@@ -1119,10 +1117,8 @@ execprg	./wincon/oswin.c
 execproc	./src/exec.c
 execute	./src/main.c
 expandp	./src/search.c
-explain	./src/tag.c
 extract_fn	./src/msdir.c
 false	./src/sinc.cpp
-false	./src/tag.c
 fast	./mtgdi/base.h
 fast	./src/base.h
 fast	./src/edef.h
@@ -1130,9 +1126,7 @@ fdopen	./wincon/estruct.h
 fetchfile	 ./src/file.c
 fex_path	./src/bind.c
 fex_up_dirs	./src/bind.c
-fex_up_dirs	./src/tag.c
 fexist	./src/bind.c
-fexist	./src/tag.c
 ffclose	./src/fileio.c
 ffgetline	./src/fileio.c
 ffisdiry	./src/fileio.c
@@ -1154,10 +1148,10 @@ fillcol	./src/epredef.h
 fillpara	./src/word.c
 filter	./unix/unix.c
 filter	./wincon/oswin.c
-findTag	./src/tag.c
-findTagExec	./src/tag.c
-findTagInFile	./src/tag.c
-findTagSearch	./src/tag.c
+findTag	./src/tag.cpp
+findTagExec	./src/tag.cpp
+findTagInFile	./src/tag.cpp
+findTagSearch	./src/tag.cpp
 find_nch	./src/search.c
 find_nch	./src/sinc.cpp
 findvar	./src/eval.c
@@ -1365,7 +1359,6 @@ macarg	./src/exec.c
 macbug	./src/epredef.h
 macrotokey	./src/bind.c
 main	./src/main.c
-main	./src/tag.c
 main	./wincon/msemacs.c
 main_	./src/main.c
 maindef	./src/main.c
@@ -1453,7 +1446,6 @@ mvupwind	./src/window.c
 myeq	./src/search.c
 myino	./src/msdir.c
 name_mode	./src/bind.c
-name_mode	./src/tag.c
 namedcmd	./src/exec.c
 narrow	./src/region.c
 nclicks	./src/epredef.h
@@ -1495,7 +1487,6 @@ outstring	./src/input.c
 ovstring	./src/line.c
 palcol	./src/display.c
 pathcat	./src/bind.c
-pathcat	./src/tag.c
 peek	./mtgdi/estruct.h
 peek	./unix/estruct.h
 peek	./wincon/estruct.h
@@ -1636,7 +1627,6 @@ strinclude	./src/bind.c
 strlast	./src/char.c
 strmatch	./src/char.c
 strpcpy	./src/char.c
-strpcpy	./src/tag.c
 strpcpypfx	./src/char.c
 strxct_mtch	./src/search.c
 strxct_mtch	./src/sinc.cpp
@@ -1703,7 +1693,6 @@ transbind	./src/bind.c
 trim_white	./src/random.c
 trimstr	./src/eval.c
 true	./src/sinc.cpp
-true	./src/tag.c
 ttflush	./unix/unix.c
 ttflush	./wincon/oswin.c
 ttgetc	./unix/terminal.c
