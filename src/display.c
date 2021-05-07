@@ -573,7 +573,7 @@ void Pascal modeline(WINDOW * wp)
 	}
 
 	if (wp == curwp)
-	{ char * s = int_asc((int)wp->w_line_no);
+	{ char * s = int_asc((int)wp->w_line_no); // int_asc((int)curbp->b_nwnd);
 																			/* take up some spaces */
 		strcpy(&tline.lc.l_text[4], &s[strlen(s)-6]);
 	} 												/* are we horizontally scrolled? */

@@ -140,6 +140,7 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
  	leavewind(curwp, 0);
 
 	curbp = bp; 			/* Switch. */
+	bp->b_nwnd += 1;
 { char * fn = bp->b_fname;
 
 	if (fn != null)

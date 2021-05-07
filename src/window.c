@@ -35,6 +35,7 @@ int Pascal orwindmode(int mode, int wh)
 void Pascal  openwind(WINDOW * wp)
 	
 { BUFFER * bp = curbp;
+	bp->b_nwnd += 1;
 	*(WUFFER*)wp = *(WUFFER*)bp;
 	wp->w_bufp    = bp;	     /* connect current window to this buffer */
 //wp->w_linep   = lforw(bp->b_baseline);
@@ -51,23 +52,24 @@ void Pascal  openwind(WINDOW * wp)
 void Pascal leavewind(WINDOW * wp, int dec)
 	
 { BUFFER * bp = wp->w_bufp;
-
-	*(WUFFER*)bp = *(WUFFER*)wp;
-	if (dec)
-	{ bp->b_nwnd -= 1;
-		free((char *)wp);
+	if (bp != NULL)
+	{	bp->b_nwnd -= 1;
+		*(WUFFER*)bp = *(WUFFER*)wp;
 	}
-
+	if (dec)
+		free((char *)wp);
 /*bp->b_fcol	 = wp->w_fcol;*/
 }
 
+extern int g_top_luct;
+
 int Pascal openwindbuf(char * bname)
 	
 {		/* split the current window to make room for the binding list */
   if (splitwind(FALSE, 1) == FALSE)
     return FALSE;
 					        
-  curbp = bfind(bname, TRUE, 0);		/* and get a buffer for it */
+{	BUFFER * bp = curbp = bfind(bname, TRUE, 0);		/* and get a buffer for it */
   if (curbp == NULL)
     return FALSE;
 
@@ -75,12 +77,13 @@ int Pascal openwindbuf(char * bname)
   { leavewind(curwp, 0);
     openwind(curwp);
   
-    curbp->b_flag &= ~MDVIEW;
-    curbp->b_flag |= BFACTIVE;
+    bp->b_flag &= ~MDVIEW;
+    bp->b_flag |= BFACTIVE;
+		bp->b_luct = ++g_top_luct;
   }
 
   return TRUE;
-}
+}}
 
 /* Reposition dot in the current window to line "n". If the argument is
  * positive, it is that line. If it is negative it is that line from the
@@ -120,6 +123,7 @@ int Pascal nextwind(int f, int n)
 	WINDOW *wp;
 
 	leavewind(curwp,0);
+	curbp->b_nwnd += 1;					/* leavewind decrements it */
 
 	if (! f)
 	{ wp = curwp->w_next;

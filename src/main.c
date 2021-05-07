@@ -307,7 +307,7 @@ void Pascal dcline(int argc, char * argv[])
 
 	curwp->w_ntrows = term.t_nrowm1-1; /* "-1" for mode line. */
 	curbp = firstbp;
-	openwind(curwp);
+//openwind(curwp);
 
 	carg = startup(startfile);
 #if 0

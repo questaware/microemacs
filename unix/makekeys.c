@@ -64,11 +64,11 @@ char * ktbl[] =
 "kll\",  /* home down [END?] key */ 194, SPEC | '>'",
 "knp\",  /* next page */            199, SPEC | 'V'",
 "kpp\",  /* previous page */        202, SPEC | 'Z'",
-"ksub1\",/* left cursor */1193,	ALTD | 'B'",
-"ksud1\",/* down cursor */1117,	ALTD | 'N'",
-"ksuf1\",/* right cursor */1211,ALTD | 'F'",
-"ksuu1\",/* up cursor */1247,	ALTD | 'P'",
-"kzch1\",/* delete character */1115,ALTD | 'D'",
+"ksub1\",/* left cursor */1193,	ALTD | SPEC | 'B'",
+"ksud1\",/* down cursor */1117,	ALTD | SPEC | 'N'",
+"ksuf1\",/* right cursor */1211,ALTD | SPEC | 'F'",
+"ksuu1\",/* up cursor */1247,	ALTD | SPEC | 'P'",
+"kzch1\",/* delete character */1115,ALTD | SPEC | 'D'",
 };
 
 char * kname[] =
