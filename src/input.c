@@ -292,7 +292,7 @@ int  mlyesno(char * prompt)
 						/* " [y/n]? " */
   mlwrite("%!%s%s", prompt, TEXT162, null);
 														/* get the response */
-{ int c = getcmd();   			/* getcmd() lets us check for anything that might */
+{ int c = getkey();   			/* was getcmd(); lets us check for anything that might */
 													  /* generate a 'y' or 'Y' in case use screws up */
   if (c == abortc)
     return ABORT;

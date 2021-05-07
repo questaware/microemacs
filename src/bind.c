@@ -354,12 +354,16 @@ static KEYTAB * aux_getbind;		/* only valid if result != null */
 int  getcmd()
 
 { int c = getkey();
+#if S_WIN32 == 0
+	return c;
+#else
 	int pfx = c == (CTRL|'[') ? META :
 						c == (CTRL|'X') ? CTLX : 0;
 	if (pfx != 0)
 		c = getkey();
 																									/* Force to upper */
 	return pfx | (!in_range(c & 0xff,'a','z') ? c : c & ~0x20);
+#endif
 }
 
 

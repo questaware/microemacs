@@ -69,6 +69,11 @@ char * ktbl[] =
 "ksuf1\",/* right cursor */1211,ALTD | SPEC | 'F'",
 "ksuu1\",/* up cursor */1247,	ALTD | SPEC | 'P'",
 "kzch1\",/* delete character */1115,ALTD | SPEC | 'D'",
+"ksub2\",/* left cursor */1193,	CTRL | SPEC | 'B'",
+"ksud2\",/* down cursor */1117,	CTRL | SPEC | 'N'",
+"ksuf2\",/* right cursor */1211,CTRL | SPEC | 'F'",
+"ksuu2\",/* up cursor */1247,	CTRL | SPEC | 'P'",
+"kzch2\",/* delete character */1115,CTRL | SPEC | 'D'",
 };
 
 char * kname[] =
@@ -112,6 +117,11 @@ char * kname[] =
 "alt right cursor",
 "alt up cursor",
 "alt delete",
+"ctrl left cursor",
+"ctrl down cursor",
+"ctrl right cursor",
+"ctrl up cursor",
+"ctrl delete",
 };
 
 
