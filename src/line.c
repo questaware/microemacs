@@ -183,7 +183,7 @@ int Pascal lchange(int flag)
     flag = WFHARD;
   }
 												   /* make sure all the needed windows get this flag */ 
-  (void)orwindmode(curbp->b_nwnd != 1 ? WFHARD : flag, 0);
+  (void)orwindmode(curbp->b_nwnd != 0 ? WFHARD : flag, 0);
 
 { WINDOW * wp = curwp;
 
