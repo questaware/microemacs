@@ -78,6 +78,8 @@ static VIDEO	 **vscreen; 	/* Virtual screen. */
 #endif
 
 #if MEMMAP
+#undef  pd_hjump
+#define pd_hjump 1
 #define MEMCT 1
 #else
 #define MEMCT 2
@@ -573,7 +575,7 @@ void Pascal modeline(WINDOW * wp)
 	}
 
 	if (wp == curwp)
-	{ char * s = int_asc((int)wp->w_line_no); // int_asc((int)curbp->b_nwnd);
+	{ char * s = int_asc((int)wp->w_line_no);
 																			/* take up some spaces */
 		strcpy(&tline.lc.l_text[4], &s[strlen(s)-6]);
 	} 												/* are we horizontally scrolled? */
@@ -767,35 +769,34 @@ void Pascal updline(int force)
 /*	updpos: update the position of the hardware cursor and handle extended
 		lines. This is the only update for simple moves.
 */
-{			  int i;
+{
  static LINE * up_lp = NULL;
+				int flag = 0;
 		    WINDOW * wp = curwp;
-		    LINE * curlp = curwp->w_dotp;
+				int fcol = wp->w_fcol;
 			  LINE * lp;
-															 		/* ensure its not off the left of the screen */
-	while ((i = getccol() - wp->w_fcol) < 0)
-	{ if (wp->w_fcol >= hjump)
-			wp->w_fcol -= hjump;
-		wp->w_flag |= WFHARD | WFMODE | WFMOVE;
+				int col = getccol() - fcol; 	/* ensure not off the left of the screen */
+				int j = ((pd_hjump - col - 1) / pd_hjump) * pd_hjump;
+
+	if (j > 0)
+	{	fcol -= j;
+		flag = 1;
 	}
 
-	if (up_lp != wp->w_dotp && 
-			i + wp->w_fcol < term.t_ncol &&
-			minfcol == 0)
-	{ i += wp->w_fcol;
-		wp->w_fcol = 0;
-		wp->w_flag |= WFHARD | WFMODE | WFMOVE;
+	j = minfcol - fcol;
+	if      (j > 0)
+	{	fcol += j;
+	  col -= j;
+		if (col < 0)
+			col = 0;
 	}
-#if 1
-	if (minfcol > wp->w_fcol)
-	{ i += wp->w_fcol - minfcol;
-		if (i < 0)
-			i = 0;
-		wp->w_fcol = minfcol;
+	else if (up_lp != wp->w_dotp && 
+			     col + fcol < term.t_ncol)
+	{ col += fcol;
+		fcol = 0;
+		flag = 1;
 	}
-#endif
 
-	curcol = i;
 	currow = wp->w_toprow;
 
 	up_lp = wp->w_dotp;
@@ -805,42 +806,49 @@ void Pascal updline(int force)
 			 lp = lforw(lp))
 		++currow;
 
-{ // int color = window_bgfg(curwp);
+{ int i;
 	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
-
-				/* if horizontal scrolling is enabled, shift if needed */
-	if (hscroll)
-		while (curcol >= term.t_ncol - 1)
-		{ curcol -= hjump;
-			wp->w_fcol += hjump;
-			wp->w_flag |= WFHARD | WFMODE | WFMOVE;
+	int rhs = col - term.t_ncol + 1;
+												/* if horizontal scrolling is enabled, shift if needed */
+	if (pd_hjump)
+	{	if (rhs >= 0)
+		{ flag = ((rhs + pd_hjump - 1) / pd_hjump) * pd_hjump;
+			fcol += flag;
+			col -= flag;
 		}
+	}
 	else
-	{ i = curcol - term.t_ncol;
-		if (i < -1)
+	{	if (rhs < 0)
 			lbound = 0;
 		else
-	/* updext: update the extended line which the cursor is currently
-			 on at a column greater than the terminal width. The line
-			 will be scrolled right or left to let the user see where
-			 the cursor is. Called only in non Hscroll mode.
-	*/
-		{ 	/* calculate what column the real cursor will end up in */
-			lbound = curcol - (i % term.t_scrsiz) - term.t_margin + 1;
+							/* updext: update the extended line which the cursor is currently
+								 on at a column greater than the terminal width. The line
+								 will be scrolled right or left to let the user see where
+								 the cursor is. Called only in non Hscroll mode.
+							*/
+		{ 				/* calculate what column the real cursor will end up in */
+			lbound = col - ((rhs - 1) % term.t_scrsiz) - term.t_margin + 1;
 
-				/* scan through the line copying to the virtual screen*/
-			/* once we reach the left edge						*/
-		{ VIDEO * vp = vtmove(currow, lbound + wp->w_fcol, cmt_clr, wp->w_dotp);
-						/* start scanning offscreen */
+											/* scan through the line copying to the virtual screen*/
+											/* once we reach the left edge						*/
+											/* start scanning offscreen */
+		{ VIDEO * vp = vtmove(currow, lbound + fcol, cmt_clr, up_lp);
 			
-			vp->v_text[0] = /*BG(C_BLUE)+FG(C_WHITE)+*/'$';
-								 /* and put a '$' in column 1 */
+//		vp->v_text[0] = /*BG(C_BLUE)+FG(C_WHITE)+*/'$';
+								 			/* and put a '$' in column 1 */
 			vp->v_flag |= (VFEXT | VFCHG);
 		}}
 	}
+
+	wp->w_fcol = fcol;
+	if (flag)
+	  wp->w_flag |= WFHARD | WFMODE | WFMOVE;
+
 					 /* update the current window if we have to move it around */
 	if (wp->w_flag & WFHARD)
 		updall(wp, 1);
+
+	curcol = col;
 
 /*	upddex: de-extend any line that deserves it 	*/
 
@@ -857,9 +865,9 @@ void Pascal updline(int force)
 		for (--i; ++i < zline; )
 		{ if (vscreen[i]->v_flag & VFEXT)
 			{ 
-				if (lp != curlp || curcol < term.t_ncol - 1)
+				if (lp != wp->w_dotp || col < term.t_ncol - 1)
 				{ VIDEO * vp = vtmove(i, wp->w_fcol, cmt_clr, lp);
-					/* this line no longer is extended */
+																		/* this line no longer is extended */
 					vp->v_flag -= VFEXT;
 					vp->v_flag |= VFCHG;
 				}
@@ -872,7 +880,7 @@ void Pascal updline(int force)
 	}}
 
 /*	updupd: update the physical screen from the virtual screen	*/
-
+{
 #if MEMMAP == 0
 	if (pd_sgarbf != FALSE)
 	{  
@@ -884,36 +892,35 @@ void Pascal updline(int force)
 
 	for (i = -1; ++i <= term.t_nrowm1; )
 	{
-#if MEMMAP == 0
+#if MEMMAP
+		VIDEO * vp = vscreen[i];
+#else
 		if (pd_sgarbf)
 		{ 
 #if REVSTA && 0
-			vscreen[i]->v_flag &= ~VFREV;
+//		vscreen[i]->v_flag &= ~VFREV;
 #endif
 			pteeol(i);
 		}
 #endif
 				/* for each line that needs to be updated*/
-		if (pd_sgarbf || (vscreen[i]->v_flag & VFCHG))
+		if (pd_sgarbf || (vp->v_flag & VFCHG))
 		{ 
 #if GOTTYPAH && S_MSDOS == 0 && 0
-			if (force == FALSE && typahead())
-				break;			/* this prob. breaks updgar !! */
+//		if (force == FALSE && typahead())
+//			break;			/* this prob. breaks updgar !! */
 #endif
 #if MEMMAP
-/* UPDATELINE specific code for the IBM-PC and other compatables */
-
-		{ struct VIDEO *vp1 = vscreen[i]; /* virtual screen image */
-			vp1->v_flag &= ~VFCHG;	/* flag this line as changed */
-			scwrite(i, vp1->v_text, vp1->v_color);
-		}
+							/* UPDATELINE specific code for the IBM-PC and other compatables */
+			vp->v_flag &= ~VFCHG;
+			scwrite(i, vp->v_text, vp->v_color);
 #else
 			updateline(i);
 #endif
 		}
 	}
 	pd_sgarbf = FALSE;
-}}
+}}}
 
 											/* reframe:	check to see if the cursor is on in the window
 												and re-frame it if needed or wanted 	*/
@@ -1086,10 +1093,12 @@ void Pascal updall(WINDOW * wp, int all)
 	if (color == 0x70)
 		color = V_BLANK;
 #endif
+#if _DEBUG
 	if (zline >= term.t_mrowm1)
 	{ /* addb(sline); */
 		zline = term.t_mrowm1-1;
 	}
+#endif
 	
 	for (; sline < zline; ++sline)
 	{ if (all || lp == wp->w_dotp)	/* and update the virtual line */
@@ -1105,7 +1114,7 @@ void Pascal updall(WINDOW * wp, int all)
 	}
 }
 
-#ifdef _WINDOWS
+#if 0
 
 void Pascal updallwnd(int reload)
 
@@ -1485,3 +1494,4 @@ void Pascal mlerase()
 	mlwrite("");
 	mpresf = FALSE;
 }
+

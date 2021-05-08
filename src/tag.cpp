@@ -162,7 +162,7 @@ class Tag
 };
 
 int	  Tag::g_lastClamp;
-int   Tag::g_LastStart = 0;
+int   Tag::g_LastStart;
 char *Tag::g_LastName = NULL;
 char *Tag::g_tagline;
 char *Tag::g_tagfile;
@@ -246,22 +246,21 @@ int Tag::findTagInFile(const char *key)
 	    if (seq >= 0)
 	  	  break;
 
-//		end = pos;
-	    seq = pos;								/* No more seeking */
-
 		while (1)
-		{ seq =- LOOK_BACK;
-		  if (seq < 0)
-		    seq = 0;
-	  	  fseek(fp, seq, 0);
-		  if (seq > 0)
-		  { seq += get_to_newline();
+		{ pos =- LOOK_BACK;
+		  if (pos < 0)
+		    pos = 0;
+	  	  fseek(fp, pos, 0);
+		  if (pos > 0)
+		  { pos += get_to_newline();
 		  { int g = get_to_newline();
-			if (g > 0 && strcmp(key, tagline) == 0)
+			if (g > 0 && strcmp(key, tagline) >= 0)
 			  continue;
 		  }}
 		  break;									/* at 0 or before target */
 		}
+
+	    seq = 0;									/* No more seeking */
 	  }
     }} while (1);
   }
@@ -286,59 +285,61 @@ int Tag::findTagInFile(const char *key)
 
 int Tag::findTagExec(const char key[])
 
+{	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
+
+	if (Tag::g_LastName == NULL)
+	  Tag::g_LastName = (char*)aalloc(sl_);
+
 {	char tagfile[NFILEN];
 	char tagline[TAGBUFFSZ+1];
 
-    char * fn = curbp->b_fname;
-	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
-
 	int clamp = Tag::g_lastClamp + 1;
 	int state = Tag::g_lastClamp > 0 &&
-				Tag::g_LastName != NULL && strcmp(Tag::g_LastName, key) == 0;
+				strcmp(Tag::g_LastName, key) == 0;
 	if (state)
-		state |= 4;
+		strcpy(tagfile, g_tagfile);
 	else
 	{   Tag::g_LastStart = -1;
+		Tag::g_tagfile = tagfile;			/* Local storage */
 		clamp = 6;
 	}
 
 	g_tagline = tagline;
-	g_tagfile = tagfile;
 	
 	while (--clamp >= 0)
 	{
-        if (!fexist(pathcat(tagfile, 260, fn, 
-        					clamp == 0 ? "./" : TAGFNAME+1+clamp*3)))
+        if (!fexist(state & 1 ? tagfile :
+						pathcat(tagfile, 260, curbp->b_fname, 
+        						clamp == 0 ? "./" : TAGFNAME+1+clamp*3)))
         	continue;
 		
 		state |= 2;
 	{	int z = Tag::findTagInFile(key);
 		if (z == 0)			/* found tag */
 			break;
-	    state &= ~1;
     }}
 
 	Tag::g_lastClamp = clamp;
 	if (clamp < 0)
 	{	MLWRITE(state == 0 ? TEXT142 : /* "[no tag file]" */
-				state & 4  ? TEXT160 : /* "No More Tags" */ 
+				state & 1  ? TEXT160 : /* "No More Tags" */ 
 							 TEXT161, key); /* "[tag %s not in tagfiles]" */
 	    return false;
 	}
     
-	if (Tag::g_LastName == NULL)
-	  Tag::g_LastName = (char*)malloc(sl_);
+	if (g_tagfile != tagfile)
+		free(g_tagfile);
+	g_tagfile = strdup(tagfile);
+
 	strcpy(Tag::g_LastName, tagline);
 
-	fn = tagline;
-	
 {   int ix;
-	char * file = skipspaces(fn + strlen(fn) + 1, fn + TAGBUFFSZ);
+	char * file = skipspaces(tagline + strlen(tagline) + 1, tagline + TAGBUFFSZ);
 
 	for (ix = -1; file[++ix] > ' '; ) /* to next tab */
 	  ;
 
-	fn = file + ix;
+{	char * fn = file + ix;
 	fn[file[ix] == 0] = 0;
 #if 0
     if (file[0] == '=')						/* but in which file ? */
@@ -405,7 +406,7 @@ int Tag::findTagExec(const char key[])
     strcpy(pat,tagline);
     mk_magic(-1);
     return rc;
-}}}}}
+}}}}}}}
 
 /*ARGSUSED*/
 
