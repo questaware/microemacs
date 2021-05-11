@@ -64,7 +64,8 @@
   *Invocation Arguments*
   Flags may be interleaved with file names
       -b**name**
-            Name the buffer **name**. Useful to override file suffix attributes
+            Name the buffer **name**. 
+						Useful to override file suffix attributes
       -e    Process error.rc after the startup file
       -m    Show failing macros in a visible buffer
       -i{%$}var value   Set variable with value before startup

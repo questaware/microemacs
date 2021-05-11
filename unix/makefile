@@ -112,8 +112,8 @@ search.i:  ../$(SRC)/search.c
 	$(CC) -c -E $(CFLAGS) ../$(SRC)/search.c > search.i
 sinc.o:  ../$(SRC)/sinc.cpp
 	$(CC) -c $(CFLAGS) ../$(SRC)/sinc.cpp
-tag.o: ../$(SRC)/tag.c
-	$(CC) -c $(CFLAGS) ../$(SRC)/tag.c
+tag.o: ../$(SRC)/tag.cpp
+	$(CC) -c $(CFLAGS) ../$(SRC)/tag.cpp
 window.o:  ../$(SRC)/window.c
 	$(CC) -c $(CFLAGS) ../$(SRC)/window.c
 word.o: ../$(SRC)/word.c

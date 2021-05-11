@@ -892,9 +892,8 @@ void Pascal updline(int force)
 
 	for (i = -1; ++i <= term.t_nrowm1; )
 	{
-#if MEMMAP
 		VIDEO * vp = vscreen[i];
-#else
+#if MEMMAP == 0
 		if (pd_sgarbf)
 		{ 
 #if REVSTA && 0

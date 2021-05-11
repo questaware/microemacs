@@ -83,7 +83,7 @@ extern NOSHARE int predefvars[];
 #define keyct    predefvars[EVKEYCT]
 #define tabsize	 predefvars[EVHARDTAB]
 //#define stabsize predefvars[EVSOFTTAB]
-#define hjump	     predefvars[EVHJUMP]
+#define pd_hjump	     predefvars[EVHJUMP]
 #define cmt_colour predefvars[EVCMTCOL]
 //#define flickcode predefvars[EVFLICKER]
 #define macbug	   predefvars[EVDEBUG]

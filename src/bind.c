@@ -354,7 +354,7 @@ static KEYTAB * aux_getbind;		/* only valid if result != null */
 int  getcmd()
 
 { int c = getkey();
-#if S_WIN32 == 0
+#if 0
 	return c;
 #else
 	int pfx = c == (CTRL|'[') ? META :

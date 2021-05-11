@@ -441,21 +441,25 @@ int g_timeout_secs = 0;
 
 int Pascal ttgetc()
 
-{  			/* if there are already keys waiting.... send them */
+{  										/* if there are already keys waiting.... send them */
 	if (in_check())
 	  return in_get();
-					/* otherwise... get the char for now */
+											/* otherwise... get the char for now */
 {	int c = get1key();
 
-	if (CTRL & c)      /* unfold the control bit back into the character */
-	  c = (c & ~ CTRL) - '@';
+//if (((SPEC+CTRL) & c) == CTRL && c != CTRL | '[')   /* unfold the control bit back into the character */
+	if ((c & SPEC) == 0)
+	{	if (c & CTRL)														   /* unfold the control bit back into the character */
+		  c = (c & ~ CTRL) - '@';
 
 		/* fold the event type into the input stream as an escape seq */
-	if ((c & ~255) != 0)
-	{ in_put(0);		/* keyboard escape prefix */
-	  in_put(c >> 8);		/* event type */
-	  in_put(c & 255);	/* event code */
-	  return ttgetc();
+//if ((c & ~255) != 0)
+		else
+		{ in_put(0);		/* keyboard escape prefix */
+		  in_put(c >> 8);		/* event type */
+		  in_put(c & 255);	/* event code */
+		  return ttgetc();
+		}		
 	}
 
 	return c;
@@ -550,19 +554,22 @@ int Pascal get1key()
 	bgetk(c);
 	if (c != 'O' && c != '[')           /* it's not terminal generated */
 	{ if (c != A_ESC)
-	  { bpushk(c)
-	    return ecco(CTRL | '[');
-	  }
+			if (c != 'x')
+				return ecco(META | c);
+			else
+		  { bpushk('x')
+	    	return ecco(CTRL | '[');
+			}
 	  else 
-	  { alarm(1);			/* it could be esc function key */
+	  { alarm(1);											/* it could be esc then function key */
 	  { int third_key;
 	    alarm_went_off = false;
 	    bgetk(third_key);
 	    alarm(0);
-	    if (alarm_went_off)
+	    if (alarm_went_off && 0)
 	      return ecco(CTRL | META | '[');
 	    else
-	    { bpushk(c);
+	    { bpushk(A_ESC);
 	      bpushk(third_key);
 	      return ecco(CTRL | '[');
 	    }
@@ -863,8 +870,9 @@ void Pascal ttscupdn(int n)
 
 { if (n > 0)					/* reverse */
   { if (captbl[K_CSR].p_seq[0] != 0)
-    { putpad(captbl[K_RI].p_seq);
-			tcapmove(sctop, 0);
+    { tcapmove(sctop, 0);
+			putpad(captbl[K_RI].p_seq);
+//		tcapmove(sctop, 0);
     }
     else
 #if USE_SCR_BDY

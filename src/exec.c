@@ -140,7 +140,7 @@ int Pascal docmd(char * cline)
 {	int n = ! f ? 1 : g_univct;  					/* numeric repeat value */
 //int (Pascal *fnc)(int, int);      	  /* function to execute */
 	Command fnc;      	  								/* function to execute */
-	char ebuffer[40];
+	char ebuffer[132];
 #define tkn ebuffer+1
 	int cc;											/* TRUE, FALSE, ABORT */
 	char *oldestr = g_execstr; 		/* original exec string */

@@ -1258,6 +1258,7 @@ in_init	./unix/terminal.c
 in_range	./mtgdi/base.h
 in_range	./src/base.h
 indent	./src/random.c
+indentsearch	./src/search.c
 init_buf	./src/buffer.c
 init_paren	./src/random.c
 init_paren	./src/sinc.cpp
