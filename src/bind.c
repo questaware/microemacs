@@ -65,6 +65,12 @@ static int Pascal cbuf40(int f, int n) { return execporb(-38,n); }
 #endif
 
 #include	"efunc.h"	/* function declarations and name table */
+										/* LINUX cannot distinguish META and ALTD for characters */
+#if S_WIN32
+#define MUTA ALTD
+#else
+#define MUTA META
+#endif
 
 /*
  * Command table.
@@ -259,7 +265,7 @@ bind-to-key filter-buffer ^X|
 	{META|'A',	BINDFNC, apro},
 #endif
 	{META|'B',	BINDFNC, backword},
-	{ALTD|'W',	BINDFNC, copyword},
+	{MUTA|'W',	BINDFNC, copyword},
 	{META|'D',	BINDFNC, delfword},
 #if CRYPT
 	{META|'E',	BINDFNC, setuekey},
@@ -292,9 +298,9 @@ bind-to-key filter-buffer ^X|
 	{MOUS|'f',	BINDFNC, mregup},
 	{MOUS|'1',	BINDFNC, resizm},
 #endif 
-	{ALTD|'S',	BINDFNC, forwhunt},
-	{ALTD|'R',	BINDFNC, backhunt},
-	{ALTD|'Z',	BINDFNC, wordsearch},
+	{MUTA|'S',	BINDFNC, forwhunt},
+	{MUTA|'R',	BINDFNC, backhunt},
+	{MUTA|'Z',	BINDFNC, wordsearch},
 	{META|',',	BINDFNC, indentsearch},
 	{SPEC|'<',	BINDFNC, gotobob},
 	{SPEC|'P',	BINDFNC, backline},
@@ -376,10 +382,17 @@ KEYTAB * Pascal getbind(int c)
 #if NBINDS
   KEYTAB *ktp;
   short  code;
+	Emacs_cmd * f;
 /*
   if (c == (CTRL | SPEC | 'N'))
     adb(44);
 */
+#if 1
+  for (ktp = &keytab[0]-1; (f = (++ktp)->k_ptr.fp) != 0 && f != copyword; )
+    ;
+  code = 0;
+#endif
+
   for (ktp = &keytab[0]-1; (code = (++ktp)->k_code) != 0 && code != c; )
     ;
 

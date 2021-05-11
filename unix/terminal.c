@@ -555,7 +555,10 @@ int Pascal get1key()
 	if (c != 'O' && c != '[')           /* it's not terminal generated */
 	{ if (c != A_ESC)
 			if (c != 'x')
+			{	if (in_range(c, 'a', 'z'))
+					c -= 0x20;
 				return ecco(META | c);
+			}
 			else
 		  { bpushk('x')
 	    	return ecco(CTRL | '[');

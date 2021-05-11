@@ -255,7 +255,7 @@ btk clear-and-redraw M-^L
     search-forward "[A-Za-z0-9_][A-Za-z0-9_]*"
     set %mtch $match
   !endif
-  !if &or &equ $lastkey 66 &equ $lastkey 66
+  !if &or &equ $lastkey 66 &equ $lastkey 18498
 ;	   set %oo @&cat "sr" %mtch
      search-reverse %mtch
   !else
