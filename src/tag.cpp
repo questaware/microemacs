@@ -286,6 +286,7 @@ int Tag::findTagInFile(const char *key)
 int Tag::findTagExec(const char key[])
 
 {	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
+	const char tagfname[] = TAGFNAME;
 
 	if (Tag::g_LastName == NULL)
 	  Tag::g_LastName = (char*)aalloc(sl_);
@@ -308,9 +309,9 @@ int Tag::findTagExec(const char key[])
 	
 	while (--clamp >= 0)
 	{
-        if (!fexist(state & 1 ? tagfile :
-						pathcat(tagfile, 260, curbp->b_fname, 
-        						clamp == 0 ? "./" : TAGFNAME+1+clamp*3)))
+        if (!fexist(state & 1  ? tagfile 		:
+					clamp == 0 ? strcpy(tagfile,tagfname+5*3) : 
+								pathcat(tagfile, 260, curbp->b_fname, tagfname+clamp*3)))
         	continue;
 		
 		state |= 2;

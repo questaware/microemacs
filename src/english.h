@@ -243,5 +243,5 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define TEXT223 "Cannot save .e2"
 #define TEXT224 " ? extra INCLS path or CR:"
 																				/* Must have 5 ../ */
-#define TAGFNAME "/../../../../../tags"
+#define TAGFNAME "../../../../../tags"
 #define TAGFNLEN 4
