@@ -154,7 +154,7 @@ btk execute-macro-10 FN2
 btk execute-macro-10 FN^2
 
 11 store-macro		; kill line
-  !if &equ $lastkey 260
+  !if &equ $lastkey 4
 	  beginning-of-line
 	!else
 		newline

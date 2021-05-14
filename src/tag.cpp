@@ -321,11 +321,7 @@ int Tag::findTagExec(const char key[])
 
 	Tag::g_lastClamp = clamp;
 	if (clamp < 0)
-	{	MLWRITE(state == 0 ? TEXT142 : /* "[no tag file]" */
-				state & 1  ? TEXT160 : /* "No More Tags" */ 
-							 TEXT161, key); /* "[tag %s not in tagfiles]" */
-	    return false;
-	}
+		return state + 256;
     
 	if (g_tagfile != tagfile)
 		free(g_tagfile);
@@ -341,21 +337,12 @@ int Tag::findTagExec(const char key[])
 
 {	char * fn = file + ix;
 	fn[file[ix] == 0] = 0;
-#if 0
-    if (file[0] == '=')						/* but in which file ? */
-    {	for (ix = 0; file[++ix] > 0xd; )
-        	;
-    	file[ix] = 0;
-	    mlwrite("%s %s", tagline, file);
-        return true;
-    }
-#endif
 {	char filenm[256];
     BUFFER * bp = bufflink(pathcat(filenm,sizeof(filenm), tagfile, file),
 				   		   1 + 64);
 	if (bp == NULL)
 	{	mlwrite(TEXT214, filenm);
-    	return false;
+    	return -1;
     }
 
 	file = skipspaces(fn + strlen(fn) + 1, tagline + TAGBUFFSZ);
@@ -422,7 +409,7 @@ findTag(int f, int n)
     {											/*---	Get user word. */
     	int cc = mltreply("Tag? ", tag, sizeof(tag)-1);
     	if (cc != true)
-            return false;
+            return -1;
     }
     else
     {	char * ss = curwp->w_dotp->l_text;
@@ -449,7 +436,7 @@ findTag(int f, int n)
     }}
 
 {	int res = Tag::findTagExec(tag);
-	if (!res)
+	if (res != TRUE)
 	{	char * s = tag - 1;
 		char ch;
 		while ((ch = *++s) != 0 && ch != ':')
@@ -459,7 +446,16 @@ findTag(int f, int n)
 			res = Tag::findTagExec(tag);
 		}
 	}
-	return res;
+	if (res == true)
+		return true;
+
+	if (res > 0)
+	{ 	res -= 256;
+		MLWRITE(res == 0 ? TEXT142 : /* "[no tag file]" */
+				res & 1  ? TEXT160 : /* "No More Tags" */ 
+						   TEXT161, tag); /* "[tag %s not in tagfiles]" */
+	}
+	return false;
 }}
 
 #if STANDALONE

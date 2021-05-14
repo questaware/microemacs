@@ -222,7 +222,7 @@ int	ctrans[] =		/* ansi to ibm color translation table */
 
   int  g_cursor_on = 0;
 
-  Char key_bspace;
+  Char key_bspace = 0x7f;
 
 static short tc_state;
 
@@ -557,7 +557,7 @@ int Pascal get1key()
 			if (c != 'x')
 			{	if (in_range(c, 'a', 'z'))
 					c -= 0x20;
-				return ecco(META | c);
+				return ecco(c == key_bspace ? META | ('H'-'@') : META | c);
 			}
 			else
 		  { bpushk('x')
