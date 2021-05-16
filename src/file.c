@@ -396,16 +396,15 @@ BUFFER * get_remote(BUFFER * bp, const char * pw, const char * cmdbody,
   char fullcmd[3*NFILEN+1];
 
 	const char * cmdnm = gtusr("scp");
+  if (cmdnm == NULL)
+    cmdnm = PSCP_CMD;			// "c:\\bbin\\pscp.exe ";
 
-	const char * rnm = &cmdbody[strlen(cmdbody)];
+{	const char * rnm = &cmdbody[strlen(cmdbody)];
 	while (--rnm > cmdbody && *rnm != '/' && *rnm != ':')	// Go back to slash or :
 		;
 
   if (rnm <= cmdbody)
     return NULL;
-
-  if (cmdnm == NULL || strcmp(cmdnm,"ERROR")==0)
-    cmdnm = PSCP_CMD;			// "c:\\bbin\\pscp.exe ";
 
   --g_clexec;
   ++pd_discmd;
@@ -461,7 +460,7 @@ BUFFER * get_remote(BUFFER * bp, const char * pw, const char * cmdbody,
 
   memset(fullcmd, 0, sizeof(fullcmd));
 	return bp;
-}}}
+}}}}
 
 
 

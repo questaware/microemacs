@@ -675,7 +675,7 @@ int Pascal yank(int f, int n)
     g_inhibit_scan += 1;
 
 #if S_WIN32
-    if (ix == 0)
+    if (ix == 0 && gtusr("NOPASTE") == NULL)
     { 
       sp = ClipPasteStart();
       if (sp == null)

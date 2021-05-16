@@ -553,10 +553,10 @@ $zcmd          The last command
 
  The User variables:
  --------------------
-  (Only used by Emacs macros!)
-%goon   When dropping a buffer, go (0: back to last, 1: on to next)
-%nn   The previous number replacing NN when generating number 
-          sequences.
+%NOPASTE	Do not use the Windows cut-paste buffer
+  (Only used by Emacs macros: )
+%goon  		When dropping a buffer, go (0: back to last, 1: on to next)
+%nn   		The previous number replacing NN when generating number sequences.
 
  The Terminal Control Variables
  ------------------------------

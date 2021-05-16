@@ -419,7 +419,7 @@ int uv_vnum;
 
 const char *Pascal gtusr(char * vname)			/* look up a user var's value */
 																						/* name of user variable to fetch */
-{	char * vptr = g_logm[2];	// "ERROR"
+{	char * vptr = NULL;
   int vnum;
 																/* scan the list looking for the user var name */
 	for (vnum = MAXVARS; --vnum >= 0 && uv[vnum].u_name[0] != 0; )
@@ -852,6 +852,8 @@ char *Pascal getval(char * tgt, char * tok)
 							              /* grab the line as an argument */
 		      }}
 	  when TOKVAR:	src = gtusr(tokp1);
+									if (src == NULL)
+										src = g_logm[2];	// "ERROR"
 	  when TOKENV:	src = gtenv(tokp1);
 	  when TOKFUN:	src = gtfun(tokp1);
 //  when TOKLIT:
@@ -968,7 +970,7 @@ int Pascal desvars(int f, int n)
 
   lnewline();
 					    /* build the user variable list */
-  for (uindex = 0; uv[uindex].u_name[0] != 0; ++uindex)
+	for (uindex = MAXVARS; --uindex >= 0 && uv[uindex].u_name[0] != 0; )
     fmt_desv('%', uv[uindex].u_name, uv[uindex].u_value);
 
   ++pd_discmd;

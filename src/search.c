@@ -287,39 +287,40 @@ void Pascal expandp(char * deststr, char * srcstr, char * tailstr, int maxlength
 	/* char	*tailstr;	** string on the end */
 	/* int	maxlength;	** maximum chars in destination */
 {
-  static const char strs[] = "<CR\000^\000%\000";
-	int dix = strlen(deststr) - 1;
+//  static const char strs[] = "<CR\000^\000%\000";
 	unsigned char c;
+	char * d = deststr + strlen(deststr) - 1;
 					     /* Scan through the string */
 	while ((c = *srcstr++) != 0)
-	{	int insix = 2;
+	{	char ich = 0;
 
 		if      (c == '\r')	       /* it's a newline */
 		{
-			insix = -1;
+			*++d = '<';
+			*++d = 'C';
+			ich = 'R';
 			c = '>';
 		}
-		else if (c < 0x20 || c == 0x7f)       /* control character */
+		else if (c < 0x20 /* || c == 0x7f */)       /* control character */
 		{
-			insix = 3;
+			ich = '^';
 			c ^= 0x40;
 		}
 		else if (c == '%')
-			insix = 5;
+			ich = '%';
 			
-		for ( ; strs[++insix] != 0; )
-		  deststr[++dix] = strs[insix];
+		if (ich != 0)
+		  *++d = ich;
 		  
-
-		deststr[++dix] = c;
+		*++d = c;
 					      /* check for maxlength */
-		if (dix >= maxlength)
-		{	dix = maxlength-1;
-			deststr[dix] = '$';
+		if (d >= maxlength + deststr)
+		{	d = maxlength + deststr;
+			*d = '$';
 			break;
 		}
 	}
-	strcpy(&deststr[++dix], tailstr);
+	strcpy(++d, tailstr);
 }
 
 /* readpattern -- Read a pattern.  Stash it in apat.  If it is the

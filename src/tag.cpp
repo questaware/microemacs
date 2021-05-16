@@ -156,7 +156,7 @@ class Tag
 	static FILE * g_fp;
 
 	static int get_to_newline(void);
-	static int findTagInFile(const char *key);
+	static int findTagInFile(const char *key, const char * tagfile);
  public:
 	static int findTagExec(const char key[]);
 };
@@ -193,9 +193,9 @@ int Tag::get_to_newline(void)
  *    1 - Found tag file but not tag
  *    2 - Found nothing
  */
-int Tag::findTagInFile(const char *key)
+int Tag::findTagInFile(const char *key, const char * tagfile)
 
-{ FILE * fp = g_fp = fopen(g_tagfile, "rb");
+{ FILE * fp = g_fp = fopen(tagfile, "rb");
   if (fp == NULL)
     return 2 ;
 
@@ -286,7 +286,7 @@ int Tag::findTagInFile(const char *key)
 int Tag::findTagExec(const char key[])
 
 {	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
-	const char tagfname[] = TAGFNAME;
+	const char * const tagfname = TAGFNAME;
 
 	if (Tag::g_LastName == NULL)
 	  Tag::g_LastName = (char*)aalloc(sl_);
@@ -298,10 +298,11 @@ int Tag::findTagExec(const char key[])
 	int state = Tag::g_lastClamp > 0 &&
 				strcmp(Tag::g_LastName, key) == 0;
 	if (state)
-		strcpy(tagfile, g_tagfile);
+	{	strcpy(tagfile, g_tagfile);
+		free(g_tagfile);
+	}	
 	else
 	{   Tag::g_LastStart = -1;
-		Tag::g_tagfile = tagfile;			/* Local storage */
 		clamp = 6;
 	}
 
@@ -315,18 +316,16 @@ int Tag::findTagExec(const char key[])
         	continue;
 		
 		state |= 2;
-	{	int z = Tag::findTagInFile(key);
+	{	int z = Tag::findTagInFile(key,tagfile);
 		if (z == 0)			/* found tag */
 			break;
     }}
 
+	Tag::g_tagfile = strdup(tagfile);
+
 	Tag::g_lastClamp = clamp;
 	if (clamp < 0)
 		return state + 256;
-    
-	if (g_tagfile != tagfile)
-		free(g_tagfile);
-	g_tagfile = strdup(tagfile);
 
 	strcpy(Tag::g_LastName, tagline);
 
@@ -431,9 +430,8 @@ findTag(int f, int n)
 //      while (--len >= 0 && tag[len] == ':')
 //       	tag[len] = 0;
 
-		if ((g_clring & BCCOMT) == 0)
-			if ((g_clring & BCFOR) || atoi(gtusr("uctags")))
-        		mkul(1, tag);
+		if ((g_clring & BCFOR) || gtusr("uctags") != NULL)
+        	mkul(1, tag);
     }}
 
 {	int res = Tag::findTagExec(tag);

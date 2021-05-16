@@ -140,9 +140,7 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
  	leavewind(curwp, 0);
 
 	curbp = bp; 			/* Switch. */
-	bp->b_nwnd += 1;
 { char * fn = bp->b_fname;
-
 	if (fn != null)
 	{
 #if S_WIN32
@@ -156,16 +154,12 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
 	}
 
 {	WINDOW *wp = curwp;
-	wp->w_bufp	= bp;
 	wp->w_flag |= WFMODE|WFHARD;			 /* Quite nasty.			 */
-#if 0
-	for (wp = wheadp; wp != NULL; wp = wp->w_next)
-		if (wp->w_bufp == bp)
-#endif
-		{ *(WUFFER*)wp = *(WUFFER*)bp;
-			setcline();
-		}
-			/* let a user macro get hold of things...if he wants */
+	wp->w_bufp	= bp;
+	*(WUFFER*)wp = *(WUFFER*)bp;
+	bp->b_nwnd += 1;
+	setcline();
+										/* let a user macro get hold of things...if he wants */
 	g_clring = (bp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS+BCML));
 	
 	execkey(&bufhook, FALSE, 1);

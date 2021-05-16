@@ -552,7 +552,7 @@ int extcode(c_)
 //}
 
 
-static int g_eaten_char = 1000000;		 /* Re-eaten char */
+static int g_eaten_char = -1;		 /* Re-eaten char */
 
 
 void Pascal reeat(int c)
@@ -696,8 +696,7 @@ int Pascal ttgetc()
 	if (g_eaten_char >= 0)
 	{ int c = g_eaten_char;
 		g_eaten_char = -1;
-		if (c != 1000000)
-			return c;
+		return c;
 //	(void)millisleep(100);
 	}
 #endif
@@ -716,23 +715,22 @@ int Pascal ttgetc()
  #endif
 			 ) break;
 
-			rg.x.ax = 1;						/* Show Cursor */
-			int86(0x33, &rg, &rg);
+		rg.x.ax = 1;						/* Show Cursor */
+		int86(0x33, &rg, &rg);
 								/* loop waiting for something to happen */
-			while (TRUE)
-			{ 
+		while (TRUE)
+		{ 
  #if TYPEAH
-				if (typahead())
-					break;
+			if (typahead())
+				break;
  #endif
-				if (checkmouse())
-					break;
-			}
+			if (checkmouse())
+				break;
+		}
 												/* turn the mouse cursor back off */
-			rg.x.ax = 2;			/* Hide Cursor */
-			int86(0x33, &rg, &rg);
-		} /* while */
-	}
+		rg.x.ax = 2;			/* Hide Cursor */
+		int86(0x33, &rg, &rg);
+	} /* while */
 #endif
 #if _DEBUG
   if (g_ConsIn == 0)
@@ -760,7 +758,7 @@ int Pascal ttgetc()
 									mlwrite("%pError %d %d ", cc, errn);
 						  }
 #endif
-							millisleep(10); // _sleep(10);
+//						millisleep(1); // _sleep(10);
 						  continue;
     	case WAIT_TIMEOUT: 
 #if _DEBUG
@@ -1373,10 +1371,8 @@ int pipefilter(wh)
 		{ const char * val = gtusr(line+1);
 			line[ix] = sch;
 
-			if (strcmp(val,"ERROR") != 0)
-			{ 
+			if (val != NULL)
 				strcpy(line,strcat(strcpy(pipeInFile,val),line+ix));
-			}
 		}}
 	}
 
@@ -1458,6 +1454,7 @@ int pipefilter(wh)
 		char * sfn = bp->b_fname;
 		bp->b_fname = null;									/* otherwise it will be freed */
 		rc = readin(fnam2, 0);
+		bp->b_nwnd -= 1;										/* both swbuffer and readin increment it*/
 		bp->b_fname = sfn; 									/* restore name */
 		bp->b_flag |= BFCHG; 								/* flag it as changed */
 //  if (fnam3 != null)
