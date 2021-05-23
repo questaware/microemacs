@@ -165,7 +165,7 @@ LINE * Pascal lfree(LINE * lp, int noffs)
 
 int g_inhibit_scan = 0;		/* also used by replace */
 static
-int header_scan = 0;
+int g_header_scan = 0;
 /*
  * This routine gets called when a character is changed in place in the current
  * buffer. It updates all of the required flags in the buffer and window
@@ -175,8 +175,7 @@ int header_scan = 0;
  */
 int Pascal lchange(int flag)
 
-{
-  if ((curbp->b_flag & BFCHG) == 0)	/* First change, so	*/
+{ if ((curbp->b_flag & BFCHG) == 0)	/* First change, so	*/
 	{	curbp->b_flag |= BFCHG;
   /*mbwrite(curbp->b_fname);*/
     TTbeep();
@@ -185,16 +184,16 @@ int Pascal lchange(int flag)
 												   /* make sure all the needed windows get this flag */ 
   (void)orwindmode(curbp->b_nwnd != 0 ? WFHARD : flag, 0);
 
-{ WINDOW * wp = curwp;
+{	int all = 0;
 
   if (g_inhibit_scan == 0)
-  {	LINE * lp = wp->w_dotp;
-		int ct = header_scan + 6;     								/* just 6 more */
+  {	LINE * lp = curwp->w_dotp;
+		int ct = g_header_scan + 6;     								/* just 6 more */
 		while ((lp->l_props & L_IS_HD) == 0 && --ct >= 0)
 		  lp = lback(lp);
 
-		header_scan = ct + 6;
-		ct = 12;
+		g_header_scan = ct + 6;
+		ct = 24;
 
 		init_paren("",0);
 		paren.in_mode = (lp->l_props & Q_IN_CMT);
@@ -204,16 +203,19 @@ int Pascal lchange(int flag)
 		  lp = lforw(lp);
 	  	if (lp->l_props & L_IS_HD)
 	    	break;
-		  if      ((lp->l_props ^ paren.in_mode) & Q_IN_CMT)
-		  {// logstr("CMT %s %d\n", lgets(lp, 0), lp->l_props);
-	  	  lp->l_props ^= Q_IN_CMT;
-		    wp->w_flag |= WFEDIT;
-		  }
-		  else if (--ct <= 0)
+		  if (--ct <= 0)
 	  	  break;
-		  updall(wp, 0);
+		
+		  if      ((lp->l_props ^ paren.in_mode) & Q_IN_CMT)
+		  { lp->l_props ^= Q_IN_CMT;
+		    all = 1; // wp->w_flag |= WFEDIT;
+		  }
 		}
+
+		updall(curwp, all);
   }
+  
+	return TRUE;
 }}
 
 #define EXPANSION_SZ 8
@@ -255,8 +257,6 @@ int Pascal lnewline()
   return lchange(WFHARD);
 }}}
 
-static int g_newlinect = 0;
-
 int g_overmode;
 
 /* Insert n copies of the character "c" at the current location of dot. 
@@ -274,71 +274,74 @@ int Pascal linsert(int n, char c)
     TTbeep();		
 */
 { int ins = n;
-	if      (ins == 0)
+	if (ins <= 0)
 		return TRUE;
-  else if (c == '\n')
-  { ++g_newlinect;  
+
+  if (c == '\n')
+  { if (g_inhibit_scan)
+      ++g_header_scan;  
     return lnewline();
   }
-  else
-  { LINE * lp = curwp->w_dotp;		/* Current line */
 
-   if (g_overmode > 0 && 
+{ LINE * lp = curwp->w_dotp;		/* Current line */
+
+	if (g_overmode > 0 && 
        curwp->w_doto < lp->l_used  &&
 			(lgetc(lp, curwp->w_doto) != '\t' ||
 			(unsigned short)curwp->w_doto % curbp->b_tabsize == (curbp->b_tabsize - 1)))
-    ins = 0;
+  	ins = 0;
 
- 	{ int  doto;
-	  LINE * newlp;
+{ int  doto;
+  LINE * newlp;
 
-    if (ins <= lp->l_spare)
-    { newlp = lp;
-      newlp->l_spare -= ins;
-      newlp->l_used += ins;
-    }
-    else
-    { ins += lp->l_used;
-      newlp = mk_line(&lp->l_text[0],BSIZE(ins+EXPANSION_SZ),lp->l_used);
-      if (newlp == NULL)
-        return FALSE;
-			newlp->l_fp = lp->l_fp;
-      newlp->l_bp = lp->l_bp;
-      newlp->l_used = ins;
-      newlp->l_props= lp->l_props & ~L_IS_HD;
-    }
+  if (ins <= lp->l_spare)
+  { lp->l_spare -= ins;
+    lp->l_used += ins;
+		newlp = lp;
+  }
+  else
+  { ins += lp->l_used;
+    newlp = mk_line(&lp->l_text[0],BSIZE(ins+EXPANSION_SZ),lp->l_used);
+    if (newlp == NULL)
+      return FALSE;
+    newlp->l_used = ins;
+		newlp->l_fp = lp->l_fp;
+  	newlp->l_bp = lp->l_bp;
+    newlp->l_props= lp->l_props & ~L_IS_HD;
+  }
 
-    doto = curwp->w_doto;
-    if (ins != 0)
-    {	if ((Int)lp->l_used - doto > 0)
-    		memmove(&newlp->l_text[doto+n],&lp->l_text[doto],(Int)lp->l_used-doto);
-    }
-    memset(&newlp->l_text[doto],c,n);
+  doto = curwp->w_doto;
+  if (ins != 0)
+  {	if ((Int)lp->l_used - doto > 0)
+   		memmove(&newlp->l_text[doto+n],&lp->l_text[doto],(Int)lp->l_used-doto);
+  }
+  memset(&newlp->l_text[doto],c,n);
 
-    if      (lp->l_props & L_IS_HD) 	      /* At the end: special */
-    {
+  if      (lp->l_props & L_IS_HD) 	      /* At the end: special */
+  {
 #if _DEBUG
-			if (doto != 0 || lp == newlp)
-			{ mlwrite(TEXT170);							/* "bug: linsert" */
-				return FALSE;
-			}
+		if (doto != 0 || lp == newlp)
+		{ mlwrite(TEXT170);							/* "bug: linsert" */
+			return FALSE;
+		}
 #endif
-			ibefore(lp, newlp);				/* Link in */
-    }
-    else if (lp != newlp)
-    { lback(lp)->l_fp = (Lineptr)newlp;
-      lforw(lp)->l_bp = (Lineptr)newlp;
-      free((char *) lp);
-    }
+		ibefore(lp, newlp);				/* Link in */
+  }
+  else if (lp != newlp)
+  { lback(lp)->l_fp = (Lineptr)newlp;
+    lforw(lp)->l_bp = (Lineptr)newlp;
+    free((char *) lp);
+  }
 
-    rpl_all(1, n, lp, newlp, doto);
-    return lchange(WFEDIT);
-	}}
-}}
+  rpl_all(1, n, lp, newlp, doto);
+  return lchange(WFEDIT);
+}}}}
 
 int Pascal insspace(int f, int n)/* insert spaces forward into text */
 
-{	linsert(n, ' ');
+{	Cc cc = linsert(n, ' ');
+	if (cc <= OK)
+		return cc;
 	return backchar(f, n);
 }
 
@@ -347,14 +350,13 @@ int Pascal insspace(int f, int n)/* insert spaces forward into text */
 /*
  * linstr -- Insert a string at the current point
  */
-int Pascal linstr(const char * instr_)
+int Pascal linstr(const char * instr)
 	
 {	int status = TRUE;
-	const char * instr = instr_;
 
 	if (instr != NULL && *instr != 0)
 	{ g_inhibit_scan += 1;
-	  g_newlinect = 1;
+	  g_header_scan = 1;
 	  
 	  while (*instr)
 	  { status = linsert(1, *instr);
@@ -366,7 +368,6 @@ int Pascal linstr(const char * instr_)
 	  } */
 	    instr++;
 	  }
-	  header_scan = g_newlinect;
 	  g_inhibit_scan -= 1;
 	}
 	return status;
@@ -582,9 +583,8 @@ int Pascal kdelete(int f, int n)
   { ClipSet(NULL);
   }
 #endif
-  if (kills[n].mem != null)
-    free(kills[n].mem);
-				/* and reset all the kill buffer pointers */
+  free(kills[n].mem);
+																			/* and reset all the kill buffer pointers */
   memset(&kills[n], 0, sizeof(kills[0]));
   return TRUE;
 }
@@ -613,8 +613,7 @@ int Pascal kinsert(char ch)
     if (kills[n].mem != NULL)
       memcpy(&mem[0], kills[n].mem, kills[n].size);
 
-		if (kills[n].mem != NULL)
-			free(kills[n].mem);
+		free(kills[n].mem);
     kills[n].mem = mem;
   }
   
@@ -671,7 +670,7 @@ int Pascal yank(int f, int n)
   { int	len;
   	char	*sp;					/* pointer into string to insert */
 
-    g_newlinect = 1;
+    g_header_scan = 1;
     g_inhibit_scan += 1;
 
 #if S_WIN32
@@ -697,7 +696,6 @@ int Pascal yank(int f, int n)
       }
     }
 
-    header_scan = g_newlinect;
     g_inhibit_scan -= 1;
     lchange(WFEDIT);
 #if S_WIN32

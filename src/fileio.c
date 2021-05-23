@@ -146,10 +146,9 @@ int Pascal ffropen(const char * fn)
  */
 int Pascal ffclose()
 
-{ if (g_fline)		/* free this since we do not need it anymore */
-  { free(g_fline);
-    g_fline = NULL;
-  }
+{ 												/* free this since we do not need it anymore */
+  free(g_fline);
+  g_fline = NULL;
 
 {	Cc cc = g_ffp == NULL ? OK : fclose(g_ffp);
 #if S_UNIX5 | S_LINUX | S_HPUX | S_SUN | S_XENIX | S_BSD | (S_MSDOS & (LATTICE | MSC | DTL | TURBO)) | S_OS2

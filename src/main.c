@@ -501,10 +501,8 @@ Pascal clean()
 
 	kdelete(0,0); 		/* and the kill buffer */
 
-	if (patmatch != NULL)
-	{ free(patmatch);
-		patmatch = NULL;
-	}
+	free(patmatch);
+	patmatch = NULL;
 
 	varclean(); 		/* dealloc the user variables */
 	vtfree(); 		/* and the video buffers */

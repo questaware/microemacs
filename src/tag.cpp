@@ -143,6 +143,12 @@ char * pathcat(char * t, int bufsz, char * dir, char * file)
 
 #define TAGBUFFSZ 1024
 
+#if NFILEN < NPAT 
+#define TAGFILEN (NPAT+2)
+#else
+#define TAGFILEN (NFILEN)
+#endif
+
 class Tag
 {
 #define LOOK_BACK 2048
@@ -152,6 +158,7 @@ class Tag
 	static char * g_LastName;
 	static char * g_tagline;
 	static char * g_tagfile;
+	static char * g_alt_root;
 
 	static FILE * g_fp;
 
@@ -166,6 +173,7 @@ int   Tag::g_LastStart;
 char *Tag::g_LastName = NULL;
 char *Tag::g_tagline;
 char *Tag::g_tagfile;
+char *Tag::g_alt_root;
 
 FILE *Tag::g_fp;
 
@@ -199,8 +207,8 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
   if (fp == NULL)
     return 2 ;
 
-{ int fd_cc = 1;
-  char * tagline = Tag::g_tagline;
+{ char * tagline = Tag::g_tagline;
+  int fd_cc = 1;
   int start = Tag::g_LastStart;			/* points after newline */
   int end = start;
   int pos = start;
@@ -216,6 +224,14 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
       fd_cc = strcmp(key, tagline);
   }}
   else
+  {	int got = get_to_newline();
+	if (tagline[0] == ' ')
+	  Tag::g_alt_root = strdup(Tag::g_tagline+1);
+	else
+	{ free(Tag::g_alt_root);
+	  Tag::g_alt_root = NULL;
+  	}
+
   {	int last_pos = -1;
 	start = 0;
 	fseek(fp, 0L, 2);
@@ -263,7 +279,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 	    seq = 0;									/* No more seeking */
 	  }
     }} while (1);
-  }
+  }}
 
   Tag::g_LastStart = pos;					/* point after newline */
 
@@ -291,7 +307,7 @@ int Tag::findTagExec(const char key[])
 	if (Tag::g_LastName == NULL)
 	  Tag::g_LastName = (char*)aalloc(sl_);
 
-{	char tagfile[NFILEN];
+{	char tagfile[TAGFILEN];
 	char tagline[TAGBUFFSZ+1];
 
 	int clamp = Tag::g_lastClamp + 1;
@@ -337,11 +353,11 @@ int Tag::findTagExec(const char key[])
 
 {	char * fn = file + ix;
 	fn[file[ix] == 0] = 0;
-{	char filenm[256];
-    BUFFER * bp = bufflink(pathcat(filenm,sizeof(filenm), tagfile, file),
+{	char * root = Tag::g_alt_root == NULL ? tagfile : Tag::g_alt_root;
+	BUFFER * bp = bufflink(pathcat(tagfile,sizeof(tagfile), root, file),
 				   		   1 + 64);
 	if (bp == NULL)
-	{	mlwrite(TEXT214, filenm);
+	{	mlwrite(TEXT214, tagfile);
     	return -1;
     }
 
@@ -355,7 +371,7 @@ int Tag::findTagExec(const char key[])
 	else
 		gotobob(0, 0);
 
-	strpcpy(tagline,pat,1024);			/* save for restore */
+	strcpy(tagfile,pat);			/* save for restore */
 
 	if (typ == 0)	
 	    strcat(strpcpy(pat, key, sizeof(pat)-20), "[^A-Za-z0-9_]");
@@ -387,13 +403,15 @@ int Tag::findTagExec(const char key[])
 		*++dd = 0 ;
 	}
 
-    mk_magic(MDMAGIC);
+{	int smode = bp->b_flag;
+	bp->b_flag |= MDMAGIC;
 
-{   int rc = hunt(typ != '?' ? 1 : -1, 1);
-    strcpy(pat,tagline);
-    mk_magic(-1);
+{   int rc = hunt(typ != '?' ? 1 : -1, 0);
+	bp->b_flag = smode;
+    strcpy(pat,tagfile);
+
     return rc;
-}}}}}}}
+}}}}}}}}
 
 /*ARGSUSED*/
 

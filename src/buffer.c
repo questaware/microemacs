@@ -309,10 +309,8 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 	else
 		bp1->b_next = bp->b_next;
 
-	if (bp->b_remote != NULL)
-		free(bp->b_remote);
-	if (bp->b_fname != null)
-		free(bp->b_fname);
+	free(bp->b_remote);
+	free(bp->b_fname);
 	free((char *) bp);			/* Release buffer block */
 	
 	return TRUE;

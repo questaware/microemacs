@@ -103,7 +103,6 @@ char * Pascal getwtxt(int, char *, int);
 int Pascal gettyp(char *);
 int Pascal getwpos();
 int init_wincon();
-int Pascal mk_magic(int);
 int Pascal mkdes();
 int Pascal nmlze_fname(char *, const char *, char *);
 void Pascal openwind(WINDOW *);

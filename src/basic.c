@@ -43,8 +43,8 @@ char * Pascal remallocstr(char * * res_ref, const char * val, int len)
 
   if (res != NULL && val != NULL)
   	strcpy(res, val);
-	if (*res_ref != null)
-    free(*res_ref);
+
+  free(*res_ref);
   return *res_ref = res;
 }}
 

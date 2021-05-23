@@ -214,8 +214,7 @@ void Pascal vtinit()
 }
 		tcapsetfgbg(0x70);			/* white background */ // should be derived
 #endif
-		if (vscreen != null)
-			free((char*)vscreen);
+		free((char*)vscreen);
 
 #define ncols 
 
@@ -243,10 +242,8 @@ void Pascal vtinit()
 */
 int Pascal vtfree()
 {
-		if (vscreen != null)
-		{ free((char*)vscreen);
-			vscreen = null;
-		}
+		free((char*)vscreen);
+		vscreen = null;
 		return 0;
 }
 
@@ -1082,7 +1079,7 @@ void Pascal updall(WINDOW * wp, int all)
 	
 { 	
 	LINE *lp = wp->w_linep;
-	int	sline = wp->w_toprow;
+	int	sline = wp->w_toprow - 1;
 	int	zline = sline + wp->w_ntrows;
 			
 	int color = window_bgfg(wp);
@@ -1099,7 +1096,7 @@ void Pascal updall(WINDOW * wp, int all)
 	}
 #endif
 	
-	for (; sline < zline; ++sline)
+	while (++sline <= zline)
 	{ if (all || lp == wp->w_dotp)	/* and update the virtual line */
 		{
 			VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);

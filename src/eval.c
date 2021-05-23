@@ -705,8 +705,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    when EVCFNAME:	 curwp->w_flag |= WFMODE;
 	    								 repl_bfname(curbp, value);
 //	  when EVSRES:	   cc = TTrez(value);
-	    when EVFILEPROF: if (g_file_prof != NULL)
-	    	               	 free(g_file_prof);
+	    when EVFILEPROF: free(g_file_prof);
 				               g_file_prof = strdup(value);
 				
 	    when EVCURCHAR:	 ldelchrs(1, FALSE);		/* delete 1 char */

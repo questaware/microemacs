@@ -360,15 +360,14 @@ int Pascal cinsert()				/* insert a newline and indentation for C */
 																												/* check for a brace */
 	if (offset >= 0 && lgetc(lp, offset) == '{')
 		offset = -1;
-																											 /* put in the newline */
+																												/* put in the newline */
 	if (lnewline() == FALSE)
 		return FALSE;
-												 /* if the new line is not blank... don't indent it! */
+														/* if the new line is not blank... don't indent it! */
 	lp = curwp->w_dotp;
 	if (lp->l_used)
 		return TRUE;
-
-								 /* hunt for the last non-blank line to get indentation from */
+								 						/* find last non-blank line to get indentation from */
 	while (lp->l_used == 0 && (lp->l_props & L_IS_HD) == 0)
 		lp = lback(lp);
 													/* grab a pointer to text to copy indentation from */

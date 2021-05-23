@@ -547,10 +547,10 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     { char * homedir = getenv("HOME");
       buf[cpos] = 0;
       if (cpos == 1 && homedir != NULL)
-      { strpcpy(&combuf[0], homedir, NSTRING-1);
+      { strpcpy(&combuf[0], homedir, HICHAR-2);
       }
       else
-      { homeusr(strpcpy(&combuf[0], buf, NSTRING-2));
+      { homeusr(strpcpy(&combuf[0], buf, HICHAR-2));
       }
       buf[0] = 0;
       cpos = 0;
@@ -642,7 +642,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       }
     }
     else if (c <= 'Z'-'@' && ch != quotec || c == (ALTD | 'S'))
-    { autostr = fixnull(getwtxt(c, &combuf[0], NSTRING-3-cpos));
+    { autostr = fixnull(getwtxt(c, &combuf[0], HICHAR-3-cpos));
     }
     else 
     { int tpos;

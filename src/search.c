@@ -98,8 +98,8 @@ typedef struct
 	char   lchar;
 } MC;
 
-static BITMAP * cclarray[NPAT / 16 /* say */ ];
-static int cclarr_ix = 0;
+static BITMAP * g_cclarray[NPAT / 16 /* say */ ];
+static int g_cclarr_ix = 0;
 
 static MC   g_pats[NPAT+2];
 static int	g_pats_top;
@@ -116,35 +116,36 @@ static unsigned int g_Dmatchlen = 0;
  */
 static int Pascal cclmake(int patix, MC *  mcptr)
 	
-{ int to = cclarr_ix;
-	BITMAP * p_bmap = cclarray[to];
-
-	if (to >= sizeof(cclarray)/sizeof(BITMAP*) ||
-			 p_bmap == NULL &&
-	    (p_bmap = (BITMAP*)aalloc(HICHAR >> 3)) == NULL)
-	{ 
+{ int to = g_cclarr_ix++;
+	if (to >= sizeof(g_cclarray)/sizeof(BITMAP*))
 	  return ERR_OOMEM;
-	}
 
-	cclarray[ to ] = p_bmap;
 	mcptr->lchar = to;
 	mcptr->mc_type = CCL;
-	++cclarr_ix;
-																		/* Test the initial character(s) in ccl for
+
+{	BITMAP * p_bmap = g_cclarray[to];
+	if (p_bmap == NULL)
+		p_bmap = (BITMAP*)aalloc(HICHAR >> 3);
+
+	if (p_bmap == NULL)
+	  return ERR_OOMEM;
+
+	g_cclarray[ to ] = p_bmap;				/* Test the initial character(s) in ccl for
 																		 * special cases - negate ccl, or an end ccl
 																		 * character as a first character.
 																		 * Anything else gets set in the bitmap. */
 {	int from;
-	for ( ; (from = pat[++patix]) != 0 && from != MC_ECCL; )
-	{
+	while ((from = pat[++patix]) != 0)
+	{	if (from == MC_ECCL)
+			return patix;
+
 		if (from == MC_NCCL)		/* '^' */
 		{ mcptr->mc_type |= NOT_PAT;
 			continue;
 		}
-	  if (pat[patix + 1] == MC_RCCL && pat[patix + 2] != MC_ECCL)
-		{	to = pat[patix + 2];
-	  	patix += 2;
-	  }
+		to = pat[patix + 2];
+	  if (to != MC_ECCL && pat[patix + 1] == MC_RCCL)
+			patix += 2;
 	  else
 	    to = from;
 
@@ -152,8 +153,8 @@ static int Pascal cclmake(int patix, MC *  mcptr)
 	    p_bmap[from >> 4] |= (1 << (from & 15));
 	}
 	
-	return from == 0 ? from : patix;
-}}
+	return 0;
+}}}
 
 
 static
@@ -185,21 +186,20 @@ int Pascal get_hex2(int * res_ref, const char * s)
  *	closure, such as a newline, beginning of line symbol, or another
  *	closure symbol.
  */
-int Pascal mk_magic(int mode)
+static
+int Pascal mk_magic()
 
-{	  int magical = 0;
-    int patix = -1;
-	  int	pchr;
-#define DOES_CL 1
-		MC * mcptr = g_pats;
-
-//mcpat[0].mc_type = MCNIL;
+{	g_cclarr_ix = 0;						/* reset magical. */
 	g_pats[NPAT].mc_type = -1;	/* a barrier */
 
-	cclarr_ix = 0;						/* reset magical. */
+{	MC * mcptr = g_pats;
+	int mode = curbp->b_flag;
+  int magical = 0;
+	int patix = -1;
+	int	pchr;
+#define DOES_CL 1
 
-	if (mode < 0)
-		mode = curbp->b_flag;
+//mcpat[0].mc_type = MCNIL;
 
 	while (TRUE)
 	{
@@ -274,7 +274,7 @@ int Pascal mk_magic(int mode)
 
 	  return true;
 	}
-}
+}}
 
 
 /*
@@ -368,7 +368,6 @@ int last_was_srch()
 }
 */ 
 
-
 int Pascal hunt(int n, int again)
 
 {								/* Make sure a pattern exists, or that we didn't switch
@@ -384,13 +383,9 @@ int Pascal hunt(int n, int again)
 	  return FALSE;
 	}
 
-//if (/*(mdexact & MDMAGIC) && */g_pats[dir][0].mc_type == MCNIL)
-	if (!mk_magic(-1))
-	  return FALSE;
-
 {	int dir = 1;
 	int cc;
-	if (n < 0)
+	if (n <= 0)
 	{ n = -n;
 	  dir = -1;
 //	paren.sdir = -1;
@@ -441,9 +436,7 @@ int Pascal forwhunt(int f, int n)
  */
 int Pascal backhunt(int f, int n)
 
-{	if (n == 0)
-		n = 1;
-
+{	
 	return hunt(-n, TRUE);
 }
 
@@ -517,7 +510,7 @@ static int mceq(int bc, int mctype, int lchar)
 		}
 		else
 #endif
-	  {	BITMAP * pbm = cclarray[lchar];
+	  {	BITMAP * pbm = g_cclarray[lchar];
 			result = pbm[bc >> 4];
 			if ((curbp->b_flag & MDEXACT) == 0 && isletter(bc))
 				result |= pbm[(bc >> 4) ^ 2];
@@ -652,13 +645,14 @@ int Pascal scanner(int direct, int again)
 	
 { Lpos_t lpos = *(Lpos_t*)&curwp->w_dotp;
   Lpos_t sm = lpos;			/* match line and offs */
-  int skip = again & 4;
 
   init_paren("",0);
   paren.sdir = direct;
   
-  (void)mk_magic(-1);
-  
+	if (!mk_magic())
+	  return FALSE;
+
+{ int skip = again & 4 && g_clring != 0;
   if ((again & 1) ? direct > 0 : (lpos.curline->l_props & L_IS_HD))
     nextch(&lpos, direct);    /* Advance the cursor.*/
                               /* Save the old g_Dmatchlen length, in case it is
@@ -718,9 +712,7 @@ int Pascal scanner(int direct, int again)
   rest_l_offs(&lpos);
   curwp->w_flag |= WFMOVE; /* flag that we have moved */
 
-  if (patmatch != NULL)
-    free(patmatch);
-
+  free(patmatch);
   patmatch = (char*)malloc(g_Dmatchlen+1);
 
 { char * patptr = patmatch;
@@ -737,7 +729,7 @@ int Pascal scanner(int direct, int again)
 #endif
 
   return true;				/* We found a match */
-}}}
+}}}}
 
 static int Pascal replaces(int, int, int);
 /*

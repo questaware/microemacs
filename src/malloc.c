@@ -188,7 +188,7 @@ void Pascal release(char * mp)
 	{ 
 #if RAMCHK
 	  mp -= 2 + PAD_SZ;
-        { int size = (mp[1] & 0xff) + (unsigned)(mp[0] << 8);
+  { int size = (mp[1] & 0xff) + (unsigned)(mp[0] << 8);
 	  if (mp[2+PAD_SZ+size] != MEM_TAG or
 	      mp[3+PAD_SZ+size] != MEM_TAG)
             adb(mp[2+PAD_SZ+size]);
