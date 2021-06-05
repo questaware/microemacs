@@ -162,19 +162,18 @@ void Pascal setconsoletitle(char * title)
 
 void Pascal tcapsetsize(int wid, int dpth)
 
-{//DWORD mode;
-	if (wid < 0)
-		wid = -wid;
-	else
-	{	int decw = csbiInfo.dwSize.X - wid;
-		int decd = csbiInfo.dwSize.Y - dpth;
-		if (decd < 0)
-			decd = 0;
-		if (decw < 0)
-			decw = 0;
+{	int decw = csbiInfo.dwSize.X - wid;
+	int decd = csbiInfo.dwSize.Y - dpth;
+	if (decd < 0)
+		decd = 0;
+	if (decw < 0)
+		decw = 0;
 		
-		if (decw > 0 || decd > 0)
-			tcapsetsize(-(csbiInfo.dwSize.X - decw - 1), csbiInfo.dwSize.Y - decd - 1);
+	if (decw + decd > 0)			// Must be done twice
+	{ decw = csbiInfo.dwSize.X - decw - 1;
+		if (decw < 0)
+			decw = -decw;
+		tcapsetsize(decw, csbiInfo.dwSize.Y - decd - 1);
 	}
 {
 #if 0
@@ -199,14 +198,12 @@ void Pascal tcapsetsize(int wid, int dpth)
 
 	GetConsoleScreenBufferInfo( h, &csbiInfo );
 																	// set the screen buffer to be big enough
-#if 1
 { int rc = SetConsoleWindowInfo(h, 1, &rect);
   if (rc == 0)
     flagerr("SCWI %d");
-}
+}}
 #endif
-#endif
-}}}
+}}
 
 			 int   g_cursor_on = 0;
 static COORD g_oldcur;

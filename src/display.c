@@ -221,7 +221,7 @@ void Pascal vtinit()
 #define UESZ	((sizeof(VIDEO)-12+2*(term.t_mcol+3))*MEMCT)	// 3 extra
 
 		i = (term.t_mrowm1+2) * MEMCT; 
-		vscreen = (VIDEO **)aalloc(i * (sizeof(VIDEO*)+UESZ));
+		vscreen = (VIDEO **)mallocz(i * (sizeof(VIDEO*)+UESZ));
 #if MEMMAP == 0
 		pscreen = &vscreen[term.t_mrowm1+1];
 #endif
@@ -348,19 +348,19 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	unsigned char s_props = *str;												/* layout dependent */
 	*str = 0;																						/* restored below */
 
+#if _DEBUG
 	if (row >= term.t_mrowm1)
 	{
-#if _DEBUG
 	  tcapbeep();
-#endif
 		row = term.t_mrowm1 - 1;
 	}
+#endif
 
 {	VIDEO *vp = vscreen[row];
 	short * tgt = &vp->v_text[0];
 	Short  clring = g_clring;
-	int mode = cmt_chrom == 0 || clring == 0 || 
-								 (vp->v_flag & VFML) ? -1 : s_props & VFCMT;
+	int mode = cmt_chrom == 0 || clring == 0 || (vp->v_flag & VFML)
+								 		? -1 : s_props & VFCMT;
 												
 	if ((clring & BCD) && (s_props & VFCMT) ||
 			(clring & BCFOR) && toupper(str[1]) == 'C' && len > 0)
@@ -543,12 +543,13 @@ void Pascal modeline(WINDOW * wp)
 	memset(&tline.lc.l_text[0], n, NLINE);
 
 	row = wp->w_toprow+wp->w_ntrows;		/* Location. */
+
+#if _DEBUG
 	if ((unsigned)row >= (unsigned)term.t_mrowm1)
 	{ row = term.t_mrowm1 - 1;
-#if _DEBUG
 		mbwrite("toprow+ntrows oor");
-#endif
 	}
+#endif
 	vscreen[row]->v_flag &= ~VFCMT;
 #if S_MSDOS || OWN_MODECOLOUR
 	vscreen[row]->v_color = 0x25; 		/* magenta on green */
@@ -629,6 +630,75 @@ void Pascal modeline(WINDOW * wp)
 	vtputs((wp->w_flag&WFFORCE) != 0 ? "F" : "");
 #endif
 }}}}
+
+/*	updall: update all the lines in a window on the virtual screen */
+
+void Pascal updall(WINDOW * wp, int wh)
+																/* wh : < 0 => de-extend logic
+																				= 0 => only w_dotp
+																				> 0 =? all */
+{ 	
+	LINE *lp = wp->w_linep;
+	int	sline = wp->w_toprow - 1;
+	int	zline = sline + wp->w_ntrows;
+			
+	int color = window_bgfg(wp);
+	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
+
+#if S_MSDOS == 0
+	if (color == 0x70)
+		color = V_BLANK;
+#endif
+#if _DEBUG
+	if (zline >= term.t_mrowm1)
+	{ /* addb(sline); */
+		zline = term.t_mrowm1-1;
+	}
+#endif
+	
+	while (++sline <= zline)
+	{ if      (wh < 0)
+		{ if (vscreen[sline]->v_flag & VFEXT)
+				if (lp != wp->w_dotp)
+				{ VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
+																		/* this line no longer is extended */
+					vp->v_flag -= VFEXT;
+					vp->v_flag |= VFCHG;
+				}
+		}	
+		else if (wh || lp == wp->w_dotp)	/* and update the virtual line */
+		{
+			VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
+
+			vp->v_color = color;
+			vp->v_flag &= ~(VFREQ | VFML);
+			vp->v_flag |= VFCHG | (lp->l_props & Q_IN_CMT);
+		}
+		if ((lp->l_props & L_IS_HD) == 0)/* if we are not at the end */
+			lp = lforw(lp);
+	}
+}
+
+
+#if 0
+
+void Pascal updallwnd(int reload)
+
+{ WINDOW * wp;
+
+	for (wp = wheadp; reload && wp != NULL; wp = wp->w_next)
+	{ updall(wp, true);
+		modeline(wp);
+	}
+
+	for (int i = -1; ++i <= term.t_nrowm1; )
+	{
+		struct VIDEO *vp1 = vscreen[i]; /* virtual screen image */
+		scwrite(i, vp1->v_text, vp1->v_color);
+	}
+}
+
+#endif
 
 #if MEMMAP
 # define pteeol(row)
@@ -773,10 +843,10 @@ void Pascal updline(int force)
 				int fcol = wp->w_fcol;
 			  LINE * lp;
 				int col = getccol() - fcol; 	/* ensure not off the left of the screen */
-				int j = ((pd_hjump - col - 1) / pd_hjump) * pd_hjump;
-
-	if (j > 0)
-	{	fcol -= j;
+				int j = (col + 1 - pd_hjump);
+				
+	if (j < 0 && pd_hjump > 0)
+	{	fcol += (j  / pd_hjump) * pd_hjump;;
 		flag = 1;
 	}
 
@@ -806,19 +876,18 @@ void Pascal updline(int force)
 { int i;
 	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
 	int rhs = col - term.t_ncol + 1;
-												/* if horizontal scrolling is enabled, shift if needed */
-	if (pd_hjump)
+										
+	if (pd_hjump)						/* if horizontal scrolling is enabled, shift if needed */
 	{	if (rhs >= 0)
 		{ flag = ((rhs + pd_hjump - 1) / pd_hjump) * pd_hjump;
 			fcol += flag;
 			col -= flag;
 		}
 	}
-	else
+	else								// Not used in Windows
 	{	if (rhs < 0)
 			lbound = 0;
-		else
-							/* updext: update the extended line which the cursor is currently
+		else		 /*  updext: update the extended line which the cursor is currently
 								 on at a column greater than the terminal width. The line
 								 will be scrolled right or left to let the user see where
 								 the cursor is. Called only in non Hscroll mode.
@@ -846,35 +915,17 @@ void Pascal updline(int force)
 		updall(wp, 1);
 
 	curcol = col;
-
-/*	upddex: de-extend any line that deserves it 	*/
+	if (col < term.t_ncol - 1)			// allow deextension on this line
+		wp->w_dotp = NULL;
+																/*	upddex: de-extend any line that deserves it */
 
 	for (wp = wheadp; wp != NULL; wp = wp->w_next)
-	{ lp = wp->w_linep;
-		i = wp->w_toprow;
-	{ int zline = i + wp->w_ntrows; 			/* zero based */
-#if _DEBUG
-		if (zline >= term.t_mrowm1)
-		{ adb(37);
-			zline = term.t_mrowm1-1;
-		}
-#endif
-		for (--i; ++i < zline; )
-		{ if (vscreen[i]->v_flag & VFEXT)
-			{ 
-				if (lp != wp->w_dotp || col < term.t_ncol - 1)
-				{ VIDEO * vp = vtmove(i, wp->w_fcol, cmt_clr, lp);
-																		/* this line no longer is extended */
-					vp->v_flag -= VFEXT;
-					vp->v_flag |= VFCHG;
-				}
-			}
-			lp = lforw(lp);
-		}
+	{	updall(wp,-1);
 
+		wp->w_dotp = up_lp;
 		modeline(wp);
 		wp->w_flag = 0; 		/* we are done */
-	}}
+	}
 
 /*	updupd: update the physical screen from the virtual screen	*/
 {
@@ -1072,63 +1123,6 @@ int Pascal upscreen(int f, int n)
 
 { return update(TRUE);
 }
-
-/*	updall: update all the lines in a window on the virtual screen */
-
-void Pascal updall(WINDOW * wp, int all)
-	
-{ 	
-	LINE *lp = wp->w_linep;
-	int	sline = wp->w_toprow - 1;
-	int	zline = sline + wp->w_ntrows;
-			
-	int color = window_bgfg(wp);
-	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
-
-#if S_MSDOS == 0
-	if (color == 0x70)
-		color = V_BLANK;
-#endif
-#if _DEBUG
-	if (zline >= term.t_mrowm1)
-	{ /* addb(sline); */
-		zline = term.t_mrowm1-1;
-	}
-#endif
-	
-	while (++sline <= zline)
-	{ if (all || lp == wp->w_dotp)	/* and update the virtual line */
-		{
-			VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
-
-			vp->v_color = color;
-			vp->v_flag &= ~(VFREQ | VFML);
-			vp->v_flag |= VFCHG | (lp->l_props & Q_IN_CMT);
-		}
-		if ((lp->l_props & L_IS_HD) == 0)/* if we are not at the end */
-			lp = lforw(lp);
-	}
-}
-
-#if 0
-
-void Pascal updallwnd(int reload)
-
-{ WINDOW * wp;
-
-	for (wp = wheadp; reload && wp != NULL; wp = wp->w_next)
-	{ updall(wp, true);
-		modeline(wp);
-	}
-
-	for (int i = -1; ++i <= term.t_nrowm1; )
-	{
-		struct VIDEO *vp1 = vscreen[i]; /* virtual screen image */
-		scwrite(i, vp1->v_text, vp1->v_color);
-	}
-}
-
-#endif
 
 /* Update a single line. This does not know how to use insert or delete
  * character sequences; we are using VT52 functionality. Update the physical

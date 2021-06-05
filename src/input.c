@@ -233,7 +233,7 @@ int  tgetc()
 int  getkey()
 
 { int c = tgetc();
-
+#if 0
   if (c == 0)								/* if it exists, process an escape sequence */
   { 
     c = tgetc();				/* get the event type */
@@ -248,6 +248,7 @@ int  getkey()
   /*loglog2("AK %x %d", c, c);*/
   }
 	/* yank out the control prefix */
+#endif
 
   return (c & 255) <= 0x1f ? CTRL | (c+'@') :
 		  	 (c & 255) == 0x88 ? CTRL | '\\':

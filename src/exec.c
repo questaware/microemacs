@@ -451,7 +451,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	  
 			if (eline[1] == 'w' && eline[2] == 'h' ||
 					eline[1] == 'b' && eline[2] == 'r')
-			{ WHBLOCK * whtemp = (WHBLOCK *)aalloc(sizeof(WHBLOCK));
+			{ WHBLOCK * whtemp = (WHBLOCK *)mallocz(sizeof(WHBLOCK));
 		 		if (whtemp == NULL ||
 	     															/* "%%!BREAK outside of any !WHILE loop" */
 	         (eline[1] == 'b' && scan == NULL))

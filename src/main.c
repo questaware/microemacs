@@ -79,7 +79,7 @@ NOSHARE int restflag = FALSE;	    /* restricted use?		*/
 const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
 
 NOSHARE char palstr[49] = "";		/* palette string		*/
-NOSHARE char lastmesg[LFSTR] = ""; 	/* last message posted		*/
+NOSHARE char lastmesg[NCOL+2] = ""; 	/* last message posted		*/
 NOSHARE int(Pascal *lastfnc)(int, int);/* last function executed	*/
 NOSHARE int eexitflag = FALSE;	/* EMACS exit flag		*/
 NOSHARE int eexitval = 0; 	/* and the exit return value	*/
@@ -433,7 +433,7 @@ int main(int argc, char * argv[])
 	  hpp->k_ptr.fp = nullproc;
 
 	wheadp =
-	curwp = (WINDOW *) aalloc(sizeof(WINDOW)); /* First window	*/
+	 curwp = (WINDOW *)mallocz(sizeof(WINDOW)); /* First window	*/
 
 	set_var("$incldirs", getenv("INCLUDE"));
 

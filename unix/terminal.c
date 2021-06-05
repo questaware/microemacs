@@ -439,32 +439,12 @@ int Pascal get1key(); /* forward */
 int g_chars_since_ctrl; /* these do not work in unix */
 int g_timeout_secs = 0;
 
+
 int Pascal ttgetc()
 
-{  										/* if there are already keys waiting.... send them */
-	if (in_check())
-	  return in_get();
-											/* otherwise... get the char for now */
-{	int c = get1key();
-
-//if (((SPEC+CTRL) & c) == CTRL && c != CTRL | '[')   /* unfold the control bit back into the character */
-	if ((c & SPEC) == 0)
-	{	if (c & CTRL)														   /* unfold the control bit back into the character */
-		  c = (c & ~ CTRL) - '@';
-
-		/* fold the event type into the input stream as an escape seq */
-//if ((c & ~255) != 0)
-		else
-		{ in_put(0);		/* keyboard escape prefix */
-		  in_put(c >> 8);		/* event type */
-		  in_put(c & 255);	/* event code */
-		  return ttgetc();
-		}		
-	}
-
-	return c;
-}}
-
+{                     /* if there are already keys waiting.... send them */
+  return in_check() ? in_get() : get1key();
+}
 
 /*	GET1KEY:	Get one keystroke. The only prefixs legal here
 			are the SPEC and CTRL prefixes.
@@ -546,10 +526,10 @@ int Pascal get1key()
 
 	bgetk(c);
 	if (c != A_ESC)
-	  if (c == key_bspace)
-	    return ecco(CTRL | 'H');
-	  else  
-	    return ecco(c);
+	{ if (c == key_bspace)
+	    c = CTRL | 'H';
+		return ecco(c);
+	}
 
 	bgetk(c);
 	if (c != 'O' && c != '[')           /* it's not terminal generated */

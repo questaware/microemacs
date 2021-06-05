@@ -141,12 +141,15 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
 
 	curbp = bp; 			/* Switch. */
 { char * fn = bp->b_fname;
+	int flag = bp->b_flag;
+  bp->b_flag |= BFACTIVE;			/* code added */
+
 	if (fn != null)
 	{
 #if S_WIN32
 		setconsoletitle(fn);
 #endif
-		if (!(bp->b_flag & BFACTIVE))		/* not active yet*/
+		if (!(flag & BFACTIVE))		/* not active yet*/
 		{ 
 			readin(fn, FILE_LOCK);
 			curwp->w_flag |= WFFORCE;
@@ -497,7 +500,7 @@ BUFFER *Pascal bfind(char * bname,
 		return null;
 
 { LINE *lp;
-	BUFFER *bp = (BUFFER *)aalloc(sizeof(BUFFER)+strlen(bname)+2);
+	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+2);
 	if (bp == NULL)
 		return NULL;
 									/* and insert it */

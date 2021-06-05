@@ -329,7 +329,7 @@ window.  Bound to "C-X 2".
 */
 int Pascal splitwind(int f, int n)
 
-{	WINDOW * wp = (WINDOW *) aalloc(sizeof(WINDOW));
+{	WINDOW * wp = (WINDOW *) mallocz(sizeof(WINDOW));
 	if (wp == NULL)
 	  return FALSE;
 
@@ -586,7 +586,9 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 		term.t_nrowm1 = dpth - 1;			
 		term.t_mrowm1 = dpth - 1;			
 	  vtinit();
+//#if S_WIN32 == 0
 	  tcapsetsize(wid,dpth);
+//#endif
 #if 0
 	  curwp->w_ntrows = term.t_nrowm1-1;
 #else

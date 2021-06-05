@@ -42,7 +42,7 @@ int Pascal makename(char * bname, const char * fname)
   const char *cand = &fname[0]; 
   char  ch;
 
-  for (s_cp = cand; (ch = *s_cp++) != 0; )
+  for (s_cp = cand; (ch = *s_cp++) != 0 && *s_cp != 0; )
 #if	S_AMIGA
 	  if (ch == ':' || ch == '/')
 #elif	S_VMS
@@ -694,7 +694,6 @@ out:
 	else
 	{ WINDOW * wp;
 	  tcapkopen();								/* open the keyboard again (Unix only) */
-	  bp->b_flag |= BFACTIVE;			/* code added */
 //  swb_luct = topluct() + 1;
 //  bp->b_luct = swb_luct;
 	  bp->b_dotp = lforw(&bp->b_baseline);

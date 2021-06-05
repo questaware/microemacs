@@ -125,7 +125,7 @@ static int Pascal cclmake(int patix, MC *  mcptr)
 
 {	BITMAP * p_bmap = g_cclarray[to];
 	if (p_bmap == NULL)
-		p_bmap = (BITMAP*)aalloc(HICHAR >> 3);
+		p_bmap = (BITMAP*)mallocz(HICHAR >> 3);
 
 	if (p_bmap == NULL)
 	  return ERR_OOMEM;

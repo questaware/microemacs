@@ -305,7 +305,7 @@ int Tag::findTagExec(const char key[])
 	const char * const tagfname = TAGFNAME;
 
 	if (Tag::g_LastName == NULL)
-	  Tag::g_LastName = (char*)aalloc(sl_);
+	  Tag::g_LastName = (char*)mallocz(sl_);
 
 {	char tagfile[TAGFILEN];
 	char tagline[TAGBUFFSZ+1];

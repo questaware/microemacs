@@ -8,6 +8,17 @@
 
 #include "epredef.h"
 
+#if _WINDOWS
+#define NROW	60			/* Max Screen size. 	*/
+#define NCOL 148										 /* Edit if you want to.				 */
+#elif S_WIN32
+#define NROW	75			/* Max Screen size. 	*/
+#define NCOL 148										 /* Edit if you want to.				 */
+#else
+#define NROW	80			/* Max Screen size. 	*/
+#define NCOL 134										 /* Edit if you want to.				 */
+#endif
+
 #define CTRL	0x0100		/* Control flag, or'ed in		*/
 #define META	0x0200		/* Meta flag, or'ed in			*/
 #define CTLX	0x0400		/* ^X flag, or'ed in			*/
@@ -378,9 +389,6 @@ extern Paren_t paren;
 #define nextabp(a,sz)	((a - (a % sz)) + sz)
 #define chcaseunsafe(ch)   (ch ^ 0x20)
 
-#define LFSTR 132
-
-
 /* from MAIN.C */
 
 #define OPT_M    1
@@ -432,7 +440,7 @@ NOSHARE extern Int envram;		/* # of bytes current in use by malloc */
 const extern char g_logm[3][8];
 
 NOSHARE extern char palstr[49];		/* palette string		*/
-NOSHARE extern char lastmesg[LFSTR];	/* last message posted		*/
+NOSHARE extern char lastmesg[NCOL+2];	/* last message posted		*/
 NOSHARE extern int (Pascal *lastfnc)(int, int);/* last function executed */
 NOSHARE extern char *fline; 		/* dynamic return line */
 NOSHARE extern int eexitflag;		/* EMACS exit flag */
@@ -506,18 +514,6 @@ NOSHARE extern TERM	term;		/* Terminal information.	*/
 #define Q_IN_CMT  32
 #define Q_IN_CMT_ 64
 #define Q_IN_EOL 128
-
-
-#if _WINDOWS
-#define NROW	60			/* Max Screen size. 	*/
-#define NCOL 148										 /* Edit if you want to.				 */
-#elif S_WIN32
-#define NROW	75			/* Max Screen size. 	*/
-#define NCOL 148										 /* Edit if you want to.				 */
-#else
-#define NROW	80			/* Max Screen size. 	*/
-#define NCOL 134										 /* Edit if you want to.				 */
-#endif
 
 /*
 	This is the message which should be added to any "About MicroEMACS"

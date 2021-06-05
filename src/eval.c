@@ -750,9 +750,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	    case EVDIAGFLAG:	
 	    case EVMSFLAG:  predefvars[vnum] = stol(value);
 
-	    when EVHJUMP:   if (val <= 0)
-									      val = 1;
-										  if (val > term.t_ncol - 1)
+	    when EVHJUMP:   if (val > term.t_ncol - 1)
 					              val = term.t_ncol - 1;
 	    default:	      predefvars[vnum] = val;
     }

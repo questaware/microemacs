@@ -331,7 +331,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
       got_star = MSD_DIRY;
     else if (ch == '/' || ch == '\\')
     {	t[0] = '/';
-    { int dif = (t - tgt) + 3;
+    { int dif = (t - tgt) - 3;
       if (dif >= 0)
       { if (t[-1] == '.')
       	{ if (t[-2] == '/')			// "/./"
@@ -386,9 +386,9 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	    	break;
 	    
 			deduct += 3;
-			t = &t[ncw - cw];
+			++t;
 			while (*++cw != 0 && *cw != DIRSEPCHAR)
-				;
+				++t;
 		}
 
 		if (deduct >= 0)

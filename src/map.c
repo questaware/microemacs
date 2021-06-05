@@ -17,7 +17,7 @@
 #define DO_SRIAL 0
 #else
 #define DO_SRIAL 1
-				  // len in bytes
+																	  // len in bytes
 Map mk_map(Map c, Format_t format, Vint len)
 
 {
@@ -25,20 +25,19 @@ Map mk_map(Map c, Format_t format, Vint len)
     return null;
 
   if (c == null)
-    c = (Map)aalloc(FOFFS_MAP+1+len);
+    c = (Map)mallocz(FOFFS_MAP+1+len);
   
   if (c != null)
-  { c->format   = format;
-    c->max_len  = len;
+  { c->max_len  = len;
+  	c->format   = format;
   
-    c->curr_len = 0;
-    c->curr_mult = 0;
-    c->c[0] = 0;
+//  c->curr_len = 0;
+//  c->curr_mult = 0;
+//  c->c[0] = 0;
     c->last_ix = -1;
   }
   return c;
 }
-
 
 #endif
 
@@ -162,7 +161,7 @@ Cc map_add_(Map * map_ref, Byte * rec)
   { if (len < LENINC)
       len = LENINC;
     len += map->curr_len;
-    map = (Map)aalloc(FOFFS_MAP+1+len);
+    map = (Map)mallocz(FOFFS_MAP+1+len);
     if (map == null)
       return ENOSPACE;
     memcpy(map, *map_ref, fieldoffs(Map, c) + ix);
@@ -231,7 +230,7 @@ Mapstrm mk_strm(Mapstrm strm, Map map, void * key)
 
 { Vint bigsz = map->format.key_type - T_DOMCHAR0;
   if (strm == null)
-    strm = (Mapstrm)aalloc(sizeof(Mapstrm_t) + (bigsz < 0 ? 0 : bigsz));
+    strm = (Mapstrm)mallocz(sizeof(Mapstrm_t) + (bigsz < 0 ? 0 : bigsz));
 
   strm->map        = map;
   strm->update_ct  = -1;

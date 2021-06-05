@@ -20,44 +20,6 @@
 
 #define BSIZE(a)  (a + NBLOCK - 1) & (~(NBLOCK - 1))
 
-
-#if 0
-X
-XLINE * lp_link0;
-XLINE * lp_link1;
-X
-X
-XLINE *Pascal lback(lp)
-X	LINE * lp;
-X{ register LINE * lp_;
-X  for (lp_ = lp; (lp_->l_props & L_HAS_BL) == 0; lp_ = lforw(lp))
-X    if (lp_ == null)
-X    { adb(59);
-X      return lp; 
-X    }
-X
-X  lp_link0 = lp_;
-X{ register LINE * lp__;
-X  lp_=lp_->l_fp[-1];
-X  if (lp_ == null)
-X  { adb(60);
-X    return lp;
-X  }
-X  
-X  lp_link1 = lp_;
-X  
-X  for (; (lp__ = lp_->l_fp[0]) != lp; lp_ = lp__)
-X    if (lp_ == null)
-X    { adb(60);
-X      return lp; 
-X    }
-X
-X  return lp_; 
-X}}
-#endif
-
-
-
 /* This routine allocates a block of memory large enough to hold a LINE
  * containing "sz" characters. Return a pointer to the new block, or
  * NULL if there isn't any memory left.
@@ -65,11 +27,11 @@ X}}
 
 LINE *Pascal mk_line(const char * src, int sz, int lsrc)
 {
-  LINE *lp = (LINE *)aalloc(sizeof(LINE)+sz);
+  LINE *lp = (LINE *)mallocz(sizeof(LINE)+sz);
   if (lp == NULL)
     return NULL;
 
-  lp->l_props = 0;
+//lp->l_props = 0;
   lp->l_used  = lsrc;
   lp->l_spare = sz - lsrc;
 	if (src != null)
