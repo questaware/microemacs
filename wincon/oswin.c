@@ -1335,10 +1335,7 @@ int pipefilter(wh)
  				char 	 bname [10];
 				char	 pipeInFile[NFILEN];
 				char	 pipeOutFile[NFILEN];
-//			char	 app[80];
-//			char	 pipeEFile[NFILEN];
 				char * fnam1 = NULL;
-//			char * fnam3 = NULL;
 							
 				char line[NSTRING+2*NFILEN+100];			 /* command line send to shell */
 
@@ -1457,8 +1454,6 @@ int pipefilter(wh)
 		bp->b_nwnd -= 1;										/* both swbuffer and readin increment it*/
 		bp->b_fname = sfn; 									/* restore name */
 		bp->b_flag |= BFCHG; 								/* flag it as changed */
-//  if (fnam3 != null)
-// 	  cc = readin(fnam3, FILE_INS);
 		if (wh == '#'-'@')
 			flush_typah();
 	}

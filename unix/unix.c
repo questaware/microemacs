@@ -69,7 +69,7 @@ char tobuf[TBUFSIZ];		/* terminal output buffer */
   static struct	termio	otermio;	/* original terminal characteristics */
   static struct	termio	ntermio;	/* charactoristics to use inside */
 
-static char g_emacsdir[128];
+static const char g_emacsdir[] = "mkdir ~/.emacs.d/";
 
 extern char * getenv();
 
@@ -518,16 +518,18 @@ int pipecmd(int f, int n)
 	}
 
   char rcmd[256];
-  strcat(strcat(strcat(strcat(strcpy(rcmd,"rm -f ")," "),g_emacsdir+10),"/"),filnam);
+  system(g_emacsdir);  
+  strcat(strcat(strcat(strcpy(rcmd,"rm -f ")," "),g_emacsdir+6),filnam);
   system(rcmd);  
   strcat(line,">");
   s = strlen(line);
-	usehost(strcat(strcat(line, g_emacsdir+10),filnam), FALSE);
+	usehost(strcat(strcat(line, g_emacsdir+6),filnam), FALSE);
   	           /* split the current window to make room for the command output*/
 	if (splitwind(FALSE, 1) == FALSE)
 	  return FALSE;
 					    /* and read the stuff in */
-  bp = bufflink(line+s, (g_clexec > 0) + 64);
+{	char * h = getenv("HOME");
+  bp = bufflink(strcat(strcpy(rcmd, h == NULL ? "/tmp" : h), line+s+1), (g_clexec > 0) + 64);
 	if (bp == NULL)
 	  return FALSE;
 	  		     /* make this window in VIEW mode, update all mode lines */
@@ -536,7 +538,7 @@ int pipecmd(int f, int n)
 
 	unlink(filnam);			/* get rid of the temporary file */
 	return TRUE;
-}}
+}}}
 
 Cc unix_rename(old, new)	/* change the name of a file */
 	char *new;	/* new file name */
@@ -579,6 +581,7 @@ int filter(int f, int n)
   { usehost(strcat(line," </tmp/fltinp >/tmp/fltout"), FALSE);
 					  /* on failure, escape gracefully */
     cc = readin(filnam2,0);
+		bp->b_nwnd -= 1;										/* both swbuffer and readin increment it*/
     unlink(filnam1);			  /* and get rid of the temporary file */
     unlink(filnam2);
   }

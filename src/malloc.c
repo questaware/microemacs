@@ -176,41 +176,39 @@ char * Pascal duplicate(const char * src)
 void Pascal release(char * mp)
 	/*mp;	** chunk of RAM to release */
 {
+	if (mp == null)
+		return;
+
 #if	RAMTRCK
 	FILE *track = fopen("malloc.dat", "a");
 	fprintf(track, "Free %lx\n", mp);
 	fclose(track);
 #endif
-	if (mp == null)
-	  TTbeep();
-	else
-	{ 
-#if RAMCHK
-	  mp -= 2 + PAD_SZ;
-  { int size = (mp[1] & 0xff) + (unsigned)(mp[0] << 8);
-	  if (mp[2+PAD_SZ+size] != MEM_TAG or
-	      mp[3+PAD_SZ+size] != MEM_TAG)
-            adb(mp[2+PAD_SZ+size]);
 
-	  mp[2+PAD_SZ+size] = 0;
+#if RAMCHK
+  mp -= 2 + PAD_SZ;
+{ int size = (mp[1] & 0xff) + (unsigned)(mp[0] << 8);
+  if (mp[2+PAD_SZ+size] != MEM_TAG or
+      mp[3+PAD_SZ+size] != MEM_TAG)
+    adb(mp[2+PAD_SZ+size]);
+
+  mp[2+PAD_SZ+size] = 0;
 
 #if RAMSCAN
-          mp -= SIZEOF_PTR;
-          rm_mallist(mp);
+    mp -= SIZEOF_PTR;
+    rm_mallist(mp);
 #endif
 
 #if RAMCHK
-	  envram -= size;
+    envram -= size;
 #else
 	  envram -= 1;
 #endif
 #if	RAMSHOW
 	  dspram();
 #endif
-	}
 #endif
-	  free(mp);
-	}
-}
+  free(mp);
+}}
 
 #endif

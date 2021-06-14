@@ -91,7 +91,7 @@ static KEYTAB keytab[NBINDS+1] =
 	{CTRL|'E',	BINDFNC, endword},
 	{CTRL|'H',	BINDFNC, backdel},
 	{CTRL|'I',	BINDFNC, handletab},
-	{CTRL|'J',	BINDFNC, indent},
+//{CTRL|'J',	BINDFNC, nop},
 	{CTRL|'K',	BINDFNC, killtext},
 	{CTRL|'L',	BINDFNC, refresh},
 	{CTRL|'M',	BINDFNC, ins_newline},

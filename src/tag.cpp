@@ -263,14 +263,14 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 	  	  break;
 
 		while (1)
-		{ pos =- LOOK_BACK;
+		{ pos -= LOOK_BACK;
 		  if (pos < 0)
 		    pos = 0;
 	  	  fseek(fp, pos, 0);
 		  if (pos > 0)
 		  { pos += get_to_newline();
 		  { int g = get_to_newline();
-			if (g > 0 && strcmp(key, tagline) >= 0)
+			if (g > 0 && strcmp(key, tagline) == 0)
 			  continue;
 		  }}
 		  break;									/* at 0 or before target */

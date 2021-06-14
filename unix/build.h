@@ -125,7 +125,7 @@
 #define EBCDIC	0	/* later IBM mainfraim versions will use EBCDIC	*/
 
 				/* wrap malloced memory */
-#define WRAP_MEM  1
+#define WRAP_MEM  0
 
 #define COLOR 1
 #define OWN_MODECOLOUR 1
