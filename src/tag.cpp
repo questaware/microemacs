@@ -237,7 +237,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 	fseek(fp, 0L, 2);
     end = ftell(fp);						/* points after newline */
   
-    do
+    while (end > 0)
   	{ if (seq < 0)
 	  { pos = (start+end) >> 1;
 	    fseek(fp, pos, 0);
@@ -278,7 +278,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 
 	    seq = 0;									/* No more seeking */
 	  }
-    }} while (1);
+    }}
   }}
 
   Tag::g_LastStart = pos;					/* point after newline */

@@ -805,7 +805,8 @@ int Pascal init_paren(const char * str,
 int Pascal scan_paren(char ch)
 				
 { int mode = paren.in_mode;
-	int beg_cmt = g_clring & BCPAS ? '(' : '/';
+	int beg_cmt = g_clring & BCPAS ? '(' :
+	              g_clring & (BCCOMT+BCSQL) ? '/' : 257;
 	int end_cmt = g_clring & BCPAS ? ')' : '/';
 
 	do
