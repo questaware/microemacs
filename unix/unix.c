@@ -581,7 +581,6 @@ int filter(int f, int n)
   { usehost(strcat(line," </tmp/fltinp >/tmp/fltout"), FALSE);
 					  /* on failure, escape gracefully */
     cc = readin(filnam2,0);
-		bp->b_nwnd -= 1;										/* both swbuffer and readin increment it*/
     unlink(filnam1);			  /* and get rid of the temporary file */
     unlink(filnam2);
   }

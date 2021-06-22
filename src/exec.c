@@ -826,7 +826,7 @@ static int Pascal dofile(const char * fname)
 							/* go execute it! */
   cc = dobuf(dfb,1);
   if (cc > FALSE &&
-      dfb->b_nwnd == 0)
+      window_ct(dfb) == 0)
             		    /* not displayed, remove the now unneeded buffer and exit */
   { zotbuf(dfb);
     dfb = NULL;

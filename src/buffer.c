@@ -160,7 +160,6 @@ Pascal swbuffer(BUFFER * bp) /* make buffer BP current */
 	wp->w_flag |= WFMODE|WFHARD;			 /* Quite nasty.			 */
 	wp->w_bufp	= bp;
 	*(WUFFER*)wp = *(WUFFER*)bp;
-	bp->b_nwnd += 1;
 	setcline();
 										/* let a user macro get hold of things...if he wants */
 	g_clring = (bp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS+BCML));
@@ -224,10 +223,10 @@ int Pascal killbuffer(int f, int n)
 				             /* "Kill buffer" */
 	flush_typah();
 
-	return bp == NULL 																			? TRUE :
-				 bp->b_nwnd > 0 && bp == curbp 
-												&& bp == (BUFFER*)nextbuffer(0,1) ? ABORT
-                                                          : zotbuf(bp);
+	return bp == NULL 													? TRUE :
+				 bp == curbp && window_ct(bp) > 0 &&
+				 bp == (BUFFER*)nextbuffer(0,1) 			? ABORT
+                                              : zotbuf(bp);
 }
 
 
@@ -295,7 +294,7 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 
 {	extern BUFFER * g_dobuf;
 
-	if (bp->b_nwnd > 0 || bp == curbp || bp == g_dobuf)	/* Error if on screen.	*/
+	if (window_ct(bp) > 0 || bp == g_dobuf)					/* Error if on screen.	*/
 	{ mlwrite(TEXT28);
 					/* "Buffer displayed" */
 		return FALSE;

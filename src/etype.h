@@ -450,6 +450,7 @@ int Pascal vtputc();
 int Pascal vttidy();
 int Pascal widen(int, int);
 int Pascal window_bgfg(WINDOW * wp);
+int Pascal window_ct(BUFFER* bp);
 int Pascal wordcount(int, int);
 int Pascal wordsearch(int, int);
 int Pascal wrapword(int, int);

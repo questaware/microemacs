@@ -224,7 +224,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 				dotp = curwp->w_dotp;
 			}}
 
-		if ((f & 0x8000))											/* entab the resulting spaced line */
+ 		if ((f & 0x8000))											/* entab the resulting spaced line */
 		{ int tab_ct = tabsz;
 			int sp_ct = 0;
 			int incol;
@@ -581,7 +581,7 @@ int USE_FAST_CALL adjustmode(int kind, int global) /* change the editor mode */
 		{ 
 #if COLOR
 			int mask = in_range(cbuf[0], 'A', 'Z') ? 0xf : 0xf0; // lc is ink
-			int * t = global ? &g_colours : &curbp->b_color;
+			short * t = global ? &g_colours : &curbp->b_color;
 			*t &= mask;
 			*t |= index << (4 & mask);
 			curwp->w_flag |= WFCOLR;

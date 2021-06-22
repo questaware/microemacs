@@ -270,26 +270,25 @@ typedef char * CRYPTKEY;
 typedef struct	BUFFER
 {	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
 	int	  				b_doto; 		/* offset of "."; isomorphism to MARK ends */
-	int						b_spare;
+	short	  			b_flag; 		/* Flags and modes  */
+	short   			b_luct;			/* last use count		*/ 
   struct  MARKS mrks;
 	struct	LINE *b_wlinep;		/* top LINE in last window */
 	struct	BUFFER *b_next; 	/* next BUFFER		*/   /* isomorphism ends */
 	struct	LINE  b_baseline;	/* the header LINE	*/
 	struct	LINE *b_narlims[2];/*narrowed top, bottom text */
 	char    			b_langprops;/* type of language of contents */
-  signed char		b_nwnd; 		/* Count of windows on buffer	*/
-	short	  			b_flag; 		/* Flags and modes  */
-	short   			b_luct;			/* last use count		*/ 
+  signed char		b_spare; 		/* Spare */
 	unsigned char b_mode;	    /* Flags and modes (extra) */
 	unsigned char b_tabsize;	/* size of hard tab		*/
-#if	COLOR
-	int   	b_color;					/* current colors		*/
-#endif
 #if	CRYPT
 	CRYPTKEY b_key;
 #endif
 	char *  b_fname;					/* malloc'd and owned by BUFFER */
 	char *	b_remote;					/* remote command 		*/
+#if	COLOR
+	short   	b_color;					/* current colors		*/
+#endif
 	char	  b_bname[1]; 			/* Buffer name			*/
 }	BUFFER;
 				/* for compatibility: */
@@ -409,6 +408,8 @@ extern int g_got_uarg;
 extern int g_got_search;
 
 /* initialized global external declarations */
+NOSHARE extern short g_colours;		/* backgrnd (black*16) + foreground (white) */
+
 NOSHARE extern int g_numcmd;	/* number of bindable functions */
 NOSHARE extern int g_clexec;	/* command line execution flag	*/
 NOSHARE extern int g_nosharebuffs;  /* dont allow different files in same buffer */
@@ -419,7 +420,6 @@ NOSHARE extern char golabel[];		/* current line to go to	*/
 NOSHARE extern int g_execlevel;		/* execution IF level		*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
 extern const NBIND names[];	/* name to function table	*/
-NOSHARE extern int g_colours;		/* backgrnd (black*16) + foreground (white) */
 NOSHARE extern int mpresf;		/* Stuff in message line	*/
 NOSHARE extern int ttinit;		/* => ttrow is wrong */
 NOSHARE extern int ttrow;		/* Row location of HW cursor	*/

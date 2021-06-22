@@ -14,6 +14,20 @@
 #include	"logmsg.h"
 
 
+
+int Pascal window_ct(BUFFER* bp)
+
+{ WINDOW * wp;
+	int ct = 0;
+  for (wp = wheadp; wp != NULL; wp = wp->w_next)
+  	if (wp->w_bufp == bp)
+  		++ct;
+  return ct;
+}
+
+
+
+
 int Pascal orwindmode(int mode, int wh)
 	/* Short 	wh;  ** 0 => all, 1 => for curbp */
 { WINDOW *wp;
@@ -35,7 +49,6 @@ int Pascal orwindmode(int mode, int wh)
 void Pascal  openwind(WINDOW * wp)
 	
 { BUFFER * bp = curbp;
-	bp->b_nwnd += 1;
 	*(WUFFER*)wp = *(WUFFER*)bp;
 	wp->w_bufp    = bp;	     /* connect current window to this buffer */
 //wp->w_linep   = lforw(bp->b_baseline);
@@ -53,9 +66,8 @@ void Pascal leavewind(WINDOW * wp, int dec)
 	
 { BUFFER * bp = wp->w_bufp;
 	if (bp != NULL)
-	{	bp->b_nwnd -= 1;
 		*(WUFFER*)bp = *(WUFFER*)wp;
-	}
+
 	if (dec)
 		free((char *)wp);
 /*bp->b_fcol	 = wp->w_fcol;*/
@@ -123,7 +135,6 @@ int Pascal nextwind(int f, int n)
 	WINDOW *wp;
 
 	leavewind(curwp,0);
-	curbp->b_nwnd += 1;					/* leavewind decrements it */
 
 	if (! f)
 	{ wp = curwp->w_next;
@@ -377,7 +388,6 @@ int Pascal splitwind(int f, int n)
 	wp->w_linep = lp;					/* if necessary.	*/
 	curwp->w_linep = lp;			/* Adjust the top lines */
 	curbp->b_wlinep = lp;
-	++curbp->b_nwnd;					/* Displayed twice.	*/
 { extern LINE * g_lastlp;		// -ve => reset
 	g_lastlp = NULL;
 	modeline(curwp);

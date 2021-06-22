@@ -1451,7 +1451,6 @@ int pipefilter(wh)
 		char * sfn = bp->b_fname;
 		bp->b_fname = null;									/* otherwise it will be freed */
 		rc = readin(fnam2, 0);
-		bp->b_nwnd -= 1;										/* both swbuffer and readin increment it*/
 		bp->b_fname = sfn; 									/* restore name */
 		bp->b_flag |= BFCHG; 								/* flag it as changed */
 		if (wh == '#'-'@')

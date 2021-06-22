@@ -6,8 +6,8 @@
  *
  * Note that this code only updates the dot and mark values in the window list.
  * Since all the code acts on the current window, the buffer that we are
- * editing must be being displayed, which means that "b_nwnd" is non zero,
- * which means that the dot and mark values in the buffer headers are nonsense.
+ * editing must be being displayed, which means that the dot and mark values 
+ * in the buffer headers are nonsense.
 */  
 #include	<stdio.h>
 #include	<stdlib.h>
@@ -46,7 +46,7 @@ void Pascal ibefore(LINE * tline, LINE * new_line)
 
 { new_line->l_fp = (Lineptr)tline;
   new_line->l_bp = tline->l_bp;
-  lback(new_line)->l_fp = new_line;
+  new_line->l_bp->l_fp = new_line;
   tline->l_bp = (Lineptr)new_line;
 }
 
@@ -144,7 +144,7 @@ int Pascal lchange(int flag)
     flag = WFHARD;
   }
 												   /* make sure all the needed windows get this flag */ 
-  (void)orwindmode(curbp->b_nwnd != 0 ? WFHARD : flag, 0);
+  (void)orwindmode(window_ct(curbp) > 0 ? WFHARD : flag, 0);
 
 {	int all = 0;
 
@@ -257,19 +257,11 @@ int Pascal linsert(int n, char c)
   LINE * newlp;
 
   if (ins <= lp->l_spare)
-  { lp->l_spare -= ins;
-    lp->l_used += ins;
 		newlp = lp;
-  }
   else
-  { ins += lp->l_used;
-    newlp = mk_line(&lp->l_text[0],BSIZE(ins+EXPANSION_SZ),lp->l_used);
+  { newlp = mk_line(&lp->l_text[0],BSIZE(ins+lp->l_used+EXPANSION_SZ),lp->l_used);
     if (newlp == NULL)
       return FALSE;
-    newlp->l_used = ins;
-		newlp->l_fp = lp->l_fp;
-  	newlp->l_bp = lp->l_bp;
-    newlp->l_props= lp->l_props & ~L_IS_HD;
   }
 
   doto = curwp->w_doto;
@@ -277,23 +269,23 @@ int Pascal linsert(int n, char c)
   {	if ((Int)lp->l_used - doto > 0)
    		memmove(&newlp->l_text[doto+n],&lp->l_text[doto],(Int)lp->l_used-doto);
   }
-  memset(&newlp->l_text[doto],c,n);
 
-  if      (lp->l_props & L_IS_HD) 	      /* At the end: special */
-  {
-#if _DEBUG
-		if (doto != 0 || lp == newlp)
-		{ mlwrite(TEXT170);							/* "bug: linsert" */
-			return FALSE;
-		}
-#endif
-		ibefore(lp, newlp);				/* Link in */
+  if (lp != newlp)
+  { newlp->l_props = lp->l_props & ~L_IS_HD;
+		if (lp->l_props & L_IS_HD)
+			ibefore(lp, newlp);				/* Link in */
+		else
+		{	lback(lp)->l_fp = (Lineptr)newlp;
+	 		lforw(lp)->l_bp = (Lineptr)newlp;
+			newlp->l_fp = lp->l_fp;
+			newlp->l_bp = lp->l_bp;
+	   	free((char *) lp);
+	  }
   }
-  else if (lp != newlp)
-  { lback(lp)->l_fp = (Lineptr)newlp;
-    lforw(lp)->l_bp = (Lineptr)newlp;
-    free((char *) lp);
-  }
+
+  newlp->l_spare -= ins;
+  newlp->l_used += ins;
+  memset(&newlp->l_text[doto],c,n);
 
   rpl_all(1, n, lp, newlp, doto);
   return lchange(WFEDIT);

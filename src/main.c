@@ -47,9 +47,9 @@ extern int g_overmode;			/* from line.c */
 NOSHARE int g_nosharebuffs = FALSE; /* dont allow different files in same buffer*/
 NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
 
-NOSHARE char *g_execstr = NULL;/* pointer to string to execute */
-NOSHARE int g_execlevel = 0;	/* execution IF level		*/
-NOSHARE int g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
+NOSHARE char *g_execstr = NULL; /* pointer to string to execute */
+NOSHARE int   g_execlevel = 0;	/* execution IF level		*/
+NOSHARE short g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
 NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
 NOSHARE int ttrow = 0; 	/* Row location of HW cursor	*/
 NOSHARE int ttcol = 0; 	/* Column location of HW cursor */
@@ -494,8 +494,7 @@ Pascal clean()
 	wheadp = NULL;
 					/* then the buffers */
 	while ((bp = bheadp))
-	{ bp->b_nwnd = 0;
-		bp->b_flag = 0; /* don't say anything about a changed buffer! */
+	{ bp->b_flag = 0; /* don't say anything about a changed buffer! */
 		zotbuf(bp);
 	}
 
