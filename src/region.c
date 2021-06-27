@@ -238,12 +238,20 @@ int Pascal upperregion(int f, int n)
 
 
 													/*	reglines:	how many lines in the current region */
-int Pascal reglines()
+int Pascal reglines(Bool ask)
 
 {	REGION * r = getregion();	   							/* check for a valid region first */
 	if (r == NULL)
-		return 0;
-									  							 /* place us at the beginning of the region */
+	  if (!ask || g_clexec)
+			return 0;
+
+	if (mlyesno("Use whole file?"))
+  { curwp->w_dotp = curwp->w_bufp->b_baseline.l_fp;
+    curwp->w_doto = 0;
+
+		return 10000000;
+	}
+											  						/* place us at the beginning of the region */
   curwp->w_dotp = r->r_linep;
   curwp->w_doto = r->r_offset;
 
@@ -260,7 +268,7 @@ int Pascal killregion(int f, int n)
 {	if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
 	  return rdonly();		/* we are in read only mode	*/
 
-{	int s = reglines();
+{	int s = reglines(FALSE);
 	if (s == 0)
 	  return FALSE;
 

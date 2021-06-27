@@ -371,6 +371,8 @@ int Pascal listbuffers(int iflag, int n)
 	Int nbytes; 		/* # of bytes in current buffer */
  
 	openwindbuf("[List]");
+
+{	Int avail = curwp->w_ntrows - 2;
 				/* build line to report global mode settings */
 						/* output the mode codes */
 //strcpy(&line[0], "Global Modes ");
@@ -389,6 +391,7 @@ int Pascal listbuffers(int iflag, int n)
 	{ if ((bp->b_flag & BFINVS) && iflag == FALSE)
 			continue;
 
+		--avail;
 		nbytes = 0L;													/* Count bytes in buf.	*/
 	{	LINE * lp;
 		for (lp = &bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
@@ -408,8 +411,10 @@ int Pascal listbuffers(int iflag, int n)
 	}}
 	curbp->b_flag |= MDVIEW;
 	curbp->b_flag &= ~BFCHG;		/* don't flag this as a change */
+	if (avail > 0)
+		shrinkwind(0, avail);
 	return gotobob(0,0);
-}
+}}
 
 
 #if 0

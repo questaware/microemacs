@@ -51,6 +51,7 @@ void Pascal  openwind(WINDOW * wp)
 { BUFFER * bp = curbp;
 	*(WUFFER*)wp = *(WUFFER*)bp;
 	wp->w_bufp    = bp;	     /* connect current window to this buffer */
+	wp->w_line_no = 1;
 //wp->w_linep   = lforw(bp->b_baseline);
 //wp->w_dotp    = bp->b_dotp;
 //wp->w_doto    = bp->b_doto;

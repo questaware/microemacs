@@ -69,7 +69,7 @@ char tobuf[TBUFSIZ];		/* terminal output buffer */
   static struct	termio	otermio;	/* original terminal characteristics */
   static struct	termio	ntermio;	/* charactoristics to use inside */
 
-static const char g_emacsdir[] = "mkdir ~/.emacs.d/";
+static const char g_emacsdir[] = "mkdir -p ~/.emacs.d/";
 
 extern char * getenv();
 
@@ -493,8 +493,9 @@ int pipecmd(int f, int n)
 	register BUFFER *bp;	/* pointer to buffer to zot */
         char	line[NLINE];	/* command line send to shell */
 
- static char bname[] = "command";
- static char filnam[] = "command";
+ static char bname[12] = "cmd";
+ static char filnam[] = "cmd";
+ static int  bix;
 
 	if (restflag)
 	  return resterr();
@@ -502,9 +503,9 @@ int pipecmd(int f, int n)
 { int s = mlreply("@", line, NLINE);     /* get the command to pipe in */
 	if (s != TRUE)
     return s;
-			/* get rid of the command output buffer if it exists */
-  bp = bfind(bname, FALSE, 0);
-	if (bp != FALSE) 
+													/* get rid of the command output buffer if it exists */
+	bp = bfind(strcpy(bname+3, int_asc(++bix)), FALSE, 0);
+  if (bp != NULL)
 	{		/* try to make sure we are off screen */
 	  for (wp = wheadp; wp != NULL; wp = wp->w_next)
 	    if (wp->w_bufp == bp)
@@ -523,7 +524,7 @@ int pipecmd(int f, int n)
   system(rcmd);  
   strcat(line,">");
   s = strlen(line);
-	usehost(strcat(strcat(line, g_emacsdir+6),filnam), FALSE);
+  usehost(strcat(strcat(strcat(line, g_emacsdir+9),filnam), int_asc(bix)), FALSE);
   	           /* split the current window to make room for the command output*/
 	if (splitwind(FALSE, 1) == FALSE)
 	  return FALSE;
@@ -532,7 +533,10 @@ int pipecmd(int f, int n)
   bp = bufflink(strcat(strcpy(rcmd, h == NULL ? "/tmp" : h), line+s+1), (g_clexec > 0) + 64);
 	if (bp == NULL)
 	  return FALSE;
-	  		     /* make this window in VIEW mode, update all mode lines */
+	  
+	free(bp->b_fname);
+	bp->b_fname = NULL;
+	  		     					/* make this window in VIEW mode, update all mode lines */
 	curwp->w_bufp->b_flag |= MDVIEW;
 	orwindmode(WFMODE, 0);
 
@@ -562,13 +566,16 @@ int filter(int f, int n)
  static char filnam1[] = FILNAM1;
  static char filnam2[] = FILNAM2;
 
+  if (f < 0)
+		strcpy(line,"sort");
+  else
+	{ if (bp->b_flag & MDVIEW)
+			return rdonly();
+  } 
   if (restflag)
     return resterr();
-
-  if (bp->b_flag & MDVIEW)
-    return rdonly();
-					/* get the filter name and its args */
-{ int cc = mlreply("#", line, NLINE);
+															/* get the filter name and its args */
+{ int cc = f < 0 ? TRUE : mlreply("#", line, NLINE);
   if (cc != TRUE)
     return cc;
 
@@ -585,8 +592,7 @@ int filter(int f, int n)
     unlink(filnam2);
   }
     
-  if (bp->b_fname != null)
-    free(bp->b_fname);
+  free(bp->b_fname);
   bp->b_fname = tmpnam;
 
   if (cc != TRUE)

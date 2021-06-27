@@ -228,15 +228,13 @@ typedef struct MARKS
 } MARKS;
 
 
-/*
- * There is a window structure allocated for every active display window. The
- * windows are kept in a big list, in top to bottom screen order, with the
- * listhead at "wheadp". Each window contains its own values of dot and mark.
- * The flag field contains some bits that are set by commands to guide
- * redisplay. Although this is a bit of a compromise in terms of decoupling,
- * the full blown redisplay is just too expensive to run for every input
- * character.
- */
+ /* A buffer header exists for every buffer in the system.
+  * The buffers are in list bheadp, so commands can search for a buffer by name
+  * There is store for the dot and mark in the header, but this is only valid if
+  * the buffer is not being displayed (that is, if window_ct(bp) is 1).
+  * The field b_linep points to a circularly linked list of lines.
+  * When Buffers are "Inactive" their files have not been read in yet.
+  */
 typedef struct	WINDOW
 {	struct	LINE *w_dotp;			/* Line containing "."		*/
 	int	          w_doto;
@@ -270,13 +268,14 @@ typedef char * CRYPTKEY;
 typedef struct	BUFFER
 {	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
 	int	  				b_doto; 		/* offset of "."; isomorphism to MARK ends */
-	short	  			b_flag; 		/* Flags and modes  */
-	short   			b_luct;			/* last use count		*/ 
+	int 					b_line_no;  /* exists for isomorphism but the value is not used */
   struct  MARKS mrks;
 	struct	LINE *b_wlinep;		/* top LINE in last window */
 	struct	BUFFER *b_next; 	/* next BUFFER		*/   /* isomorphism ends */
 	struct	LINE  b_baseline;	/* the header LINE	*/
 	struct	LINE *b_narlims[2];/*narrowed top, bottom text */
+	short	  			b_flag; 		/* Flags and modes  */
+	short   			b_luct;			/* last use count		*/ 
 	char    			b_langprops;/* type of language of contents */
   signed char		b_spare; 		/* Spare */
 	unsigned char b_mode;	    /* Flags and modes (extra) */

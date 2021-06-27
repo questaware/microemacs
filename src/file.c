@@ -702,6 +702,12 @@ out:
 	  for (wp = wheadp; wp != NULL; wp=wp->w_next)
 	    if (wp->w_bufp == bp)
 	      openwind(wp);
+#if S_MSDOS == 0
+		if (diry)
+		{ filter(-1,0);
+			bp->b_flag &= ~BFCHG;
+		}
+#endif
   }
 
 {	LINE * lp;

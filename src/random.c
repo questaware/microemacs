@@ -206,7 +206,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 		return rdonly();							/* we are in read only mode 		*/
 
 	if ((f & 0x7fff) == FALSE)
-		n = reglines();
+		n = reglines(TRUE);
 
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sgn(n)] */
 
@@ -214,6 +214,8 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 	{ LINE * dotp = curwp->w_dotp;
 		char ch;
 		int    offs;											/* detab line */
+		if (dotp->l_props & L_IS_HD)
+			break;
 		for (offs = -1; ++offs < llength(dotp); )
 			if ((ch = lgetc(dotp, offs)) == '\t')
 			{ lputc(dotp, offs, ' ');
@@ -273,7 +275,7 @@ int Pascal trim_white(int f, int n)
 		return rdonly();							/* we are in read only mode 		*/
 
 	if (f == FALSE)
-		n = reglines();
+		n = reglines(TRUE);
 
 { LINE *lp;									/* current line pointer */
 /*int length;								** current length */

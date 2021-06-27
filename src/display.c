@@ -921,8 +921,8 @@ void Pascal updline(int force)
 
 	for (wp = wheadp; wp != NULL; wp = wp->w_next)
 	{	updall(wp,-1);
-
-		wp->w_dotp = up_lp;
+		if (wp == curwp)
+			wp->w_dotp = up_lp;
 		modeline(wp);
 		wp->w_flag = 0; 		/* we are done */
 	}
