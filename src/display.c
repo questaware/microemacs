@@ -659,12 +659,13 @@ void Pascal updall(WINDOW * wp, int wh)
 	while (++sline <= zline)
 	{ if      (wh < 0)
 		{ if (vscreen[sline]->v_flag & VFEXT)
-				if (lp != wp->w_dotp)
-				{ VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
+			{ VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
 																		/* this line no longer is extended */
-					vp->v_flag -= VFEXT;
+				if (lp != wp->w_dotp)
+				{	vp->v_flag -= VFEXT;
 					vp->v_flag |= VFCHG;
 				}
+			}
 		}	
 		else if (wh || lp == wp->w_dotp)	/* and update the virtual line */
 		{
@@ -846,7 +847,9 @@ void Pascal updline(int force)
 				int j = (col + 1 - pd_hjump);
 				
 	if (j < 0 && pd_hjump > 0)
-	{	fcol += (j  / pd_hjump) * pd_hjump;;
+	{	j = (j  / pd_hjump) * pd_hjump;
+		fcol += j;
+		col -= j;
 		flag = 1;
 	}
 

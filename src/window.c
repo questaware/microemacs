@@ -598,7 +598,7 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 		term.t_mrowm1 = dpth - 1;			
 	  vtinit();
 //#if S_WIN32 == 0
-	  tcapsetsize(wid,dpth);
+	  tcapsetsize(wid,dpth,2);
 //#endif
 #if 0
 	  curwp->w_ntrows = term.t_nrowm1-1;

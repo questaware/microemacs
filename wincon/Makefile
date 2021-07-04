@@ -8,7 +8,7 @@ CPP=cl.exe
 CPP_PROJ=/nologo /W3 /O1 /Os /Og /Oy /GF /Gs9192 $(C_FLG) /D "WIN32" /D "WIN32_LEAN_AND_MEAN" /D "NDEBUG" /D "_CONSOLE" /c 
 
 LINK32=link
-LINK32_FLAGS=/nologo /map /stack:0xc000 /out:
+LINK32_FLAGS=/nologo /map /out:
 #LINK32_FLAGS=/nologo /Fm $(C_FLG) /Fe
 
 else

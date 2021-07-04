@@ -134,7 +134,7 @@ int Pascal sindex(char *, char *);
 int USE_FAST_CALL stol(char * s);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
-void Pascal tcapsetsize(int wid, int dpth);
+void Pascal tcapsetsize(int wid, int dpth, int clamp);
 int Pascal tgetc();
 int Pascal topluct();
 int Pascal uneat();

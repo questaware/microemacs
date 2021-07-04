@@ -27,7 +27,6 @@
 
 #define NONDIR  	0                     /* ndir.h is dirent.h           */
 #define USE_UBAR  0
-#define GOTTYPAH  1
 #define HIDECRYPT 1
 
 /*	Compiler definitions			*/

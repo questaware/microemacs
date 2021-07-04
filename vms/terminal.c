@@ -324,7 +324,7 @@ int Pascal use_named_str(char * name, char * str)
 void Pascal restore_size()
 
 { if (term.t_ncol != first_width || term.t_nrowm1 + 1 != first_length)
-		tcapsetsize(first_width, first_length);
+		tcapsetsize(first_width, first_length,2);
 }
 
 

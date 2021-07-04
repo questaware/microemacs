@@ -403,7 +403,6 @@ int Pascal hunt(int n, int again)
 	  mlwrite(TEXT79);
 					/* "Not found " */
 	else
-	{ update(TRUE);
 	{ WINDOW * wp = curwp;
 		LINE * lim = wp->w_linep;
 		LINE * lp = wp->w_dotp;
@@ -413,6 +412,18 @@ int Pascal hunt(int n, int again)
 
 		if (ct <= 2)
 			mvdnwind(1,2 + ct);
+	{ int plen = strlen(patmatch) + 5;
+		int e = wp->w_doto + plen;
+		if (e - lp->l_used > 0)
+		{ plen -= e - lp->l_used;
+			e -= e - lp->l_used;
+		}
+		if (e - term.t_ncol > 0)
+		{ wp->w_doto = e;
+		  update(TRUE);
+		  wp->w_doto -= plen;
+		}
+	  update(TRUE);
 	}}
 	return cc;
 }}

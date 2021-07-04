@@ -193,7 +193,7 @@ struct SREGS {
 #else
 # define NFILEN 256
 #endif
-#define NBUFN	64			/* # of bytes, buffer name	*/
+#define NBUFN	32			/* # of bytes, buffer name	*/
 #define NLINE	160			/* # of bytes, input line	*/
 #define NKBDM	256			/* # of strokes, keyboard macro */
 #define NPAT	128			/* # of bytes, pattern		*/

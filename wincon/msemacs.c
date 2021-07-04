@@ -93,7 +93,7 @@ int Pascal tcapclose(int lvl)
 { 
 /*CloseHandle(hConsoleIn);
   hConsoleIn = NULL;  cannot do this */
-  tcapsetsize(csbiInfoO.dwSize.X, csbiInfoO.dwSize.Y);
+  tcapsetsize(csbiInfoO.dwSize.X, csbiInfoO.dwSize.Y, 2);
   return OK;
 }
 
@@ -160,7 +160,7 @@ void Pascal setconsoletitle(char * title)
 // }
 
 
-void Pascal tcapsetsize(int wid, int dpth)
+void Pascal tcapsetsize(int wid, int dpth, int clamp)
 
 {	int decw = csbiInfo.dwSize.X - wid;
 	int decd = csbiInfo.dwSize.Y - dpth;
@@ -168,12 +168,12 @@ void Pascal tcapsetsize(int wid, int dpth)
 		decd = 0;
 	if (decw < 0)
 		decw = 0;
-		
-	if (decw + decd > 0)			// Must be done twice
+
+	if (--clamp > 0 && decw + decd > 0)			// Must be done twice
 	{ decw = csbiInfo.dwSize.X - decw - 1;
 		if (decw < 0)
 			decw = -decw;
-		tcapsetsize(decw, csbiInfo.dwSize.Y - decd - 1);
+		tcapsetsize(decw, csbiInfo.dwSize.Y - decd - 1, 0);
 	}
 {
 #if 0
@@ -197,6 +197,7 @@ void Pascal tcapsetsize(int wid, int dpth)
 // SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 
 	GetConsoleScreenBufferInfo( h, &csbiInfo );
+
 																	// set the screen buffer to be big enough
 { int rc = SetConsoleWindowInfo(h, 1, &rect);
   if (rc == 0)

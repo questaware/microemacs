@@ -504,7 +504,7 @@ BUFFER *Pascal bfind(char * bname,
 		return null;
 
 { LINE *lp;
-	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+2);
+	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+10); // was 2
 	if (bp == NULL)
 		return NULL;
 									/* and insert it */

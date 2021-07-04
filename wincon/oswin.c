@@ -41,10 +41,6 @@ static int oldbut;	/* Previous state of mouse buttons */
 #define millisleep(n) Sleep(n)
 
 
-int g_chars_since_ctrl;
-int g_timeout_secs;
-
-
 int flagerr(const char *str)  //display detailed error info
 
 {	DWORD ec = GetLastError();
@@ -89,57 +85,10 @@ printf()
 { sprintf();
 }
 
-
-char * memcpy(t_, s_, len_)
-      char * t_, *s_;
-      int    len_;
-{ register int len = len_;
-  register char * t = t_;
-  register char * s = s_;
-  
-  if (t <= s)
-    while (--len >= 0)
-      *t++ = *s++;
-  else 
-  { t = &t[len];
-    s = &s[len];
-    
-    while (--len >= 0)
-      *--t = *--s;
-  }
-  return t_;
-}
-
 */
 #endif
 
-#if 0
-X
-X#define	IBUFSIZE  4		/* must be a power of 2 */
-X
-Xunsigned char in_buf[IBUFSIZE];	/* input character buffer */
-XShort in_next = 0;		/* pos to retrieve next input character */
-XShort in_last = 0;		/* pos to place most recent input character */
-X
-X
-X#define in_init() in_next = in_last = 0   /* initialize the input buffer */
-X
-X#define in_check() (in_next != in_last)   /* is the input buffer non-empty? */
-X
-X
-Xvoid Pascal in_put(event)
-X	int event;	/* event to enter into the input buffer */
-X{ in_buf[in_last & (IBUFSIZE - 1)] = event;
-X  in_last += 1;
-X}
-X
-X
-X#define in_get() in_buf[in_next++ & (IBUFSIZE - 1)]
-X				/* get an event from the input buffer */
-#endif
-
-	/*
-	 * This function is called once to set up the terminal device streams.
+	/* This function is called once to set up the terminal device streams.
 	 */
 #if	MOUSE
 
@@ -176,13 +125,13 @@ void ttopen()
 	  return;
        
 	mexist = 1;
-		        		/* put it in the upper right corner */
+		        				/* put it in the upper right corner */
 	rg.x.ax = 4;			/* set mouse cursor position */
 	rg.x.cx = (term.t_ncol - 1) << 3;	/* last col of display */
 	int86(0x33, &rg, &rg);
-					/* and set its attributes */
-	rg.x.ax = 10;		/* set text cursor */
-	rg.x.bx = 0;		/* software text cursor please */
+																				/* and set its attributes */
+	rg.x.ax = 10;			/* set text cursor */
+	rg.x.bx = 0;			/* software text cursor please */
 	rg.x.cx = 0x77ff;	/* screen mask */
 	rg.x.dx = 0x7700;	/* cursor mask */
 	int86(0x33, &rg, &rg);
@@ -204,8 +153,7 @@ void maxlines(lines)		/* set number of vertical rows for mouse */
 
 
 #if 0
-/*
- * Flush terminal buffer. Does real work where the terminal output is buffered
+/* Flush terminal buffer. Does real work where the terminal output is buffered
  * up. A no-operation on systems where byte at a time terminal I/O is done.
  */
 Pascal ttflush()
@@ -213,366 +161,7 @@ Pascal ttflush()
 }
 
 #endif
-
-
-#if 0
-X
-Xstatic const char exttbl1[] = 
-X{ 
-X	'Q',
-X	'W',
-X	'E',
-X	'R',
-X	'T',  /* 20 */
-X	'Y',
-X	'U',
-X	'I',
-X	'O',
-X	'P',  /* 25 */
-X	26,
-X	27,
-X	28,
-X	29,
-X	'A',	/* 30 */
-X	'S',
-X	'D',
-X	'F',
-X	'G',
-X	'H',
-X	'J',
-X	'K',
-X	'L',	/* 38 */
-X	39,
-X	40,
-X	41,
-X	42,
-X	43,	
-X	'Z',	/* 44 */
-X	'X',
-X	'C',
-X	'V',
-X	'B',
-X	'N',
-X	'M',	/* 50 */
-X	51,
-X	52,
-X	53,
-X	54,
-X	55,
-X	56,
-X	57,
-X	58,
-X};
-X
-Xstatic const char exttbl2[] = 
-X{
-X        '<',	/* HOME */
-X	'P',	/* cursor up */
-X	'Z',	/* page up */
-X	74,
-X	'B',	/* cursor left */
-X	75,
-X	'F',	/* cursor right */
-X	76,
-X	'>',	/* end */
-X	'N',	/* cursor down */
-X	'V',	/* page down */
-X	'C',	/* insert */
-X	'D',	/* delete */
-X};
-X
-Xstatic const char exttbl3[] = 
-X{     	'B',	/* control left */
-X	'F',	/* control right */
-X	'>',	/* control END */
-X	'V',	/* control page down */
-X	'<',	/* control HOME */
-X};
-X
-Xstatic const short exttbl4[] = 
-X{	ALTD | 131,
-X        SPEC | CTRL | 'Z',	/* control page up */
-X      	SPEC | ':',		/* F11 */
-X	SPEC | ';',		/* F12 */
-X      	SPEC | SHFT | ':',	/* SHFT + F11 */
-X	SPEC | SHFT | ';',	/* SHFT + F12 */
-X      	SPEC | CTRL | ':',	/* CTRL + F11 */
-X	SPEC | CTRL | ';',	/* CTRL + F12 */
-X      	SPEC | ALTD | ':',	/* ALT + F11 */
-X	SPEC | ALTD | ';',	/* ALT + F12 */
-X};
-X
-Xstatic const char mod10[] = "1234567890";
-X
-X/*	extcode:	resolve MSDOS extended character codes
-X			encoding the proper sequences into emacs
-X			printable character specifications
-X*/
-Xint extcode(c_)
-X	unsigned c_;	/* byte following a zero extended char byte */
-X{ register unsigned char c = c_;
-X
-X  if (c < 15)
-X    return ALTD | c;
-X					/* backtab */
-X  if (c == 15)
-X    return SHFT | CTRL | 'I';
-X					/* ALTed letter keys */ 
-X  if (c <= 58)
-X    return ALTD | exttbl1[c - 16]; 
-X        				/* function keys 1 through 10 */
-X  if (c < 69)
-X    return SPEC | mod10[c - 59];
-X					/* movement keys */
-X  if (c < 84)
-X    return SPEC | exttbl2[c-71];
-X					/* shifted function keys */
-X  if (c < 94)
-X    return SPEC | SHFT | mod10[c - 84];
-X					/* control function keys */
-X  if (c < 104)
-X    return SPEC | CTRL | mod10[c - 94];
-X					/* ALTed function keys */
-X  if (c < 114)
-X    return SPEC | ALTD | mod10[c - 104];
-X					/* control movement keys */
-X  if (c < 120)
-X    return SPEC | CTRL | exttbl3[c-115];
-X					/* ALTed number keys */
-X  if (c <= 130)
-X    return ALTD | mod10[c - 120];
-X					/* F10, F11 keys */  
-X  if (c < 141)
-X    return exttbl4[c - 131];
-X
-X  return ALTD | c;
-X}
-X
-#else
-
-
-static const unsigned char scantokey[] =
-{	
-#define SCANK_STT 0x3b
-  '1',		/* 3b */
-	'2',
-	'3',
-	'4',
-	'5',
-	'6',
-	'7',
-	'8',
-	'9',
-	'0',		/* 44 */
-	'W',		/* pause */
-	'L',		/* Scroll Lock */
-	'<',		/* Home */
-	'P',		/* Up */
-	'Z',		/* Page Up */
-	'J',		/* key not known *//* 4a */
-	'B',		/* Left */
-	'K',		/* key not known */
-	'F',		/* Right */
-	'L',		/* key not known */
-	'>',		/* End */
-	'N',		/* Down */
-	'V',		/* Page Down */
-	'C',		/* Insert */
-	'D',		/* Delete */
-	'Q',		/* key not known *//* 54 */
-	'q',		/* key not known */
-	0x1c,		/* CTRL-\ */
-	':',
-	';',		/* 58 */
-};
-        
-#if 0
-
-static const short exttbl[] = 
-{ 
-	SHFT | CTRL | 'I',
-	ALTD | 'Q',
-	ALTD | 'W',
-	ALTD | 'E',
-	ALTD | 'R',
-	ALTD | 'T',  /* 20 */
-	ALTD | 'Y',
-	ALTD | 'U',
-	ALTD | 'I',
-	ALTD | 'O',
-	ALTD | 'P',  /* 25 */
-	ALTD | 26,
-	ALTD | 27,
-	ALTD | 28,
-	ALTD | 29,
-	ALTD | 'A',	/* 30 */
-	ALTD | 'S',
-	ALTD | 'D',
-	ALTD | 'F',
-	ALTD | 'G',
-	ALTD | 'H',
-	ALTD | 'J',
-	ALTD | 'K',
-	ALTD | 'L',	/* 38 */
-	ALTD | 39,
-	ALTD | 40,
-	ALTD | 41,
-	ALTD | 42,
-	ALTD | 43,	
-	ALTD | 'Z',	/* 44 */
-	ALTD | 'X',
-	ALTD | 'C',
-	ALTD | 'V',
-	ALTD | 'B',
-	ALTD | 'N',
-	ALTD | 'M',	/* 50 */
-	ALTD | 51,
-	ALTD | 52,
-	ALTD | 53,
-	ALTD | 54,
-	ALTD | 55,
-	ALTD | 56,
-	ALTD | 57,
-	ALTD | 58,
-	SPEC | '1',
-	SPEC | '2',
-	SPEC | '3',
-	SPEC | '4',
-	SPEC | '5',
-	SPEC | '6',
-	SPEC | '7',
-	SPEC | '8',
-	SPEC | '9',
-	SPEC | '0',
-  ALTD | 69,
-	ALTD | 70,
-  SPEC | '<',	/* HOME */
-	SPEC | 'P',	/* cursor up */
-	SPEC | 'Z',	/* page up */
-	SPEC | 74,
-	SPEC | 'B',	/* cursor left */
-	SPEC | 75,
-	SPEC | 'F',	/* cursor right */
-	SPEC | 76,
-	SPEC | '>',	/* end */
-	SPEC | 'N',	/* cursor down */
-	SPEC | 'V',	/* page down */
-	SPEC | 'C',	/* insert */
-	SPEC | 'D',	/* delete */
-	SPEC | SHFT | '1',
-	SPEC | SHFT | '2',
-	SPEC | SHFT | '3',
-	SPEC | SHFT | '4',
-	SPEC | SHFT | '5',
-	SPEC | SHFT | '6',
-	SPEC | SHFT | '7',
-	SPEC | SHFT | '8',
-	SPEC | SHFT | '9',
-	SPEC | SHFT | '0',
-	SPEC | CTRL | '1',
-	SPEC | CTRL | '2',
-	SPEC | CTRL | '3',
-	SPEC | CTRL | '4',
-	SPEC | CTRL | '5',
-	SPEC | CTRL | '6',
-	SPEC | CTRL | '7',
-	SPEC | CTRL | '8',
-	SPEC | CTRL | '9',
-	SPEC | CTRL | '0',
-	SPEC | ALTD | '1',
-	SPEC | ALTD | '2',
-	SPEC | ALTD | '3',
-	SPEC | ALTD | '4',
-	SPEC | ALTD | '5',
-	SPEC | ALTD | '6',
-	SPEC | ALTD | '7',
-	SPEC | ALTD | '8',
-	SPEC | ALTD | '9',
-	SPEC | ALTD | '0',
-	ALTD | 114,
-  SPEC | CTRL | 'B',	/* control left */
-	SPEC | CTRL | 'F',	/* control right */
-	SPEC | CTRL | '>',	/* control END */
-	SPEC | CTRL | 'V',	/* control page down */
-	SPEC | CTRL | '<',	/* control HOME */
-	ALTD | '1',
-	ALTD | '2',
-	ALTD | '3',
-	ALTD | '4',
-	ALTD | '5',
-	ALTD | '6',
-	ALTD | '7',
-	ALTD | '8',
-	ALTD | '9',
-	ALTD | '0',
-	ALTD | 130,
-	ALTD | 131,
-	ALTD | 132,
-	SPEC | ':',		/* F11 */
-	SPEC | ';',		/* F12 */
-	SPEC | SHFT | ':',	/* SHFT + F11 */
-	SPEC | SHFT | ';',	/* SHFT + F12 */
-	SPEC | CTRL | ':',	/* CTRL + F11 */
-	SPEC | CTRL | ';',	/* CTRL + F12 */
-	SPEC | ALTD | ':',	/* ALT + F11 */
-	SPEC | ALTD | ';',	/* ALT + F12 */
-	ALTD | 141,
-	ALTD | 142,
-	ALTD | 143,
-	ALTD | 144,
-	ALTD | 145,
-	SPEC | CTRL | 'C',	/* insert */
-	SPEC | CTRL | 'D',	/* delete */
-};
-
-/*	extcode:	resolve MSDOS extended character codes
-			encoding the proper sequences into emacs
-			printable character specifications
-*/
-int extcode(c_)
-	unsigned c_;	/* byte following a zero extended char byte */
-{ register short c = c_ - 15;
-
-  return c > 147 - 15 ? ALTD | c : exttbl[c];
-}
-
-#endif
-#endif
 
-#if ISRCH == 0
-#undef GOTTYPAH
-#endif
-
-#if GOTTYPAH
-
-//			 /* typahead: See if any characters are already in the keyboard buffer */
-//int Pascal typahead()
-//
-//{	return _kbhit();
-//}
-
-
-static int g_eaten_char = -1;		 /* Re-eaten char */
-
-
-void Pascal reeat(int c)
-
-{	g_eaten_char = c;			/* save the char for later */
-}
-
-#endif
-
-void flush_typah()
-
-{ 
-#if GOTTYPAH
-	g_eaten_char = -1;
-#endif
-	while (_kbhit())
-    (void)ttgetc();
-}
-
-
 extern CONSOLE_SCREEN_BUFFER_INFO csbiInfo;  /* Orig Console information */
 extern CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
 
@@ -685,30 +274,90 @@ typedef struct _WINDOWPLACEMENT {
 } WINDOWPLACEMENT; 
 */
 
+//			 /* typahead: See if any characters are already in the keyboard buffer */
+//int Pascal typahead()
+//
+//{	return _kbhit();
+//}
+
+
+int g_chars_since_ctrl;
+int g_timeout_secs;
+
+static const unsigned char scantokey[] =
+{	
+#define SCANK_STT 0x3b
+  '1',		/* 3b */
+	'2',
+	'3',
+	'4',
+	'5',
+	'6',
+	'7',
+	'8',
+	'9',
+	'0',		/* 44 */
+	'W',		/* pause */
+	'L',		/* Scroll Lock */
+	'<',		/* Home */
+	'P',		/* Up */
+	'Z',		/* Page Up */
+	'J',		/* key not known *//* 4a */
+	'B',		/* Left */
+	'K',		/* key not known */
+	'F',		/* Right */
+	'L',		/* key not known */
+	'>',		/* End */
+	'N',		/* Down */
+	'V',		/* Page Down */
+	'C',		/* Insert */
+	'D',		/* Delete */
+	'Q',		/* key not known *//* 54 */
+	'q',		/* key not known */
+	0x1c,		/* CTRL-\ */
+	':',
+	';',		/* 58 */
+};
+
+#define EAT_SZ 128
+
+static int g_eaten_ct = 0;		 /* Re-eaten char */
+static int g_eaten_ix = -1;
+static int g_eaten[EAT_SZ+4];	 /* four buffer entries */
+
+
+void Pascal reeat(int c)
+
+{	g_eaten_ct += 1;
+  g_eaten[g_eaten_ix + g_eaten_ct] = c;			/* save the char for later */
+}
+
+
+void flush_typah()
+
+{ 
+	g_eaten_ct = 0;
+	g_eaten_ix = -1;
+
+	while (_kbhit())
+    (void)ttgetc();
+}
+
+
 /*
  * Read a character from the terminal, performing no editing and doing no echo
  * at all. Also mouse events are forced into the input stream here.
  */
-int Pascal ttgetc()
+int ttgetc()
 
-{
-#if GOTTYPAH
-	if (g_eaten_char >= 0)
-	{ int c = g_eaten_char;
-		g_eaten_char = -1;
-		return c;
-//	(void)millisleep(100);
+{ if (g_eaten_ct > 0)
+	{ g_eaten_ct -= 1;
+		return g_eaten[++g_eaten_ix];
 	}
-#endif
 
 #if MOUSE > 0
 	while (TRUE)
-	{
- #if 0
-		if (in_check()) 		/* the type ahead buffer */
-			return in_get();
- #endif
-								/* with no mouse, this is a simple get char routine */
+	{												/* with no mouse, this is a simple get char routine */
 		if (mexist == FALSE || mouseflag == FALSE
  #if TYPEAH
 			|| typahead()
@@ -737,20 +386,21 @@ int Pascal ttgetc()
   	mbwrite("Int Err.7");
 #endif
 {	int totalwait = g_timeout_secs;
-/*int cRecords = 0;
-	PeekConsoleInput(g_hConIn, &ir, 1, &cRecords);*/
+ 	DWORD lim = 1000;
+	int oix = -1;
 
   while (1)
-  { DWORD actual;
-  	const DWORD lim = 1000;
-  	INPUT_RECORD rec;
+  { int got,need;
+  	INPUT_RECORD rec[32];
 
     int cc = WaitForSingleObject(g_ConsIn, lim);
     switch(cc)
 		{	case WAIT_OBJECT_0:
-//					  SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
-							cc = ReadConsoleInput(g_ConsIn, &rec, (DWORD)1, &actual);
-							if (cc && actual > 0)
+							need = (EAT_SZ - 1 - oix) * 2;
+							if (need > 32)
+								need = 32;
+							cc = ReadConsoleInput(g_ConsIn,&rec[0],need,(DWORD*)&got);
+							if (cc && got > 0)
 								break;	
 #if _DEBUG
 						  {	DWORD errn = GetLastError();
@@ -758,7 +408,6 @@ int Pascal ttgetc()
 									mlwrite("%pError %d %d ", cc, errn);
 						  }
 #endif
-//						millisleep(1); // _sleep(10);
 						  continue;
     	case WAIT_TIMEOUT: 
 #if _DEBUG
@@ -773,43 +422,58 @@ int Pascal ttgetc()
 			default:continue;
     }
 
-    if      (rec.EventType == KEY_EVENT && rec.Event.KeyEvent.bKeyDown)
-    {	int ctrl = 0;
-			int keystate = rec.Event.KeyEvent.dwControlKeyState;
-      if (keystate & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) 
-			{	ctrl |= CTRL;
-				g_chars_since_ctrl = 0;
-			}
-
-    { int chr = rec.Event.KeyEvent.wVirtualKeyCode;
-      if (in_range(chr, 0x10, 0x12))
-        continue;														/* shifting key only */
-    
-      if (keystate & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED))
-	 		  ctrl |= ALTD;
-			else
-				chr = rec.Event.KeyEvent.uChar.AsciiChar & 0xff;
-
-			if (/*chr !=  0x7c && */ (chr | 0x60) != 0x7c)	// | BSL < or ^ BSL
-			{	int vsc = rec.Event.KeyEvent.wVirtualScanCode;
-				if (in_range(vsc, SCANK_STT, 0x58))
-	      { ctrl |= SPEC;
-					chr = scantokey[vsc - SCANK_STT];
+	{	int ix = -1;
+		while (++ix < got)
+    {	INPUT_RECORD * r = &rec[ix];
+			if      (r->EventType == KEY_EVENT && r->Event.KeyEvent.bKeyDown)
+	    {	int ctrl = 0;
+				int keystate = r->Event.KeyEvent.dwControlKeyState;
+	      if (keystate & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) 
+				{	ctrl |= CTRL;
+					g_chars_since_ctrl = 0;
 				}
-				if (in_range(vsc, 2, 10) && chr == 0)
-					chr = '0' - 1 + vsc;
-			}
-     
-      if ((keystate & SHIFT_PRESSED) && ctrl)		// exclude e.g. SHIFT 7
-      	ctrl |= SHFT;
-      
-			++g_chars_since_ctrl;
-      return ctrl | (chr == 0xdd ? 0x7c : chr);
-    }}
-    else if (rec.EventType == MENU_EVENT)
-    { /*loglog1("Menu %x", rec.Event.MenuEvent.dwCommandId);*/
-    }  
-  }
+	
+	    { int chr = r->Event.KeyEvent.wVirtualKeyCode;
+	      if (in_range(chr, 0x10, 0x12))
+	        continue;														/* shifting key only */
+	    
+	      if (keystate & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED))
+		 		  ctrl |= ALTD;
+				else
+					chr = r->Event.KeyEvent.uChar.AsciiChar & 0xff;
+	
+				if (/*chr !=  0x7c && */ (chr | 0x60) != 0x7c)	// | BSL < or ^ BSL
+				{	int vsc = r->Event.KeyEvent.wVirtualScanCode;
+					if      (in_range(vsc, SCANK_STT, 0x58))
+		      { ctrl |= SPEC;
+						chr = scantokey[vsc - SCANK_STT];
+					}
+//				else if (in_range(vsc, 2, 10) && chr == 0)
+//					chr = '0' - 1 + vsc;
+				}
+	     
+	      if ((keystate & SHIFT_PRESSED) && ctrl)		// exclude e.g. SHIFT 7
+	      	ctrl |= SHFT;
+	      
+	      g_eaten[++oix] = ctrl | (chr == 0xdd ? 0x7c : chr);
+				++g_chars_since_ctrl;
+	    }}
+	    else if (r->EventType == MENU_EVENT)
+	    { /*loglog1("Menu %x", r->Event.MenuEvent.dwCommandId);*/
+	    }
+		}
+		
+		if (got == need && oix < EAT_SZ - 1)
+		{	lim = 0;
+			continue;
+		}
+
+		if (oix >= 0)
+		{ g_eaten_ct = oix;
+			g_eaten_ix = 0;
+			return g_eaten[0];
+		}
+  }}
 }}
 
 #define LAUNCH_BUFFERNM      0x0001      /* Do not use the comspec    */
@@ -957,7 +621,6 @@ Cc WinLaunch(int flags,
 						)
 { char buff[512];           //i/o buffer
 	const char * fapp = NULL;
-	char * t = buff + 4 - 1;
 	char * ca = NULL;
 	int quote = 0;
 	char * app = NULL;
@@ -965,31 +628,28 @@ Cc WinLaunch(int flags,
 	if (cmd != NULL)
 	{	const char * s = cmd - 1;
 		if (*cmd == '"')
-		{ ++cmd;
-			quote = '"';
+		{ quote = *cmd;
+			++cmd;
 		}
+	{	char * t = buff - 1;
 	  while ((ch = *++s) != 0)
 	  {	*++t = ch;
 	  	if (ca == NULL && (ch == quote || ch <= ' '))
 			{	*t = 0;
-				*++t = ' ';
+				*t += 5;
 				ca = t;
 			}
 	  }
 	
 		*++t = 0;
 	{ int ct = 2;
-		char * app_ = buff+4;
 		
-		while ((fapp = flook('P', app_)) == NULL && --ct > 0)
-			app_ = strcat(strcpy(buff, app_), ".exe");
+		while ((fapp = flook('P', buff)) == NULL && --ct > 0)
+			strcat(buff, ".exe");
 			
-		if (fapp == NULL)
-		{	if (ca != NULL)
-				*--ca = ' ';							// undo terminator
+		if (fapp == NULL)							// ignore buff
 			ca = cmd;
-		}
-	}}
+	}}}
 	if      (fapp != NULL)					// never use comspec
 		app = (char*)fapp;
 	else if ((flags & WL_SHELL) == 0)
@@ -1631,10 +1291,10 @@ void Pascal mbwrite(const char * msg)
 
 {
 #if S_WIN32
-		char * em_ = "Emacs";
+		const char * em_ = "Emacs";
 #if VS_CHAR8
 		char * m = (char*)(msg == NULL ? lastmesg : msg);
-		char * em = em_;
+		const char * em = em_;
 #else
 		wchar_t buf[256], ebuf[256];
 		LPTSTR m = char_to_wchar((char*)(msg == NULL ? lastmesg : msg), 256, buf);

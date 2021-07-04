@@ -211,9 +211,9 @@ int  tgetc()
 		g_ll = g_sll;
   }
 
-  lastkey = ttgetc();	   			 /* fetch a character from the terminal driver */
-													  	 /* record it for $lastkey */
-  if (kbd_record(pd_kbdmode))
+  lastkey = ttgetc();	   				/* fetch a character from the terminal driver */
+													  	 
+  if (kbd_record(pd_kbdmode))		/* record it for $lastkey */
   {//char buf[30];
     g_kbdm[(++pd_kbdwr)-1] = lastkey;
 //  sprintf(buf,"Rec%x",lastkey);

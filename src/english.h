@@ -198,7 +198,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT177	", overide?"
 #define	TEXT178	"[can not get system error message]"
 #define	TEXT179	" Diry:"
-#define	TEXT180	""								// not in use
+#define	TEXT180	"Use whole file?"
 #define	TEXT181	""								// not in use
 #define	TEXT182	"Environment variable TERM not defined!"
 #define	TEXT183	""

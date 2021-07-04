@@ -242,12 +242,11 @@ int Pascal reglines(Bool ask)
 
 {	REGION * r = getregion();	   							/* check for a valid region first */
 	if (r == NULL)
-	  if (!ask || g_clexec)
+	{ if (!ask || g_clexec || !mlyesno(TEXT180))
 			return 0;
-
-	if (mlyesno("Use whole file?"))
-  { curwp->w_dotp = curwp->w_bufp->b_baseline.l_fp;
-    curwp->w_doto = 0;
+		
+	  curwp->w_dotp = curwp->w_bufp->b_baseline.l_fp;
+  	curwp->w_doto = 0;
 
 		return 10000000;
 	}
