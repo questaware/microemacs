@@ -620,10 +620,9 @@ Cc WinLaunch(int flags,
           	 // char *outErr
 						)
 { char buff[512];           //i/o buffer
-	const char * fapp = NULL;
+	const char * app = NULL;
 	char * ca = NULL;
 	int quote = 0;
-	char * app = NULL;
 	char ch;
 	if (cmd != NULL)
 	{	const char * s = cmd - 1;
@@ -636,25 +635,22 @@ Cc WinLaunch(int flags,
 	  {	*++t = ch;
 	  	if (ca == NULL && (ch == quote || ch <= ' '))
 			{	*t = 0;
-				*t += 5;
+				t += 5;
 				ca = t;
+				*t = ' ';
 			}
 	  }
 	
 		*++t = 0;
 	{ int ct = 2;
 		
-		while ((fapp = flook('P', buff)) == NULL && --ct > 0)
+		while ((app = flook('P', buff)) == NULL && --ct > 0)
 			strcat(buff, ".exe");
 			
-		if (fapp == NULL)							// ignore buff
-			ca = cmd;
+		if (app == NULL)							// ignore buff
+			ca = (char*)cmd;
 	}}}
-	if      (fapp != NULL)					// never use comspec
-		app = (char*)fapp;
-	else if ((flags & WL_SHELL) == 0)
-		ca = app;
-	else
+	if (app == NULL && (flags & WL_SHELL))					// use comspec
 	{	app = (char*)getenv("COMSPEC");
 		if (app == NULL)
 			app = "cmd.exe";
@@ -719,12 +715,11 @@ Cc WinLaunch(int flags,
 		si.dwFlags |= STARTF_USESTDHANDLES;
 	}
 	else
-	{	if (!CreatePipe(&read_stdout,&si.hStdOutput,&sa,0))  //create stdout pipe
-	  	return -1000 + flagerr("CreatePipe");
-	
-		if ((ipstr != NULL || infile != NULL)
+	{	if      (!CreatePipe(&read_stdout,&si.hStdOutput,&sa,0)) //create stdout pipe
+	  	wcc = -1000;
+		else if ((ipstr != NULL || infile != NULL)
 		  && !CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
-			wcc = -2000 + flagerr("CreatePipe");
+			wcc = -2000;
 		else
 		{ // mbwrite("Created WSO");
 // 		GetStartupInfo(&si);      //set startupinfo for the spawned process
@@ -760,7 +755,7 @@ Cc WinLaunch(int flags,
  	int sentz = 0;
 
 	if      (wcc != OK)
-		;
+		wcc += flagerr("CreatePipe");
   else if (!CreateProcess(app,					//spawn the child process
                     			(char*)ca,
                     			NULL,NULL,

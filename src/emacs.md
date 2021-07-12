@@ -125,17 +125,14 @@
   and elsewhere vt100 sequences separated by dots.
 
   *Tabs*
-  The variable $hardtab specifies the distance between tab stops;
-  it is stored in each buffer.
+  The variable $hardtab is stored in each buffer and specifies the distance 
+  between tab stops; < 0 => expansion to spaces before inserting in the buffer.
   The variable $fileprof specifies $hardtab for file suffixes (starting .).
 	The syntax is **suffix** = [^][**type**]#
   The presence of a ^ signifies that the mode of operation is not AbC
 	The **type** is one of cpfqPm signifying C/C++,perl,Fortran,SQL,Pascal,markup.
 	The number # is the tab size.
-  Example : set $fileprof ".sql=^q4.h=c2.c=c2.cpp=c2.py=2"
-	The variable $softtab when not zero signifies that tabs are expanded before
-  inserting in the buffer; it is stored in each buffer. 
-  The command handle-tab (bound to C-I) with an argument also expands the tab..
+  Example : set $fileprof ".sql=^q4.h=c2.c=c2.cpp=c2.py=-2"
 
   *The File Names*
  EMACS decides that two files by different paths are the different.  
@@ -267,7 +264,6 @@ goto-matching-fence      M-^F Goto a matching bracket, parenthesis, etc
                          ^T
 grow-window              ^X^
                          ^XZ
-handle-tab               ^I   See above.
 help                     M-?
                          A-1
 hunt-backward            A-R

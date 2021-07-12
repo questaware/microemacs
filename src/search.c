@@ -914,8 +914,10 @@ qprompt:
 	    return FALSE;
 	  }
 	} // Loop
-						/* And report the results */
-	mlwrite(TEXT92, numsub);
+#if S_WIN32 == 0
+	update(TRUE);
+#endif						
+	mlwrite(TEXT92, numsub);				/* And report the results */
 				/* "%d substitutions" */
 	return TRUE;
 }}

@@ -342,8 +342,11 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
 	int chrom_nxt = 0;
 	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
+	int tabsize = curbp->b_tabsize;
+	if (tabsize < 0)
+		tabsize = - tabsize;
 
-	int len = llength(lp); 		/* an upper limit */
+{	int len = llength(lp); 		/* an upper limit */
   unsigned char * str = (unsigned char *)&lp->l_text[-1];
 	unsigned char s_props = *str;												/* layout dependent */
 	*str = 0;																						/* restored below */
@@ -395,7 +398,7 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 		if			(c == '\t') 
 		{ c = ' ';
-			if (((vtc + 1 + col) % curbp->b_tabsize) != 0)
+			if (((vtc + 1 + col) % tabsize) != 0)
 			{ --str;
 				++len;
 			}
@@ -498,7 +501,7 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 	lp->l_props = s_props;
 	return vp;
-}}}}
+}}}}}
 
 
 /************************** Modeline stuff *************************/

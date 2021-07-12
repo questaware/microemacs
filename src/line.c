@@ -246,15 +246,24 @@ int Pascal linsert(int n, char c)
   }
 
 { LINE * lp = curwp->w_dotp;		/* Current line */
+	int tabsize = curbp->b_tabsize;
+	if (tabsize < 0)
+	{	tabsize = - tabsize;
+		if (ins == 1 && c == '\t')
+		{ ins = tabsize - (getccol() % tabsize);
+			c = ' ';
+		}
+	}
 
-	if (g_overmode > 0 && 
-       curwp->w_doto < lp->l_used  &&
-			(lgetc(lp, curwp->w_doto) != '\t' ||
-			(unsigned short)curwp->w_doto % curbp->b_tabsize == (curbp->b_tabsize - 1)))
+{	int doto = curwp->w_doto;
+
+	if (g_overmode >= ins  && 
+      doto < lp->l_used  &&
+			(lgetc(lp, doto) != '\t' ||
+			 (unsigned short)doto % tabsize == (tabsize - 1)))
   	ins = 0;
 
-{ int  doto;
-  LINE * newlp;
+{ LINE * newlp;
 
   if (ins <= lp->l_spare)
 		newlp = lp;
@@ -264,10 +273,9 @@ int Pascal linsert(int n, char c)
       return FALSE;
   }
 
-  doto = curwp->w_doto;
   if (ins != 0)
   {	if ((Int)lp->l_used - doto > 0)
-   		memmove(&newlp->l_text[doto+n],&lp->l_text[doto],(Int)lp->l_used-doto);
+   		memmove(&newlp->l_text[doto+ins],&lp->l_text[doto],(Int)lp->l_used-doto);
   }
 
   if (lp != newlp)
@@ -285,11 +293,11 @@ int Pascal linsert(int n, char c)
 
   newlp->l_spare -= ins;
   newlp->l_used += ins;
-  memset(&newlp->l_text[doto],c,n);
+  memset(&newlp->l_text[doto],c,ins);
 
-  rpl_all(1, n, lp, newlp, doto);
+  rpl_all(1, ins, lp, newlp, doto);
   return lchange(WFEDIT);
-}}}}
+}}}}}
 
 int Pascal insspace(int f, int n)/* insert spaces forward into text */
 

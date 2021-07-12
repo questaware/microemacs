@@ -139,7 +139,7 @@ extern char nulls[];
 #define MDDIR    0x4000		/* this file is a directory	*/
 #define BFACTIVE 0x8000		/* this buffer is active */
 
-#define BSOFTTAB 0x01
+#define BSOFTTAB 0x01			/* not in use */
 #define BCRYPT2	 0x02
 
 				/* language properties */
@@ -279,7 +279,7 @@ typedef struct	BUFFER
 	char    			b_langprops;/* type of language of contents */
   signed char		b_spare; 		/* Spare */
 	unsigned char b_mode;	    /* Flags and modes (extra) */
-	unsigned char b_tabsize;	/* size of hard tab		*/
+	signed char 	b_tabsize;	/* size of hard tab		*/
 #if	CRYPT
 	CRYPTKEY b_key;
 #endif

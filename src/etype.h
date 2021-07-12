@@ -112,7 +112,7 @@ char * Pascal pathcat(char *, int, const char *, const char *);
 #if S_MSDOS
 unsigned short refresh_colour(int row, int col);
 #endif
-int Pascal reglines();
+int Pascal reglines(Bool ask);
 void Pascal release(char * mp);
 int Pascal remmark(int, int);
 int Pascal risearch(int, int);
@@ -125,7 +125,6 @@ void setMyConsoleIP(void);
 #else
 void Pascal setconsoletitle(char * title);
 #endif
-int Pascal handletab(int, int);
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);

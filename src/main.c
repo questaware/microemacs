@@ -562,43 +562,48 @@ static int Pascal execute(int c, int f, int n)
 
 		status = execkey(key, f, n);			// f is 0 or any other value
 	
-	else if (!in_range(c, ' ', 0xFF)) /* Self inserting.	*/
-	{//TTbeep();
-		mlwrite(TEXT19);								/* complain 	*/
-					/* [Key not bound]" */
-		status = FALSE;
-	}
 	else
-	{ /* If a space was typed, fill column is defined, the argument is non-
-		 * negative, wrap mode is enabled, and we are now past fill column,
-		 * and we are not read-only, perform word wrap.
-		 */
-		if (c == ' ' && (curbp->b_flag & (MDVIEW | MDWRAP)) == MDWRAP
-								 && pd_fillcol > 0 && getccol() > pd_fillcol
-								 && n >= 0)
-			execkey(&wraphook, FALSE, 1);
+	{ if (c == (CTRL | 'I'))
+			c = '\t';
 
-		if (n <= 0) 		/* Fenceposts.	*/
-		{ g_lastflag = 0;
-			return n == 0;
+		if (!in_range(c, ' ', 0xFF) && c != '\t') /* Self inserting.	*/
+		{//TTbeep();
+      mbwrite(int_asc(c));
+			mlwrite(TEXT19);								/* complain 	*/
+						/* [Key not bound]" */
+			status = FALSE;
 		}
-
-		g_overmode = curbp->b_flag & MDOVER;
-		status = linsert(n, (char)c); 	/* do the insertion */
-		g_overmode = FALSE;
-#if 0
-						 /* check for CMODE fence matching */
-		if ((c == '}' || c == ')' || c == ']') &&
-				(curbp->b_flag & MDCMOD))
-			fmatch(c);
-#endif
-																				 /* check auto-save mode */
-		if (curbp->b_flag & MDASAVE)
-			if (--gacount == 0)
-			{ gacount = gasave;
-			/*update(TRUE);*/ /* why ?*/
-				filesave(FALSE, 0);
+		else
+		{ /* If a space was typed, fill column is defined, the argument is non-
+			 * negative, wrap mode is enabled, and we are now past fill column,
+			 * and we are not read-only, perform word wrap.
+			 */
+			if (c == ' ' && (curbp->b_flag & (MDVIEW | MDWRAP)) == MDWRAP
+									 && pd_fillcol > 0 && getccol() > pd_fillcol
+									 && n >= 0)
+				execkey(&wraphook, FALSE, 1);
+	
+			if (n <= 0) 		/* Fenceposts.	*/
+			{ g_lastflag = 0;
+				return n == 0;
 			}
+	
+			g_overmode = curbp->b_flag & MDOVER;
+			status = linsert(n, (char)c); 	/* do the insertion */
+			g_overmode = FALSE;
+#if 0
+																		 /* check for CMODE fence matching */
+			if ((c == '}' || c == ')' || c == ']') &&
+					(curbp->b_flag & MDCMOD))
+				fmatch(c);
+#endif
+			if (curbp->b_flag & MDASAVE)							/* check auto-save mode */
+				if (--gacount == 0)
+				{ gacount = gasave;
+				/*update(TRUE);*/ /* why ?*/
+					filesave(FALSE, 0);
+				}
+		}
 	}
 	return status;
 }}

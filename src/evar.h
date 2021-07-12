@@ -62,7 +62,6 @@ NOSHARE const char * envars[] = {
 	"status",			/* returns the status of the last command */
 	"sterm",			/* search terminator character */
 	"uarg",				/* last universal arg */
-	"usesofttab",	/* expand tabs befoe inserting */
 	"version",		/* current version number */
 	"wintitle",		/* the title on the window */
 	"wline",			/* # of lines in current window */

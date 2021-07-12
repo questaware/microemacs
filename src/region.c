@@ -292,7 +292,7 @@ int Pascal narrow(int f, int n)
 	  return FALSE;
 	}
 									       /* find the boundries of the current region */
-{	int status = reglines();
+{	int status = reglines(FALSE);
 	if (status <= 1)
 	{ mlwrite(TEXT72);
 					/* "%%Must narrow at least 1 full line" */

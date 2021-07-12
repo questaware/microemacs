@@ -101,19 +101,20 @@ const char * suftag  = "cpfqPm";
 
 void Pascal customise_buf(BUFFER * bp)
 
-{
+{		int tabsize = 0;
 #if 0
 		const char * pat = strlast(bp->b_bname,'.');
 #else
-	  const char * pat = "";
+	  const char * pat = NULL;
 		const char * fn = bp->b_bname - 1;
     while (*++fn != 0)
       if (*fn == '.')
         pat = fn;
-
 #endif
-    if (*pat != 0)
-    {  
+    if (pat != NULL)
+    {  if (strcmp(".e2", pat) == 0)
+      	bp->b_mode |= BCRYPT2;
+
 			if (g_file_prof != NULL)
     	{	
     		char * pr = g_file_prof - 1;
@@ -139,15 +140,12 @@ void Pascal customise_buf(BUFFER * bp)
             ++pr;
 				  }
           
-        { int tabsz = atoi(pr+2);
-          if (tabsz > 0)
-          	 bp->b_tabsize = tabsz;
+          tabsize = atoi(pr+2);
           break;
-        }}}}
+        }}}
       }
-      if (strcmp(".e2", pat) == 0)
-      	bp->b_mode |= BCRYPT2;
 		}
+    bp->b_tabsize = tabsize != 0 ? tabsize : pd_tabsize;
 }
 
 
@@ -742,7 +740,7 @@ out:
 									     && lp->l_text[2] == 't' && lp->l_text[3] == 'a'
 									     && lp->l_text[4] == 'b' && lp->l_text[5] == ' ')
 	  { int tabw = atoi(lp->l_text+6);
-	    if (in_range(tabw, 2, 16))
+	    if (tabw != 0)
 	      bp->b_tabsize = tabw;
 	  }
 	}

@@ -333,4 +333,4 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.jav=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.pas=P2.md=m2.py=p2"
+set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.jav=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.pas=P2.md=m2.py=p-2"

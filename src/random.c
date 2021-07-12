@@ -46,11 +46,15 @@ int Pascal getgoal(LINE * dlp, int offs)
 		offs = 0x7fffffff;
 	}
 
+{	int tabsize = curbp->b_tabsize;
+	if (tabsize < 0)
+		tabsize = - tabsize;
+
 	for (dbo = -1; ++dbo < lim; )
 	{ short c = lgetc(dlp, dbo);
 		if (c < 0x20 || c == 0x7f)
 		{ if (c == '\t')
-				col += curbp->b_tabsize  - 1 - (col % curbp->b_tabsize);
+				col += tabsize - 1 - (col % tabsize);
 			else if (c >= col1ch && c <= col2ch)
 			{ col -= 1;
 				if (c == 8)
@@ -65,7 +69,7 @@ int Pascal getgoal(LINE * dlp, int offs)
 	}
 
 	return (offs & 0x40000000) ? col : dbo;
-}
+}}
 
 
 /* Return current column.  Stop at first non-blank given TRUE argument.
@@ -156,20 +160,25 @@ int Pascal twiddle(int f, int n)
  */
 int Pascal quote(int f, int n)
 
-{ int c = tgetc();
-	if (n < 0)
+{	if (n < 0)
 		return FALSE;
-	return linsert(n, (char)c);
-}
+{ int c = tgetc();
+	int tabsz = curbp->b_tabsize;
+	if (c == 'I'-'@')
+		curbp->b_tabsize = 1;
+{	int cc = linsert(n, (char)c);
+	curbp->b_tabsize = tabsz;	
+	return cc;
+}}}
 
-
+#if 0
   /* If given an argument then if > 0 expand the tab
      Otherwise if softtab is on then expand the tab (inserting spaces).
    */
 int Pascal handletab(int f, int n)
 
 { int tabsz_ = curbp->b_tabsize;
-  int tabsz = tabsz_ == 0 ? 1 : tabsz_;
+  int tabsz = tabsz_ == 0 ? 1 : tabsz_ < 0 ? - tabsz_ : tabsz_;
   unsigned char mode = curbp->b_mode;
 
   if (f && n > 0)
@@ -179,25 +188,9 @@ int Pascal handletab(int f, int n)
                          : linsert(1,'\t');
 }
 
+#endif
+
 #if 		AEDIT
-/*
-int Pascal detabline()
-
-{ LINE * dotp = curwp->w_dotp;
-	int    llen = llength(dotp);
-	int 	 tabsz = curbp->b_tabsize;
-	int    offs;
-	
-	for (offs = -1; ++offs < llen)
-		if (lgetc(dotp, offs) == '\t')
-		{ lputc(dotp, offs, ' ');
-			insspace(TRUE, tabsz - (offs % tabsz) - 1);
-		}
-
-	return OK;
-}
-*/
-
 
 int Pascal detab(int f, int n) /* change tabs to spaces */
 
@@ -380,9 +373,6 @@ int Pascal cinsert()				/* insert a newline and indentation for C */
 	linstr(lp->l_text); 							 /* insert this saved indentation */
 	*cptr = schar;
 																			
-	if (offset >= 0)												/* one more tab for a brace */
-		handletab(FALSE, 1);
-
 	return TRUE;
 }}
 

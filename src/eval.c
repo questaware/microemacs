@@ -493,7 +493,7 @@ const char *Pascal gtenv(const char * vname)
 	  when EVCURCOL:   res = getccol();
 	  when EVCURLINE:	 res = setcline();
 	  when EVHARDTAB:  res = curbp->b_tabsize;
-		when EVUSESOFTTAB:res = curbp->b_mode & BSOFTTAB ? 1 : 0;
+//	when EVUSESOFTTAB:res = curbp->b_mode & BSOFTTAB ? 1 : 0;
 	  when EVCBFLAGS:  res = curbp->b_flag;
 	  case EVCMODE:    if (vnum == EVCMODE) res = res >> NUMFLAGS;
 	  when EVCBUFNAME: return curbp->b_bname;
@@ -675,14 +675,14 @@ int Pascal svar(int var, char * value)	/* set a variable */
 #if S_WIN32
 //    when EVWINTITLE: setconsoletitle( value );
 #endif
-	    when EVHARDTAB:	 if (val > 0)
-                       { tabsize = val;
+	    when EVHARDTAB:	 if (val != 0)
+                       { pd_tabsize = val;
                   	     curbp->b_tabsize = val;
                        }
 	                     upwind();
-			when EVUSESOFTTAB: curbp->b_mode &= ~BSOFTTAB;
-											 if (val)
-													curbp->b_mode |= BSOFTTAB;
+//		when EVUSESOFTTAB:curbp->b_mode &= ~BSOFTTAB;
+//										 if (val)
+//												curbp->b_mode |= BSOFTTAB;
 	    when EVPAGELEN:	 cc = newdims(term.t_ncol, val);
 	    when EVPAGEWIDTH:cc = newdims(val, term.t_nrowm1+1);
 	    when EVCURCOL:	 cc = setccol(val);

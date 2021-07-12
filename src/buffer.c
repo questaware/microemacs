@@ -515,7 +515,6 @@ BUFFER *Pascal bfind(char * bname,
 /*bp->b_flag |= BFACTIVE; ** very doubtful !!! */
 	bp->b_flag = bflag | g_gmode;
 	bp->b_color = g_colours;
-	bp->b_tabsize = tabsize;
 
 	bp->b_next = sb->b_next;    /* insert it */
 	sb->b_next = bp;
