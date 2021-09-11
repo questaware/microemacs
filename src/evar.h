@@ -6,7 +6,7 @@
 
 /*	list of recognized environment variables	*/
 
-NOSHARE const char * envars[] = {
+NOSHARE const char * g_envars[] = {
 	"acount",			/* # of chars until next auto-save */
 	"asave",			/* # of chars between auto-saves */
 	"bufhook",		/* enter buffer switch hook */
@@ -58,7 +58,6 @@ NOSHARE const char * envars[] = {
 	"search",			/* search pattern */
 	"seed", 			/* current random number seed */
 	"ssave",			/* safe save flag */
-	"sscroll",		/* smooth scrolling flag */
 	"status",			/* returns the status of the last command */
 	"sterm",			/* search terminator character */
 	"uarg",				/* last universal arg */
@@ -72,7 +71,7 @@ NOSHARE const char * envars[] = {
 	"zcmd"				/* last command */
 };
 
-#define NEVARS	(sizeof(envars) / sizeof(envars[0]))
+#define NEVARS	(sizeof(g_envars) / sizeof(g_envars[0]))
 
 
 /*	list of recognized user functions	*/

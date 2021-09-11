@@ -50,7 +50,6 @@ NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
 NOSHARE char *g_execstr = NULL; /* pointer to string to execute */
 NOSHARE int   g_execlevel = 0;	/* execution IF level		*/
 NOSHARE short g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
-NOSHARE int mpresf = FALSE;	/* TRUE if message in last line */
 NOSHARE int ttrow = 0; 	/* Row location of HW cursor	*/
 NOSHARE int ttcol = 0; 	/* Column location of HW cursor */
 NOSHARE int lbound = 0;		/* leftmost column of current line
@@ -62,9 +61,9 @@ static
 NOSHARE int g_prefix = 0;	/* currently pending prefix bits */
 NOSHARE int prenum = 0;		/*     "       "     numeric arg */
 
-char highlight[64] = "4hello";
+//char highlight[64] = "4hello";
 
-NOSHARE int restflag = FALSE;	    /* restricted use?		*/
+NOSHARE int g_restflag = FALSE;	    /* restricted use?		*/
 //NOSHARE int g_newest = 0;       /* choose newest file */
 //#define USE_SVN
 #ifdef USE_SVN
@@ -78,7 +77,7 @@ NOSHARE int restflag = FALSE;	    /* restricted use?		*/
 
 const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
 
-NOSHARE char palstr[49] = "";		/* palette string		*/
+//NOSHARE char palstr[49] = "";		/* palette string		*/
 NOSHARE char lastmesg[NCOL+2] = ""; 	/* last message posted		*/
 NOSHARE int(Pascal *lastfnc)(int, int);/* last function executed	*/
 NOSHARE int eexitflag = FALSE;	/* EMACS exit flag		*/
@@ -88,6 +87,7 @@ NOSHARE int eexitval = 0; 	/* and the exit return value	*/
 
 /* uninitialized global definitions */
 
+NOSHARE int g_restflag;	/* restricted use?		*/
 NOSHARE int g_thisflag;	/* Flags, this command		*/
 NOSHARE int g_lastflag;	/* Flags, last command		*/
 NOSHARE WINDOW *curwp; 		/* Current window		*/
@@ -110,7 +110,7 @@ NOSHARE KEYTAB hooks[6];
 	match.
 */
 
-NOSHARE char *patmatch = NULL;
+//NOSHARE char *patmatch = NULL;
 
 #if	DEBUGM
 				/* vars needed for macro debugging output*/
@@ -135,8 +135,11 @@ char * g_invokenm;
 
 int g_opts = 0;
 
-static void Pascal editloop(int c_); /* forward */
+#if S_WIN32 == 0
+int g_nopipe;
+#endif
 
+static void Pascal editloop(int c_); /* forward */
 
 //void Pascal load_pat(const char * src);
 
@@ -155,8 +158,11 @@ void Pascal dcline(int argc, char * argv[])
 	int genflag = 0;
 	const char * def_bname = "main";
 	int	carg;
+#if S_WIN32 == 0
+  g_nopipe = nopipe;
+#endif
 
-	g_ll.ll_ix = -1;
+  g_ll.ll_ix = -1;
 #if S_MSDOS && 0
 	for (carg = argc; --carg > 0; )
 		clean_arg(argv[carg]);
@@ -186,7 +192,7 @@ void Pascal dcline(int argc, char * argv[])
 										g_gmode |= MDCRYPT;
 									}
 #endif						
-				when 'r': restflag = TRUE;	/* -r restrictive use */
+				when 'r': g_restflag = TRUE;	/* -r restrictive use */
 									
 				when 'b': def_bname = filev+2;
 									genflag |= 1;
@@ -345,7 +351,6 @@ void Pascal dcline(int argc, char * argv[])
 #if S_WIN32 == 0
   tcapepage();
 #endif
-	tcapopen(); 	/* open the screen */
   ttopen();
   tcapkopen();    /* open the keyboard */
   tcaprev(FALSE);
@@ -358,9 +363,6 @@ void Pascal dcline(int argc, char * argv[])
 		MySetCoMo();
 #endif
 	}
-
-	if (g_clring & BCCOMT)
-		addnewbind(CTRL | 'M', indent);
 
 #if 0
 	putpad("\033[m\033[2J\007");TTflush();
@@ -419,11 +421,11 @@ int main(int argc, char * argv[])
 	loglog("***************Started***************");
 #endif
 //char ch  = ttgetc();
-	
-	vtinit();
-#if CALLED
-	varinit();		/* user variables */
+	tcapopen(); 	/* open the screen */
+#if S_MSDOS == 0
+  vtinit(0,0);
 #endif
+	varinit();		/* user variables */
 #if DIACRIT
 	initchars();		/* character set definitions */
 #endif
@@ -500,8 +502,8 @@ Pascal clean()
 
 	kdelete(0,0); 		/* and the kill buffer */
 
-	free(patmatch);
-	patmatch = NULL;
+	free(pd_patmatch);
+	pd_patmatch = NULL;
 
 	varclean(); 		/* dealloc the user variables */
 	vtfree(); 		/* and the video buffers */
@@ -568,7 +570,7 @@ static int Pascal execute(int c, int f, int n)
 
 		if (!in_range(c, ' ', 0xFF) && c != '\t') /* Self inserting.	*/
 		{//TTbeep();
-      mbwrite(int_asc(c));
+//    mbwrite(int_asc(c));
 			mlwrite(TEXT19);								/* complain 	*/
 						/* [Key not bound]" */
 			status = FALSE;
@@ -598,8 +600,8 @@ static int Pascal execute(int c, int f, int n)
 				fmatch(c);
 #endif
 			if (curbp->b_flag & MDASAVE)							/* check auto-save mode */
-				if (--gacount == 0)
-				{ gacount = gasave;
+				if (--pd_gacount == 0)
+				{ pd_gacount = pd_gasave;
 				/*update(TRUE);*/ /* why ?*/
 					filesave(FALSE, 0);
 				}
@@ -610,7 +612,6 @@ static int Pascal execute(int c, int f, int n)
 
 
 int g_got_uarg = FALSE;
-int g_got_search = FALSE;
 
 /*
 	This is called to let the user edit something.	Note that if you
@@ -624,7 +625,7 @@ void Pascal editloop(int c)
 	int n; 	/* numeric repeat count */
 
 					/* if there is something on the command line, clear it */
-	if (mpresf != FALSE)
+	if (pd_got_msg != FALSE)
 	{ mlerase();
 		update(FALSE);
 	}
@@ -638,7 +639,11 @@ void Pascal editloop(int c)
 		n = prenum;
 	} 
 	else
-	{ n = 1;
+	{ 
+//	extern int g_macro_last_pos;
+//  extern int g_kbdwr;	
+//  g_macro_last_pos = g_kbdwr;
+		n = 1;
 		f = g_got_uarg;
 		if (f)
 		{	g_got_uarg = 0;
@@ -743,18 +748,25 @@ Pascal quit(int f, int n)
 
 int rdonly()
 
-{ 	 /* TTbeep(); */
-	mlwrite(TEXT109);
-/*		"VIEW mode" */
+{ if (curbp->b_flag & MDVIEW)
+	{
+		mlwrite(TEXT109);
+	/*		"VIEW mode" */
+		return TRUE;
+	}
+	
 	return FALSE;
 }
 
 
 int resterr()
 
-{ 	 /* TTbeep();*/
-	mlwrite(TEXT110);
-/*		"[That command is RESTRICTED]" */
+{ if (g_restflag)
+	{	mlwrite(TEXT110);
+					/* "[That command is RESTRICTED]" */
+		return TRUE;
+	}
+		
 	return FALSE;
 }
 

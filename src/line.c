@@ -114,7 +114,7 @@ void Pascal rpl_all(int wh, int noffs, LINE * old, LINE * new_, int offs)
  * might be in. Release the memory. The buffers are updated too; the magic
  * conditions described in the above comments don't hold here.
  */
-LINE * Pascal lfree(LINE * lp, int noffs)
+LINE * Pascal USE_FAST_CALL lfree(int noffs, LINE * lp)
 
 { LINE * nlp = lforw(lp);
   rpl_all(0, noffs, lp, nlp, noffs);
@@ -139,12 +139,13 @@ int Pascal lchange(int flag)
 
 { if ((curbp->b_flag & BFCHG) == 0)	/* First change, so	*/
 	{	curbp->b_flag |= BFCHG;
+	  curwp->w_flag |= WFMODE;
   /*mbwrite(curbp->b_fname);*/
     TTbeep();
     flag = WFHARD;
   }
 												   /* make sure all the needed windows get this flag */ 
-  (void)orwindmode(window_ct(curbp) > 0 ? WFHARD : flag, 0);
+  (void)orwindmode(window_ct(curbp) > 1 ? WFHARD : flag);
 
 {	int all = 0;
 
@@ -174,7 +175,7 @@ int Pascal lchange(int flag)
 		  }
 		}
 
-		updall(curwp, all);
+		updall(all, curwp);
   }
   
 	return TRUE;
@@ -191,8 +192,8 @@ int Pascal lchange(int flag)
  */
 int Pascal lnewline()
 
-{ if (curbp->b_flag & MDVIEW)     						/* don't allow this command if */
-    return rdonly();              						/* we are in read only mode    */
+{	if (rdonly())
+		return FALSE;
 
 { LINE * lp1 = curwp->w_dotp;   /* Get the address and  */
   int    doto = curwp->w_doto;   /* offset of "."        */
@@ -230,8 +231,8 @@ int g_overmode;
  */
 int Pascal linsert(int n, char c)
 
-{ if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
-    return rdonly();		/* we are in read only mode	*/
+{	if (rdonly())
+		return FALSE;
 /*if (! (curbp->b_flag & BFCHG)	&& pd_discmd > 0)
     TTbeep();		
 */
@@ -304,7 +305,7 @@ int Pascal insspace(int f, int n)/* insert spaces forward into text */
 {	Cc cc = linsert(n, ' ');
 	if (cc <= OK)
 		return cc;
-	return backchar(f, n);
+	return backbychar(n);
 }
 
 
@@ -375,11 +376,11 @@ int kinsert_n;		/* parameter to kinsert, used in region.c */
  * deleted, and FALSE if they were not (because dot ran into the end of the
  * buffer. The "tokill" is TRUE if the text should be put in the kill buffer.
  */
-int Pascal ldelchrs(Int n, int tokill)
+int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
 								 /* Int n; 		  * # of chars to delete */
 								 /* int tokill;	* put killed text in kill buffer flag */
-{  if (curbp->b_flag & MDVIEW)     /* don't allow this command if  */
-    return rdonly();              /* we are in read only mode     */
+{	if (rdonly())
+		return FALSE;
 
   --g_overmode;
   ++g_inhibit_scan;
@@ -496,32 +497,29 @@ char * Pascal getctext(char * t)
 	    memcpy(&lp3->l_text[used1], &lp2->l_text[0], lp2->l_used);
 	    ibefore(lp2, lp3);
 
-	    lfree(lp2, used1);
+	    lfree(used1,lp2);
 	  }
-	  lchange(WFHARD);
-	  lfree(lp1, used1);
 	}
-	else
-	{ if (used1 == 0)			 								/* Blank line.		*/
-	    lfree(lp1,0);
-	}
+	else if (used1 != 0)			 								/* Blank line. */
+		return TRUE;
+
+  lfree(used1,lp1);
+  lchange(WFHARD);
 	return TRUE;
 }
 
 /* The kill buffer abstraction */
 
-#define NOOKILL 2
-
 static struct
 { char * mem;
   int    size;
   int    kfree;		/* # of bytes used in kill buffer*/
-} kills[NOOKILL];
+} kills[NOOKILL+1];
 
 
-int Pascal chk_k_range(int n)
+int Pascal USE_FAST_CALL chk_k_range(int n)
 
-{ if (! in_range(n,0,NOOKILL))
+{ if (! in_range(n,0,NOOKILL-1))
   { mlwrite(TEXT23);
 					/* "Out of range" */
     return -1;
@@ -537,9 +535,11 @@ int Pascal chk_k_range(int n)
 int Pascal kdelete(int f, int n)
 
 {				/* first, delete all the chunks */
-  n = chk_k_range(n);
-  if (n < 0)
-    return FALSE;
+  if (f >= 0)
+  { n = chk_k_range(n);
+  	if (n < 0)
+    	return FALSE;
+  }
 #if S_MSDOS
   if (n == 0)
   { ClipSet(NULL);
@@ -609,13 +609,13 @@ char *Pascal getkill()
 /* When (N = -n) > 0 then the repeat count else the kill buffer to use.
  * Yank text back from the kill buffer. Bound to "C-Y".
  */
-int Pascal yank(int f, int n)
+int Pascal yank(int notused, int n)
 
 {
   int ix = 0;
 
-  if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
-    return rdonly();					/* we are in read only mode	*/
+	if (rdonly())
+		return FALSE;
 
   if (n <= 0)
     n = -n;

@@ -55,6 +55,7 @@ extern char deltaf[HICHAR];
 #define combuf ((char*)deltaf)
 
 extern int   g_cursor_on;
+extern unsigned int g_Dmatchlen;
 
 
 LL g_ll;
@@ -67,10 +68,19 @@ static char g_savepat[NPAT+2];
 
 static int g_kbdm[NKBDM];		/* Macro */
 
-static LINE * macro_start_line;
+//static LINE * macro_start_line;
 static int    macro_start_col;
 
 static int    g_slast_dir;
+static int		g_kbdwr = 0;								// -ve => play
+
+
+static void save_state()
+
+{	g_sll = g_ll;
+	strcpy(g_savepat,pat);
+}
+
 
 /* Begin a keyboard macro.
  * Error if not at the top level in keyboard processing.
@@ -78,24 +88,23 @@ static int    g_slast_dir;
  */
 int ctlxlp(int f, int n)
 
-{ if (pd_kbdmode != STOP)
+{ if (g_kbdwr > 0)
 	{ mlwrite(TEXT105);
 		return FALSE;
 	}
 
+	g_kbdwr = 1;
+
+//macro_start_line = curwp->w_dotp;
+	
+	g_slast_dir = pd_lastdir;
+	macro_start_col = getccol();
+	g_Dmatchlen = 0;
+	save_state();
+
 	mlwrite(TEXT106);
 				/* "[Start macro]" */
 
-	macro_start_col = getccol();
-	macro_start_line = curwp->w_dotp;
-	
-	g_slast_dir = pd_lastdir;
-	memcpy(g_savepat,pat,NPAT+2);
-
-	g_got_search = FALSE;
-
-	pd_kbdwr = 0;
-	pd_kbdmode = RECORD;
 	return TRUE;
 }
 
@@ -105,26 +114,27 @@ int ctlxlp(int f, int n)
  */
 int  ctlxrp(int f, int n)
 
-{ if (pd_kbdmode == STOP)
+{ if (g_kbdwr == 0)
 	{ mlwrite(TEXT107);
 					/* "%%Macro not active" */
 		return FALSE;
 	}
 
-	if (!kbd_record(pd_kbdmode))					// cmd to be ignored 
+  if (g_kbdwr < 0)						// cmd to be ignored 
 		return TRUE;
-	
-	pd_kbdmode = STOP;
-	g_execlevel = 0;
 
-	g_kbdm[pd_kbdwr] = 0;								// includes the sequence for this cmd!
-
-	if (g_got_search)
-		macro_start_col = -1;
-
+  g_kbdwr = - g_kbdwr;
+//g_kbdm[g_macro_last_pos] = 0;					// exclude the sequence for this cmd!
+//g_macro_last_pos = NKBDM-1;
 	pd_lastdir = g_slast_dir;
 
-	memcpy(pat,g_savepat,NPAT+2);
+	strcpy(pat,g_savepat);
+
+	g_execlevel = 0;
+
+	if (g_Dmatchlen)
+		macro_start_col = -1;
+
 //mk_magic(-1);
 
   mlwrite(TEXT108);
@@ -148,20 +158,18 @@ int  ctlxe(int f, int n)
 	if (col >= macro_start_col)
 	{
 		if (macro_start_col >= 0)
-			curwp->w_doto = getgoal(curwp->w_dotp,macro_start_col);
+			curwp->w_doto = getgoal(macro_start_col, curwp->w_dotp);
 						
-		g_sll = g_ll;
-		strpcpy(g_savepat,pat,133);
+		save_state();
 				 
-		if (pd_kbdmode != STOP)
+		if (g_kbdwr >= 0)
 		{ mlwrite(TEXT105);
 			return FALSE;
 		}
 
 		if (n > 0)
 		{ pd_kbdrep = n; 			/* remember how many times to execute */
-			pd_kbdmode = PLAY; 	/* start us in play mode */
-			pd_kbdrd = 0;				/* at the beginning */
+			pd_kbdrd = 1;				/* at the beginning */
 		}
 	}
 
@@ -175,7 +183,8 @@ int  ctlxe(int f, int n)
 int  ctrlg(int f, int n)
 
 { 	 /* TTbeep();*/
-	pd_kbdmode = STOP;
+	g_kbdwr = 0;
+	pd_kbdrd = 0;
 	mlwrite(TEXT8);
 				/* "[Aborted]" */
 	return ABORT;
@@ -188,40 +197,43 @@ int  ctrlg(int f, int n)
 */
 int  tgetc()
 
-{				/* if we are playing a keyboard macro back, */
-  if (kbd_play(pd_kbdmode))
-  {    					/* if there is some left... */
-    while (true)		/* once only */				
-    { if (++pd_kbdrd > pd_kbdwr)
-      { pd_kbdrd = 0;	/* reset the macro to the begining for the next rep */
+{											/* if we are playing a keyboard macro back, */
+  if (pd_kbdrd > 0)
+  {    								/* if there is some left... */
+    while (true) /* once only */				
+    { if (++pd_kbdrd >= -g_kbdwr + 1)
+      { pd_kbdrd = 1;	/* reset the macro to the begining for the next rep */
         if (--pd_kbdrep <= 0)
           break;
       }
-			lastkey = (int)g_kbdm[pd_kbdrd-1];
+			lastkey = (int)g_kbdm[pd_kbdrd-2];
       return lastkey;
     }
 					/* at the end of last repetition? */
 		g_execlevel = 0;					/* weak code ! */
-    pd_kbdmode = STOP;
+    pd_kbdrd = 0;							/* mode STOP; */
 //	lastkey = g_slastkey;
+		g_ll = g_sll;
+    strcpy(pat,g_savepat);
 #if VISMAC == 0
     update(FALSE);		/* force a screen update after all is done */
 #endif
-    strcpy(pat,g_savepat);
-		g_ll = g_sll;
   }
 
   lastkey = ttgetc();	   				/* fetch a character from the terminal driver */
 													  	 
-  if (kbd_record(pd_kbdmode))		/* record it for $lastkey */
+  if (g_kbdwr > 0)		/* record it for $lastkey */
   {//char buf[30];
-    g_kbdm[(++pd_kbdwr)-1] = lastkey;
-//  sprintf(buf,"Rec%x",lastkey);
-//  mbwrite(buf);
-    if (pd_kbdwr >= NKBDM)				/* don't overrun the buffer */
-    { pd_kbdmode = STOP;
+    if (g_kbdwr > NKBDM)				/* don't overrun the buffer */
       TTbeep();
-    }
+		else
+    	g_kbdm[(++g_kbdwr)-2] = lastkey;
+#if _DEBUG && 0
+	{ char buf[40];
+	  sprintf(buf,"Rec at %d %x",g_kbdwr-2, lastkey);
+	  mbwrite(buf);
+	}
+#endif
   }
 
   return lastkey;
@@ -366,19 +378,20 @@ void  homeusr(char buf[])
 #endif
 
 									    	/*	comp_command:	Attempt completion on a command name */
-static int comp_name(char * name, int cpos, int wh)
+static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 													/* command containing the current name to complete */
 													/* ptr to position of next character to insert */
 {
 	int trash;
 	int i;															/* index into strings */
-	int comflag = FALSE;   							/* was there a completion at all? */
+	int iter = -1;   							/* was there a completion at all? */
 
             /* start attempting completions, one character at a time */
   for ( ; cpos < NSTRING; ++cpos)
   { int match = 1;
     BUFFER *bp = bheadp;                		/* trial buffer to complete */
     int curbind = g_numcmd;
+    ++iter;
 
     if (wh == CMP_FILENAME)
     {   
@@ -412,7 +425,11 @@ static int comp_name(char * name, int cpos, int wh)
       for (i = -1; ++i < cpos; )
 			{	if (name[i] == '\\' && eny[i] == '/')
 					continue;	
-        if (lwr(name[i]) != lwr(eny[i]))
+#if S_MSDOS == 0
+        if (name[i] != eny[i])
+#else
+        if (((name[i] ^ eny[i]) & ~0x20) != 0)
+#endif
           break;
 			}
                                                         /* if it is a match */
@@ -420,17 +437,21 @@ static int comp_name(char * name, int cpos, int wh)
       {               				/* if this is the first match, simply record it */
         if      (match > 0)
         { --match;
-          name[i] = lwr(eny[i]);
+          name[i] = eny[i];// lwr(eny[i]);
           if (wh == CMP_FILENAME) name[i+1] = 0;
         }
                                         /* if there's a difference, stop here */
-        else if (lwr(name[i]) != lwr(eny[i]))
+#if S_MSDOS == 0
+        else if (name[i] != eny[i])
+#else
+        else if (((name[i] ^ eny[i]) & ~0x20) != 0)
+#endif
           return i;
       }
     } /* while over entries */
                                                /* with no match, we are done */
     if (match > 0)
-    { if (comflag == FALSE)      /* beep if we never matched */
+    { if (iter == 0)      /* beep if we never matched */
     	  TTbeep();
       break;
     }
@@ -440,7 +461,6 @@ static int comp_name(char * name, int cpos, int wh)
                           /* remember we matched, and complete one character */
     mlout(name[cpos]);
     TTflush();
-    comflag = TRUE;
   } /* for (cpos) */
   return cpos;
 }
@@ -448,16 +468,17 @@ static int comp_name(char * name, int cpos, int wh)
 #endif
 
 static int  redrawln(char buf[], int clamp)
-      
+
 { int len = clamp;
   char * s;
   char c;
 
   for (s = &buf[-1]; (c = *++s) != 0; )
-  { 
+  {
     if (c == '\r')
-    { if ((len -= 4) >= 0 && g_disinp > 0)
-        mlputs("<CR>");		/* put out <CR> for <ret> */
+    { len -= 4;
+      if (g_disinp > 0)
+        mlputs(4, "<CR>");		/* put out <CR> for <ret> */
     }  
     else
     { if (c < ' ')
@@ -489,7 +510,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
   int llcol = -1;
   int fulllen = 0;    /* maximum buffer position */
   int cpos = 0;
-  char * autostr = "";
+  char * autostr = NULL;
 #if S_MSDOS == 0
 	int twid = FALSE;
 #endif
@@ -510,7 +531,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       buf[cpos] = c;
       redo &= ~1;
     }
-  { int ch = *autostr;
+  { int ch = autostr == NULL ? 0 : *autostr;
     if (ch != 0)
     { ++autostr;
       gs_keyct += 1;
@@ -518,11 +539,11 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
 
     if (redo)
-    { tcapeeol();				/* redraw */
-      c = ttcol;
+    { redo = 0;
+      tcapeeol();				/* redraw */
+			c = ttcol;
       (void)redrawln(&buf[cpos], term.t_ncol-c);
       tcapmove(term.t_nrowm1, c);
-      redo = 0;
     }
     TTflush();
     ch = getkey();
@@ -530,7 +551,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       llcol = -1;
                               /* if they hit the line terminate, wrap it up */
     if (ch == sterm)
-    { /* mlerase();                  ** clear the message line */
+    { mlerase();                  /* clear the message line */
       if (buf[0] != 0)
         break;
                           /* if we default the buffer, return FALSE */
@@ -584,7 +605,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
         ;
       ((char*)memcpy(mybuf,buf+tpos+1,cpos-tpos))[cpos-tpos] = 0;
 
-      ix = comp_name(mybuf, cpos - tpos - 1, CMP_FILENAME);
+      ix = comp_name(cpos - tpos - 1, CMP_FILENAME,mybuf);
       if (ix > cpos - tpos)
       { cpos = tpos+1+ix;
         fulllen = cpos;
@@ -594,7 +615,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
     else if ((c == ' '|| c == '\t') && gs_type >= 0 && cpos > 0)
     { 
-    	int tpos = comp_name(buf, cpos, gs_type);    /* attempt a completion */
+    	int tpos = comp_name(cpos, gs_type, buf);    /* attempt a completion */
       if (tpos > 0 && buf[tpos - 1] == 0)
         break;
       cpos = tpos;
@@ -643,7 +664,9 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       }
     }
     else if (c <= 'Z'-'@' && ch != quotec || c == (ALTD | 'S'))
-    { autostr = fixnull(getwtxt(c, &combuf[0], HICHAR-3-cpos));
+    { autostr = getwtxt(c, &combuf[0], HICHAR-3-cpos);
+//   	if (autostr == NULL)
+//   		autostr = "";
     }
     else 
     { int tpos;
@@ -656,7 +679,7 @@ getliteral:
       c = ectoc(ch);
 
       if (fulllen >= nbuf-1)
-      { autostr = "";
+      { autostr = NULL;
         continue;
       }
 #if S_MSDOS == 0
@@ -686,6 +709,7 @@ getliteral:
 #endif
     }
   }}
+
   g_ll.ll_ix += 1;
   strpcpy(&g_ll.lastline[g_ll.ll_ix & MLIX][0], buf, NSTRING-1);
   return TRUE;
@@ -707,7 +731,8 @@ int  getstring(char * buf, int nbuf, const char * prompt)
 
 char gs_buf[NSTRING+2];		/* buffer to hold tentative name */
 
-char * complete(char * prompt, char * defval, int type, int maxlen)
+static
+char * complete(const char * prompt, char * defval, int type, int maxlen)
 					/* prompt to user on command line */
 					/* default value to display to user */
 				/* type of what we are completing */
@@ -742,7 +767,7 @@ char * complete(char * prompt, char * defval, int type, int maxlen)
 	   name if it is unique.
 	*/
 //int ( * getname(char * prompt))(int, int)
-Command getname(char * prompt)
+Command getname(const char * prompt)
 				/* string to prompt with */
 {
   char *sp = complete(prompt, NULL, CMP_COMMAND, NSTRING);
@@ -756,7 +781,7 @@ Command getname(char * prompt)
 			I was goaded into this by lots of other people's
 			completion code.
 */
-BUFFER * getcbuf(char *prompt, char *defval, int createflag)
+BUFFER * getcbuf(const char *prompt, char *defval, int createflag)
 				/* prompt to user on command line */
 				/* default value to display to user */
 				/* should this create a new buffer? */
@@ -767,9 +792,9 @@ BUFFER * getcbuf(char *prompt, char *defval, int createflag)
 }
 
 
-char * USE_FAST_CALL gtfilename(char * prompt)
+const char * gtfilename(const char * prompt)
 				/* prompt to user on command line */
 {
-  return complete(prompt, NULL, CMP_FILENAME, NFILEN);
+  return (const char *)complete(prompt, NULL, CMP_FILENAME, NFILEN);
 }
 

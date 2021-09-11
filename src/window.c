@@ -17,31 +17,35 @@
 
 int Pascal window_ct(BUFFER* bp)
 
-{ WINDOW * wp;
+{
+#if 1
+  WINDOW * wp;
 	int ct = 0;
   for (wp = wheadp; wp != NULL; wp = wp->w_next)
   	if (wp->w_bufp == bp)
   		++ct;
   return ct;
+#else
+	BUFFER * s_bp = curbp;
+	curbp = bp;
+{	int ct = orwindmode(WFONLY);
+	curbp = s_bp;
+  return ct;
+}
+#endif
 }
 
 
 
+int Pascal orwindmode(int mode)
 
-int Pascal orwindmode(int mode, int wh)
-	/* Short 	wh;  ** 0 => all, 1 => for curbp */
 { WINDOW *wp;
   int ct = 0;
 				   /* force all windows to redraw */
   for (wp = wheadp; wp != NULL; wp = wp->w_next)
-    if (wh == 0 || wp->w_bufp == curbp)
-    { /* if      (wp->w_changed == null)
-        wp->w_changed = curbp->b_dotp;
-      else if (wp->w_changed != curbp->b_dotp)
-        mode = WFHARD; */
-      wp->w_flag |= mode;
-      ++ct;
-    }
+  { wp->w_flag |= (mode & (WFONLY-1));
+    ++ct;
+  }
 
   return ct;
 }
@@ -76,26 +80,25 @@ void Pascal leavewind(WINDOW * wp, int dec)
 
 extern int g_top_luct;
 
-int Pascal openwindbuf(char * bname)
+void openwindbuf(char * bname)
 	
 {		/* split the current window to make room for the binding list */
   if (splitwind(FALSE, 1) == FALSE)
-    return FALSE;
+    return;
 					        
-{	BUFFER * bp = curbp = bfind(bname, TRUE, 0);		/* and get a buffer for it */
-  if (curbp == NULL)
-    return FALSE;
+{	BUFFER * bp = bfind(bname, TRUE, 0);		/* and get a buffer for it */
+  if (bp == NULL)
+    return;
 
-  if (bclear(curbp))
-  { leavewind(curwp, 0);
-    openwind(curwp);
-  
-    bp->b_flag &= ~MDVIEW;
+	curbp = bp;
+
+  if (bclear(bp))
+  { bp->b_flag &= ~MDVIEW;
     bp->b_flag |= BFACTIVE;
 		bp->b_luct = ++g_top_luct;
+    leavewind(curwp, 0);
+    openwind(curwp);
   }
-
-  return TRUE;
 }}
 
 /* Reposition dot in the current window to line "n". If the argument is
@@ -118,8 +121,9 @@ int Pascal refresh(int f, int n)
 
 {  if (f != FALSE)
       return reposition(0, 0);  /* Center dot. */
-    pd_sgarbf = TRUE;
-    return pd_sgarbf;
+//  pd_sgarbf = TRUE;
+		upwind();
+    return TRUE;
 }
 
 /*
@@ -143,7 +147,7 @@ int Pascal nextwind(int f, int n)
 	    wp = wheadp;
 	}
 	else
-	{ int wct = orwindmode(0, 0);  /* 0,: just count windows */
+	{ int wct = orwindmode(0);  /* 0,: just count windows */
 	
     if (n < 0)
       n = ((wct+n) % wct)+1;  /* the nth window from bottom of the screen */
@@ -206,7 +210,7 @@ int Pascal getwpos()
  * (this command does not really move "."; it moves the frame). Bound to
  * "C-X C-P".
  */
-int Pascal mvupwind(int f, int n)
+int Pascal mvupwind(int notused, int n)
 
 {   int wpos = getwpos();
 	  LINE * lp = curwp->w_linep;
@@ -214,24 +218,25 @@ int Pascal mvupwind(int f, int n)
     int i = n;
 
     if (i < 0)
-    { while (lp != p && ++i <= 0)
+		{	--i;
+      while (lp != p && ++i < 0)
 				lp = lforw(lp);
-      --i;
     }
     else
     { p = lforw(p);
-      while (lp != p && --i >= 0)
+			++i;
+      while (lp != p && --i > 0)
 				lp = lback(lp);
-      ++i;
     }
 
+		upwind();
     curwp->w_linep = lp;
-    curwp->w_flag |= WFHARD;		/* Mode line is OK. */
+//  curwp->w_flag |= WFHARD;		/* Mode line is OK. */
 
-    if (wpos >= 0 && getwpos() < 0)
-    { curwp->w_dotp = lp;
-      curwp->w_line_no += i - n - wpos;
-      (void)forwline(0, curwp->w_ntrows >> 1);
+    if (getwpos() < 0 && wpos >= 0)
+    { curwp->w_line_no += i - n - wpos;
+      curwp->w_dotp = lp;
+      (void)forwbyline(curwp->w_ntrows >> 1);
     }
 
     return TRUE;
@@ -248,7 +253,7 @@ int Pascal mvupwind(int f, int n)
 int Pascal mvdnwind(int f, int n)
 
 {
-  return mvupwind(f, -n);
+  return mvupwind(-n, -n);
 }
 
 
@@ -259,7 +264,7 @@ int Pascal mvdnwind(int f, int n)
  * the buffer structures right if the destruction of a window makes a buffer
  * become undisplayed.
  */
-int Pascal onlywind(int f, int n)
+int Pascal onlywind(int notused, int n)
 
 {	WINDOW *wp;
 	WINDOW *nwp;
@@ -291,7 +296,7 @@ int Pascal onlywind(int f, int n)
  * Delete the current window, placing its space in the window above,
  * or, if it is the top window, the window below. Bound to C-X 0.
  */
-int Pascal delwind(int f, int n)
+int Pascal delwind(int notused, int n)
 				/* arguments are ignored for this command */
 {
 	WINDOW *wp;		/* window to recieve deleted space */
@@ -318,13 +323,12 @@ int Pascal delwind(int f, int n)
 					/* "Can not delete this window" */
 	  return FALSE;
 	}
-
-	nwp->w_ntrows += 1 + curwp->w_ntrows;
-	nwp->w_flag |= WFHARD | WFMODE;				/* update all lines */
 														   					/* unlink the current window */
 	pwp->w_next = curwp->w_next;
 
 	leavewind(curwp, 1);
+	nwp->w_ntrows += 1 + curwp->w_ntrows;
+	nwp->w_flag |= WFHARD | WFMODE;				/* update all lines */
 	curwp = nwp;
 	curbp = nwp->w_bufp;
 /*refresh(0, 0); */
@@ -387,12 +391,15 @@ int Pascal splitwind(int f, int n)
 	  lp = lforw(lp);
 
 	wp->w_linep = lp;					/* if necessary.	*/
-	curwp->w_linep = lp;			/* Adjust the top lines */
 	curbp->b_wlinep = lp;
-{ extern LINE * g_lastlp;		// -ve => reset
+	curwp->w_linep = lp;			/* Adjust the top lines */
+{ 
+#if S_MSDOS == 0
+	extern LINE * g_lastlp;		// -ve => reset
 	g_lastlp = NULL;
+#endif
 	modeline(curwp);
-	g_lastlp = NULL;
+	// g_lastlp = NULL;
 	modeline(wp);
 	return TRUE;
 }}}}}
@@ -403,7 +410,7 @@ int Pascal splitwind(int f, int n)
  * all the hard work. You don't just set "force reframe" because dot would
  * move. Bound to "C-X Z".
  */
-int Pascal enlargewind(int f, int n)
+int Pascal enlargewind(int notused, int n)
 
 {   WINDOW * wp = curwp;
     WINDOW * adjwp;
@@ -460,8 +467,9 @@ int Pascal enlargewind(int f, int n)
  */
 int Pascal shrinkwind(int f, int n)
 
-{	
-	return enlargewind(f, n == 0 ? -1 : -n);
+{	int n_ = n == 0 ? -1 : -n;
+	return enlargewind(n_,n_);
+
 #if 0
 X	if (wheadp->w_next == NULL)
 X	{ mlwrite(TEXT206);
@@ -502,13 +510,13 @@ X	return TRUE;
 			 /* Resize the current window to the requested size */
 int Pascal resize(int f, int n)
 
-{
-	int clines = curwp->w_ntrows;/* current # of lines in window */
+{	int diff = n - curwp->w_ntrows;/* current # of lines in window */
 	
-		/* must have a non-default argument, else ignore call */
-				      /* find out what to do */
-	return ! f || clines == n ? TRUE	 /* already the right size? */
-			   	                  : enlargewind(TRUE, n - clines);
+									/* must have a non-default argument, else ignore call */
+	if (! f)
+		return TRUE;
+
+	return enlargewind(diff, diff);
 }
 
 #if 0
@@ -545,35 +553,6 @@ int Pascal nextdown(int f, int n)	/* scroll next window down (forward) a page*/
 {	return nextup(f, -n);
 }
 
-#if 0
-																												// This code is not safe
-static WINDOW *swindow = NULL; 	/* saved window pointer 	*/
-
-int Pascal savewnd(int f, int n)	/* save ptr to current window */
-
-{	swindow = curwp;
-	return TRUE;
-}
-
-int Pascal restwnd(int f, int n)	/* restore the saved screen */
-
-{
-	WINDOW *wp;
-					     /* find the window */
-	for (wp = wheadp; wp != NULL; wp = wp->w_next) 
-		if (wp == swindow)
-		{	curwp = wp;
-			curbp = wp->w_bufp;
-			upmode();
-			return TRUE;
-		}
-
-	mlwrite(TEXT208);
-				/* "[No such window exists]" */
-	return FALSE;
-}
-
-#endif
 
 #if 0				       
 const static char text209[] = TEXT209;
@@ -583,11 +562,11 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 
 { // int inr = true;
                       					     /* make sure it's in range */
-	if (! in_range(dpth, 3, 62))
-	  dpth = 62;
+	if (! in_range(dpth, 3, NROW))
+	  dpth = NROW;
 
-	if (! in_range(wid, 10, 134))
-	  wid = 134;
+	if (! in_range(wid, 10, NCOL))
+	  wid = NCOL;
 
 	if (term.t_nrowm1 != dpth - 1 ||
 	    term.t_ncol != wid)
@@ -595,15 +574,14 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 	  term.t_margin = wid / 10;
 	  term.t_scrsiz = wid - (term.t_margin * 2);
 		term.t_nrowm1 = dpth - 1;			
-		term.t_mrowm1 = dpth - 1;			
-	  vtinit();
+	  vtinit(wid,dpth-1);
 //#if S_WIN32 == 0
 	  tcapsetsize(wid,dpth,2);
 //#endif
 #if 0
 	  curwp->w_ntrows = term.t_nrowm1-1;
 #else
-    onlywind(FALSE, 1);		/* can only make this work */
+    onlywind(1, 1);		/* can only make this work */
 #endif
 		upwind();
 //  tcapepage();
@@ -612,7 +590,8 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 	  mlwrite(strpcpy(&buf[0], lastmesg, 30));
 	}
 #endif
-	  pd_sgarbf = TRUE;			  /* screen is garbage */
+//  pd_sgarbf = TRUE;			  /* screen is garbage */
+		upwind();
 	}
 #if 0				       
 	if (!inr)

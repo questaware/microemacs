@@ -164,5 +164,10 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define PSCP_CMD "pscp "
 #define CLIP_LIFE 0					// seconds, not in use
 
+#define NOOKILL 2
+
+#define NROW	80
+#define NCOL 180
+
 #include "../src/base.h"
 #endif /* VERSION */

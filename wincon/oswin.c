@@ -55,14 +55,11 @@ int flagerr(const char *str)  //display detailed error info
               0,
               NULL
                );
-  mlwrite("%s: %s\n",str,msg);
+  mlwrite("%p%s: %s\n",str,msg);
   LocalFree(msg);
 #else
-{	char buf[100];
-  mlwrite(strcat(strcpy(buf,str)," %d"), ec);
-}
+  mlwrite("%p%s %d", str, ec);
 #endif
-	mbwrite(NULL);
 	return -(int)ec;
 }
 
@@ -179,8 +176,7 @@ void setMyConsoleIP()
 {// int clamp = 2;
 
 //if (GetConsoleMode(g_ConsIn, &mode))
-//{ mlwrite("Mode before %x", mode);
-//	mbwrite(NULL);
+//{ mlwrite("%pMode before %x", mode);
 //}
 
 //while (--clamp >= 0)
@@ -275,7 +271,7 @@ typedef struct _WINDOWPLACEMENT {
 */
 
 //			 /* typahead: See if any characters are already in the keyboard buffer */
-//int Pascal typahead()
+//int Pascal l typahead()
 //
 //{	return _kbhit();
 //}
@@ -319,25 +315,24 @@ static const unsigned char scantokey[] =
 	';',		/* 58 */
 };
 
-#define EAT_SZ 128
+#define EAT_LOG 7
+#define EAT_SZ (1 << EAT_LOG)
 
-static int g_eaten_ct = 0;		 /* Re-eaten char */
-static int g_eaten_ix = -1;
+Pair g_eaten_pair;
+
 static int g_eaten[EAT_SZ+4];	 /* four buffer entries */
 
 
 void Pascal reeat(int c)
 
-{	g_eaten_ct += 1;
-  g_eaten[g_eaten_ix + g_eaten_ct] = c;			/* save the char for later */
+{																				/* save the char for later */
+	g_eaten[g_eaten_pair.both.ix + ++g_eaten_pair.both.ct] = c;
 }
 
 
 void flush_typah()
 
-{ 
-	g_eaten_ct = 0;
-	g_eaten_ix = -1;
+{ g_eaten_pair.both.ct = 0;
 
 	while (_kbhit())
     (void)ttgetc();
@@ -350,9 +345,9 @@ void flush_typah()
  */
 int ttgetc()
 
-{ if (g_eaten_ct > 0)
-	{ g_eaten_ct -= 1;
-		return g_eaten[++g_eaten_ix];
+{ if (g_eaten_pair.both.ct > 0)
+	{ g_eaten_pair.both.ct -= 1;
+		return g_eaten[++g_eaten_pair.both.ix];
 	}
 
 #if MOUSE > 0
@@ -390,9 +385,9 @@ int ttgetc()
 	int oix = -1;
 
   while (1)
-  { int got,need;
+  { int need;
   	INPUT_RECORD rec[32];
-
+  	int got = 0;
     int cc = WaitForSingleObject(g_ConsIn, lim);
     switch(cc)
 		{	case WAIT_OBJECT_0:
@@ -408,7 +403,7 @@ int ttgetc()
 									mlwrite("%pError %d %d ", cc, errn);
 						  }
 #endif
-						  continue;
+//					  continue;
     	case WAIT_TIMEOUT: 
 #if _DEBUG
     					if (g_got_ctrl)
@@ -419,7 +414,8 @@ int ttgetc()
 							if (--totalwait == 0)			// -w opt
 								exit(2);
 														// drop through
-			default:continue;
+			default:if (lim != 0)
+								continue;
     }
 
 	{	int ix = -1;
@@ -463,14 +459,18 @@ int ttgetc()
 	    }
 		}
 		
-		if (got == need && oix < EAT_SZ - 1)
+		if (lim != 0 && got == need && oix < EAT_SZ - 1)
 		{	lim = 0;
 			continue;
 		}
 
 		if (oix >= 0)
-		{ g_eaten_ct = oix;
-			g_eaten_ix = 0;
+		{
+#if LITTLEENDIAN
+			g_eaten_pair.pair = oix;
+#else
+			g_eaten_pair.pair = oix << 16;
+#endif
 			return g_eaten[0];
 		}
   }}
@@ -520,13 +520,13 @@ static char * mkTempCommName(/*out*/char *filename, char *suffix)
 			c2[0] = DIRY_CHAR;
 	
 {	char *ss = concat(filename,td,c2,"me",int_asc(_getpid()),suffix,0);
-	int tail = strlen(ss) - 3;
+	int tail = strlen(ss);
 	int iter = 25;
 	
 	while (--iter >= 0 && fexist(ss))
 	{
-		ss[tail] = 'A' + 24 - iter;				// File should not exist anyway
-		ss[tail+1] = '~';
+		ss[tail-3] = 'A' + 24 - iter;				// File should not exist anyway
+		ss[tail-2] = '~';
 	}
 	return filename;
 }}
@@ -691,7 +691,8 @@ Cc WinLaunch(int flags,
   sa.nLength = sizeof(SECURITY_ATTRIBUTES);
   sa.bInheritHandle = TRUE;         //allow inheritable handles
 
-	pd_sgarbf = TRUE;
+  pd_sgarbf = TRUE;
+	upwind();
 //memset(&pi, 0, sizeof(pi));
 	memset(&si, 0, sizeof(si));
 	si.cb = sizeof(si);
@@ -709,8 +710,10 @@ Cc WinLaunch(int flags,
 		if (outfile != NULL)
 		{ si.hStdOutput = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sa,
 																 CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
+#if _DEBUG
 			if (si.hStdOutput <= 0)
 				mbwrite("CFOut Failed");
+#endif
 		}
 		si.dwFlags |= STARTF_USESTDHANDLES;
 	}
@@ -780,12 +783,9 @@ Cc WinLaunch(int flags,
 			{ Cc cc = (procStatus != WAIT_FAILED);
 				if (cc)
 				{ cc = GetExitCodeProcess(pi.hProcess,&exit);
-				  if (cc == 0)
-				  	flagerr("GECP");
-					else
-					{//mbwrite("Exitting");
+				  if (cc != 0)
 						break;
-					}
+				  flagerr("GECP");
 				}
 			}}
 			
@@ -820,16 +820,13 @@ Cc WinLaunch(int flags,
 			  if (!cc)
 		  	 	flagerr("PNP");
 				if (bread == 0)
-		  	{ 
-	  			if (exit == STILL_ACTIVE)
-					{ cc = GetExitCodeProcess(pi.hProcess,&exit); //while process exists
-				    if 			(!cc)
-				    {	flagerr("GECP");
-				    	break;
-				    }
-	  				else if (exit != STILL_ACTIVE)
-	  					break;
-	  			}
+		  	{ cc = GetExitCodeProcess(pi.hProcess,&exit); //while process exists
+				  if 			(!cc)
+				  {	flagerr("GECP");
+				   	break;
+				  }
+	  			if (exit != STILL_ACTIVE)
+	  				break;
 	  		}
 	  		else
 	  		{ DWORD done = 0;
@@ -944,7 +941,7 @@ Cc WinLaunch(int flags,
 	setMyConsoleIP();
 
   return wcc != OK ? wcc :
-  			 sentz < 0 ? -1  : (Cc)exit;
+  			 sentz < 0 ? sentz  : (Cc)exit;
 }}}
 
 
@@ -990,19 +987,19 @@ int pipefilter(wh)
  				char 	 bname [10];
 				char	 pipeInFile[NFILEN];
 				char	 pipeOutFile[NFILEN];
-				char * fnam1 = NULL;
 							
 				char line[NSTRING+2*NFILEN+100];			 /* command line send to shell */
 
-	if (restflag) 					/* don't allow this command if restricted */
-		return resterr();
+	if (resterr())
+		return FALSE;
 
 { Cc cc;
+	char * fnam1 = NULL;
 	char prompt[2];
 	prompt[0] = wh;
 	wh -= '@';											
-	if (wh != 0 && wh != '!'-'@' && (curbp->b_flag & MDVIEW)) /* disallow if*/
-		return rdonly();															/* we are in read only mode */
+	if (wh != 0 && wh != '!'-'@' && rdonly())
+		return FALSE;
 
 	if (wh == 'e'-'@')
 		strpcpy(line, g_ll.lastline[0], sizeof(line)-2*NFILEN);
@@ -1014,10 +1011,9 @@ int pipefilter(wh)
 		if (line[0] == '%' || line[0] == '\'')
 		{ char sch;
       int ix;
-			for (ix = 0; line[++ix] != 0 && isalpha(line[ix]); )
+			for (ix = 0; (sch = line[++ix]) != 0 && isalpha(sch); )
 				;
 
-			sch = line[ix];
 			line[ix] = 0;
 
 		{ const char * val = gtusr(line+1);
@@ -1062,8 +1058,8 @@ int pipefilter(wh)
 #endif
 	cc = WinLaunch(cc,line, NULL, fnam1, fnam2);
 	if (cc != OK)
-	{	mlwrite("%p"TEXT3" %d", cc); 							/* "[Execution failed]" */
-		return FALSE;
+	{	mlwrite(TEXT3, cc); 							/* "[Execution failed]" */
+//	return FALSE;
 	}
 
 {/*int fid = open(tmpnam, O_RDONLY);			// did the output file get generated?
@@ -1105,7 +1101,7 @@ int pipefilter(wh)
 	{ BUFFER * bp = curbp;
 		char * sfn = bp->b_fname;
 		bp->b_fname = null;									/* otherwise it will be freed */
-		rc = readin(fnam2, 0);
+		rc = readin(fnam2, FILE_NMSG);
 		bp->b_fname = sfn; 									/* restore name */
 		bp->b_flag |= BFCHG; 								/* flag it as changed */
 		if (wh == '#'-'@')
@@ -1339,20 +1335,6 @@ void Pascal mbmenu(const char * msg)
 	else
 			MessageBox(hwnd, "Could not load small icon!", "Error", MB_OK | MB_ICONERROR);
 }}}
-
-
-void Pascal mbwrite2(const char * diag, const char * msg)
-
-{
-#if S_WIN32
-		int len = strlen(diag) + strlen(msg) + 3;
-		char * t = strcat(strcpy(malloc(len),diag),msg);
-
-		mbwrite(t);
-		free(t);
-}
-#endif
-}
 
 #endif
 

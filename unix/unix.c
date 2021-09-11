@@ -358,7 +358,10 @@ int ttgetraw()
 
 int typahead()
 
-{
+{ extern int in_next,in_last;
+  if (in_next != in_last)
+  	return TRUE;
+
 #if 0
 	return FALSE;
 #elif	S_BSD || S_LINUX
@@ -391,7 +394,7 @@ int bktoshell()		/* suspend MicroEMACS and wait to wake up */
 int rtfrmshell()
 
 { ttopen();
-  curwp->w_flag = WFHARD;
+  upwind();
   pd_sgarbf = TRUE;
   return 0;     /* dont know the value */
 }
@@ -400,11 +403,16 @@ int rtfrmshell()
 static void usehost(line, end)
 	char *   line;
 	char	 end;
-{ TTflush();
+{ extern int g_nopipe;
+	TTflush();
   tcapclose(1);
   if (g_clexec <= 0)
-    ttputc('\n');                /* Already have '\r'    */
+  { ttputc('\n');                /* Already have '\r'    */
 
+	  if (g_nopipe == 0)
+  	  system("reset -Q");
+  }
+  
   system(line);
   if (end)
   {
@@ -423,6 +431,7 @@ static void usehost(line, end)
      ;
   }
 #endif
+  upwind();
   pd_sgarbf = TRUE;
 }
 
@@ -434,8 +443,8 @@ int gen_spawn(f, n, prompt, line)
 	char *   line;
 { register int  s;
 
-  if (restflag)
-    return resterr();
+  if (resterr())
+    return FALSE;
   
   if (prompt == NULL)
     tcapmove(term.t_nrowm1, 0);             /* Seek to last line.   */
@@ -497,8 +506,8 @@ int pipecmd(int f, int n)
  static char filnam[] = "cmd";
  static int  bix;
 
-	if (restflag)
-	  return resterr();
+	if (resterr())
+	  return FALSE;
 
 { int s = mlreply("@", line, NLINE);     /* get the command to pipe in */
 	if (s != TRUE)
@@ -509,7 +518,7 @@ int pipecmd(int f, int n)
 	{		/* try to make sure we are off screen */
 	  for (wp = wheadp; wp != NULL; wp = wp->w_next)
 	    if (wp->w_bufp == bp)
-	    { onlywind(FALSE, 1);
+	    { onlywind(1, 1);
 	      break;
 	    }
 
@@ -520,7 +529,7 @@ int pipecmd(int f, int n)
 
   char rcmd[256];
   system(g_emacsdir);  
-  strcat(strcat(strcat(strcpy(rcmd,"rm -f ")," "),g_emacsdir+6),filnam);
+  strcat(strcat(strcat(strcpy(rcmd,"rm -f ")," "),g_emacsdir+9),filnam);
   system(rcmd);  
   strcat(line,">");
   s = strlen(line);
@@ -538,7 +547,7 @@ int pipecmd(int f, int n)
 	bp->b_fname = NULL;
 	  		     					/* make this window in VIEW mode, update all mode lines */
 	curwp->w_bufp->b_flag |= MDVIEW;
-	orwindmode(WFMODE, 0);
+	orwindmode(WFMODE);
 
 	unlink(filnam);			/* get rid of the temporary file */
 	return TRUE;
@@ -559,25 +568,25 @@ Cc unix_rename(old, new)	/* change the name of a file */
 			 */
 int filter(int f, int n)
 
-{ register BUFFER *bp = curbp;
-  char line[NLINE];			/* command line send to shell */
-  char * tmpnam = bp->b_fname;		/* place to store real file name */
+{ char line[NLINE];			/* command line send to shell */
 
  static char filnam1[] = FILNAM1;
  static char filnam2[] = FILNAM2;
 
-  if (f < 0)
-		strcpy(line,"sort");
-  else
-	{ if (bp->b_flag & MDVIEW)
-			return rdonly();
-  } 
-  if (restflag)
-    return resterr();
+	strcpy(line,"sort");
+
+	if (rdonly())
+		return FALSE;
+
+  if (resterr())
+    return FALSE;
 															/* get the filter name and its args */
 { int cc = f < 0 ? TRUE : mlreply("#", line, NLINE);
   if (cc != TRUE)
     return cc;
+
+{ BUFFER *bp = curbp;
+  char * tmpnam = bp->b_fname;		/* place to store real file name */
 
   bp->b_fname = null;			/* prevent freeing */
 					/* write it out, checking for errors */
@@ -605,7 +614,7 @@ int filter(int f, int n)
 
   bp->b_flag |= BFCHG;			/* flag it as changed */
   return TRUE;
-}}
+}}}
 
 		   /* return a system dependant string with the current time */
 char *Pascal timeset()

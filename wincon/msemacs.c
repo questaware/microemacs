@@ -28,7 +28,7 @@ long unsigned int thread_id(void)
 }
 
 
-int init_wincon()
+void init_wincon()
 
 {	
 #if 0
@@ -42,9 +42,12 @@ int init_wincon()
 #endif
 	flook_init(argv[0]);
 #endif
+
+//Sleep(1000*8);
 																							// reduces memory but slows startup
 	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
 
+//Sleep(1000*8);
 											      /* Get display screen information, clear the screen.*/
 	g_ConsOut = GetStdHandle( STD_OUTPUT_HANDLE );
 
@@ -72,7 +75,6 @@ void Pascal tcapeeol()
 	DWORD     Dummy;
   
   FillConsoleOutputCharacter(g_ConsOut, ' ',sz,Coords,&Dummy );
-  return OK;
 }}
 
 /*
@@ -224,12 +226,12 @@ void Pascal tcapmove(int row, int col)
 
 {/* if (row == ttrow && col == ttcol)
       return; */
- if (row > term.t_mrowm1)
+ if (row > term.t_nrowm1)
   { tcapbeep();
     row = 0;
   }
   
-{ WORD MyAttr = row == term.t_mrowm1 ? BG_GREY
+{ WORD MyAttr = row == term.t_nrowm1 ? BG_GREY
                         					   : window_bgfg(curwp) | BACKGROUND_INTENSITY;
   DWORD  Dummy;
   COORD  Coords;
@@ -291,8 +293,7 @@ void Pascal ttscupdn(n)                  /* direction the window moves */
 void Pascal ttputc(unsigned char ch) /* put character at the current position in
 														   		      current colors */
 {			/* if its a newline, we have to move the cursor */
-  unsigned long  Dummy;
-  register int col;
+  unsigned long  Dum;
 #if VS_CHAR8
 #define gch (char)ch
 #else
@@ -301,39 +302,38 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 
 /*GetConsoleScreenBufferInfo( g_ConsOut, &ccInfo );*/
 	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
-  col = csbiInfo.dwCursorPosition.X;
 /* ttcol = col;*/
-  ttrow = csbiInfo.dwCursorPosition.Y;
+{	int row = csbiInfo.dwCursorPosition.Y;
+  int col = csbiInfo.dwCursorPosition.X + 1;
 
   if (ch != '\n' && ch != '\r')
   { if (ch != '\b')
-    { col += 1; 
-      if (col >= csbiInfo.dwSize.X)
-      { mlwrite("Row %d Col %d Lim %d", ttrow, col, csbiInfo.dwSize.X);
-				mbwrite(lastmesg);
+    { if (col >= csbiInfo.dwSize.X)
+      { mlwrite("%pRow %d Col %d Lim %d", ttrow, col, csbiInfo.dwSize.X);
 				return;
       }
     }
     else
-    { col -= 1;
+    { col -= 2;
       if (col < 0)
         col = 0;
     }
   }
   else
-  { ttrow += 1;
-    if (ttrow >= csbiInfo.dwSize.Y)
-    { ttscupdn(1);                 /* direction the window moves */
-      ttrow -= 1;
+  { col = 0;
+  	++row;
+    if (row >= csbiInfo.dwSize.Y)
+    { --row;
+    	ttscupdn(1);                 /* direction the window moves */
     }
   }
-				/* write char to screen with current attrs */
-  WriteConsoleOutputCharacter(g_ConsOut, &gch,1, csbiInfo.dwCursorPosition, &Dummy);
+									/* write char to screen with current attrs */
+  WriteConsoleOutputCharacter(g_ConsOut, &gch,1, csbiInfo.dwCursorPosition, &Dum);
   csbiInfo.dwCursorPosition.X = col;
-  csbiInfo.dwCursorPosition.Y = ttrow;
+//ttrow = row;
+  csbiInfo.dwCursorPosition.Y = row;
   SetConsoleCursorPosition( g_ConsOut, csbiInfo.dwCursorPosition);
-/* rg.x.bx = cfcolor; */
-}
+}}
 
 
 

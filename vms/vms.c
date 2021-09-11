@@ -613,7 +613,9 @@ int Pascal spawncli(int f, int n)
 		/*
 		 * Don't allow this command if restricted
 		 */
-	if (restflag) return(resterr());
+	if (resterr()) 
+		return FALSE;
+
 	tcapmove(term.t_nrowm1, 0);
 	/*movecursor(term.t_nrow, 0); 			** Seek to last line. 	*/
 	TTclose(0); 					/* stty to old settings */
@@ -661,10 +663,12 @@ int Pascal spawn(int f, int n)
 		/*
 		 * Don't allow this command if restricted.
 		 */
-	if (restflag) return(resterr());
+	if (resterr())
+		return FALSE;
 
 	if ((s=mlreply("!", line, NLINE)) != TRUE)
 		return s;
+
 	TTputc('\n'); 	/* Already have '\r' */
 	TTflush();
 	TTclose(0); 		/* stty to old modes */
@@ -702,8 +706,8 @@ int Pascal execprg(int f, int n)
 	char					line[NLINE];
 
 	/* Don't allow this command if restricted. */
-	if (restflag)
-		return resterr();
+	if (resterr())
+		return FALSE;
 
 	if ((s=mlreply("!", line, NLINE)) != TRUE)
 		return s;
@@ -735,7 +739,7 @@ X
 X static char filnam[NFILEN] = "command.log";
 X
 X 			/* don't allow this command if restricted */
-X if (restflag) return(resterr());
+X if (resterr()) return FALSE;
 X
 X 	 /* get the command to pipe in */
 X if ((s=mlreply("@", line, NLINE)) != TRUE) return(s);
@@ -802,11 +806,11 @@ X static char filnam1[] = "fltinp.com";
 X static char filnam2[] = "fltout.log";
 X
 X /* don't allow this command if restricted */
-X if (restflag)
-X 	return resterr();
+X if (resterr())
+X 	return FALSE;
 X
-X if (curbp->b_mode&MDVIEW) /* don't allow this command if	*/
-X 	return rdonly(); /* we are in read only mode */
+X if (rdonly())
+X 	return FALSE;
 X
 X /* get the filter name and its args */
 X 			 if ((s=mlreply("#", line, NLINE)) != TRUE)
@@ -874,8 +878,8 @@ int pipecmd(int f, int n)
 
 	strcpy(line, "pipe ");
 
-	if (restflag)
-		return resterr();
+	if (resterr())
+		return FALSE;
 
 { int s = mlreply("@", &line[5], NLINE);		 /* get the command to pipe in */
 	if (s != TRUE)
@@ -905,7 +909,7 @@ int pipecmd(int f, int n)
 		
 				 /* make this window in VIEW mode, update all mode lines */
 	curwp->w_bufp->b_flag |= MDVIEW;
-	orwindmode(WFMODE, 0);
+	orwindmode(WFMODE);
 
 	unlink(filnam); 		/* get rid of the temporary file */
 	return TRUE;
@@ -938,11 +942,12 @@ int filter(int f, int n)
  
 	strcpy(line, "pipe ");
 
-	if (restflag)
-		return resterr();
+	if (resterr())
+		return FALSE;
 
-	if (bp->b_flag & MDVIEW)
-		return rdonly();
+	if (rdonly())
+		return FALSE;
+
 					/* get the filter name and its args */
 { int s = mlreply("#", &line[5], NLINE);
 	if (s != TRUE)
@@ -1439,7 +1444,7 @@ int Pascal ffclose()
 	return FIOSUC;
 }
 
-extern int Pascal ucrypt(char *, int);
+extern void Pascal ucrypt(char *, int);
 
 /*
  * Write a line to the already opened file. The "buf" points to the buffer,

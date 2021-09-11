@@ -190,7 +190,7 @@ union REGS {
 #else
 # define NFILEN 256
 #endif
-#define NBUFN	32			/* # of bytes, buffer name	*/
+#define NBUFN	48			/* # of bytes, buffer name	*/
 #define NLINE	160			/* # of bytes, input line	*/
 #define	NSTRING	1026			/* # of bytes, string buffers	*/
 #define NKBDM	256			/* # of strokes, keyboard macro */

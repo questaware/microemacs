@@ -232,9 +232,8 @@ struct SREGS {
 #ifdef	isupper
 # undef	isupper
 #endif
-#endif
 
-#if	DIACRIT == 0 && (UNIX == 0) && (MSC == 0)
+#elif	(UNIX == 0) && (MSC == 0)
 #if	CHARCODE == ASCII
 # define isletter(c)	(('a' <= c && 'z' >= c) || ('A' <= c && 'Z' >= c))
 # define islower(c)	(('a' <= c && 'z' >= c))

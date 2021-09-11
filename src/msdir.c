@@ -10,7 +10,6 @@
 #include        <errno.h>
 #include        <sys/types.h>
 #include        <sys/stat.h>
-# include       <io.h>
 #include        "build.h"
 #include        "logmsg.h"
 
@@ -168,8 +167,9 @@ X}
 #define fn_ic 1
 #endif
 
-Bool match_fn_re_ic(Char *       tlt,
-										Char *       pat
+static
+Bool match_fn_re_ic(Char * tlt,
+										Char * pat
 #if S_WIN32 == 0
 									 ,int /*Bool*/ fn_ic
 #endif
@@ -180,7 +180,7 @@ Bool match_fn_re_ic(Char *       tlt,
   while (1)
   { pch = *++pat;
 	  ch = *++tlt;
-		if (pch == 0)
+		if (pch == 0 || ch == 0)
 			break;
 #if S_WIN32 == 0
 		if (ch == pch)
@@ -188,8 +188,8 @@ Bool match_fn_re_ic(Char *       tlt,
 #endif
     if (toupper(ch) == toupper(pch) && fn_ic)
       continue;
-    if (pch == '?')													/* asterix, ? are not in file names */
-    	continue;
+//  if (pch == '?')											/* not enabled */
+//   	continue;
     
     if (pch != '*')
     	break;
@@ -249,11 +249,8 @@ staticc Char   msd_path_[FILENAMESZ+4] = "?/";
 
 staticc Short g_pathend;          /* end of path part in msd_path (after /)*/
 
-#if S_MSDOS == 0 || S_WIN32 != 0
-staticc Char msd_pat[120];		/* pattern of last component */
-#else
-staticc Char msd_pat[10];		/* pattern of last component */
-#endif
+staticc Char msd_pat[100];		/* pattern of last component */
+
 
 #if S_MSDOS && S_WIN32 == 0
 staticc Char  rbuf[FILENAMESZ+2];
@@ -268,7 +265,7 @@ staticc Set16   msd_props;		/* which files to use */
 #else
         Bool    msd_ic;				/* Ignore case in file names */
 #endif
-        Set16   msd_attrs;		/* attributes of result: MSD_xxx */
+static  Set16   msd_attrs;		/* attributes of result: MSD_xxx */
 
 struct stat msd_stat;
 
@@ -717,7 +714,7 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 staticc Cc getnext()
 {
 #if S_WIN32
-  strpcpy(&msd_path[g_pathend], "*.*", 4);
+  strcpy(&msd_path[g_pathend], "*.*");
 /*eprintf(null, "FNF %x, %s\n", msd_curr, msd_path);*/
 
 #if VS_CHAR8
@@ -734,7 +731,7 @@ staticc Cc getnext()
   
   ms_intdosx((Char *)dta, 0x1a00);		/*  set dta  */
 
-  strpcpy(&msd_path[g_pathend], "*.*", 4);
+  strcpy(&msd_path[g_pathend], "*.*");
 
 /*printf("DNF\n");*/
 
@@ -921,7 +918,7 @@ static Bool extract_fn(int * fnoffs)
 #endif
 
   msd_attrs = msd_a;
-  if (msd_attrs & MSD_DIRY)
+  if (msd_a & MSD_DIRY)
   { 
     tl[-1] = '/';
     tl[0] = 0;
@@ -932,8 +929,8 @@ static Bool extract_fn(int * fnoffs)
   if      (msd_pat[0] == 0 ||
 				   match_fn_re_ic(s,msd_pat /*,*/msd_ignore(msd_ic))
           )
-    msd_attrs |= MSD_MATCHED;
-  else if (! ((msd_attrs & MSD_DIRY) && (msd_attrs & MSD_SHOWDIR)))
+    ; // msd_attrs |= MSD_MATCHED;
+  else if (! ((msd_a & MSD_DIRY) && (msd_a & MSD_SHOWDIR)))
     return false;
 
 #if NOPUSHPOP == 0

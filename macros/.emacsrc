@@ -1,8 +1,8 @@
 set $discmd 0
-set $sscroll TRUE
 set $col1ch 1
 set $col2ch 8
 set $palette 71727374757670
+set $highlight 4hello
 ;set $pagelen 74
 
 set $sterm ~n
@@ -31,7 +31,7 @@ add-mode black
 btk execute-macro-1 
 
 2 store-macro		; end buffer
-	!if &equ $lastkey 47
+	!if &equ $lastkey 559
 	  save-file
   !endif
 
@@ -42,17 +42,19 @@ btk execute-macro-1 
   !if &not %goon
     !force last-buffer
   !endif
-  !if &not $status
+  !if &seq %mybuf $cbufname
     !force next-buffer
   !endif
-  !if &or &not $status &seq %mybuf $cbufname
+  !if &seq %mybuf $cbufname
     !force exit-emacs
   !endif
-  !force delete-buffer %mybuf
-  !if &not $status
-    !force select-buffer %mybuf
+	!if $status
+	  !force delete-buffer %mybuf
+	  !if &not $status
+	    !force select-buffer %mybuf
+	  !endif
+	  !force delete-window
   !endif
-  !force delete-window
   set $discmd %disc
 !endm
 
@@ -333,4 +335,4 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.jav=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.pas=P2.md=m2.py=p-2"
+set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.jav=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.pas=P2.md=m2.py=p2"

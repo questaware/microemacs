@@ -133,5 +133,10 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define PSCP_CMD "c:\\bbin\\pscp.exe "
 #define CLIP_LIFE 300					// seconds
 
+#define NOOKILL 2
+
+#define NROW	60			/* Max Screen size. 	*/
+#define NCOL 148
+
 #include "../src/base.h"
 #endif /* BUILDINC */

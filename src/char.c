@@ -155,49 +155,46 @@ int Pascal isletter(ch)
   return upcase[ch] || lowcase[ch];
 }
 
-int Pascal islower(ch)
-	register unsigned int	ch;
-{
-  return lowcase[ch] != 0;
-}
-
-int Pascal isupper(ch)
-	register unsigned int	ch;
-{
-  return upcase[ch] != 0;
-}
+//static
+//int Pascal islower(ch)
+//	register unsigned int	ch;
+//{
+//  return lowcase[ch] != 0;
+//}
+//
+//static
+//int Pascal isupper(ch)
+//	register unsigned int	ch;
+//{
+//  return upcase[ch] != 0;
+//}
 
 unsigned int Pascal chcase(ch)
 	register unsigned int	ch;
 {
-  return islower(ch) ? lowcase[ch] :
-				 isupper(ch) ? upcase[ch]  : ch;
+  return lowcase[ch] != 0 ? lowcase[ch] :
+				 upcase[ch] != 0  ? upcase[ch]  : ch;
 }
 
-char Pascal toupper(ch)
+static
+char Pascal USE_FAST_CALL toupper(ch)
 	char ch;
 {
-  return ! islower(ch) ? ch : lowcase[ch];
+  return ! lowcase[ch] != 0 ? ch : lowcase[ch];
 }
 
 
-char Pascal tolower(ch)
+static
+char Pascal USE_FAST_CALL tolower(ch)
 	char ch;
 {
-  return ! isupper(ch) ? ch : upcase[ch];
+  return ! upcase[ch] != 0 ? ch : upcase[ch];
 }
 
 
 Pascal initchars() /* initialize the character upper/lower case tables */
 
 {	register int index;     
-#if 0
-					/* all of both tables to zero */
-	for (index = HICHAR - 1; index >= 0; --index)
-	{ lowcase[index] = 0;
-	  upcase[index] = 0;
-	}
-#endif
 						/* lower to upper */
 	for (index = 'a'; index <= 'z'; index++)
 	  lowcase[index] = index - DIFCASE;
@@ -234,6 +231,16 @@ Pascal initchars() /* initialize the character upper/lower case tables */
 	0x98,	/* 98: Y with two dots */
 			   };
 	
+	lowcase[0xa0] = 0xa0;	/* A with an acute accent */
+	lowcase[0xa1] = 0xa1;	/* I with an acute accent */
+	lowcase[0xa2] = 0xa2;	/* O with an acute accent */
+	lowcase[0xa3] = 0xa3;	/* U with an acute accent */
+	lowcase[0xa4] = 0xa5;	/* N with a ...... */
+	lowcase[0xa6] = 0xa6;	/* A underlined */
+	lowcase[0xa7] = 0xa7;	/* O underlined */
+
+	memcpy(&lowcase[0x81], specials, sizeof(specials));
+
 	upcase[0x80]  = 0x87;	/* C with a cedilla */
 	upcase[0x8e]  = 0x84;	/* A with an umlat */
 	upcase[0x8f]  = 0x86;	/* A with a circle */
@@ -242,16 +249,6 @@ Pascal initchars() /* initialize the character upper/lower case tables */
 	upcase[0x99]  = 0x94;	/* O with an umlat */
 	upcase[0x9a]  = 0x81;	/* U with an umlat */
 	upcase[0xa5]  = 0xa4;	/* N with a ...... */
-
-	memcpy(&lowcase[0x81], specials, sizeof(specials));
-
-	lowcase[0xa0] = 0xa0;	/* A with an acute accent */
-	lowcase[0xa1] = 0xa1;	/* I with an acute accent */
-	lowcase[0xa2] = 0xa2;	/* O with an acute accent */
-	lowcase[0xa3] = 0xa3;	/* U with an acute accent */
-	lowcase[0xa4] = 0xa5;	/* N with a ...... */
-	lowcase[0xa6] = 0xa6;	/* A underlined */
-	lowcase[0xa7] = 0xa7;	/* O underlined */
 }
 #endif
 }
@@ -286,12 +283,12 @@ int Pascal setupper(ch, val)
 
 char Pascal toupper(ch)	/* return the upper case equivalant of a character */
 	char ch;	/* character to get uppercase euivalant of */
-{  return ! islower(ch) ? ch : ch - DIFCASE;
+{  return ! lowcase[ch] != 0 ? ch : ch - DIFCASE;
 }
 
 char Pascal tolower(ch)	/* return the lower case equivalant of a character */
 	char ch;	/* character to get lowercase equivalant of */
-{  return ! isupper(ch) ? ch : ch + DIFCASE;
+{  return ! upcase[ch] != 0 ? ch : ch + DIFCASE;
 }
 
 #endif

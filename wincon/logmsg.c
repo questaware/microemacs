@@ -102,7 +102,7 @@ static void log_restart( logfile, filename, max_size )
       if (cmd != null && filename_ != null)
       { char *ptr = strrchr( filename_, '.' );
         if ( ptr != NULL )
-	  *( ptr ) = 0;
+				  *( ptr ) = 0;
 
         fclose( *logfile );
 

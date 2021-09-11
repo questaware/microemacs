@@ -12,18 +12,13 @@
 #include	"etype.h"
 #include	"elang.h"
 
-void adb(int n)
+void USE_FAST_CALL adb(int n)
 
-{ mlwrite("\007ADB(%d)", n);
-#if S_WIN32
-	mbwrite(NULL);
-#else
-  ttgetc();
-#endif
+{ mlwrite("%p%bADB(%d)", n);
 }
 
 
-char * mallocz(int n)
+char * USE_FAST_CALL mallocz(int n)
 
 { char * res = malloc(n);
   if (res == NULL)
@@ -58,13 +53,13 @@ BUFFER * Pascal prevele(BUFFER * bl, BUFFER * bp)
   return bl;
 }
 
-int Pascal gotobol(int f, int n)
+int Pascal gotobol(int notused, int n)
 
 { curwp->w_doto = 0;
   return TRUE;
 }
 
-int Pascal gotoeol(int f, int n)
+int Pascal gotoeol(int notused, int n)
 
 { curwp->w_doto = llength(curwp->w_dotp);
   return TRUE;
@@ -111,7 +106,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 }
 
 
-int Pascal forwchar(int f, int n)
+int Pascal forwchar(int notused, int n)
 
 { WINDOW * wp = curwp;
 #if 1
@@ -153,9 +148,9 @@ int Pascal forwchar(int f, int n)
 
 
 
-int Pascal backchar(int f, int n)
+int Pascal backchar(int notused, int n)
 
-{ return forwchar(f, -n);
+{ return forwchar(-n, -n);
 }
 
 
@@ -172,7 +167,7 @@ int Pascal gotobob_()
   return TRUE;
 }
 
-int Pascal gotobob(int f, int n)
+int Pascal gotobob(int notused, int n)
 
 { return gotobob_();
 }
@@ -199,11 +194,11 @@ int Pascal gotoline(int f, int n)	/* move to a particular line.
     return FALSE;
 				/* first, we go to the start of the buffer */
   gotobob_();
-  return forwline(f, n-1);
+  return forwline(n-1, n-1);
 }
 
 
-int Pascal gotoeob(int f, int n)
+int Pascal gotoeob(int notused, int n)
 
 { WINDOW * wp = curwp;
   int ct;
@@ -223,10 +218,9 @@ int Pascal gotoeob(int f, int n)
 
 extern KEYTAB * prevbind;
 
-int Pascal forwline(int f, int n_)
+int Pascal forwline(int notused, int n_)
 							/* if we are on the last line as we start....fail the command */
 { int n = n_;
-  LINE * dlp = curwp->w_dotp;
   LINE * lim = &curbp->b_baseline;
 //int inc = 0;
 
@@ -239,6 +233,7 @@ int Pascal forwline(int f, int n_)
 //	inc = 1;
   }
 
+{ LINE * dlp = curwp->w_dotp;
   if (dlp == lim)
     return FALSE;
 																/* move the point down */
@@ -256,31 +251,31 @@ int Pascal forwline(int f, int n_)
   if (keyct == 1 && prevbind != NULL && prevbind->k_ptr.fp != backline)
     g_curgoal = getccol();
 
-  curwp->w_doto  = getgoal(dlp,g_curgoal);
   curwp->w_dotp  = dlp;							/* Can be b_baseline meaning at end */
+  curwp->w_doto  = getgoal(g_curgoal, dlp);
   curwp->w_flag |= WFMOVE;
   curwp->w_line_no += n_ - n;
 
   return TRUE;
-}
+}}
 
 
 
-int Pascal backline(int f, int n)
+int Pascal backline(int notused, int n)
 
-{ return forwline(f, -n);
+{ return forwbyline(-n);
 }
 
 #if	WORDPRO
 
-int Pascal gotobop(int f, int n) /* go back to beginning of current paragraph
+int Pascal gotobop(int notused, int n) /* go back to beginning of current paragraph
 										   here look for a <NL><NL> or <NL><TAB> or <NL><SPACE>
 										 combination to delimit the beginning of a paragraph  */
 {
-  return gotoeop(f, -n);
+  return gotoeop(-n, -n);
 }
 
-int Pascal gotoeop(int f, int n)  /* go forword to end of current paragraph
+int Pascal gotoeop(int notused, int n)  /* go forword to end of current paragraph
 													    			 look for <NL><NL>, <NL><TAB> or <NL><SPACE>
 																		 to delimit the beginning of a paragraph */
 { LINE * ln;
@@ -293,7 +288,7 @@ int Pascal gotoeop(int f, int n)  /* go forword to end of current paragraph
 
   while (--n >= 0)
   {	char suc;														/* first scan until we are in a word */
-    while ((suc = forwchar(FALSE, dir)) && !inword())
+    while ((suc = forwbychar(dir)) && !inword())
       ;
 	{ WINDOW * wp = curwp;								/* and go to the B-O-Line */
     ln = wp->w_dotp;										/* of next line if not at EOF */
@@ -354,7 +349,8 @@ int Pascal forwpage(int f, int n)
 #endif
 
 #if 1
-  pd_sgarbf = -1;
+	upwind();
+//pd_sgarbf = -1;
 #endif
 
   return mvupwind(FALSE, -n);

@@ -6,19 +6,6 @@
                         	Steve Wilhite and George Jones
 */
 
-#include "epredef.h"
-
-#if _WINDOWS
-#define NROW	60			/* Max Screen size. 	*/
-#define NCOL 148										 /* Edit if you want to.				 */
-#elif S_WIN32
-#define NROW	75			/* Max Screen size. 	*/
-#define NCOL 148										 /* Edit if you want to.				 */
-#else
-#define NROW	80			/* Max Screen size. 	*/
-#define NCOL 134										 /* Edit if you want to.				 */
-#endif
-
 #define CTRL	0x0100		/* Control flag, or'ed in		*/
 #define META	0x0200		/* Meta flag, or'ed in			*/
 #define CTLX	0x0400		/* ^X flag, or'ed in			*/
@@ -57,13 +44,13 @@ extern char nulls[];
 #define false 0
 #define true  1
 
-#define ABORT	-1	/* ^G, abort, etc.	*/
+#define ABORT	(-1)	/* ^G, abort, etc.	*/
 #define FALSE	 0
 #define TRUE	 1
 
 	 /* order is important */
 #define	PLAY   (-1)	/*		  playing	*/
-#define STOP	0	/* keyboard macro not in use	*/
+#define STOP	  0	/* keyboard macro not in use	*/
 #define	RECORD	1	/*		  recording	*/
 
 #define kbd_play(x)   (x < STOP)
@@ -113,6 +100,7 @@ extern char nulls[];
 #define	WFCOLR	0x20		/* Needs a color change		*/
 #define	WFTXTD  0x40		/* Text down one line           */
 #define	WFTXTU  0x80		/* Text up one line             */
+#define	WFONLY 0x100		/* Not stored */
 
 
 #define NUMFLAGS  4
@@ -143,13 +131,12 @@ extern char nulls[];
 #define BCRYPT2	 0x02
 
 				/* language properties */
-#define BINDENT	0x01		/* Auto indent */
-#define BCCOMT  0x02		/* c style comments */
-#define BCPRL   0x04		/* perl style comments */
-#define BCFOR   0x08		/* fortran style comments */
-#define BCSQL   0x10    /* sql style comments */
-#define BCPAS   0x20		/* pascal style comments */
-#define BCML    0x40    /* Markup language */
+#define BCCOMT  0x01		/* c style comments */
+#define BCPRL   0x02		/* perl style comments */
+#define BCFOR   0x04		/* fortran style comments */
+#define BCSQL   0x08    /* sql style comments */
+#define BCPAS   0x10		/* pascal style comments */
+#define BCML    0x20    /* Markup language */
 
 /*
  * Modes of working
@@ -321,9 +308,7 @@ typedef struct	{
  * one terminal type.
  */
 typedef struct	{
-	short	t_mrowm1; 		 /* max number of rows allowable */
 	short	t_nrowm1; 		/* current number of rows used	*/
-	short	t_mcol; 		/* max Number of columns.	*/
 	short	t_ncol; 		/* current Number of columns.	*/
 	short	t_margin;		/* min margin for extended lines*/
 	short	t_scrsiz;		/* size of scroll region "	*/
@@ -333,17 +318,22 @@ typedef int Pascal Emacs_cmd(int, int);
 
                         /* Structure for the table of current key bindings */
 union EPOINTER {
-        Emacs_cmd * fp;      							/* C routine to invoke */
-        BUFFER *    buf;                  /* buffer to execute */
+        Emacs_cmd * fp;      				/* C routine to invoke */
+        BUFFER *    buf;            /* buffer to execute */
 };
-			/* Structure for the key binding table */
+                        /* Structure for the table of predefined variables */
+typedef union PD_VAR {
+        int    i;      							/* C routine to invoke */
+        char * p;                 	/* buffer to execute */
+} PD_VAR;
+												/* Structure for the key binding table */
 typedef struct
 { short k_code;	        /* Key code, 0 => end of table */
   short k_type;	        /* binding type (C function or buffer) */
   union EPOINTER k_ptr; /* ptr to thing to execute */
 } KEYTAB;
 
-			/* Structure for the name binding table */
+												/* Structure for the name binding table */
 typedef struct 
 {	const char *n_name;			/* name of function key */
 	int (*n_func)(int, int);	/* function name is bound to */
@@ -365,6 +355,7 @@ typedef struct KILL {
 typedef struct LL
 {	int  ll_ix;						// = MLIX;
 	char lastline[MLIX+1][NSTRING];
+//char pat[NPAT+2];
 } LL;
 
 typedef struct Paren_s
@@ -381,6 +372,8 @@ typedef struct Paren_s
 } Paren_t, *Paren;
 
 extern Paren_t paren;
+
+#include "epredef.h"
 
 					   /*  Internal defined functions */
 #define nextab(a)	((a - (a % tabsize)) + tabsize)
@@ -396,6 +389,9 @@ extern Paren_t paren;
 #define OPT_V  256
 #define OPT_X 1024
 #define OPT_Z 4096
+
+#define Q_INHERIT 0x8
+#define Q_POPUP   1
 
 extern int g_opts;
 
@@ -419,7 +415,6 @@ NOSHARE extern char golabel[];		/* current line to go to	*/
 NOSHARE extern int g_execlevel;		/* execution IF level		*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
 extern const NBIND names[];	/* name to function table	*/
-NOSHARE extern int mpresf;		/* Stuff in message line	*/
 NOSHARE extern int ttinit;		/* => ttrow is wrong */
 NOSHARE extern int ttrow;		/* Row location of HW cursor	*/
 NOSHARE extern int ttcol;		/* Column location of HW cursor */
@@ -429,16 +424,15 @@ NOSHARE extern int sterm;		/* search terminating character */
 
 NOSHARE extern int prenum;		/*     "       "     numeric arg */
 
-NOSHARE extern char highlight[64];	/* the highlight string */
+//NOSHARE extern char highlight[64];	/* the highlight string */
 
 NOSHARE extern int cryptflag;		/* currently encrypting?	*/
-NOSHARE extern int restflag;		/* restricted use?		*/
 //NOSHARE extern int g_newest;  /* choose newest file           */
 NOSHARE extern Int envram;		/* # of bytes current in use by malloc */
 
 const extern char g_logm[3][8];
 
-NOSHARE extern char palstr[49];		/* palette string		*/
+//NOSHARE extern char palstr[49];		/* palette string		*/
 NOSHARE extern char lastmesg[NCOL+2];	/* last message posted		*/
 NOSHARE extern int (Pascal *lastfnc)(int, int);/* last function executed */
 NOSHARE extern char *fline; 		/* dynamic return line */
@@ -463,15 +457,15 @@ NOSHARE	extern char lowcase[HICHAR];	/* lower casing map		*/
 NOSHARE	extern char upcase[HICHAR];	/* upper casing map		*/
 #endif
 
-        extern char pat[NPAT+2];	/* Search pattern		*/
+	      extern char pat[NPAT+2];	/* Search pattern		*/
 NOSHARE extern char rpat[NPAT+2];	/* replacement pattern		*/
 
-				extern char *g_file_prof;	/* profiles of files */
+//			extern char *g_file_prof;	/* profiles of files */
 
 /*	Various "Hook" execution variables	*/
 NOSHARE extern KEYTAB hooks[6];		/* executed on all file reads */
 
-NOSHARE extern char *patmatch;
+//NOSHARE extern char *patmatch;
 
 #if	DEBUGM
 /*	vars needed for macro debugging output	*/

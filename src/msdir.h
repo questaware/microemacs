@@ -1,10 +1,6 @@
-extern Char * match_fn_re(Char*, Char*);
-
 #if S_WIN32 == 0
-extern Bool   match_fn_re_ic(Char*, Char*, int /*bool */);
 #define msd_ignore(x) ,x
 #else
-extern Bool   match_fn_re_ic(Char*, Char*);
 #define msd_ignore(x)
 #endif
 
@@ -17,9 +13,9 @@ extern Char * msd_pop (void);
 extern int  msd_getprops (Char * fn);
 
 
+#if 0
 extern Set16     msd_attrs;
-extern Int       msd_size;
-extern Int       msd_mtime;
+#endif
 
 extern struct stat msd_stat;
 

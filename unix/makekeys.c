@@ -130,10 +130,9 @@ int order[] = { 0,1,2,3,30,29,33,4,31,32,
  10,11,12,13,14,15,16,17,18,20,21,22,34,35,36,37,38};
 
 
-int main(argc, argv)
-	int argc;
-	char *argv[];
-{ char buf[30];
+int main(int argc, char *argv[])
+{ 
+	char buf[30];
   int lim = sizeof(order) / sizeof(order[0]);
   int i;
   

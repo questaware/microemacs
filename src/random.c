@@ -11,7 +11,7 @@
 #include	"elang.h"
 #include	"logmsg.h"
 
-int g_c_cmt, g_s_cmt, g_f_cmt, g_p_cmt;
+static int g_s_cmt, g_ps_cmt;
 
 
 int Pascal setcline(void) 			/* get the current line number */
@@ -34,7 +34,7 @@ int Pascal setcline(void) 			/* get the current line number */
  * column, return the best choice for the offset. The offset is returned.
  * Used by next-line and backward-line.
  */
-int Pascal getgoal(LINE * dlp, int offs)
+int Pascal USE_FAST_CALL getgoal(int offs, LINE * dlp)
 
 { int col = 0;
 	int dbo;
@@ -55,7 +55,7 @@ int Pascal getgoal(LINE * dlp, int offs)
 		if (c < 0x20 || c == 0x7f)
 		{ if (c == '\t')
 				col += tabsize - 1 - (col % tabsize);
-			else if (c >= col1ch && c <= col2ch)
+			else if (c >= pd_col1ch && c <= pd_col2ch)
 			{ col -= 1;
 				if (c == 8)
 					col -= 1;
@@ -76,7 +76,7 @@ int Pascal getgoal(LINE * dlp, int offs)
  */
 int Pascal getccol()
 
-{ return getgoal(curwp->w_dotp, - curwp->w_doto);
+{ return getgoal(- curwp->w_doto, curwp->w_dotp);
 }
 
 /* Display the current position of the cursor, in origin 1 X-Y coordinates,
@@ -86,7 +86,7 @@ int Pascal getccol()
  * Normally this is bound to "C-X =".
  */
 
-int Pascal showcpos(int f, int n)
+int Pascal showcpos(int notused, int n)
 
 {	int		numchars = 0; 	/* # of chars in file */
 	int		numlines = 0; 	/* # of lines in file */
@@ -113,7 +113,7 @@ int Pascal showcpos(int f, int n)
 	}
 															/* Get real column and end-of-line column. */
 {	int len = llength(tgt);
-	int ecol = getgoal(tgt, - len);
+	int ecol = getgoal(- len, tgt);
 
 	mlwrite(TEXT60,
 					/* "Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x" */
@@ -134,12 +134,12 @@ int Pascal showcpos(int f, int n)
  */
 int Pascal twiddle(int f, int n)
 
-{	register LINE *dotp = curwp->w_dotp;
-	register int	 doto = curwp->w_doto;
-
-	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
-		return rdonly();							/* we are in read only mode 		*/
+{	if (rdonly())
+		return FALSE;
 					
+{	LINE *dotp = curwp->w_dotp;
+	int	 doto = curwp->w_doto;
+
 	if (doto == llength(dotp))
 		--doto;
 
@@ -149,7 +149,7 @@ int Pascal twiddle(int f, int n)
 	lputc(dotp, doto, lgetc(dotp, doto-1));
 	lputc(dotp, doto-1, cr);
 	return lchange(WFEDIT);
-}}
+}}}
 
 #endif
 
@@ -158,7 +158,7 @@ int Pascal twiddle(int f, int n)
  * its line splitting meaning. The character is always read, even if it is
  * inserted 0 times, for regularity. Bound to "C-Q"
  */
-int Pascal quote(int f, int n)
+int Pascal quote(int notused, int n)
 
 {	if (n < 0)
 		return FALSE;
@@ -194,9 +194,9 @@ int Pascal handletab(int f, int n)
 
 int Pascal detab(int f, int n) /* change tabs to spaces */
 
+{	if (rdonly())
+		return FALSE;
 {	int tabsz = curbp->b_tabsize;
-	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
-		return rdonly();							/* we are in read only mode 		*/
 
 	if ((f & 0x7fff) == FALSE)
 		n = reglines(TRUE);
@@ -204,53 +204,50 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sgn(n)] */
 
 	for (; n; n -= inc)
-	{ LINE * dotp = curwp->w_dotp;
+	{ LINE * dotp;
 		char ch;
 		int    offs;											/* detab line */
-		if (dotp->l_props & L_IS_HD)
+		if (curwp->w_dotp->l_props & L_IS_HD)
 			break;
-		for (offs = -1; ++offs < llength(dotp); )
+		for (offs = -1; ++offs < llength((dotp = curwp->w_dotp)); )
 			if ((ch = lgetc(dotp, offs)) == '\t')
 			{ lputc(dotp, offs, ' ');
 				curwp->w_doto = offs;
 			{	int ins_ct = tabsz - (offs % tabsz) - 1;
 				offs += ins_ct;
 				insspace(TRUE, ins_ct);
-				dotp = curwp->w_dotp;
 			}}
 
  		if ((f & 0x8000))											/* entab the resulting spaced line */
 		{ int tab_ct = tabsz;
 			int sp_ct = 0;
+			int outcol = 0;
 			int incol;
-			int outcol = -1;
 			for (incol = -1; ++incol < offs; )
-			{ 
-				if (incol - tab_ct == 0)
+			{	if (incol - tab_ct == 0)
 				{ tab_ct += tabsz;
 					if (sp_ct > 1)
-					{ outcol -= sp_ct;
-						dotp->l_text[++outcol] = '\t';
+					{	outcol -= sp_ct;
+						dotp->l_text[++outcol - 1] = '\t';
 					}
-					
 					sp_ct = 0;
 				}
 			{	int ch = dotp->l_text[incol];
-				dotp->l_text[++outcol] = ch;
+				dotp->l_text[++outcol - 1] = ch;
 				++sp_ct;
 				if (ch != ' ')
 					sp_ct = 0;
 			}}
-			dotp->l_used = outcol+1;
+			dotp->l_used = outcol;
 		}
 														/* advance/or back to the next line */
-		forwline(TRUE, inc);
+		forwbyline(inc);
 	}
 		
 	curwp->w_doto = 0;			/* to the begining of the line */
 //thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
 	return lchange(WFEDIT);	/* yes, we have made at least an edit */
-}}
+}}}
 
 
 int Pascal entab(int f, int n) /* change spaces to tabs where posible */
@@ -263,9 +260,8 @@ int Pascal entab(int f, int n) /* change spaces to tabs where posible */
 */
 int Pascal trim_white(int f, int n)
 
-{
-	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
-		return rdonly();							/* we are in read only mode 		*/
+{	if (rdonly())
+		return FALSE;
 
 	if (f == FALSE)
 		n = reglines(TRUE);
@@ -278,25 +274,15 @@ int Pascal trim_white(int f, int n)
 	{ 			
 		lp = curwp->w_dotp; 						/* find current line text */
 																		/* trim the current line */
-#if 0
-		int offset = curwp->w_doto;
-
-		for (length = lp->l_used; length > offset; --length)
-			if (lgetc(lp, length-1) != ' ' && 
-					lgetc(lp, length-1) != '\t')
-				break;
-
-		lp->l_used = length;
-#else
-		lp->l_used = trimstr(lp->l_text,lp->l_used);
-#endif
+		lp->l_used = trimstr(lp->l_used,lp->l_text);
 																				/* advance/or back to the next line */
-		forwline(TRUE, inc);
+		forwbyline(inc);
 	}
 //thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
 	return lchange(WFEDIT);
 }}
 #endif
+
 
 
 char * Pascal skipspaces(char * s, char * limstr)			
@@ -321,7 +307,7 @@ char * Pascal skipspaces(char * s, char * limstr)
  * subcomands failed. Normally bound to "C-J".
  * doesnt work so I replaced it with cinsert semantics -- PJS
  */
-int Pascal indent(int f, int n)
+int Pascal indent(int notused, int n)
 
 {	if (n < 0)
 		return FALSE;
@@ -381,36 +367,34 @@ int Pascal cinsert()				/* insert a newline and indentation for C */
  * and then back up over them. Everything is done by the subcommand
  * processors. They even handle the looping. Normally this is bound to "C-O".
  */
-int Pascal openline(int f, int n)
+int Pascal openline(int notused, int n)
 
-{	register int		i;
-	register int		s;
+{	if (rdonly())
+		return FALSE;
 
-	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
-		return rdonly();							/* we are in read only mode 		*/
 	if (n <= 0)
 		return n == 0;
 
-	i = n;																	/* Insert newlines. 		*/
+{	int		s;
+	int i = n;																	/* Insert newlines. 		*/
 	while ((s = lnewline()) > FALSE && --i > 0)
 		;
 
 	if (i > 0)															/* Then back up overtop */
 		return s; 														/* of them all. 				*/
-	return backchar(f, n);
-}
+	return backbychar(n);
+}}
 
 #endif /* FLUFF */
 
 /* Insert a newline. Bound to "C-M". If we are in CMODE, do automatic
  * indentation as specified.
  */
-int Pascal ins_newline(int f, int n)
+int Pascal ins_newline(int notused, int n)
 
-{	int s;
+{	if (rdonly())
+		return FALSE;
 
-	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
-		return rdonly();							/* we are in read only mode 		*/
 	if (n < 0)
 		return FALSE;
 #if FLUFF
@@ -426,13 +410,15 @@ int Pascal ins_newline(int f, int n)
 	if ((curbp->b_flag & MDWRAP) && 
 			getccol() > pd_fillcol)
 		execkey(&wraphook, FALSE, 1);
+
+{	int s;
 																						/* insert some lines */
 	while (--n >= 0)
-		if ((s=lnewline()) <= FALSE)
+		if ((s = lnewline()) <= FALSE)
 			return s;
 
 	return TRUE;
-}
+}}
 
 /* Delete forward. This is real easy, because the basic delete routine does
  * all of the work. Watches for negative arguments, and does the right thing.
@@ -440,17 +426,17 @@ int Pascal ins_newline(int f, int n)
  * of text if typed with a big argument. Normally bound to "C-D".
  */
 int Pascal forwdel(int f, int n)
-{
-	if (curbp->b_flag & MDVIEW) 		/* don't allow this command if	*/
-		return rdonly();							/* we are in read only mode 		*/
-		
+
+{	if (rdonly())
+		return FALSE;
+
 	if (f != FALSE) 											/* Really a kill. 			*/
-	{ if ((g_lastflag&CFKILL) == 0)
+	{ if ((g_lastflag & CFKILL) == 0)
 			kdelete(0,0);
 	}
 	if (n < 0)
 	{ n = -n;
-	{ int s = backchar(f, n);
+	{ int s = backbychar(n);
 		if (s <= FALSE)
 			return s;
 	}}
@@ -501,7 +487,7 @@ int Pascal killtext(int f, int n)
 	if			(f == FALSE)
 	{ chunk += llength(curwp->w_dotp);
 		if (chunk == 0)
-			chunk = 1;
+			++chunk;
 	} 
 	else if (n == 0)
 	{ chunk = -chunk;
@@ -531,8 +517,7 @@ int USE_FAST_CALL adjustmode(int kind, int global) /* change the editor mode */
 	concat(&cbuf[0], global ? TEXT62 : TEXT63,
 /*														"Global mode to " */
 /*														"Mode to " */
-				
-				TEXT64a[kind], null);
+					TEXT64a[kind], null);
 /*														 "delete: " */
 /*														 "add: " */
 /*														 "toggle: " */
@@ -660,7 +645,7 @@ int Pascal toggmode(int f, int n) 	/* prompt and set a global editor mode */
 /*			This function simply clears the message line,
 								mainly for macro usage									*/
 
-int Pascal clrmes(int f, int n)
+int Pascal clrmes(int notused, int n)
 
 {
 	mlwrite("%!");
@@ -670,10 +655,9 @@ int Pascal clrmes(int f, int n)
 /*	This function writes a string on the message line
 			mainly for macro usage									*/
 
-int Pascal writemsg(int f, int n)
+int Pascal writemsg(int notused, int n)
 
-{
-	char buf[NSTRING];
+{	char buf[NSTRING];
 
 	int status = mlreply(TEXT67, buf, NSTRING - 1);
 															/* "Message to write: " */
@@ -696,9 +680,8 @@ int Pascal init_paren(const char * str,
 	paren.olcmt = c_cmt ? '/' :
 								s_cmt ? '-' : 
 								p_cmt ? ')' : (char)-1;
-	paren.nest = 1;							// reinitialised by sinc.cpp
-//paren.nestclamped = 1;			// initialised by sinc.cpp
 	paren.sdir = 1;
+	paren.nest = len < 0 ? 0 : 1;
 	paren.in_mode = 0;
 	paren.prev = 0;
 	paren.complex = false;
@@ -796,10 +779,11 @@ int Pascal init_paren(const char * str,
 
 int Pascal scan_paren(char ch)
 				
-{ int mode = paren.in_mode;
-	int beg_cmt = g_clring & BCPAS ? '(' :
+{	int beg_cmt = g_clring & BCPAS ? '(' :
+								g_clring & BCPRL ? '#' :
 	              g_clring & (BCCOMT+BCSQL) ? '/' : 257;
 	int end_cmt = g_clring & BCPAS ? ')' : '/';
+	int mode = paren.in_mode;
 
 	do
 	{ if (mode & (Q_IN_CMT + Q_IN_CMT0))
@@ -836,7 +820,7 @@ int Pascal scan_paren(char ch)
 		else // if	((mode & ~Q_IN_CMT_) == 0)
 		{ mode = ch == '\'' 	 ? Q_IN_CHAR :
 						 ch == '"'		 ? Q_IN_STR	:
-						 ch == beg_cmt ? Q_IN_CMT0 :
+						 ch == beg_cmt ? beg_cmt == '#' ? Q_IN_CMT + Q_IN_EOL : Q_IN_CMT0 :
 						 ch == paren.olcmt ? Q_IN_CMT0 :
 						 ch == '\\' && paren.sdir < 0 
 												&& (paren.prev == '\'' || paren.prev == '"')
@@ -880,7 +864,7 @@ int Pascal scan_par_line(LINE * lp)
 
 												/* returns pointing to eol or
 												 * the first / of / / */
-int Pascal scan_for_sl(LINE * lp)
+int Pascal USE_FAST_CALL scan_for_sl(LINE * lp)
 
 {	Paren_t sparen = paren;
 	
@@ -899,7 +883,7 @@ int Pascal scan_for_sl(LINE * lp)
 #if CFENCE
 
 #if 0
-char wordmatch(const char * t, int add)
+char wordmatch(int add, const char * t)
 
 { int ix = curwp->w_doto + add;
 	const char * s_ = &curwp->w_dotp->l_text[ix];
@@ -928,7 +912,7 @@ char wordmatch(const char * t, int add)
 #endif
 
 static
-int wordmatch(const char * t_, int add)
+int USE_FAST_CALL wordmatch(int add, const char * t_)
 
 { const char * t = t_;
 	int ix = curwp->w_doto+add;
@@ -960,7 +944,7 @@ int got_f_key(fdcr * fd, int tabsz)
 	const char * pos = &start[curwp->w_doto+1];
 	int choffs = 0;
 
-	if (g_s_cmt + g_p_cmt)
+	if (g_ps_cmt)
 		while (++start < pos && *start <= ' ')
 			;
 	else
@@ -982,7 +966,7 @@ int got_f_key(fdcr * fd, int tabsz)
 
 		if (toupper(pos[0]) == 'T')
 		{ /*char buf[2];*/
-			if (wordmatch("THEN",0) == 0)
+			if (wordmatch(0,"THEN") == 0)
 			{/*buf[1] = 0;
 				buf[0] = 'A'+len;
 				mbwrite(buf);*/
@@ -1027,19 +1011,19 @@ int got_f_key(fdcr * fd, int tabsz)
 			if (curwp->w_doto != 0 && *(pos-1) == '.')
 				return 0;
 		
-		if (wordmatch(lbl,0) != 0)
+		if (wordmatch(0,lbl) != 0)
 			return 1;
-		if (g_s_cmt + g_p_cmt && wordmatch("CASE", 0) != 0)
+		if (g_ps_cmt && wordmatch(0,"CASE") != 0)
 		  return 1;
 	}
 
 	if (toupper(pos[0])=='E')
 	{ int len = llength(curwp->w_dotp) - curwp->w_doto;
 
-		if (g_s_cmt + g_p_cmt)
-		{ if (wordmatch("END", 0))
+		if (g_ps_cmt)
+		{ if (wordmatch(0,"END"))
 		  { return len <= 4 || !is_space(pos[3]) ||
-		  	 			 wordmatch("IF", 4) == 0;
+		  	 			 wordmatch(4, "IF") == 0;
 		  }
 	  }
 		else
@@ -1062,8 +1046,8 @@ int got_f_key(fdcr * fd, int tabsz)
 				}
 
 				if (g_s_cmt == 0)
-				{ int d = wordmatch("DO", ix);
-					int i = wordmatch("IF", ix);
+				{ int d = wordmatch(ix, "DO");
+					int i = wordmatch(ix, "IF");
 			/*	char buf[2];
 					buf[1] = 0;
 					buf[0] = '5' + paren.nest;
@@ -1075,7 +1059,7 @@ int got_f_key(fdcr * fd, int tabsz)
 																	 (toupper(pos[1]) == 'L' ? -1 : 0) :
 								 *lbl == 'D' ? d												 						 :
 								 *lbl == 'B' ? d + i == 0  ? 1 : 0 		 							 :
-															 wordmatch(lbl, ix);
+															 wordmatch(ix, lbl);
 				}
 			}
 		}
@@ -1089,21 +1073,18 @@ int got_f_key(fdcr * fd, int tabsz)
 int Pascal getfence(int f, int n)
 				/* int f, n;		** not used */
 { int tabsz = curbp->b_tabsize;
-	int c_cmt = (curbp->b_langprops & BCCOMT) >> 1;
-	int p_cmt = (curbp->b_langprops & BCPAS);
+	int c_cmt = (curbp->b_langprops & BCCOMT);
 	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL));
+	int p_cmt = (curbp->b_langprops & BCPAS);
 	int s_cmt = (f_cmt							& BCSQL);
-	char ch;
 	fdcr fd;
 
 	g_s_cmt = s_cmt;
-	g_f_cmt = f_cmt;
-	g_p_cmt = p_cmt;
-	g_c_cmt = c_cmt;
+	g_ps_cmt = s_cmt+p_cmt;
 
 {	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;						/* original line pointer */
-	char * lstr = lgets(s.curline, s.curoff);
 	int rem = llength(s.curline) - s.curoff - 1;
+	char * lstr = lgets(s.curline, s.curoff);
 
 	if (lstr[0] != '#')
 	{ if (rem < 0)
@@ -1116,30 +1097,31 @@ int Pascal getfence(int f, int n)
 			return FALSE;
 		if (rem > 3 && lstr[1] == 'e' && lstr[4] == 'e' && 
 									 lstr[2] == 'l' && lstr[3] == 's')
-			forwchar(FALSE, 1);
+			forwbychar(1);
 	}
 
 	if (rem >= 0 && f_cmt != 0 && toupper(lstr[0])=='I' && toupper(lstr[1]) == 'F')
 	{ int ct = 1000;
 	/*mbwrite("looking for THEN");*/
-		while (--ct > 0 && nextword(FALSE, 1))
-			if (wordmatch("THEN",0) != 0)
+		while (--ct > 0 && nextword(1, 1))
+			if (wordmatch(0,"THEN") != 0)
 				break;
 
 		if (ct <= 0)
 		{ mbwrite("Cant find THEN");
 			goto beeper;
 		}
-		lstr = &curwp->w_dotp->l_text[curwp->w_doto];
 	}
 
-{ int ch;
+  lstr = lgets(curwp->w_dotp, curwp->w_doto);
+
+{	int len = llength(curwp->w_dotp) - curwp->w_doto;
+	int dir = init_paren(lstr,len);
+  int ch;
 	Paren_t sparen = paren;
 	int rc = true;
 	int stt_ko = -1;
 	int lastko = -1;
-	int len = llength(curwp->w_dotp) - curwp->w_doto;
-	int dir = init_paren(lstr,len);
 
 	if (n != 1 && paren.fence == '}')
 		dir = init_paren("}",0); 
@@ -1156,18 +1138,13 @@ int Pascal getfence(int f, int n)
 
 	while (paren.complex)						//once only
 	{ int ix = lstr[0] == '#';
-		if (c_cmt > ix)
+		if (c_cmt > ix || len < 2)
 		{ dir = 0;
 			break;
 		}
 			
-		if (len < 2)
-		{ dir = 0;
-			break;
-		}
-
 		if (s_cmt + p_cmt == 0 && toupper(lstr[ix]) == 'E' &&
-				wordmatch("ELSE", ix) + wordmatch("ELSEIF", ix))
+				wordmatch(ix,"ELSE") + wordmatch(ix,"ELSEIF"))
 		{ /*mbwrite("GotELSEIF");*/
 			fd.blk_type = 'T';
 			paren.ch = 'T';
@@ -1181,19 +1158,18 @@ int Pascal getfence(int f, int n)
 			
 			if (fd.blk_type == 'E' && ch == 'N')   // END DO, END LOOP, etc
 			{ int ix = len <= 3 ? 0 : lstr[3] == ' ' ? 4 : 3;
+				char fch = toupper(lstr[ix]);
 
-				rc = wordmatch("END",0);
+				rc = wordmatch(0,"END");
 
 			  if			(s_cmt || p_cmt)
 			  	paren.fence = 'B';
 			  else if (ix <= 0)
 			  	;
-				else if	(wordmatch("DO", ix) ||
-								 wordmatch("LOOP" ,ix) ||
-								 wordmatch("SELECT", ix))
-				  paren.fence = toupper(lstr[ix]);
-				else if (wordmatch("IF", ix) == 0)
-					paren.fence = 'B';
+				else if	(wordmatch(ix,fch == 'D' ? "DO" :
+														  fch == 'L' ? "LOOP" : 
+														  fch == 'S' ? "SELECT" : "IF"))
+				  paren.fence = fch == 'I' ? 'B' : fch;
 				fd.blk_type = paren.fence;
 			}
 			else
@@ -1227,7 +1203,7 @@ int Pascal getfence(int f, int n)
 /*mbwrite("Lkg");
 	mbwrite(&fd.blk_type);*/
 													 /* scan until we find it, or reach the end of file */
-	while (paren.nest > 0 && forwchar(FALSE, dir))
+	while (paren.nest > 0 && forwbychar(dir))
 	{ LINE * lp = curwp->w_dotp;
 		int offs = curwp->w_doto;
 		if (offs == llength(lp))
@@ -1322,15 +1298,12 @@ int Pascal getfence(int f, int n)
 					ko = (ko + tabsz - 1) & -tabsz;
 			}
 
-		{ int diff = ko - stt_ko;
-			if (diff < 0)
-				diff = -diff;
 			if (*lstr != '(' && *lstr != ')' && *lstr != '[' && *lstr != ']')
-			if (in_range(diff,1,4) && (offs == 0 ||
-																 lp->l_text[offs] != 
-																  lp->l_text[offs-1] ))
-				TTbeep();
-		}}
+			if (in_range(ko - stt_ko,-4,4) && (offs == 0 ||
+																				  lp->l_text[offs] != 
+																				   lp->l_text[offs-1] ))
+				TTbeep();					/* indent error */
+		}
 	}
 
   paren = sparen;
@@ -1361,7 +1334,7 @@ int Pascal fmatch(ch)
 	char opench = ch == ')' ? '(' :
 								ch == '}' ? '{' : '[';
 	update(FALSE);
-	backchar(FALSE, 2);
+	backbychar(2);
 
 					 /* scan back until we find it, or reach past the top of the window */
 	while (depth > 0 && curwp->w_dotp != toplp)
@@ -1371,14 +1344,14 @@ int Pascal fmatch(ch)
 			++depth;
 		if (c == opench)
 			--depth;
-		backchar(FALSE, 1);
+		backbychar(1);
 	}
 								/* if depth is zero, we have a match, display the sucker */
 								/* there is a real machine dependant timing problem here we have
 									 yet to solve......... */
 	if (depth == 0)
 	{
-		forwchar(FALSE, 1);
+		forwbychar(1);
 	}
 																						/* restore the current position */
 	rest_l_offs(&s);
@@ -1393,8 +1366,8 @@ int Pascal arith(int f, int n)
 				/* int f, n;		** not used */
 { 
 #if 1
-	endword(0,1);
-	endword(0,-1);
+	endword(1,1);
+	endword(-1,-1);
 //update(1);
   copyword(0,1);
 {	char* src = getkill();

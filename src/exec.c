@@ -20,7 +20,7 @@ typedef struct WHBLOCK
 { struct WHBLOCK *w_next;	/* next while */
 	LINE *w_begin;					/* ptr to !while statement */
 	LINE *w_end;						/* ptr to the !endwhile statement*/
-	char  w_type;						/* block type */
+	char  w_break;						/* block type */
 } WHBLOCK;
 
 /* directive name table:
@@ -34,6 +34,7 @@ static const char dname[][8] =
 };
 
 #define NUMDIRS (sizeof(dname) / 8)
+#define LIM_WHILE 0
 
 
 static struct BUFFER * g_bstore = NULL;				/* buffer to store macro text to*/
@@ -143,10 +144,10 @@ int Pascal docmd(char * cline)
 	char ebuffer[132];
 #define tkn ebuffer+1
 	int cc;											/* TRUE, FALSE, ABORT */
-	char *oldestr = g_execstr; 		/* original exec string */
+	char *s_execstr = g_execstr; 		/* original exec string */
 
-	++g_clexec;	      /* in cline execution */
 	g_execstr = cline;	      /* and set this one as current */
+	++g_clexec;	      /* in cline execution */
 
 	g_lastflag = g_thisflag;
 	g_thisflag = 0;
@@ -178,11 +179,11 @@ int Pascal docmd(char * cline)
 			else 												/* execute the buffer */
 				cc = dobuf(bp,n);
 		}}
-		cmdstatus = cc;								/* save the status */
+		pd_cmdstatus = cc;								/* save the status */
 		lastfnc = fnc;
 	}
 	--g_clexec;			/* restore g_clexec flag */
-	g_execstr = oldestr;
+	g_execstr = s_execstr;
 	return cc;
 #undef tkn
 }}}
@@ -370,6 +371,7 @@ int Pascal execproc(int f, int n)
 }
 
 
+static
 char * Pascal skipleadsp(char * s, int len)
 	
 {
@@ -379,7 +381,11 @@ char * Pascal skipleadsp(char * s, int len)
 }
 
 
+#if LIM_WHILE
+#define freewhile(x)
+#else
 
+static
 void Pascal freewhile(WHBLOCK * wp)/* free a list of while block pointers */
 				/* head of structure to free */
 {
@@ -389,7 +395,7 @@ void Pascal freewhile(WHBLOCK * wp)/* free a list of while block pointers */
 	}
 }
 
-
+#endif
 
 /*	dobuf:	execute the contents of the buffer pointed to
 		by the passed BP
@@ -421,19 +427,23 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	FILE *fp;		/* file handle for log file */
 #endif
 	int cc = TRUE;
+#if LIM_WHILE
+	WHBLOCK whiles[LIM_WHILE];
+	int topwh = LIM_WHILE-1;
+#endif
+
 	g_dobuf = bp;
 	g_univct = iter;
 
   while (--iter >= 0 && cc > FALSE)
 	{ LINE *lp;						/* pointer to line to execute */
-		int dirnum;					/* directive index */
 		char *ebuf = smalleline;	/* initial value of eline */
 		char *eline;				/* text of line to execute */
 		char * msg = NULL;
 		char tkn[NSTRING];	/* buffer to evaluate an expresion in */
 
   	WHBLOCK *whlist = NULL; /* ptr to !WHILE list */
-		WHBLOCK *scan = NULL;/* ptr during scan */
+		WHBLOCK *scan = NULL;		/* ptr during scan */
 												    /* scan the buffer, building WHILE header blocks */
 		int nest_level = 0;
 		g_execlevel = 0;		/* clear IF level flags/while ptr */
@@ -451,15 +461,21 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	  
 			if (eline[1] == 'w' && eline[2] == 'h' ||
 					eline[1] == 'b' && eline[2] == 'r')
-			{ WHBLOCK * whtemp = (WHBLOCK *)mallocz(sizeof(WHBLOCK));
+			{
+#if LIM_WHILE
+				WHBLOCK * whtemp = topwh <= 0 ? NULL : &whiles[topwh--];
+#else			
+				WHBLOCK * whtemp = (WHBLOCK *)mallocz(sizeof(WHBLOCK));
+#endif
 		 		if (whtemp == NULL ||
 	     															/* "%%!BREAK outside of any !WHILE loop" */
 	         (eline[1] == 'b' && scan == NULL))
 					goto failexit;
 
+		    whtemp->w_break = eline[1];
 		    whtemp->w_begin = lp;
-		    whtemp->w_type = eline[1];
 	  	  whtemp->w_next = scan;
+//  	  whtemp->w_end = 0;
 	    	scan = whtemp;
 	  	}
 												/* if it is an endwhile directive, record the spot.. */
@@ -475,15 +491,15 @@ int Pascal dobuf(BUFFER * bp, int iter)
 		 			whlist = scan;
 		 			scan = scan->w_next;
 		 			whlist->w_next = whtemp;
-	    	} while (whlist->w_type == 'b');
+	    	} while (whlist->w_break == 'b');
 	  	}
 		} /* for */
 
 		if (scan != NULL)
-		{ eline = "WHILE";		/* %%mismatched !WHILE in '%s' */
+	  { freewhile(scan);
+		  eline = "WHILE";		/* %%mismatched !WHILE in '%s' */
 failexit:     
 	    mlwrite(TEXT121, bp->b_bname, eline);
-	    freewhile(scan);
 		  cc = FALSE;
 		}
 								/* let the first command inherit the flags from the last one..*/
@@ -502,12 +518,13 @@ failexit:
 	    if (eexitflag || cc <= FALSE ||
 				  ((lp = lforw(lp))->l_props & L_IS_HD) != 0)
 				break;
-																	/* allocate eline and copy macro line to it */
-		{	int linlen = lp->l_used+1;
+																	
+		{	int dirnum;					/* directive index */
+			int linlen = lp->l_used+1;
 		  if (linlen < sizeof(smalleline))
 			  ebuf = smalleline;
 	    else 
-		  { ebuf = (char *)malloc(linlen);
+		  { ebuf = (char *)malloc(linlen);	/* allocate eline and copy macro line to it */
 		    if (ebuf == NULL)
 		    { cc = FALSE;
 		      break;
@@ -642,7 +659,7 @@ failexit:
 																					/* find the right while loop */
 						{ WHBLOCK * whtemp; 
 						  for (whtemp = whlist; whtemp; whtemp = whtemp->w_next)
-						    if (whtemp->w_type == 'w' &&
+						    if (whtemp->w_break == 'w' &&
 										whtemp->w_end == lp)
 						      break;
 		        
@@ -720,9 +737,9 @@ dbuild: /* Build the information line to be presented to the user */
 	strcpy(outline, "<<<");
 					/* display the tracked expression */
 	if (track[0] != 0)
-	{ int oldstatus = cmdstatus;
+	{ int oldstatus = pd_cmdstatus;
 	  docmd(track);
-	  cmdstatus = oldstatus;
+	  pd_cmdstatus = oldstatus;
 	  concat(&outline[0], "[=", gtusr("track"), "]", null);
 	}
 							/* debug macro name */
@@ -733,7 +750,7 @@ dbuild: /* Build the information line to be presented to the user */
 dinput: 
   outline[term.t_ncol - 1] = 0;
   if (pd_discmd > 0)
-    mlputs(outline);
+    mlputs(term.t_ncol, outline);
 
 	update(TRUE);
 						   /* and get the keystroke */
@@ -747,7 +764,7 @@ dinput:
 	else 
 	{ int oldcmd = pd_discmd;		        
 	  int oldinp = g_disinp;
-	  int oldstatus = cmdstatus;
+	  int oldstatus = pd_cmdstatus;
 	  
 	  switch (c)
 	  { case '?': strcpy(outline, TEXT128);     /* list commands */
@@ -763,7 +780,7 @@ dinput:
 	    case 'x': pd_discmd = TRUE;		/* execute extended command */
       		      g_disinp = TRUE;
       		      namedcmd(FALSE, 1);
-      		      cmdstatus = oldstatus;
+      		      pd_cmdstatus = oldstatus;
       		      goto dbuild;
 
 	    case 'e': strcpy(temp, "set %track ");   /* evaluate expresion */
@@ -773,7 +790,7 @@ dinput:
       		      pd_discmd = oldcmd;
       		      g_disinp = oldinp;
       		      docmd(temp);
-      		      cmdstatus = oldstatus;
+      		      pd_cmdstatus = oldstatus;
       		      concat(&temp[0], "%! = [", gtusr("track"), "]", null);
       		      mlwrite(temp);
       		      c = getkey();

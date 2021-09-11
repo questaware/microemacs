@@ -124,8 +124,8 @@ char * Pascal allocate(unsigned nbytes)
 #endif
 	if (mp == NULL)
 	{ mlwrite(TEXT99);
-          return NULL;
-        }
+    return NULL;
+  }
 #if RAMCHK
 	envram += nbytes;
 #else

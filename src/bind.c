@@ -259,7 +259,6 @@ bind-to-key filter-buffer ^X|
 	{META|'>',	BINDFNC, gotoeob},
 	{META|'<',	BINDFNC, gotobob},
 	{SPEC|CTRL|'<', BINDFNC, gotobob},
-	{META|'~',	BINDFNC, unmark},
 #if APROP
 	{META|'A',	BINDFNC, apro},
 #endif
@@ -386,10 +385,9 @@ KEYTAB * Pascal getbind(int c)
   if (c == (CTRL | SPEC | 'N'))
     adb(44);
 */
-#if 1
+#if 0
   for (ktp = &keytab[0]-1; (f = (++ktp)->k_ptr.fp) != 0 && f != copyword; )
     ;
-  code = 0;
 #endif
 
   for (ktp = &keytab[0]-1; (code = (++ktp)->k_code) != 0 && code != c; )
@@ -790,11 +788,11 @@ void Pascal flook_init(char * cmd)
 
 
 /*!********************************************************
- bool fexist(char * fname)
+ bool name_mode(char * fname)
  
  Remarks
  ~~~~~~~
- Indicates whether or not the file exists and is readable
+ return the mode of the file S_ISREG, S_ISDIR, ..
  
  Return Value
  ~~~~~~~~~~~~
@@ -820,7 +818,7 @@ int Pascal fexist(const char * fname)	/* does <fname> exist on disk? */
 					/* file to check for existance */
 {
   char tfn[NFILEN+2];
-  /* nmlze_fname(&tfn[0], fname); */
+  /* nmlze_fname(&tfn[0], fname,?); */
   return access(fname, 0) == 0;
 }
 
@@ -910,8 +908,6 @@ int fex_path(const char * dir, const char * file)
   return 0;  
 }
 
-extern char * g_incldirs;				// from eval.c
-
 /*char * inclmod;			** initial mod to incldirs */
 
 /*	wh == I => 
@@ -950,9 +946,9 @@ const char * Pascal flook(char wh, const char * fname)
 	      return fspec;
 #endif
 
-	  if (g_incldirs != NULL)								// gtenv("incldirs");
+	  if (pd_incldirs != NULL)								// gtenv("incldirs");
 	  { char * incls;
-	  	for (incls = g_incldirs; *incls != 0; )
+	  	for (incls = pd_incldirs; *incls != 0; )
 	  	{ char * ln = incls;
 	  		char ch;
 	  		while ((ch = *++ln) != 0 && ch != PATHCHR)
@@ -1096,7 +1092,7 @@ int g_funcnum = 0;
 						/* fncmatch:	match fname to a function in the names table and return
 													any match or NULL if none
 						*/
-int (Pascal *Pascal fncmatch(char * fname))(int, int)
+int (Pascal *Pascal USE_FAST_CALL fncmatch(char * fname))(int, int)
 	/* char *fname;	** name to attempt to match */
 {		
 	namemap.srch_key = fname;

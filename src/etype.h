@@ -7,6 +7,17 @@
 */
 
 #if S_WIN32
+
+typedef union
+{ int pair;
+  struct
+  { short ct;
+  	short ix;
+  } both;
+} Pair;
+
+extern Pair g_eaten_pair;
+
 #define WinChar wchar_t
 #else
 #define WinChar void
@@ -23,9 +34,8 @@ void ClipPasteEnd(void);
 /*extern int atoi(char * s);*/
 
 int Pascal millisleep(unsigned int n);
-char * mallocz(int n);
-void adb(int n);
-void app_kbdm(int key);
+char * USE_FAST_CALL mallocz(int n);
+void USE_FAST_CALL adb(int n);
 int Pascal arith(int, int);
 int Pascal addnewbind(int c, int (Pascal *func)(int, int));
 char * Pascal allocate(unsigned nbytes);
@@ -36,14 +46,13 @@ void cls(void);
 BUFFER *Pascal bfind(char * bname, int cflag, int bflag);
 int Pascal getIncls(int f, int n);
 BUFFER *Pascal getdefb(void);
-BUFFER *Pascal getcbuf(char *, char *, int);
+BUFFER *Pascal getcbuf(const char *, char *, int);
 BUFFER *Pascal bufflink(const char *, int);
 char * Pascal repl_bfname(BUFFER*, const char *);
 char *Pascal bytecopy();
-char *Pascal complete();
 char *Pascal envval();
 //void Pascal expandp(char *, char *, char *, int);
-const char * USE_FAST_CALL fixnull(const char * s);
+//const char * USE_FAST_CALL fixnull(const char * s);
 const char * Pascal flook(char, const char *);
 char * Pascal flookdown(char *, char *);
 char *Pascal flooknear();
@@ -55,19 +64,13 @@ const char *Pascal getreg(char * t);
 extern char getvalnull[];
 char *Pascal getval(char *, char *);
 
-#if S_HPUX == 0 || 1
- const
-#endif
-       char *Pascal gtenv(const char *);
-char * USE_FAST_CALL gtfilename(char *);
-#if S_HPUX == 0 || 1
- const
-#endif
-       char *Pascal gtusr(char*);
+const char * gtfilename(const char *);
+const char *Pascal gtusr(char*);
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
 void init_fncmatch(void);
-char *Pascal int_asc(int);
+char *Pascal USE_FAST_CALL int_asc(int);
+char * Pascal USE_FAST_CALL int_radix_asc(int i, int r);
 int Pascal makename(char *, const char *);
 char *Pascal mkkey(const char *);
 char *Pascal mkul(int, char *);
@@ -76,16 +79,16 @@ int Pascal pipefilter(char);
 BUFFER * Pascal prevele(BUFFER*, BUFFER*);
 char *Pascal timeset();
 char *Pascal token(char * tok, int size);
+int to_kill_buff(int wh, int n);
 const char *Pascal transbind(char *);
-int Pascal trimstr(char * s, int from);
+int Pascal USE_FAST_CALL trimstr(int from, char * s);
 char *Pascal xlat(char *, char *, char *);
-int (Pascal *Pascal fncmatch(char *))(int, int);
-Command getname(char *);
+int (Pascal *Pascal USE_FAST_CALL fncmatch(char *))(int, int);
+Command getname(const char *);
 char * Pascal getconsoletitle();
 int Pascal desfunc(int,int);
 int Pascal desvars(int, int);
 int Pascal dispvar(int,int);
-int Pascal echochar(int,int);
 int USE_FAST_CALL myeq(int, int);
 int Pascal ernd(void);
 int Pascal execkey(KEYTAB *, int, int);
@@ -102,12 +105,12 @@ int Pascal getkey();
 char * Pascal getwtxt(int, char *, int);
 int Pascal gettyp(char *);
 int Pascal getwpos();
-int init_wincon();
+void init_wincon();
 int Pascal mkdes();
 int Pascal nmlze_fname(char *, const char *, char *);
 void Pascal openwind(WINDOW *);
-int Pascal openwindbuf(char *);
-int Pascal orwindmode(int, int);
+void openwindbuf(char *);
+int Pascal orwindmode(int);
 char * Pascal pathcat(char *, int, const char *, const char *);
 #if S_MSDOS
 unsigned short refresh_colour(int row, int col);
@@ -117,7 +120,7 @@ void Pascal release(char * mp);
 int Pascal remmark(int, int);
 int Pascal risearch(int, int);
 void Pascal rpl_all(int, int, LINE*, LINE*, int);
-int Pascal scan_for_sl(LINE * lp);
+int Pascal USE_FAST_CALL scan_for_sl(LINE * lp);
 int Pascal scanner(int, int);
 #if S_WIN32
 void setMyConsoleIP(void);
@@ -129,7 +132,6 @@ int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);
 int Pascal set_var(char *, char *);
-int Pascal sindex(char *, char *);
 int USE_FAST_CALL stol(char * s);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
@@ -141,6 +143,7 @@ LINE *Pascal mk_line(const char *, int, int);
 LINE *Pascal mouseline();
 int Pascal apro(int, int);
 int Pascal backchar(int, int);
+#define backbychar(x) backchar(x,x)
 int Pascal backdel(int, int);
 int Pascal backhunt(int, int);
 int Pascal backline(int, int);
@@ -154,7 +157,7 @@ int Pascal bktoshell(int, int);
 int Pascal buildlist(const char * mstring);
 int Pascal capword(int, int);
 int Pascal cex(int, int);
-int Pascal chk_k_range(int);
+int Pascal USE_FAST_CALL chk_k_range(int);
 int Pascal cinsert();
 int Pascal clean();
 int Pascal clrmes(int, int);
@@ -199,11 +202,11 @@ int Pascal execproc(int, int);
 int Pascal fetchfile(int, int);
 short execprog();
 int Pascal ffisdiry();
+FILE * ffwopen(int mode, char * fn);
 int Pascal ffclose();
 int Pascal ffgetline(int *);
-int Pascal ffputline(char *, int);
+int Pascal ffputline(FILE*, char *, int);
 int Pascal ffropen(const char *);
-int Pascal ffwopen(int, char *);
 int Pascal filefind(int, int);
 int Pascal filename(int, int);
 int Pascal fileread(int, int);
@@ -216,16 +219,17 @@ void flush_typah();
 int Pascal fmatch();
 int Pascal fnclabel();
 int Pascal forwchar(int, int);
+#define forwbychar(x) forwchar(x,x)
 int Pascal forwdel(int, int);
 int Pascal forwhunt(int, int);
 int Pascal forwline(int, int);
+#define forwbyline(x) forwline(x,x)
 int Pascal forwpage(int, int);
 int Pascal forwsearch(int, int);
-void Pascal freewhile();
 int Pascal getccol();
 int Pascal getcmd();
 int Pascal getfence(int, int);
-int Pascal getgoal(LINE*, int);
+int Pascal USE_FAST_CALL getgoal(int, LINE*);
 REGION * Pascal getregion();
 int Pascal getstring(char * buf, int nbuf, const char * prompt);
 short * Pascal get_vscr_line(int row);
@@ -251,7 +255,7 @@ int Pascal inword();
 int Pascal indentsearch(int, int);
 int Pascal iskboard();
 void Pascal ismodeline();
-int Pascal isword(char);
+int Pascal USE_FAST_CALL isword(char);
 int Pascal istring(int, int);
 int Pascal hidebuffer(int, int);
 int Pascal kdelete(int, int);
@@ -263,10 +267,10 @@ int Pascal killtext(int, int);
 int Pascal kinsert(char);
 int Pascal lastbuffer(int, int);
 int Pascal lchange(register int);
-int Pascal ldelchrs(Int, int);
+int Pascal USE_FAST_CALL ldelchrs(Int, int);
 int Pascal ldelnewline();
 void Pascal leavewind(WINDOW *, int);
-LINE * Pascal lfree(register LINE *, int);
+LINE * Pascal USE_FAST_CALL lfree(int, LINE *);
 int Pascal linsert(int, char);
 int Pascal linstr(const char *);
 int Pascal listbuffers(int, int);
@@ -283,7 +287,7 @@ void Pascal mlforce(const char *);
 void Pascal mlout(char);
 void Pascal mlputf(int);
 int Pascal mlputi(int);
-void Pascal mlputs(const char *);
+void Pascal mlputs(int, const char *);
 #define mlreply(a,b,c) nextarg(a,b,c)
 #define mltreply(a,b,c) nextarg(a,b,c)
 int Pascal mlyesno(char *);
@@ -377,7 +381,7 @@ const char * Pascal strsame(const char *, const char *);
 extern char * Pascal strpcpy(char * tgt, const char * src, int mlen);
 char * Pascal strpcpypfx(char *, const char *, int, char);
 int Pascal swapmark(int, int);
-int Pascal swbuffer(BUFFER*);
+void Pascal USE_FAST_CALL swbuffer(BUFFER*);
 void Pascal tcapopen();
 int Pascal toggmode(int, int);
 int Pascal togmod(int, int);
@@ -418,18 +422,16 @@ long unsigned int thread_id(void);
 int Pascal twiddle(int,int);
 #endif
 #if S_MSDOS
-#define typahead _kbhit
+#define typahead() (g_eaten_pair.both.ct || _kbhit())
 #else
 int Pascal typahead();
 #endif
 int Pascal unarg(int, int);
 int Pascal unbindkey(int, int);
-int Pascal unmark(int, int);
 int Pascal uniarg(int, int);
-void Pascal updall(WINDOW *, int);
+void Pascal USE_FAST_CALL updall(int, WINDOW *);
 void Pascal updallwnd(int);
 int /*Pascal*/ update(int);
-void Pascal updline(int);
 int Pascal updone();
 void Pascal updupd(int);
 void Pascal upmode();
@@ -440,11 +442,11 @@ void Pascal upwind(void);
 int Pascal usebuffer(int, int);
 int Pascal use_named_str(Char *,Char *);
 int Pascal varclean();
-int Pascal varinit();
+void Pascal varinit();
 int Pascal viewfile(int, int);
 int Pascal vteeol();
 int Pascal vtfree();
-void Pascal vtinit();
+void Pascal vtinit(int cols, int dpthm1);
 int Pascal vtputc();
 int Pascal vttidy();
 int Pascal widen(int, int);
@@ -525,4 +527,5 @@ void Pascal SetParentFocus(void);
 #define FILE_INS  1
 #define FILE_REST 2
 #define FILE_LOCK 4
+#define FILE_NMSG 8
 

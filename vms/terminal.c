@@ -472,7 +472,6 @@ int Pascal ttgetc()
 					/* otherwise... get the char for now */
 			/*loginfo("GETKEY");*/
 { int c = get1key();
-			/*loginfo2("GOTKEY %x %d", c, pd_kbdwr);*/
 
 	if (CTRL & c) 		 /* unfold the control bit back into the character */
 		c = (c & ~ CTRL) - '@';

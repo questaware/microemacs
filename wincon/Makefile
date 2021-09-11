@@ -95,12 +95,15 @@ boldbug.exe : boldbug.obj
 	$(LINK32) $(LINK32_FLAGS)./boldbug.exe boldbug.obj
 
 clean :
-	-rm *.obj
-	-rm *.pch
-	-rm *.pdb
-	-rm e.exe
+	-del *.obj
+	-del *.pch
+	-del *.pdb
+	-del e.exe
 
 .c.asm :
+	$(CPP) -I../ -I../../src/ /Fait.asm $(CPP_PROJ) $< 
+
+.cpp.asm :
 	$(CPP) -I../ -I../../src/ /Fait.asm $(CPP_PROJ) $< 
 
 inc :

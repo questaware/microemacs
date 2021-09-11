@@ -80,7 +80,7 @@ src/region.c
 src/search.c
 src/sinc.cpp
 src/sleep.cpp
-src/tag.c
+src/tag.cpp
 src/window.c
 src/word.c
 tags
@@ -88,7 +88,6 @@ terminfo/console
 terminfo/uk.map
 unix/build.h
 unix/estruct.h
-unix/io.h
 unix/lock.c
 unix/makefile
 unix/makekeys.c

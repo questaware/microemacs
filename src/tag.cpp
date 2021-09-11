@@ -165,7 +165,7 @@ class Tag
 	static int get_to_newline(void);
 	static int findTagInFile(const char *key, const char * tagfile);
  public:
-	static int findTagExec(const char key[]);
+	static int USE_FAST_CALL findTagExec(const char key[]);
 };
 
 int	  Tag::g_lastClamp;
@@ -299,7 +299,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 #endif
 
 
-int Tag::findTagExec(const char key[])
+int USE_FAST_CALL Tag::findTagExec(const char key[])
 
 {	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
 	const char * const tagfname = TAGFNAME;
@@ -341,77 +341,79 @@ int Tag::findTagExec(const char key[])
 
 	Tag::g_lastClamp = clamp;
 	if (clamp < 0)
-		return state + 256;
+		return state + 4;
 
 	strcpy(Tag::g_LastName, tagline);
 
-{   int ix;
-	char * file = skipspaces(tagline + strlen(tagline) + 1, tagline + TAGBUFFSZ);
+	BUFFER * bp;
+	char * fn = tagline;
+	int iter;
+	for (iter = 2; --iter >= 0; )
 
-	for (ix = -1; file[++ix] > ' '; ) /* to next tab */
-	  ;
+	{ 	char * file = skipspaces(fn + strlen(fn)+1, tagline+TAGBUFFSZ);
 
-{	char * fn = file + ix;
-	fn[file[ix] == 0] = 0;
-{	char * root = Tag::g_alt_root == NULL ? tagfile : Tag::g_alt_root;
-	BUFFER * bp = bufflink(pathcat(tagfile,sizeof(tagfile), root, file),
-				   		   1 + 64);
-	if (bp == NULL)
-	{	mlwrite(TEXT214, tagfile);
-    	return -1;
-    }
+		if (iter > 0)
+		{	if (file[0] == '.' && file[1] == '/')
+				file += 2;
 
-	file = skipspaces(fn + strlen(fn) + 1, tagline + TAGBUFFSZ);
+		    int ix;
+			for (ix = -1; file[++ix] > ' '; ) /* to next tab */
+	  			;
 
-		    			/* convert search pattern to magic search string */
-	        	/* if the first char is '/' search forwards, '?' for backwards */
-{	char typ = *file;
-	if (typ == '?')
-		gotoeob(0, 0);
-	else
-		gotobob(0, 0);
+			fn = file + ix;
+			fn[file[ix] == 0] = 0;
+			char * root = Tag::g_alt_root == NULL ? tagfile : Tag::g_alt_root;
 
-	strcpy(tagfile,pat);			/* save for restore */
-
-	if (typ == 0)	
-	    strcat(strpcpy(pat, key, sizeof(pat)-20), "[^A-Za-z0-9_]");
-	
-	else	/* look for end '/' or '?' - start at end and look backwards*/
-	{	char ch;
-#if 0
-		char * dd = strlast(file+1,ee);
-		*dd = 0;
-#else
-		char * dd = NULL;
-		char * s = file;
-		while (*++s != 0)
-			if (*s == typ)
-				dd = s;
-
-		if (dd != NULL)
-			*dd = 0;
-#endif		
-		dd = pat - 1;
-		
-		while ((ch=*++file) != 0 && dd < pat + sizeof(pat) - 3)
-		{
-			*++dd = ch ;
-			if (ch == '\\') 	/* backslash must be escaped */
-		   	    *++dd = '\\' ;
+			bp = bufflink(pathcat(tagfile,sizeof(tagfile), root, file), 1 + 64);
+			if (bp == NULL)
+				break;
 		}
+		else    			/* convert search pattern to magic search string */
+	    {		  	/* if first char is '/' search forwards, '?' for backwards */
+			char typ = *file;
+			if (typ == '?')
+				gotoeob(0, 0);
+			else
+				gotobob(0, 0);
 
-		*++dd = 0 ;
+			char * dd = pat - 1;
+		
+			strcpy(tagfile,pat);			/* save for restore */
+
+			if (typ == 0)	
+	    		strcat(strpcpy(dd+1, key, sizeof(pat)-20), "[^A-Za-z0-9_]");
+	
+			else	/* look for end '/' or '?' - start at end and look backwards*/
+			{	char ch;
+				int lim = sizeof(pat) - 3;
+				int ix = 0;
+				while ((ch = file[++ix]) != 0)
+					if (ch == typ)
+						lim = ix;
+
+				while (--lim > 0 && (ch=*++file) != 0)
+				{	*++dd = ch ;
+					if (ch == '\\') 	/* backslash must be escaped */
+				   	    *++dd = '\\' ;
+				}
+
+				*++dd = 0 ;
+			}
+
+			int smode = bp->b_flag;
+			bp->b_flag |= MDMAGIC;
+
+			int rc = hunt(typ != '?' ? 1 : -1, 0);
+			bp->b_flag = smode;
+	    	strcpy(pat,tagfile);
+
+		    return rc;
+		}
 	}
 
-{	int smode = bp->b_flag;
-	bp->b_flag |= MDMAGIC;
-
-{   int rc = hunt(typ != '?' ? 1 : -1, 0);
-	bp->b_flag = smode;
-    strcpy(pat,tagfile);
-
-    return rc;
-}}}}}}}}
+	mlwrite(TEXT214, tagfile);
+   	return -1;
+}}
 
 /*ARGSUSED*/
 
@@ -467,10 +469,9 @@ findTag(int f, int n)
 		return true;
 
 	if (res > 0)
-	{ 	res -= 256;
-		MLWRITE(res == 0 ? TEXT142 : /* "[no tag file]" */
-				res & 1  ? TEXT160 : /* "No More Tags" */ 
-						   TEXT161, tag); /* "[tag %s not in tagfiles]" */
+	{	MLWRITE((res & 3) == 0 ? TEXT142 : /* "[no tag file]" */
+				res & 1  	   ? TEXT160 : /* "No More Tags" */ 
+						   		 TEXT161, tag); /* "[tag %s not in tagfiles]" */
 	}
 	return false;
 }}

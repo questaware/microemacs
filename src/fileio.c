@@ -10,7 +10,6 @@
 
 #include	<stdio.h>
 #include	<stdlib.h>
-#include	<io.h>
 #include	<fcntl.h>
 #include	<errno.h>
 #include 	<sys/types.h>
@@ -21,10 +20,11 @@
 #if S_BORLAND
 #include	<dir.h>
 #elif S_WIN32
-#include  <direct.h>
+# include  <direct.h>
+# include	<io.h>
 #else
-#include 	<unistd.h>
-#include <termios.h>
+# include 	<unistd.h>
+# include <termios.h>
 #endif
 #include	"base.h"
 #include	"edef.h"
@@ -46,7 +46,7 @@ char * g_fline = NULL;			/* dynamic return line */
 static 
 unsigned int g_flen = 0;		/* space available for chars */
 
-static FILE *g_ffp;		/* File pointer, all functions. */
+FILE *g_ffp;		/* File pointer, all functions. */
 
 int g_crlfflag;
 
@@ -142,26 +142,6 @@ int Pascal ffropen(const char * fn)
 #endif
 
 
-/* Close a file. Should look at the status in all systems.
- */
-int Pascal ffclose()
-
-{ 												/* free this since we do not need it anymore */
-  free(g_fline);
-  g_fline = NULL;
-
-{	Cc cc = g_ffp == NULL ? OK : fclose(g_ffp);
-#if S_UNIX5 | S_LINUX | S_HPUX | S_SUN | S_XENIX | S_BSD | (S_MSDOS & (LATTICE | MSC | DTL | TURBO)) | S_OS2
-  if (cc != OK)
-  { adb(243);
-    return FIOERR;
-  }
-#endif
-
-  return FIOSUC;
-}}
-
-
 #if S_LINUX
 
 void stdin_close()
@@ -176,63 +156,55 @@ void stdin_close()
                                    0 if exists and must not
                               and -1 on error (cannot create).
  */
-int Pascal ffwopen(int mode, char * fn)
+FILE * ffwopen(int mode, char * fn)
 	
 { if (fn == null)
   { g_ffp = stdout;
     return OK;
   }
-{ int fd;
+{
 #if S_MSDOS && S_WIN32 == 0
   char afn[266];
-  fd = open(LFN_to_8dot3(LFN_to_83, 0, fn, &afn[0]), 
-        		    O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), 0755);
-#else
-  fd = open(fn, O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), 0755);
+  fn = LFN_to_8dot3(LFN_to_83, 0, fn, &afn[0]);
 #endif
+{ int fd = open(fn, O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), 0755);
   if (fd < 0)
-    return errno == EEXIST ? 0 : -1;
+    return NULL;
 
-  g_ffp = fdopen(fd, "wb");
-  if (g_ffp == NULL)
-  { close(fd);
-    return -1;
-  }
-  return 1;
-}}
+{	FILE * ffp = fdopen(fd, "wb");
+  if (ffp == NULL)
+  	close(fd);
+
+  return ffp;
+}}}}
 
 
 /* Write a line to the already opened file. The "buf" points to the buffer,
  * and the "nbuf" is its length, less the free newline. Return the status.
  * Check only at the newline.
  */
-int Pascal ffputline(char buf[], int nbuf)
+int Pascal ffputline(FILE * op, char buf[], int nbuf)
 	
 {	int i = -1;
+	int cc = 0;
 
-#if	CRYPT
-	if (curbp->b_flag & MDCRYPT)
-	{ while (++i < nbuf)
-	  { char c = buf[i];
-	    ucrypt(&c, 1);
-	    putc(c, g_ffp);
-	  }
-	} 
-	else
-#endif
 #if S_MSDOS
-	  while (++i < nbuf)
-	    putc(buf[i], g_ffp);
+  while (++i < nbuf)
+  { char c = buf[i];
+#if	CRYPT
+		if (curbp->b_flag & MDCRYPT)
+		  ucrypt(&c, 1);
+#endif
+  
+    cc |= fputc(c, op);
+  }
 #else
-	  fwrite (&buf[0], 1, nbuf, g_ffp);
+  fwrite (&buf[0], 1, nbuf, op);
 #endif
 
-	if (g_crlfflag)
-	  putc('\r', g_ffp);
+	cc |= fputs(g_crlfflag ? "\r\n" : "\n", op);
 
-	putc('\n', g_ffp);
-
-	if (ferror(g_ffp))
+	if (cc < 0)
 	{ mlwrite(TEXT157);
 					/* "Write I/O error" */
 	  return FIOERR;
@@ -357,21 +329,19 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	
 { const Char * cw = &cwd_[strlen(cwd_)];
   int num_dirs = 0;
+  int root = 0;
   t = tgt;
 
   while (strcmp_right(t, "../") == 0)
   { t += 3;						  											 /* target forward */
 		++num_dirs;
 
-    while (--cw >= cwd_ && *cw != DIRSEPCHAR)	 /* cwd backward */
+    while (!(root = (--cw < cwd_)) && *cw != DIRSEPCHAR)	 /* cwd backward */
       ;
       
-		if (cw >= cwd_)
-			continue;
-		break;
+		if (root)
+			break;
 	}
-
-{ int root = cw < cwd_;
 
 	if (num_dirs > 0)
 	{	int deduct = -1;
@@ -408,7 +378,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	}
 		
   return got_star;
-}}}}
+}}}
 
 
 #if S_MSDOS == 0

@@ -48,29 +48,31 @@ static T_is g_isb;
 
 /* routine to echo i-search characters */
 
-int Pascal echochar(int c, int col)
+static
+int Pascal USE_FAST_CALL echochar(int c, int col)
 					/* character to be echoed */
 					/* column to be echoed in */
 {
 	tcapmove(term.t_nrowm1,col);
+
 	switch (c)
 	{
 #if 0
 	case '\r':
 		col += 3;
-		mlputs("<NL>");
+		mlputs(4,"<NL>");
 #endif
 	when '\t':
-		col += 4;
-		mlputs("<TAB>");
+//	if ((col += 4) > 0)
+		mlputs(4,"<TAB>");
 
 	when 0x7F:
 		c = '?' - 'A' + 1;
 					/* drop through */
 	default:
 		if (c < ' ')
-		{ c += 'A' - 1;
-			col++;
+		{ c ^= 0x40;
+			++col;
 			mlout('^');
 		}
 		mlout(c);
@@ -78,7 +80,7 @@ int Pascal echochar(int c, int col)
 #if S_MSDOS == 0
 	TTflush();
 #endif
-	return col+1;
+	return col + 1;
 }
 
 	/*
@@ -155,7 +157,7 @@ int Pascal isearch(int n)
 	}
 
 	if (n < 0)
-		backchar(FALSE, 1);
+		backbychar( 1);
 	  
 	/* Get the first character in the pattern. If we get an initial Control-S
 		 or Control-R, re-use the old search string and find the first occurrence
@@ -179,7 +181,7 @@ int Pascal isearch(int n)
 
 				if (cpos == 0)
 				{ char ch;
-					backchar (TRUE, 1); 											/* Be defensive about EOB  */
+					backbychar(1); 														/* Be defensive about EOB  */
 					for (cpos = -1; (ch = pat[++cpos]) != 0; )/* find the length */
 						col = echochar(ch, col);								/* and re-echo the string */
 				}

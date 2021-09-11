@@ -67,11 +67,10 @@ char deltaf[NSTRING+2];		/* available for sharing */
 
 #define MCNIL	0	/* Like the '\0' for strings.*/
 #define	LITCHAR	1	/* Literal character, or string.*/
-//#define	ANY	2
-#define	CCL	3
+#define	EOL			2
+#define	CCL	    3
 #define	NCCL (NOT_PAT+CCL)
-#define	BOL	4
-#define	EOL	5
+#define	BOL	  4
 #define	DITTO	6
 
 #define MC_ANY		'.'	/* 'Any' character (except newline).*/
@@ -104,7 +103,7 @@ static int g_cclarr_ix = 0;
 static MC   g_pats[NPAT+2];
 static int	g_pats_top;
 
-static unsigned int g_Dmatchlen = 0;
+unsigned int g_Dmatchlen = 0;
 
 #define ERR_SYN   (0)
 #define ERR_OOMEM (-1)
@@ -130,10 +129,10 @@ static int Pascal cclmake(int patix, MC *  mcptr)
 	if (p_bmap == NULL)
 	  return ERR_OOMEM;
 
-	g_cclarray[ to ] = p_bmap;				/* Test the initial character(s) in ccl for
-																		 * special cases - negate ccl, or an end ccl
-																		 * character as a first character.
-																		 * Anything else gets set in the bitmap. */
+	g_cclarray[ to ] = p_bmap;			/* Test the initial character(s) in ccl for
+																	 * special cases - negate ccl, or an end ccl
+																	 * character as a first character.
+																	 * Anything else gets set in the bitmap. */
 {	int from;
 	while ((from = pat[++patix]) != 0)
 	{	if (from == MC_ECCL)
@@ -193,11 +192,9 @@ int Pascal mk_magic()
 	g_pats[NPAT].mc_type = -1;	/* a barrier */
 
 {	MC * mcptr = g_pats;
-	int mode = curbp->b_flag;
-  int magical = 0;
+	int magic = curbp->b_flag;
+	int magical = 0;
 	int patix = -1;
-	int	pchr;
-#define DOES_CL 1
 
 //mcpat[0].mc_type = MCNIL;
 
@@ -208,31 +205,31 @@ int Pascal mk_magic()
 			break;
 		}
 
-		pchr = pat[++patix];
+	{	int pchr = pat[++patix];
 		if (pchr == 0)
 			break;
 
-		if (mode & MDMAGIC)
+		if (magic & MDMAGIC)
 		  switch (pchr)
 		  {	case MC_CCL:		/* [ */
-					magical = DOES_CL;
+					magical = TRUE;
 		  		patix = cclmake(patix, mcptr);
 					if (patix <= 0)
 						break;	  		
 					continue;
 						
 			  when MC_ANY:		/* . */
-					magical = DOES_CL;
+					magical = TRUE;
 			  	mcptr->mc_type = LITCHAR | NOT_PAT;
 			  	mcptr->lchar = '\n';
 					continue;
 				        
-			  when MC_CLOSURE:/* * */			/* Does the closure symbol mean closure here?
-																		 * If so, back up to the previous element
-																		 * and indicate it is enclosed. */
+			  when MC_CLOSURE:/* * */		/* Does the closure symbol mean closure here?
+																	 * If so, back up to the previous element
+																	 * and indicate it is enclosed. */
 					if (magical)
 					{	(--mcptr)->mc_type |= CLOSURE;
-						magical = 0;
+						magical = FALSE;
 						continue;
 					}
 	
@@ -248,7 +245,7 @@ int Pascal mk_magic()
 		mcptr->mc_type = LITCHAR;
 		mcptr->lchar   = pchr;
 		magical = pchr - '\n';
-	}	/* End of while.*/
+	}}	/* End of while.*/
 
 		/* Set up the reverse array, if the status is good.  Please note
 		 * the structure assignment - your compiler may not like that.
@@ -267,8 +264,9 @@ int Pascal mk_magic()
 
 		g_pats_top = (--mcptr) - g_pats;
 		if (mcptr->lchar == MC_EOL)
-//		mcptr->mc_type = EOL;
+		{ mcptr->mc_type = EOL;
 			mcptr->lchar = '\n';
+		}
 	  if (g_pats[1].lchar == MC_BOL)
 			g_pats[1].mc_type = BOL;
 
@@ -344,8 +342,8 @@ int Pascal readpattern(const char * prompt, char apat[])
     expandp(concat(tpat, prompt, " [", null), 
     				strlen(apat) < 30 ? apat : "\"",  "] ",  sizeof(tpat)-1);
 
-					     /* Read a pattern.  Either we get one, or
-		    			  * we just get the META charater, and use the previous pattern */ 
+						  		/* Read a pattern.  Either we get one, or
+			    				 * we just get the META charater and use the previous pattern*/ 
 {		Cc cc = mltreply(tpat, tpat, NPAT);
     if (cc >= 0)
     { extern int gs_keyct;		 /* from getstring */
@@ -353,8 +351,6 @@ int Pascal readpattern(const char * prompt, char apat[])
         strcpy(apat, tpat);
 
       cc = TRUE;
-//    if (apat == pat)
-//      cc = mk_magic(-1);
     }
 
     return cc;
@@ -373,9 +369,6 @@ int Pascal hunt(int n, int again)
 {								/* Make sure a pattern exists, or that we didn't switch
 								 * into MAGIC mode until after we entered the pattern. */
 //paren.sdir = 1;
-
-  if (kbd_record(pd_kbdmode))
-    g_got_search = TRUE;
 
   if (pat[0] == '\0')
 	{ mlwrite(TEXT78);
@@ -412,17 +405,21 @@ int Pascal hunt(int n, int again)
 
 		if (ct <= 2)
 			mvdnwind(1,2 + ct);
-	{ int plen = strlen(patmatch) + 5;
+	{ int plen = strlen(pd_patmatch) + 5;
 		int e = wp->w_doto + plen;
 		if (e - lp->l_used > 0)
 		{ plen -= e - lp->l_used;
 			e -= e - lp->l_used;
 		}
 		if (e - term.t_ncol > 0)
+#if 1
+			wp->w_doto = e - plen;
+#else
 		{ wp->w_doto = e;
 		  update(TRUE);
 		  wp->w_doto -= plen;
 		}
+#endif
 	  update(TRUE);
 	}}
 	return cc;
@@ -510,7 +507,7 @@ static int mceq(int bc, int mctype, int lchar)
 
 	if      (bc < 0)
 		return 0;
-	else if ((mctype & MASKPAT) == LITCHAR)
+	else if ((mctype & MASKPAT) <= EOL)
 		result = eq(bc, (int)lchar);
 	else
 	{
@@ -559,8 +556,9 @@ int Pascal amatch(MC * mcptr, int direct, Lpos_t * pcwlpos)
 			 * So, for a start, we check for them on entry.
 			 */
 	int type;
+	int ct = 0;
 	for (; (type = mcptr->mc_type) != MCNIL; mcptr += direct)
-	{
+	{ ct = 0;
 										    /* The only way we'd get a BOL metacharacter here
 												 * is at the end of the reversed pattern.
 												 * The only way we'd get an EOL metacharacter here 
@@ -579,38 +577,33 @@ int Pascal amatch(MC * mcptr, int direct, Lpos_t * pcwlpos)
 	  { if (lpos.curoff != 0)
 	      return FALSE;
 		}
-//  else if (type == EOL)
+//  else if (type ==  EOL)
 //  { if (lpos.curoff != llength(lpos.curline))
 //      return FALSE;
 //	}
 	  else												/* Try to match as many characters as possible */
-	  {														/* against the current meta-character.
-																 * A newline never matches a closure. */
-	    int ct = 0;
-	    while (mceq(nextch(&lpos, direct), mcptr->mc_type, mcptr->lchar))
+																/* A newline never matches a closure. */
+	  {	while (mceq(nextch(&lpos, direct), type, mcptr->lchar))
 	    { ++ct;
 	  		if ((type & CLOSURE) == 0)
 	  			break;
 	  	}
 	  	if ((type & CLOSURE) == 0)
-	  	{	if (ct == 0)
+			{ if (type != EOL)
+	    	  g_Dmatchlen++;
+	  		if (ct == 0)
 	  			return FALSE;
-	    	g_Dmatchlen++;
 	    	continue;
-	    }
-												/* We are now at the character that made us fail.
-												 * Try to match the rest of the pattern, shrinking
-												 * the closure by one for each failure.
-												 * Since closure matches *zero* or more occurences
-												 * of a pattern, a match may start even if the
-												 * previous loop matched no characters. */
-	    while (1)
+	    }											/* We are now at the character that made us fail.
+														 * Try to match the rest of the pattern, shrinking
+														 * the closure by one for each failure.
+														 * Since closure matches *zero* or more occurences
+														 * of a pattern, a match may start even if the */
+	    while (1)							/* previous loop matched no characters. */
 	    { nextch(&lpos, -direct);
 
 	      if (amatch(mcptr+direct, direct, &lpos))
-	      { g_Dmatchlen += ct;
 	        goto success;
-	      }
 
 	      if (--ct < 0)
 	        return FALSE;
@@ -618,7 +611,9 @@ int Pascal amatch(MC * mcptr, int direct, Lpos_t * pcwlpos)
 	  }
 	}	/* End of mcptr loop.*/
 
+	ct = 0;
 success:							/* A SUCCESSFULL MATCH!!!  */
+  g_Dmatchlen += ct;
 	*pcwlpos = lpos;		/* Reset the "." pointers. */
 	return TRUE;
 }
@@ -660,7 +655,7 @@ int Pascal scanner(int direct, int again)
   init_paren("",0);
   paren.sdir = direct;
   
-	if (!mk_magic())
+	if (mk_magic() < 0)
 	  return FALSE;
 
 { int skip = again & 4 && g_clring != 0;
@@ -670,7 +665,7 @@ int Pascal scanner(int direct, int again)
                                * very different (closure) from the old length.
                                * Important for the query-replace undo command. */
 { int ch = 0;
-  MC * mcpatrn = &g_pats[direct > 0 ? 1 : g_pats_top];
+  MC * mcptr = &g_pats[direct > 0 ? 1 : g_pats_top];
   int got = 0;
 									 /* Scan each character until we hit the head link record. */
   while (true)
@@ -683,18 +678,18 @@ int Pascal scanner(int direct, int again)
 		  	  /* Save the current position in case we need to restore it on a match. 
 		    	 * Initialize g_Dmatchlen to zero for any search for replacement.
 		  	   */
-	{	char ptyp = mcpatrn->mc_type;
+	{	char ptyp = mcptr->mc_type;
     if      (ptyp == LITCHAR)
     { ch = nextch(&lpos, direct); 		/* Advance the cursor.*/
       if (skip)
 		    scan_paren(ch);
 
-      if (! eq(ch, (int)mcpatrn->lchar))
+      if (! eq(ch, (int)mcptr->lchar))
         continue;
       sm = lpos;
       got = 1;
       g_Dmatchlen = 1;
-      if (! amatch(mcpatrn+direct, direct, &lpos))
+      if (! amatch(mcptr+direct, direct, &lpos))
         continue;
 
 			if ((paren.in_mode & Q_IN_CMT) != 0)
@@ -709,7 +704,7 @@ int Pascal scanner(int direct, int again)
       g_Dmatchlen = 0;
 //  	if (skip && (paren.in_mode & Q_IN_CMT) != 0)
 //			continue;
-      if (amatch(mcpatrn, direct, &lpos))
+      if (amatch(mcptr, direct, &lpos))
         break;
     }
     ch = nextch(&lpos, direct);  /* Advance the cursor.*/
@@ -723,16 +718,14 @@ int Pascal scanner(int direct, int again)
   rest_l_offs(&lpos);
   curwp->w_flag |= WFMOVE; /* flag that we have moved */
 
-  free(patmatch);
-  patmatch = (char*)malloc(g_Dmatchlen+1);
+  free(pd_patmatch);
+  pd_patmatch = (char*)mallocz(g_Dmatchlen+1);
 
-{ char * patptr = patmatch;
+{ char * patptr = pd_patmatch;
   if (patptr != NULL)
   {
     for (ch = g_Dmatchlen; --ch >= 0; )
       *patptr++ = nextch(&sm, FORWARD);
-
-    *patptr = '\0';
   }
 #if _DEBUG
 	if (!got)											// otherwise optimised away
@@ -774,8 +767,8 @@ int Pascal replaces(int kind, int f, int n)
 	int cc;
 	char tpat[NPAT*2+20];
 
-	if (curbp->b_flag & MDVIEW)
-	  return rdonly();
+	if (rdonly())
+	  return FALSE;
 
 	if      (!f)
 		n = 100000000;
@@ -800,8 +793,8 @@ int Pascal replaces(int kind, int f, int n)
   int lenold = 0;
   int lastins = 0;
 
-	Lpos_t orig = *(Lpos_t*)&curwp->w_dotp;
 	Lpos_t last;		/* position of last replace */
+	int orig_line_no = setcline();
 
 //orig.curline = lback(orig.curline);
 	last.curline = NULL;
@@ -827,7 +820,7 @@ int Pascal replaces(int kind, int f, int n)
 	  if (kind)			/* Check for query */
 	  {	if (getwpos() + 2 >= curwp->w_ntrows)
 			{ Lpos_t save = *(Lpos_t*)&curwp->w_dotp;
-			  forwline(f, 2);
+			  forwbyline(2);
 			  rest_l_offs(&save);
 			}
 					  					/* Get the query  */
@@ -848,7 +841,7 @@ qprompt:
 
 			  when '!':	kind = FALSE;	/* yes/stop asking */
 					
-			  when 'N':	forwchar(FALSE, 1);	/* no, onword */
+			  when 'N':	forwbychar(1);	/* no, onword */
 					continue;
 
 			  when 'U':		   /* undo last and re-prompt */
@@ -856,14 +849,14 @@ qprompt:
 			  	{ rest_l_offs(&last);			/* Restore old position. */
 					  last.curline = NULL;	   									
 
-					  backchar(FALSE, lastins);
-					  cc = delins(lastins, patmatch, 0);
+					  backbychar(lastins);
+					  cc = delins(lastins, pd_patmatch, 0);
 					  if (cc < 0)
 					    return FALSE;
 						       /* Record one less substitution,
 										* backup, save our place, and reprompt. */
 					  --numsub;
-					  backchar(FALSE, lenold);
+					  backbychar(lenold);
 					}
 					goto pprompt;
 			  otherwise			   /* bitch and beep */
@@ -875,8 +868,8 @@ qprompt:
 //				orig.curline = lforw(orig.curline);
 //				if (orig.curoff >= orig.curline->l_used)
 //				  orig.curoff = 0;
-					rest_l_offs(&orig);
-					curwp->w_flag |= WFMOVE;
+					gotoline(1,orig_line_no);
+//				curwp->w_flag |= WFMOVE;
 
 			  case CTRL|'G':
 			  	mlwrite(TEXT89);  /* abort! and stay */
@@ -956,8 +949,8 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 	        break;
 	      ix = -1;
 	      if (instr[0] == use_meta)
-	      { len += strlen(patmatch);
-	      	cc = linstr(patmatch);
+	      { len += strlen(pd_patmatch);
+	      	cc = linstr(pd_patmatch);
 	        if (cc != TRUE)
 	          break;
 	        continue;

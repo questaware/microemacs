@@ -1262,6 +1262,7 @@ indentsearch	./src/search.c
 init_buf	./src/buffer.c
 init_paren	./src/random.c
 init_paren	./src/sinc.cpp
+init_wincon	./wincon/msemacs.c
 initchars	./src/char.c
 initcrypt	./src/crypt.c
 inp	./mtgdi/estruct.h
@@ -1279,7 +1280,7 @@ intdos	./mtgdi/estruct.h
 intdos	./unix/estruct.h
 intdos	./wincon/estruct.h
 inword	./src/word.c
-io_message	./src/basic.c
+io_message	./src/file.c
 is_bindfunc	./src/bind.c
 is_space	./src/word.c
 isearch	./src/isearch.c
@@ -1408,6 +1409,7 @@ mkTempCommName	./wincon/oswin.c
 mkTempName	./wincon/oswin.c
 mk_const_map	./src/map.h
 mk_format	./src/map.h
+mk_line	./src/line.c
 mk_map	./src/map.c
 mk_strm	./src/map.c
 mkdes	./src/eval.c
@@ -1752,6 +1754,7 @@ wOffset	./src/sinc.cpp
 wchar_to_char	./wincon/msemacs.c
 widen	./src/region.c
 window_bgfg	./src/display.c
+window_ct	./src/window.c
 wordcount	./src/word.c
 wordmatch	./src/random.c
 wordsearch	./src/search.c

@@ -5,8 +5,8 @@
 */
 
 #ifdef	maindef
-/*const*/ char TEXT8[] = "\007[Aborted]";
-/*const*/ char TEXT79[] = "Not found ";
+/*const*/ char TEXT8[] = "%b[Aborted]";
+/*const*/ char TEXT79[] = "Not found";
 /*const*/ char TEXT94[] = "[TABLE OVERFLOW]";
 /*const*/ char TEXT99[] = "[OUT OF MEMORY]";
 /*const*/ char TEXT23[] = "Out of range";
@@ -38,7 +38,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 
 #define	TEXT1	  "[Starting new CLI]"
 #define	TEXT2	  "Int Err 1"
-#define	TEXT3	  "[Execution failed]"
+#define	TEXT3	  "Return code %d"
 #define	TEXT4	  "Shell variable TERM not defined!"
 #define	TEXT5	  "Terminal type not 'vt100'!"
 #define	TEXT6	  "\r\n[End]"
@@ -113,6 +113,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT82  "Replace"
 #define	TEXT83	"Query replace"
 #define	TEXT84  "with"
+#define	TEXT85  "[Not Found] %s"
 #define	TEXT87	"Replace '"
 #define	TEXT88	"' with '"
 #define	TEXT89	"Aborted!"
@@ -132,8 +133,8 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT106	"[Start macro]"
 #define	TEXT107	"%%Macro not active"
 #define	TEXT108	"[End macro]"
-#define	TEXT109	"\007VIEW mode"
-#define	TEXT110	"\007[command is RESTRICTED]"
+#define	TEXT109	"%bVIEW mode"
+#define	TEXT110	"%b[command is RESTRICTED]"
 #define	TEXT111	"No macro specified"
 #define	TEXT112	"Macro number oo range"
 #define	TEXT113	"Can not create macro"

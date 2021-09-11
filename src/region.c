@@ -84,13 +84,9 @@ static char * g_doregt;
 /* doregion */
 
 static
-Pascal doregion(int wh)
+Pascal doregion(int wh, char * t)
 	
-{ 
-	if (wh > 1 && curbp->b_flag & MDVIEW)	/* disallow this command if */
-	  return rdonly();		        /* we are in read only mode */
-
-	if (wh < 0)
+{ if (wh < 0)
 	{ 
 		int offs =  curwp->w_doto;
 		LINE * ln = curwp->w_dotp;
@@ -99,16 +95,18 @@ Pascal doregion(int wh)
 		char ch;
 
 		while (offs >= 0 && 
-               ((ch = lp[offs]) == '_' || ch == '-' || isalnum(ch)))
+               ((ch = lp[offs]) == '_' || isalnum(ch)))
 			--offs;
 
     while (++offs < len && 
-               ((ch = lp[offs]) == '_' || ch == '-' || isalnum(ch)))
+               ((ch = lp[offs]) == '_' || isalnum(ch)))
     { int cc = kinsert(ch);
 	    if (cc <= FALSE)
 	      return cc;
     }
   }
+	else if (wh > 1 && rdonly())	/* disallow this command if */
+	  return FALSE;		        		/* we are in read only mode */
   else
 	{ LINE  *linep;
 	  int	 loffs;
@@ -134,7 +132,7 @@ Pascal doregion(int wh)
 	    } 
 	    if      (wh == 0)
 	    { if (--space >= 0)
-	        *g_doregt++ = ch;
+	        *t++ = ch;
 	    }
 	    else if (wh == 1) 
 	    { ch = kinsert(ch);
@@ -142,14 +140,14 @@ Pascal doregion(int wh)
 	        return ch;
 	    }
 	    else
-	    { if (isalpha(ch) && isupper(ch) == wh - 2)
-	      { lchange(WFHARD);
-	        lputc(linep, loffs, chcaseunsafe(ch));
+	    { if (isalpha(ch) && (ch & 0x20) == (wh & ~2)) /* isupper */
+	      {	lputc(linep, loffs, chcaseunsafe(ch));
+	      	lchange(WFHARD);
 	      }
 	    }
 	  }
-	  if (wh == 0)
-	    *g_doregt = 0;
+	  if (t != NULL)
+	    *t = 0;
 	}
 	return TRUE;
 }
@@ -158,22 +156,24 @@ Pascal doregion(int wh)
 */
 const char *Pascal getreg(char * t)
 
-{ g_doregt = t;
-  return doregion(0) <= FALSE ? g_logm[2] : t;
+{ return doregion(0,t) <= FALSE ? g_logm[2] : t;
 }
 
 
-static
 int to_kill_buff(int wh, int n)
 
-{ kinsert_n = chk_k_range(n);
-  if (kinsert_n < 0)
-    return 1;
-
+{ if (wh == -2)
+		kinsert_n = NOOKILL;
+	else
+	{ kinsert_n = chk_k_range(n);
+	  if (kinsert_n < 0)
+	    return 1;
+	}
+	
 	if (wh < 0)
-	  (void)kdelete(0, n);
+	  (void)kdelete(wh+1, kinsert_n);
 
-{ int cc = doregion(wh);
+{ int cc = doregion(wh, NULL);
   if (cc <= FALSE)
     return cc;
   
@@ -221,7 +221,7 @@ int copyword(int f, int n)
  */
 Pascal lowerregion(int f, int n)
 
-{ return doregion(2 + true);
+{ return doregion(2 + 0, NULL);
 }
 
 /* Upper case region. Zap all of the lower
@@ -233,7 +233,7 @@ Pascal lowerregion(int f, int n)
  */
 int Pascal upperregion(int f, int n)
 
-{ return doregion(2 + false);
+{ return doregion(0x20, NULL);
 }
 
 
@@ -264,8 +264,8 @@ int Pascal reglines(Bool ask)
  */
 int Pascal killregion(int f, int n)
 
-{	if (curbp->b_flag & MDVIEW)	/* don't allow this command if	*/
-	  return rdonly();		/* we are in read only mode	*/
+{	if (rdonly())
+	  return FALSE;
 
 {	int s = reglines(FALSE);
 	if (s == 0)
@@ -299,7 +299,7 @@ int Pascal narrow(int f, int n)
 	  return FALSE;
 	}										   								/* move forward to the end of this region
 										  					   		  	 (a long number of bytes perhaps) */
-	forwchar(TRUE, g_region.r_size);
+	forwbychar(g_region.r_size);
 //curwp->w_doto = 0;										/* only by full lines please! */
 
 	bp->b_flag |= BFNAROW;								/* remember we are narrowed */
@@ -338,7 +338,7 @@ int Pascal narrow(int f, int n)
 
 /*	widen-from-region (^X->) restores a narrowed region	*/
 
-int Pascal widen(int f, int n)
+int Pascal widen(int notused, int n)
 
 {		      								/* find the proper buffer and ensure we are narrow */
 	BUFFER * bp = curwp->w_bufp;
@@ -375,7 +375,7 @@ int Pascal widen(int f, int n)
 	}
 
 	setcline();
-	orwindmode(WFHARD|WFMODE, 0);
+	orwindmode(WFHARD|WFMODE);
 
 	mlwrite(TEXT75);
 				/* "[Buffer is widened]" */
