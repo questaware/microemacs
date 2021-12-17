@@ -152,6 +152,8 @@ void stdin_close()
     
 #endif
 
+#define NEW_FILE_MODE 0644
+
 /* Open a file for writing. Return 1 if all is well,
                                    0 if exists and must not
                               and -1 on error (cannot create).
@@ -167,7 +169,7 @@ FILE * ffwopen(int mode, char * fn)
   char afn[266];
   fn = LFN_to_8dot3(LFN_to_83, 0, fn, &afn[0]);
 #endif
-{ int fd = open(fn, O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), 0755);
+{ int fd = open(fn, O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), NEW_FILE_MODE);
   if (fd < 0)
     return NULL;
 

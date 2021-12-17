@@ -14,7 +14,7 @@
 
 #include  "../src/edef.h"
 #include	"../src/etype.h"
-#define Short short
+//#define Short short
 
 #include	"../src/elang.h"
 #include	"../src/logmsg.h"
@@ -1011,7 +1011,7 @@ int pipefilter(wh)
 		if (line[0] == '%' || line[0] == '\'')
 		{ char sch;
       int ix;
-			for (ix = 0; (sch = line[++ix]) != 0 && isalpha(sch); )
+			for (ix = 0; isalpha(line[++ix]); )
 				;
 
 			line[ix] = 0;
@@ -1091,7 +1091,7 @@ int pipefilter(wh)
 				fputs(ln, stdout);
 
 			fclose(ip);
-			puts("[End]");
+			puts(TEXT6);
 			ttgetc();
 		/*homes();*/
 			rc = TRUE;
@@ -1119,7 +1119,7 @@ int pipefilter(wh)
 	/* Pipe a one line command into a window
 	 * Bound to ^X @
 	 */
-Pascal pipecmd(int f, int n)
+int Pascal pipecmd(int f, int n)
 
 { return pipefilter('@');
 }
@@ -1128,7 +1128,7 @@ Pascal pipecmd(int f, int n)
 	 * filter a buffer through an external DOS program
 	 * Bound to ^X #
 	 */
-Pascal filter(int f, int n)
+int Pascal filter(int f, int n)
 
 { return pipefilter('#');
 }
@@ -1138,7 +1138,7 @@ Pascal filter(int f, int n)
 	* a single character to be typed, then mark the screen as garbage 
 	* so a full repaint is done. Bound to "C-X !".
 	*/
-Pascal spawn(int f, int n)
+int Pascal spawn(int f, int n)
 {
 	return pipefilter('!');
 }
@@ -1177,8 +1177,6 @@ DWORD WINAPI ClipThread(void * data);
 Cc ClipSet(char * data)
 
 { int thread = ((unsigned int)data & 0xc0000000) == 0xc0000000; // top of mem?
-	char * src = thread ? NULL : data;
-	int len = src == NULL ? 0 : strlen(src);
 	HWND mwh = GetTopWindow(NULL);
 	if (mwh == NULL)
 		return -1;
@@ -1196,20 +1194,21 @@ Cc ClipSet(char * data)
 	if (OpenClipboard(mwh))
 	{	
 		EmptyClipboard();
-		if (len != 0)
-
-		{	HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
+		if (thread == NULL && data != NULL)
+		{	int len = strlen(data);
+			HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
 			if (!m_hData)  
 				return -1;
-
+	
 		{	char * m_lpData = (char*)GlobalLock(m_hData);
 			if (m_lpData == NULL)
 				return -1;
-
-			strcpy(&m_lpData[0], src);
+	
+			strcpy(&m_lpData[0], data);
 			SetClipboardData(CF_TEXT, m_hData);
 			GlobalUnlock(m_hData);
 		}}
+
 		CloseClipboard();
 	}
 

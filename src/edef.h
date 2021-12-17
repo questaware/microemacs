@@ -362,16 +362,17 @@ typedef struct Paren_s
 { 
   char          ch;
   char          fence;
-  int           nest;
-  int           nestclamped;
+  char          prev;			// must follow fence
+  char          olcmt;
+  int         	nest;
+  short		      nestclamped;
   short         in_mode;
   short         complex;
-  int           sdir;
-  char          prev;
-  char          olcmt;
+  short				  sdir;
 } Paren_t, *Paren;
 
 extern Paren_t paren;
+extern Paren_t g_sparen;
 
 #include "epredef.h"
 

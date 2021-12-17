@@ -69,7 +69,7 @@ static char g_savepat[NPAT+2];
 static int g_kbdm[NKBDM];		/* Macro */
 
 //static LINE * macro_start_line;
-static int    macro_start_col;
+int    macro_start_col;
 
 static int    g_slast_dir;
 static int		g_kbdwr = 0;								// -ve => play
@@ -99,7 +99,6 @@ int ctlxlp(int f, int n)
 	
 	g_slast_dir = pd_lastdir;
 	macro_start_col = getccol();
-	g_Dmatchlen = 0;
 	save_state();
 
 	mlwrite(TEXT106);
@@ -131,9 +130,6 @@ int  ctlxrp(int f, int n)
 	strcpy(pat,g_savepat);
 
 	g_execlevel = 0;
-
-	if (g_Dmatchlen)
-		macro_start_col = -1;
 
 //mk_magic(-1);
 
@@ -369,8 +365,6 @@ void  homeusr(char buf[])
 
 #endif
 
-#if COMPLET
-
 #if S_MSDOS == 0
 #define lwr(x) x
 #else
@@ -464,8 +458,6 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
   } /* for (cpos) */
   return cpos;
 }
-
-#endif
 
 static int  redrawln(char buf[], int clamp)
 
@@ -498,11 +490,9 @@ static int  redrawln(char buf[], int clamp)
   return clamp - len;
 }
 
-int g_txt_woffs;
 int g_chars_since_ctrl;
 
-
-int gs_keyct;
+//int gs_keyct;
 
 static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 	  
@@ -510,18 +500,19 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
   int llcol = -1;
   int fulllen = 0;    /* maximum buffer position */
   int cpos = 0;
-  char * autostr = NULL;
+  char * autostr = "";
 #if S_MSDOS == 0
 	int twid = FALSE;
 #endif
+  int woffs = curwp->w_doto;
 	int redo = 0;
-
+//int plain = gs_type - CMP_COMMAND;
+  
   buf[0] = 0;
 
   g_chars_since_ctrl = 1000;
-  gs_keyct = 0;
-  g_txt_woffs = curwp->w_doto;
-
+//gs_keyct = 0;
+  
   for (;;)
   {	int c;             													/* current input character */
   	if (redo & 1)
@@ -531,10 +522,10 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       buf[cpos] = c;
       redo &= ~1;
     }
-  { int ch = autostr == NULL ? 0 : *autostr;
+  { int ch = *autostr;
     if (ch != 0)
     { ++autostr;
-      gs_keyct += 1;
+//    gs_keyct += 1;
       goto getliteral;
     }
 
@@ -547,6 +538,21 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
     TTflush();
     ch = getkey();
+#if 0
+    if (!plain && (ch == '-' || in_range(ch,'0','9'))
+    { int val = 0;
+    	int sign = 1;
+    	if (ch == '-')
+    	{ ch = getkey();
+    		sign = -1;
+    	}
+    	++plain;
+    	while (in_range(ch,'0','9'))
+    		val = val * 10 + ch - '0';
+    	if (sign < 0 && val == 0)
+    		val = 1
+    }
+#endif
     if (ch != (SPEC | 'P') && ch != (SPEC | 'N'))
       llcol = -1;
                               /* if they hit the line terminate, wrap it up */
@@ -559,9 +565,9 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
 
     if (ch == abortc)
-    	return ctrlg(FALSE, 0);    /* Abort any kb macro */
+    	return ctrlg(FALSE, 0);    /* ABORT, Abort any kb macro */
 
-    gs_keyct += 1;
+//  gs_keyct += 1;
                      /* change from command form back to character form */
     c = ectoc(ch);
 #if S_MSDOS == 0
@@ -582,7 +588,6 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       continue;
     }               
 #endif
-
     if      (c==0x7F || c==0x08 || c==0x15)         /* rubout/erase */
     { if (cpos > 0)
       { int tpos;
@@ -594,8 +599,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       }
     }
     else if (c == 'A'-'@' && gs_type >= 0)
-    { return buildlist(null);
-//    return ABORT;
+    { return buildlist(null);			// TRUE
     }
     else if (c == 'F'-'@')
     { int tpos,ix;
@@ -663,10 +667,21 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
         redo = 1;
       }
     }
-    else if (c <= 'Z'-'@' && ch != quotec || c == (ALTD | 'S'))
-    { autostr = getwtxt(c, &combuf[0], HICHAR-3-cpos);
-//   	if (autostr == NULL)
-//   		autostr = "";
+    else if ((c <= 'Z'-'@' || c == (ALTD | 'S')) && ch != quotec)
+    { switch(c)
+      {	case 'B'-'@':
+    			autostr = getkill();
+				when 'N'-'@':
+					autostr = curbp->b_fname;
+				when 'S'-'@':
+				case ALTD | 'S':
+					autostr = pd_patmatch;
+				otherwise
+		      woffs = getwtxt(c, &combuf[0], HICHAR-3-cpos, woffs);
+					autostr = combuf;
+//   			if (autostr == NULL)
+//   				autostr = "";
+			}
     }
     else 
     { int tpos;
@@ -678,34 +693,30 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 getliteral:
       c = ectoc(ch);
 
-      if (fulllen >= nbuf-1)
-      { autostr = NULL;
-        continue;
-      }
 #if S_MSDOS == 0
       if (cpos == 0 && c == '~')
         twid = 1;
 #endif
-#if 0
-      if (cpos < 0 || (unsigned)fulllen > 80)
-      { tcapbeep();
+      if (cpos >= nbuf - 2)
+      { cpos = nbuf - 2;
+      	autostr = "";
+        tcapbeep();
       }
-#endif
-      ch = c;
+
       for (tpos = ++fulllen; --tpos >= cpos; )
         buf[tpos+1] = buf[tpos];
-      buf[cpos++] = ch;
+      buf[cpos++] = c;
       if (fulllen > cpos)
       	redo = 2;
       
       if (g_disinp <= 0)
-				ch = '*';
+				c = '*';
 #if S_MSDOS
-      mybuf[0] = ch;
+      mybuf[0] = c;
       mybuf[1] = 0;
       (void)redrawln(mybuf, term.t_ncol-ttcol);
 #else
-			mlout(ch);
+			mlout(c);
 #endif
     }
   }}
@@ -729,72 +740,60 @@ int  getstring(char * buf, int nbuf, const char * prompt)
 }}
 
 
-char gs_buf[NSTRING+2];		/* buffer to hold tentative name */
+static
+char gs_buf[NFILEN+2];		/* buffer to hold tentative name */
 
 static
-char * complete(const char * prompt, char * defval, int type, int maxlen)
+char * complete(const char * prompt, char * defval, int type)
 					/* prompt to user on command line */
 					/* default value to display to user */
 				/* type of what we are completing */
 				/* maximum length of input field */
 { int cc;
-		 /* if executing a command line get the next arg and match it */
+						 /* if executing a command line get the next arg and match it */
   if (g_clexec)
     return macarg(gs_buf) <= FALSE ? NULL : gs_buf;
 
-#if COMPLET == 0
-  strcpy(gs_buf, prompt);
-  if (type != CMP_COMMAND && defval)
-    concat(&gs_buf[0], "[", defval, "]", null);
-
-  cc = mlreply(strcat(&gs_buf[0], ": "), gs_buf, maxlen);
-#else
 { int plen = ! prompt ? 0
-											: mlwrite(type==CMP_COMMAND ? "%s"	 :
-															  defval	    			? "%s[%s]: " :
-																			              "%s: ",   prompt, defval);
+											: mlwrite(defval ? "%s[%s]: " :
+																			   "%s: ",   prompt, defval);
   --g_cursor_on;
-  cc = getstr(gs_buf, NSTRING-2, plen, type);
+  cc = getstr(gs_buf, NFILEN, plen, type);
   ++g_cursor_on;
-}
-#endif
+
   return cc < 0				          	? NULL   : 
-         defval && gs_buf[0] == 0 ? strpcpy(gs_buf,defval,NSTRING) : gs_buf;
-}
+         defval && gs_buf[0] == 0 ? strpcpy(gs_buf,defval,NFILEN) : gs_buf;
+}}
 
 	/* get a command name from the command line. Command completion means
 	   that pressing a <SPACE> attempts to complete an unfinished command
 	   name if it is unique.
 	*/
-//int ( * getname(char * prompt))(int, int)
 Command getname(const char * prompt)
 				/* string to prompt with */
 {
-  char *sp = complete(prompt, NULL, CMP_COMMAND, NSTRING);
+  char *sp = complete(prompt, NULL, CMP_COMMAND);
 
   return sp == NULL ? NULL : fncmatch(sp);
-}
-
-
-/*	     getcbuf:	get a completion from the user for a buffer name.
-
-			I was goaded into this by lots of other people's
-			completion code.
-*/
-BUFFER * getcbuf(const char *prompt, char *defval, int createflag)
-				/* prompt to user on command line */
-				/* default value to display to user */
-				/* should this create a new buffer? */
-{
-  char *sp = complete(prompt, defval, CMP_BUFFER, NBUFN);
-
-  return sp == NULL ? NULL : bfind(sp, createflag, 0);
 }
 
 
 const char * gtfilename(const char * prompt)
 				/* prompt to user on command line */
 {
-  return (const char *)complete(prompt, NULL, CMP_FILENAME, NFILEN);
+  return (const char *)complete(prompt, NULL, CMP_FILENAME);
 }
 
+
+/*	     getcbuf:	get a completion from the user for a buffer name.
+
+						I was goaded into this by lots of other people's completion code.
+*/
+BUFFER * getcbuf(const char *prompt, int createflag)
+												/* prompt to user on command line */
+{	BUFFER *bp = getdefb();	
+				
+  char *sp = complete(prompt, bp ? bp->b_bname : "main", CMP_BUFFER);
+
+  return sp == NULL ? NULL : bfind(sp, createflag, 0);
+}

@@ -416,7 +416,7 @@ static void usehost(line, end)
   system(line);
   if (end)
   {
-    putpad(TEXT188);
+    putpad(TEXT6);
        /*     "[End]" */
     TTflush();
   }

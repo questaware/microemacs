@@ -1211,9 +1211,7 @@ getfname	./src/bind.c
 getgoal	./src/random.c
 getkey	./src/input.c
 getkill	./src/line.c
-getname	./mtgdi/estruct.h
-getname	./unix/estruct.h
-getname	./wincon/estruct.h
+getname	./src/input.c
 getnext	./src/msdir.c
 getreg	./src/region.c
 getregion	./src/region.c

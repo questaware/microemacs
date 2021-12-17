@@ -75,7 +75,6 @@
 #define	VISMAC	0	/* update display during keyboard macros	*/
 #define	CTRLZ	0	/* add a ^Z at end of files under MSDOS only	*/
 #define	NBRACE	1	/* new style brace matching command		*/
-#define	COMPLET	1	/* new completion code (as of 3.10)		*/
 #define	CLEAN	0	/* de-alloc memory on exit			*/
 #define	CALLED	0	/* is emacs a called subroutine? or stand alone */
 #define ADDCR	0	/* ajout d'un CR en fin de chaque ligne (ST520) */
@@ -121,9 +120,20 @@
 
 #define CHARCODE ASCII
 
-				/* size for general strings */
-#define NSTRING 1026
-#define FILENAMESZ 256
+				
+#define NSTRING 1026		/* size for general strings */
+#define NBINDS	220			/* max # of bound keys		*/
+#define NFILEN  256			/* Maximum file name (inc dirs) */
+#define NBUFN		 32			/* # of bytes, buffer name */
+#define NLINE		160			/* # of bytes, input line	*/
+#define NKBDM		256			/* # of strokes, keyboard macro */
+#define NPAT		128			/* # of bytes, pattern		*/
+#define	NLOCKS	100			/* max # of file locks active	*/
+#define	KBLOCK	250			/* sizeof kill buffer chunks	*/
+#define	NBLOCK	16			/* line block chunk size	*/
+#define	NVSIZE	10			/* max #chars in a var name	*/
+#define NMARKS	 4			/* number of marks must be po2  */
+#define MAXVARS 64
 
 typedef int   Vint;       /* set this to short int if it is more efficient */
 

@@ -15,6 +15,8 @@
 #define MREG	2
 
 #if	MOUSE
+#define HUGE	1000			/* Huge number			*/
+
 NOSHARE int	lastypos = HUGE;	/* Last mouse event row.	*/
 NOSHARE int	lastxpos = HUGE;	/* Last mouse event column.	*/
 NOSHARE int	lastmcmd = MNONE;	/* Last mouse command.		*/
@@ -34,8 +36,8 @@ Pascal movemd(f, n)
 
 	/* if anything has changed, reset the click count */
 	if (lastmcmd != MMOVE || lastypos!=ypos || lastxpos!=xpos)
-		nclicks = 0;
-	++nclicks;
+		pd_nclicks = 0;
+	++pd_nclicks;
 	lastwp = mousewindow(lastypos); 	/* remember least window */
 
 	/* reset the last position */
@@ -60,8 +62,8 @@ Pascal movemd(f, n)
 		upmode();
 
 	/* if we aren't off the end of the text, move the point to the mouse */
-	if ((lp=mouseline(wp, ypos)) != NULL) {
-		curwp->w_dotp = lp;
+	if ((lp=mouseline(wp, ypos)) != NULL)
+	{	curwp->w_dotp = lp;
 		curwp->w_doto = mouseoffset(wp, lp, xpos);
 	}
 
@@ -86,8 +88,8 @@ Pascal mregdown(f, n)
 
 	/* if anything has changed, reset the click count */
 	if (lastmcmd != MREG || lastypos != ypos || lastxpos != xpos)
-		nclicks = 0;
-	++nclicks;
+		pd_nclicks = 0;
+	++pd_nclicks;
 	lastwp = mousewindow(lastypos); 	/* remember least window */
 
 	/* reset the last position */
@@ -112,13 +114,13 @@ Pascal mregdown(f, n)
 		upmode();
 
 	/* if we aren't off the end of the text, move the point to the mouse */
-	if ((lp=mouseline(wp, ypos)) != NULL) {
-		curwp->w_dotp = lp;
+	if ((lp=mouseline(wp, ypos)) != NULL)
+	{	curwp->w_dotp = lp;
 		curwp->w_doto = mouseoffset(wp, lp, xpos);
 	}
 
 	/* perform the region function */
-	if (nclicks == 1)
+	if (pd_nclicks == 1)
 		return setmark(FALSE, 0);
 
 	g_lastflag &= ~CFKILL;
@@ -150,8 +152,8 @@ Pascal mregup(f, n)
 
 	/* if anything has changed, reset the click count */
 	if (lastmcmd != MREG || lastypos != ypos || lastxpos != xpos)
-		nclicks = 0;
-	++nclicks;
+		pd_nclicks = 0;
+	++pd_nclicks;
 	lastwp = mousewindow(lastypos); 	/* remember least window */
 
 	/* did we down click on a modeline? */
@@ -179,8 +181,8 @@ Pascal mregup(f, n)
 	curbp = wp->w_bufp;
 
 	/* if we aren't off the end of the text, move the point to the mouse */
-	if ((lp=mouseline(wp, ypos)) != NULL && nclicks < 3) {
-		curwp->w_dotp = lp;
+	if ((lp=mouseline(wp, ypos)) != NULL && pd_nclicks < 3)
+	{	curwp->w_dotp = lp;
 		curwp->w_doto = mouseoffset(wp, lp, xpos);
 	}
 
@@ -191,12 +193,13 @@ Pascal mregup(f, n)
 	}
 
 	/* perform the region function */
-	if (nclicks == 1) {
-		return(copyregion(FALSE, 0));
-	} else if (nclicks == 2) {
+	if (pd_nclicks == 1) 
+			return(copyregion(FALSE, 0));
+	else 
+	if (pd_nclicks == 2)
 		return(yank(FALSE, 1));
-	} else {
-		nclicks = 0;
+	else
+	{	pd_nclicks = 0;
 		return(TRUE);
 	}
 }

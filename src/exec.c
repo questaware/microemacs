@@ -87,9 +87,8 @@ int Pascal namedcmd(int f, int n)
 	int cc;
 
 	if (! scle)
-			/* prompt the user to type a named command */
-			/* and get the function name to execute */
-	  kfunc = getname(": ");
+															/* prompt the user to type a named command */
+	  kfunc = getname(" ");			/* and get the function name to execute */
 	else
 	{	char ebuffer[40];
 																					/* grab token and advance past */
@@ -288,15 +287,15 @@ int Pascal nextarg(const char * prompt, char * buffer, int size)
 
 
 
-static int common_return(BUFFER * bp)
+static int USE_FAST_CALL common_return(BUFFER * bp)
 	
 {	if (bp == NULL)
 	{ mlwrite(TEXT113);				/*	"Can not create macro" */
 	  return FALSE;
 	}
 														/* and make sure it is empty */
-	bclear(bp);
 	g_bstore = bp;
+	bclear(bp);
 	return TRUE;
 }
 
@@ -439,13 +438,13 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	{ LINE *lp;						/* pointer to line to execute */
 		char *ebuf = smalleline;	/* initial value of eline */
 		char *eline;				/* text of line to execute */
-		char * msg = NULL;
 		char tkn[NSTRING];	/* buffer to evaluate an expresion in */
 
   	WHBLOCK *whlist = NULL; /* ptr to !WHILE list */
 		WHBLOCK *scan = NULL;		/* ptr during scan */
 												    /* scan the buffer, building WHILE header blocks */
 		int nest_level = 0;
+		int msg = 0;
 		g_execlevel = 0;		/* clear IF level flags/while ptr */
 
 		for (lp = &bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; ) 
@@ -507,9 +506,9 @@ failexit:
 																	/* starting at the beginning of the buffer */
 		lp = &bp->b_baseline; 
 		while (1)
-		{	if (msg != NULL)
-			{ mlwrite(msg);
-				msg = NULL;
+		{	if (msg)
+			{ mlwrite(msg > 0 ? TEXT124 : TEXT126);
+				msg = 0;
 	      cc = FALSE;
 			}
 			if (ebuf != smalleline)
@@ -518,13 +517,13 @@ failexit:
 	    if (eexitflag || cc <= FALSE ||
 				  ((lp = lforw(lp))->l_props & L_IS_HD) != 0)
 				break;
-																	
+													/* allocate eline and copy macro line to it */
 		{	int dirnum;					/* directive index */
 			int linlen = lp->l_used+1;
 		  if (linlen < sizeof(smalleline))
 			  ebuf = smalleline;
 	    else 
-		  { ebuf = (char *)malloc(linlen);	/* allocate eline and copy macro line to it */
+		  { ebuf = (char *)malloc(linlen);
 		    if (ebuf == NULL)
 		    { cc = FALSE;
 		      break;
@@ -533,7 +532,7 @@ failexit:
 																						/* trim leading whitespace */
 		  eline = skipleadsp(strpcpy(ebuf, lp->l_text, linlen), linlen);
 																				   
-		  if (*eline == ';' || *eline == 0 ||		/* dump comments and blank lines */
+		  if (*eline == 0 || *eline == ';' ||		/* dump comments and blank lines */
 		  		*eline == '*')
 		    continue;
 
@@ -558,7 +557,7 @@ failexit:
 						break;
 																				/* and bitch if it's illegal */
 		    if (dirnum < 0)
-		    { msg = TEXT124;						/* "%%Unknown Directive" */
+		    { msg += 1;		    					/* "%%Unknown Directive" */
 		      continue;
 		    }
 		  }
@@ -614,7 +613,7 @@ failexit:
 							    break;
         
 							if (whtemp == NULL) 
-							{ msg = TEXT126;						/* "%%Internal While loop error" */
+							{ msg -= 1;				/* "%%Internal While loop error" */
 							  continue;
 							}
 																					    /* reset the line pointer back.. */
@@ -664,7 +663,7 @@ failexit:
 						      break;
 		        
 						  if (whtemp == NULL)
-						  { msg = TEXT126;						/* "%%Internal While loop error" */
+						  { msg -= 1;						/* "%%Internal While loop error" */
 						    continue;
 						  }
 																				  /* reset the line pointer back.. */

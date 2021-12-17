@@ -460,36 +460,27 @@ int Pascal wordcount(int notused, int n)
 
 #endif
 
-extern int g_txt_woffs;
+int USE_FAST_CALL getwtxt(int wh, char * buf, int lim, int from)
+	  														/* wh : B, F, G, K, N, S, W else whole line */
+{	wh -= 'W'-'@';
 
-char * Pascal getwtxt(int wh, char * buf, int lim)
-	  
-{ if (wh == 'B'-'@')
-    return getkill();
-  if (wh == 'N'-'@')
-    return curbp->b_fname;
-  if (wh == 'S'-'@' || wh == (ALTD | 'S'))
-    return pd_patmatch;
-
-	wh -= 'W'-'@';
-{ int offs = wh == 0 || wh == 'K'-'W' ? g_txt_woffs : 0;
+{ int offs = wh == 0 || wh == 'K'-'W' ? from : 0;
 	int lct = llength(curwp->w_dotp) - offs;
   if (lct > lim)
     lct = lim;
 
 { char * t = buf;
-  int	c;
+  int	ct = 0;
   while (--lct >= 0)
-  { c = lgetc(curwp->w_dotp, offs);
-    if (! isword(c) && t != buf && wh == 0)
+  { int c = lgetc(curwp->w_dotp, offs);
+    if (! isword(c) && ct > 0 && wh == 0)
       break;
     *t++ = c;
-    offs += 1;
+    ++offs;
+    ++ct;
   }
 
-  if (wh == 0)
-    g_txt_woffs = offs;
-
   *t = 0;
-  return buf;
+
+  return offs;
 }}}

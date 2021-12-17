@@ -260,7 +260,8 @@ forward-character        ^L
 goto-line                M-G
 goto-mark                M-^G
 goto-matching-fence      M-^F Goto a matching bracket, parenthesis, etc
-															If arg != 1 and on left brace use a right brace.
+															If arg <= 0 and on left brace use a right brace.
+															So ESC - ^T does this.
                          ^T
 grow-window              ^X^
                          ^XZ

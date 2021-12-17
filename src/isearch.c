@@ -232,7 +232,7 @@ int Pascal isearch(int n)
 		else
 		{ forwchar(TRUE, cpos+1);
 			cc = scanner(-1, 2);
-			if (cc)
+			if (cc > 0)
 				continue;
 			forwchar(TRUE, -(cpos+1));
 		}
@@ -252,7 +252,7 @@ sm:
 						/* direction to search					*/
 
 		cc = scanner(n, (c == IS_FORWARD) | 2);
-		if (!cc)
+		if (cc <= 0)
 			TTbeep(); /* Beep if search fails 			*/
 	}} /* for {;;} */
 }
@@ -263,7 +263,7 @@ sm:
 /* Subroutine to do incremental search.
  */
 
-int Pascal fisearch(int f, int n)
+int Pascal fisearch(int notused, int n)
 
 { /*char	pat_save[NPAT+1]; 				* Saved copy of the old pattern str */
 		Lpos_t save = *(Lpos_t*)&curwp->w_dotp;/* Save the current position */
@@ -294,9 +294,9 @@ int Pascal fisearch(int f, int n)
 
 
 
-int Pascal risearch(int f, int n)
+int Pascal risearch(int notused, int n)
 
-{ return fisearch(f, n ^ 0x80000000);
+{ return fisearch(n ^ 0x80000000, n ^ 0x80000000);
 }
 
 #endif

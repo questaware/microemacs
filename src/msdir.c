@@ -244,7 +244,7 @@ Bool match_fn_re_ic(Char * tlt,
 
 
 staticc Char * msd_relpath;
-staticc Char   msd_path_[FILENAMESZ+4] = "?/";
+staticc Char   msd_path_[NFILEN+4] = "?/";
 #define msd_path ((char*)&msd_path_[2])	/* printed path to current file */
 
 staticc Short g_pathend;          /* end of path part in msd_path (after /)*/

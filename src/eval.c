@@ -57,7 +57,6 @@ FALSE, /* EVCWLINE */		  /* */
 8,     /* EVHARDTAB */		/* default tab size */
 0,     /* EVHIGHLIGHT */	/* not in use */
 1,     /* EVHJUMP */		  /* horizontal jump size */
-1,     /* EVHSCROLL */		/* horizontal scrolling flag */
 0,		 /* EVINCLD */		/* not in use */
 0,     /* EVKEYCT */		  /* consec key ct */
 CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
@@ -80,16 +79,17 @@ UNDEF, /* EVSEARCH */
 0,     /* EVSEED */       /* random number seed */
 1,     /* EVSSAVE */      /* safe save flag */
 1,     /* EVSTATUS */			/* last command status */
+#if 0
 UNDEF, /* EVSTERM */ 	
 0,     /* EVUARG */				/* universal argument */
-0,		 /* EV_USESOFTAB */
 UNDEF, /* EVVERSION */	
 UNDEF, /* EVWINTITLE */
 UNDEF, /* EVWLINE */ 	
 UNDEF, /* EVWRAPHK */	
 UNDEF, /* EVWRITEHK */	
 0,     /* EVXPOS */			/* current column mouse is positioned to*/
-0,     /* EVYPOS */			/* current screen row	     "		*/
+0,     /* EVYPOS */			/* current screen row	*/
+#endif
 };
 
 //char * g_file_prof = NULL;
@@ -248,9 +248,9 @@ int USE_FAST_CALL stol(char * val)					/* convert a string to a numeric logical 
 				/* output integer as radix r */
 char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix)
 
-{
-	static const char hexdigits[] = "0123456789ABCDEF";
+{	static const char hexdigits[] = "0123456789ABCDEF";
   static char result[INTWIDTH+2];
+
 	memset(&result, ' ', INTWIDTH); 
 	result[INTWIDTH] = 0;
 //result[INTWIDTH+1] = 0;	
@@ -381,7 +381,7 @@ const char * Pascal gtfun(char * fname)/* evaluate a function */
 			           }}}
 #if DIACRIT
 		when UFSLOWER:setlower(arg1, arg2);
-				          return "";
+				          if (0)
 		when UFSUPPER:setupper(arg1, arg2);
 #endif
 		default:	    return "";
@@ -596,7 +596,6 @@ const char *Pascal USE_FAST_CALL gtenv(const char * vname)
 	  case EVDISCMD:  
 	  case EVDISINP:  
 	  case EVSSAVE:   
-	  case EVHSCROLL: 
 	  case EVDIAGFLAG:
 	  case EVMSFLAG:   return ltos(res);
 
@@ -776,8 +775,6 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  case EVWRAPHK:  ++hookix;
     case EVREADHK:  ++hookix;
   				  		    setktkey(&hooks[hookix], BINDFNC, value);
-
-	  when EVHSCROLL: lbound = 0;
 #if S_WIN32
 		when EVWINTITLE:setconsoletitle(value);
 #endif
@@ -857,7 +854,7 @@ int Pascal set_var(char var[NVSIZE+1], char * value)	/* set a variable */
 #define	TOKLBL	'*'	/* line label			*/
 #define	TOKSTR	'"'	/* quoted string literal	*/
 
-char getvalnull[] = "";
+const char getvalnull[] = "";
 
 				/* the oob checks are faulty */
 					/* find the value of a token */

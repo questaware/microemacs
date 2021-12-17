@@ -13,6 +13,117 @@
 
 static int g_s_cmt, g_ps_cmt;
 
+Paren_t paren;
+Paren_t g_sparen;
+
+int Pascal init_paren(const char * str,
+										  int len
+										 )
+{	Paren_t p = {0,};
+	int p_cmt = (curbp->b_langprops & BCPAS);
+	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL+BCPAS));
+	int s_cmt = (f_cmt							& BCSQL);
+	int c_cmt = (curbp->b_langprops & BCCOMT);
+		
+	p.olcmt = c_cmt ? '/' :
+								s_cmt ? '-' : 
+								p_cmt ? ')' : (char)-1;
+	p.complex = true;
+	p.sdir = 1;
+//p.in_mode = 0;
+//p.prev = 0;
+//p.nest = len < 0 ? 0 : 1;
+	if (len >= 0)
+		++p.nest;
+{	char nch = len <= 1 ? 0 : toupper(str[1]);
+	p.ch = toupper(*str);
+	
+{ char ch = p.ch;
+																						 /* setup proper matching fence */
+	switch (ch)
+	{
+#if CHARCODE == ASCII
+	  case '(':
+		case ')': ch ^= 1;
+							p.complex = false;
+		when '[':
+		case '{':
+		case ']': 
+		case '}': ch ^= 6;
+							p.complex = false;
+#else
+		when '[': ch = ']';
+							p.complex = false;
+		when '{': ch = '}';
+							p.complex = false;
+		when ']': ch = '[';
+							p.complex = false;
+		when '}': ch = '{';
+							p.complex = false;
+#endif
+		when '#': if			(len > 2 && nch == 'I' &&  str[2] == 'f')
+								;
+							else if (len > 2 && nch == 'E' && (str[2] =='n'|| str[2] =='l'))
+								p.sdir = -1;
+							else
+							{ p.nest = 0;
+								ch = 0;
+							}
+		when 'T':
+		case 'S':
+		case 'D':
+		case 'L': 
+							if (s_cmt)
+								return 0;
+		case 'B':
+							if (nch == 0 ||
+							   (ch == 'T' ? nch - 'H' : 
+								  ch == 'S' ? nch - 'E' :
+								  ch == 'B' ? nch - 'E' :
+															nch - 'O') ||		// DO, LOOP
+									ch == 'L' && len > 2 && toupper(str[2]) != 'O')
+								return 0;
+							ch = 'E';
+
+		when 'C':	if (len < 2)
+								return 0;
+
+							if (s_cmt + p_cmt)
+							{ if (nch != 'A')
+									return 0;
+								p.ch = 'B';
+								ch = 'E';
+							}
+
+		when 'E': 
+//						if (nch != 'L')
+							{ ch = 'T';
+								p.sdir = -1;
+							}
+//						else
+//						{ p.ch = 'T';
+//							p.fence = 'E';
+//							p.sdir = 1;
+//							return 1;
+//						}
+							
+		otherwise p.nest = 0;
+							p.sdir = 0;
+	}
+	p.nestclamped = p.nest;
+	p.fence = ch;
+	if (ch < p.ch)			// not complex
+	{	p.sdir = -1;
+		if (p_cmt)
+			p.olcmt = '(';
+			
+	}
+{	g_sparen = paren;
+	paren = p;	
+	return p.sdir;
+}}}}
+
+
 
 int Pascal setcline(void) 			/* get the current line number */
 
@@ -667,109 +778,6 @@ int Pascal writemsg(int notused, int n)
 	return status;
 }
 
-Paren_t paren;
-
-int Pascal init_paren(const char * str,
-										  int len
-										 )
-{	int p_cmt = (curbp->b_langprops & BCPAS);
-	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL+BCPAS));
-	int s_cmt = (f_cmt							& BCSQL);
-	int c_cmt = (curbp->b_langprops & BCCOMT);
-		
-	paren.olcmt = c_cmt ? '/' :
-								s_cmt ? '-' : 
-								p_cmt ? ')' : (char)-1;
-	paren.sdir = 1;
-	paren.nest = len < 0 ? 0 : 1;
-	paren.in_mode = 0;
-	paren.prev = 0;
-	paren.complex = false;
-	paren.ch = toupper(*str);
-	
-{ char ch = paren.ch;
-																						 /* setup proper matching fence */
-	switch (ch)
-	{
-#if CHARCODE == ASCII
-	  case '(':
-		case ')': ch ^= 1;
-		when '[':
-		case '{':
-		case ']': 
-		case '}': ch ^= 6;
-#else
-		when '[': ch = ']';
-		when '{': ch = '}';
-		when ']': ch = '[';
-		when '}': ch = '{';
-#endif
-		when '#': paren.complex = true;
-							if			(len > 2 && str[1] == 'i' &&  str[2] == 'f')
-								;
-							else if (len > 2 && str[1] == 'e' && (str[2] =='n'|| str[2] =='l'))
-								paren.sdir = -1;
-							else
-							{ paren.nest = 0;
-								ch = 0;
-							}
-		when 'T':
-		case 'S':
-		case 'D':
-		case 'L': 
-							if (s_cmt)
-								return 0;
-		case 'B':
-							if (len < 2)
-								return 0;
-							if ((ch == 'T' ? toupper(str[1]) - 'H' : 
-									 ch == 'S' ? toupper(str[1]) - 'E' :
-									 ch == 'B' ? toupper(str[1]) - 'E' :
-															 toupper(str[1]) - 'O') ||
-									 ch == 'L' && len > 2 && toupper(str[2]) != 'O')
-								return 0;
-							paren.complex = true;
-							paren.fence = 'E';
-							return paren.sdir;
-
-		when 'C':	if (len < 2)
-								return 0;
-
-							if (s_cmt + p_cmt)
-							{ if (toupper(str[1]) != 'A')
-									return 0;
-								paren.complex = true;
-								paren.ch = 'B';
-								paren.fence = 'E';
-								return paren.sdir;					
-							}
-
-		when 'E': paren.complex = true;
-//						if (toupper(str[1]) != 'L')
-							{ paren.fence = 'T';
-								paren.sdir = -1;
-								return paren.sdir;
-							}
-//						else
-//						{ paren.ch = 'T';
-//							paren.fence = 'E';
-//							paren.sdir = 1;
-//							return 1;
-//						}
-							
-		otherwise paren.nest = 0;
-							paren.sdir = 0;
-	}
-	paren.fence = ch;
-	if (ch < paren.ch)			// not complex
-	{	paren.sdir = -1;
-		if (p_cmt)
-			paren.olcmt = '(';
-			
-	}
-	return paren.sdir;
-}}
-
 #if 0
 	 CMT0 				after the first /
 	 CMT
@@ -784,6 +792,7 @@ int Pascal scan_paren(char ch)
 	              g_clring & (BCCOMT+BCSQL) ? '/' : 257;
 	int end_cmt = g_clring & BCPAS ? ')' : '/';
 	int mode = paren.in_mode;
+	int dir = paren.sdir;
 
 	do
 	{ if (mode & (Q_IN_CMT + Q_IN_CMT0))
@@ -802,15 +811,15 @@ int Pascal scan_paren(char ch)
 			else // if (mode & Q_IN_CMT0)
 			{ mode = ch == '*'													  ? Q_IN_CMT 					 :
 							 ch == paren.olcmt &&
-							 ch == paren.prev  && paren.sdir >= 0 ? Q_IN_CMT + Q_IN_EOL : 0;
+							 ch == paren.prev  && dir >= 0 ? Q_IN_CMT + Q_IN_EOL : 0;
 			} 			
 		} 
 		else if ((mode & (Q_IN_STR + Q_IN_CHAR)) != 0)
 		{ if			(ch == '\n' && paren.olcmt != '-')
 				mode = 0;
-			else if ((mode & Q_IN_ESC) && paren.sdir >= 0)
+			else if ((mode & Q_IN_ESC) && dir >= 0)
 				mode &= ~Q_IN_ESC;
-			else if (ch == '\\' && paren.sdir >= 0)
+			else if (ch == '\\' && dir >= 0)
 				mode |= Q_IN_ESC;
 			else if ((mode & Q_IN_STR) && ch == '"' ||
 							 (mode & Q_IN_CHAR) && ch == '\'') 
@@ -822,26 +831,39 @@ int Pascal scan_paren(char ch)
 						 ch == '"'		 ? Q_IN_STR	:
 						 ch == beg_cmt ? beg_cmt == '#' ? Q_IN_CMT + Q_IN_EOL : Q_IN_CMT0 :
 						 ch == paren.olcmt ? Q_IN_CMT0 :
-						 ch == '\\' && paren.sdir < 0 
+						 ch == '\\' && dir < 0 
 												&& (paren.prev == '\'' || paren.prev == '"')
 													? paren.prev == '"' ? Q_IN_STR : Q_IN_CHAR : 0;
 		}
 
 		if (mode == 0)
-		{
+#if 0
+    {   if (ch == paren.ch)
+        { /*loglog2("INC %d %s", paren.nest, str);*/
+          ++paren.nest;
+          ++paren.nestclamped;
+//        if (paren.nestclamped <= 0)
+//          paren.nestclamped = 1;
+        }
+        if (ch == paren.fence)
+        { /*loglog2("DEC %d %c", paren.nest, ch);*/
+          --paren.nest;	/* srchdeffile needs relative and clamped nestings */
+          --paren.nestclamped;
+        }
+    }
+#else
+		{ int adj = 0;
 			if (ch == paren.ch)
-			{ 
-				++paren.nest;
-				++paren.nestclamped;
-				if (paren.nestclamped <= 0)
-					paren.nestclamped = 1;
-			}
+				++adj;
 			if (toupper(ch) == paren.fence)
-			{ 
-				--paren.nest; 			/* srchdeffile needs relative and clamped nestings */
-				--paren.nestclamped;
-			}
+				--adj;
+										/* -ve srchdeffile needs relative and clamped nestings */
+			paren.nest += adj;
+			paren.nestclamped += adj;
+//		if (paren.nestclamped <= 0)
+//			paren.nestclamped = 1;
 		}
+#endif
 	} while (0);
 
 /* if (mode & Q_IN_EOL)
@@ -866,9 +888,7 @@ int Pascal scan_par_line(LINE * lp)
 												 * the first / of / / */
 int Pascal USE_FAST_CALL scan_for_sl(LINE * lp)
 
-{	Paren_t sparen = paren;
-	
-	init_paren("{",0);
+{	init_paren("{", 0);
 
 {	int cplim = lp->l_used;
 	int ix;
@@ -876,7 +896,7 @@ int Pascal USE_FAST_CALL scan_for_sl(LINE * lp)
 	for (ix = -1; ++ix < cplim && !(scan_paren(lp->l_text[ix]) & Q_IN_EOL); )
 		;
 
-	paren = sparen;
+	paren = g_sparen;
 	return ix == cplim ? ix : ix - 1;
 }}
 
@@ -938,24 +958,22 @@ typedef struct
 	  1: normal fence
 	  2: else fence
  */
+static
 int got_f_key(fdcr * fd, int tabsz)
 
 { const char * start = curwp->w_dotp->l_text-1;
 	const char * pos = &start[curwp->w_doto+1];
 	int choffs = 0;
 
-	if (g_ps_cmt)
-		while (++start < pos && *start <= ' ')
-			;
-	else
-	{	while (++start < pos && *start <= ' ')
-		{ 
-			choffs = choffs + 1;
-			if (*start == '\t')
-				choffs = (choffs + tabsz - 1) & -tabsz;
-		}
+	while (++start < pos && *start <= ' ')
+	{ 
+		choffs = choffs + 1;
+		if (*start == '\t')
+			choffs = (choffs + tabsz - 1) & -tabsz;
+	}
 
-		if (choffs < 6)
+	if (! g_ps_cmt)
+	{	if (choffs < 6)
 		{ if (choffs < 5)
 				 return -3;
 			choffs = -1;
@@ -1071,16 +1089,17 @@ int got_f_key(fdcr * fd, int tabsz)
 
 																/* the cursor is moved to a matching fence */
 int Pascal getfence(int f, int n)
-				/* int f, n;		** not used */
+				/* int f;		** not used */
 { int tabsz = curbp->b_tabsize;
 	int c_cmt = (curbp->b_langprops & BCCOMT);
 	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL));
 	int p_cmt = (curbp->b_langprops & BCPAS);
 	int s_cmt = (f_cmt							& BCSQL);
+	int ps_cmt = s_cmt+p_cmt;
 	fdcr fd;
 
+	g_ps_cmt = ps_cmt;
 	g_s_cmt = s_cmt;
-	g_ps_cmt = s_cmt+p_cmt;
 
 {	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;						/* original line pointer */
 	int rem = llength(s.curline) - s.curoff - 1;
@@ -1095,12 +1114,9 @@ int Pascal getfence(int f, int n)
 		f_cmt = 0;
 		if (rem < 2)
 			return FALSE;
-		if (rem > 3 && lstr[1] == 'e' && lstr[4] == 'e' && 
-									 lstr[2] == 'l' && lstr[3] == 's')
-			forwbychar(1);
 	}
 
-	if (rem >= 0 && f_cmt != 0 && toupper(lstr[0])=='I' && toupper(lstr[1]) == 'F')
+	if (rem >= 0 && f_cmt && toupper(lstr[0])=='I' && toupper(lstr[1]) == 'F')
 	{ int ct = 1000;
 	/*mbwrite("looking for THEN");*/
 		while (--ct > 0 && nextword(1, 1))
@@ -1118,22 +1134,23 @@ int Pascal getfence(int f, int n)
 {	int len = llength(curwp->w_dotp) - curwp->w_doto;
 	int dir = init_paren(lstr,len);
   int ch;
-	Paren_t sparen = paren;
 	int rc = true;
 	int stt_ko = -1;
 	int lastko = -1;
 
-	if (n != 1 && paren.fence == '}')
-		dir = init_paren("}",0); 
+	if (n <= 0)
+		if (paren.complex == 0)
+			dir = init_paren(&paren.fence,0);
+		else
+			dir = -dir;
 	
 	if (s_cmt && dir == 0 && paren.complex == 0)	// search backwards for begin
 	{ paren.complex = true;
-	  paren.sdir = -1;
-	  dir = -1;
-	  paren.nest = 1;
 	  paren.ch = 'E';
 	  paren.fence = 'B';
 		fd.blk_type = paren.fence;
+	  paren.nest = 1;
+	  dir = -1;
 	}
 
 	while (paren.complex)						//once only
@@ -1143,53 +1160,54 @@ int Pascal getfence(int f, int n)
 			break;
 		}
 			
-		if (s_cmt + p_cmt == 0 && toupper(lstr[ix]) == 'E' &&
-				wordmatch(ix,"ELSE") + wordmatch(ix,"ELSEIF"))
-		{ /*mbwrite("GotELSEIF");*/
-			fd.blk_type = 'T';
-			paren.ch = 'T';
-			paren.fence = 'E';
-			paren.sdir = 1;
-			dir = 1;
-		}
-		else if (f_cmt + p_cmt != 0)											// Fortran or Pascal or SQL
-		{ char ch = toupper(lstr[1]);
-			fd.blk_type = toupper(lstr[0]);
-			
-			if (fd.blk_type == 'E' && ch == 'N')   // END DO, END LOOP, etc
-			{ int ix = len <= 3 ? 0 : lstr[3] == ' ' ? 4 : 3;
-				char fch = toupper(lstr[ix]);
-
-				rc = wordmatch(0,"END");
-
-			  if			(s_cmt || p_cmt)
-			  	paren.fence = 'B';
-			  else if (ix <= 0)
-			  	;
-				else if	(wordmatch(ix,fch == 'D' ? "DO" :
-														  fch == 'L' ? "LOOP" : 
-														  fch == 'S' ? "SELECT" : "IF"))
-				  paren.fence = fch == 'I' ? 'B' : fch;
-				fd.blk_type = paren.fence;
+		if (ps_cmt)													// Fortran or Pascal or SQL
+		{	if (toupper(lstr[ix]) == 'E' &&
+					wordmatch(ix,"ELSE") + wordmatch(ix,"ELSEIF"))
+			{ /*mbwrite("GotELSEIF");*/
+				fd.blk_type = 'T';
+				paren.ch = 'T';
+				paren.fence = 'E';
+				dir = 1;
 			}
-			else
-			{ if (fd.blk_type == 'T' && ch != 'H' ||
-						fd.blk_type == 'C' && ch != 'A' ||
-						fd.blk_type == 'B' && ( (ch != 'E') || s_cmt + p_cmt == 0 ) ||
-						fd.blk_type == 'S' && ch != 'E' ||
-						fd.blk_type == 'D' && ch != 'O' ||
-						fd.blk_type == 'L' && ch != 'O')
-					rc = FALSE;
-				if (fd.blk_type == 'C')
-					fd.blk_type = 'B';
+			else		
+			{ char ch = toupper(lstr[1]);
+				fd.blk_type = toupper(lstr[0]);
+				
+				if (fd.blk_type == 'E' && ch == 'N')   // END DO, END LOOP, etc
+				{ int ix = len <= 3 ? 0 : lstr[3] == ' ' ? 4 : 3;
+					char fch = toupper(lstr[ix]);
+	
+					rc = wordmatch(0,"END");
+	
+				  if			(ps_cmt)
+				  	paren.fence = 'B';
+				  else if (ix <= 0)
+				  	;
+					else if	(wordmatch(ix,fch == 'D' ? "DO" :
+															  fch == 'L' ? "LOOP" : 
+															  fch == 'S' ? "SELECT" : "IF"))
+					  paren.fence = fch == 'I' ? 'B' : fch;
+					fd.blk_type = paren.fence;
+				}
+				else
+				{ if (fd.blk_type == 'T' && ch != 'H' ||
+							fd.blk_type == 'C' && ch != 'A' ||
+							fd.blk_type == 'B' && ( (ch != 'E') || ps_cmt == 0 ) ||
+							fd.blk_type == 'S' && ch != 'E' ||
+							fd.blk_type == 'D' && ch != 'O' ||
+							fd.blk_type == 'L' && ch != 'O')
+						rc = FALSE;
+					if (fd.blk_type == 'C')
+						fd.blk_type = 'B';
+				}
 			}
 		}
-	  if (f_cmt)
+	  if (f_cmt > s_cmt)
 		{ char * start = lgets(s.curline, 0);
 			char * ls = start + s.curoff;
 			lastko = 0;
 
-			while (start < ls && (*start <= ' ' || f_cmt > s_cmt && lastko == 5))
+			while (start < ls && (*start <= ' ' || lastko == 5))
 			{ 
 				lastko = lastko + 1;
 				if (*start++ == '\t')
@@ -1199,6 +1217,8 @@ int Pascal getfence(int f, int n)
 		}
 		break;
 	}
+
+	paren.sdir = dir;
 
 /*mbwrite("Lkg");
 	mbwrite(&fd.blk_type);*/
@@ -1226,7 +1246,7 @@ int Pascal getfence(int f, int n)
 			&& in_range(toupper(lp->l_text[offs-1]),'A','Z'))// inside word
 				continue;
 
-		if (s_cmt + p_cmt && ch == 'C')
+		if (ps_cmt && ch == 'C')
 				ch = 'B';
 
 		if (scan_paren(ch) == 0 && paren.complex)
@@ -1242,7 +1262,7 @@ int Pascal getfence(int f, int n)
 				if			(c_cmt != 0 && llength(lp) - offs > 2 &&
 								 (toupper(w[1]) == 'I' && toupper(w[2]) == 'F' 
 							 || toupper(w[1]) == 'E' && toupper(w[2]) == 'N'))
-				{ paren.nest += (2*(toupper(w[1]) == 'I')-1)*paren.sdir;	// do it
+				{ paren.nest += (2*(toupper(w[1]) == 'I')-1)*dir;				// do it
 				/*buf[0] = 'f' + paren.nest;
 					mbwrite(buf);*/
 				}
@@ -1280,7 +1300,7 @@ int Pascal getfence(int f, int n)
 			}
 		}
 	}	/* while */
-												/* if count is zero, we have a match, move the sucker */
+											/* if count is zero, we have a match, move the sucker */
 	if (paren.nest != 0)
 		rc = FALSE;
 	else
@@ -1306,7 +1326,7 @@ int Pascal getfence(int f, int n)
 		}
 	}
 
-  paren = sparen;
+  paren = g_sparen;
 
 beeper:																/* restore the current position */
 	if (!rc)

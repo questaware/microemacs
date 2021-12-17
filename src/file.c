@@ -579,7 +579,7 @@ int Pascal readin(char const * fname, int props)
   if (cc != 0)
     goto out;
 
-  init_paren("",0);
+  init_paren("(",0);
 	
 	if (ins)
 	{ 				                          /* back up a line and save the mark here */
@@ -607,7 +607,6 @@ int Pascal readin(char const * fname, int props)
 	  bp->b_flag |= MDDIR;
 	}
 
-	paren.sdir = 1;
 	cc = FIOSUC;
 //sp_langprops = bp->b_langprops & BCCOMT;
 	while (cc == FIOSUC)

@@ -82,7 +82,6 @@ NOSHARE char lastmesg[NCOL+2] = ""; 	/* last message posted		*/
 NOSHARE int(Pascal *lastfnc)(int, int);/* last function executed	*/
 NOSHARE int eexitflag = FALSE;	/* EMACS exit flag		*/
 NOSHARE int eexitval = 0; 	/* and the exit return value	*/
-/*NOSHARE int nclicks = 0;		** cleared on any non-mouse event*/
 
 
 /* uninitialized global definitions */

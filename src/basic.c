@@ -73,9 +73,10 @@ int Pascal gotoeol(int notused, int n)
  */
 int Pascal nextch(Lpos_t * lpos, int dir)
 
-{	char c = '\n';
-  LINE * lp = lpos->curline;
+{ LINE * lp = lpos->curline;
   int	off = lpos->curoff;
+	int adj = 0;
+	char c = '\n';
   int ct = dir == 0 ? 1 : dir;
 
   if (dir >= FORWARD)
@@ -84,7 +85,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	      c = lgetc(lp, off++);					/* get the char */
 	    else
 	    { lp = lforw(lp);	/* skip to next line */
-	      lpos->line_no += 1;
+	      adj += 1;
 	      off = 0;
 			}
     }
@@ -94,13 +95,14 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	  { if (off != 0)
 				c = lgetc(lp, --off);
 	    else
-			{	lpos->line_no -= 1;
+			{	adj -= 1;
 				lp = lback(lp);
 	      off = llength(lp);
 	    }
 		}
   }
   lpos->curoff = off;
+	lpos->line_no += adj;
   lpos->curline = lp;
   return lp->l_props & L_IS_HD ? -1 : c & 0xff;
 }

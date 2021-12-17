@@ -80,8 +80,8 @@ Vint bin_unit_len;		/* secondary result */
 Vint binary(Map map, Byte * table)
 
 { Byte * keyfld = &table[map->format.key_offs];
-  register Vint low = 0;		/* search limit is entire list */
-  register Vint uppp1 = map->curr_mult;
+  Vint low = 0;		/* search limit is entire list */
+  Vint uppp1 = map->curr_mult;
 #if DO_SRIAL
   if (map->format.key_type == T_DOMCHAR0)		/* not binary */
   { bin_unit_len = 1;

@@ -216,10 +216,7 @@ BUFFER *Pascal getdefb()	/* get the default buffer for a use or kill */
  */
 int Pascal usebuffer(int f, int n)
 {
-	BUFFER *bp = getdefb();	/* temporary buffer pointer */
-                					/* get the buffer name to switch to */
-				
-	bp = getcbuf(TEXT24, bp ? bp->b_bname : "main", TRUE);
+	BUFFER * bp = getcbuf(TEXT24, TRUE);
 							/* "Use buffer" */
 	if (!bp)
 		return ABORT;
@@ -330,9 +327,7 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
  */
 int Pascal killbuffer(int f, int n)
 
-{ BUFFER * nxt_bp = getdefb();
-					                    			/* get the buffer name to kill */
-	BUFFER * bp = getcbuf(TEXT26, nxt_bp ? nxt_bp->b_bname : "main", FALSE);
+{	BUFFER * bp = getcbuf(TEXT26, FALSE);
 				             /* "Kill buffer" */
 	flush_typah();
 

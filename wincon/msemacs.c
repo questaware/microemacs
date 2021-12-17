@@ -14,7 +14,7 @@ extern void flagerr(const char * fmt);
 
 HANDLE  g_ConsOut;                   /* Handle to the console */
 
-CONSOLE_SCREEN_BUFFER_INFO csbiInfo;   /* Console information */
+CONSOLE_SCREEN_BUFFER_INFO g_csbi;   /* Console information */
 //CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
 //CONSOLE_CURSOR_INFO        ccInfo;
 
@@ -56,7 +56,7 @@ void init_wincon()
     flagerr("SCMO %d");
 #endif
 
-	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
+	GetConsoleScreenBufferInfo( g_ConsOut, &g_csbi );
 //GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfoO );
 
 	SetConsoleTextAttribute(g_ConsOut, BG_GREY);
@@ -71,7 +71,7 @@ void Pascal tcapeeol()
 { COORD     Coords;
   Coords.Y = ttrow;
   Coords.X = ttcol;
-{ int sz = csbiInfo.dwSize.X-ttcol;
+{ int sz = g_csbi.dwSize.X-ttcol;
 	DWORD     Dummy;
   
   FillConsoleOutputCharacter(g_ConsOut, ' ',sz,Coords,&Dummy );
@@ -164,18 +164,18 @@ void Pascal setconsoletitle(char * title)
 
 void Pascal tcapsetsize(int wid, int dpth, int clamp)
 
-{	int decw = csbiInfo.dwSize.X - wid;
-	int decd = csbiInfo.dwSize.Y - dpth;
+{	int decw = g_csbi.dwSize.X - wid;
+	int decd = g_csbi.dwSize.Y - dpth;
 	if (decd < 0)
 		decd = 0;
 	if (decw < 0)
 		decw = 0;
 
 	if (--clamp > 0 && decw + decd > 0)			// Must be done twice
-	{ decw = csbiInfo.dwSize.X - decw - 1;
+	{ decw = g_csbi.dwSize.X - decw - 1;
 		if (decw < 0)
 			decw = -decw;
-		tcapsetsize(decw, csbiInfo.dwSize.Y - decd - 1, 0);
+		tcapsetsize(decw, g_csbi.dwSize.Y - decd - 1, 0);
 	}
 {
 #if 0
@@ -198,7 +198,7 @@ void Pascal tcapsetsize(int wid, int dpth, int clamp)
 // HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
 // SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 
-	GetConsoleScreenBufferInfo( h, &csbiInfo );
+	GetConsoleScreenBufferInfo( h, &g_csbi );
 
 																	// set the screen buffer to be big enough
 { int rc = SetConsoleWindowInfo(h, 1, &rect);
@@ -262,54 +262,58 @@ void Pascal tcapscreg(row1, row2)
 #endif
 
 
-void Pascal ttscupdn(n)                  /* direction the window moves */
-        int   n;   
+static
+void Pascal ttscup(int maxx, int maxy)/* direction the window moves*/
+
 { CHAR_INFO ci;
 	SMALL_RECT rect;
 	COORD doo;
-  doo.Y = 0;
+  doo.Y = 0; // -1 ???;
   doo.X = 0;
   rect.Top = 0;
   rect.Left = 0;
-  rect.Right = csbiInfo.dwSize.X;
-  rect.Bottom = csbiInfo.dwSize.Y;
+  rect.Right = maxx;
+  rect.Bottom = maxy + 1;
   
-  if (n < 0)
-    rect.Top += n;
-  else 
-  { rect.Bottom += n;
-    doo.Y -= n;
-  }
-
   ci.Char.AsciiChar = ' ';
   ci.Attributes = BG_GREY;
     
-  if (ScrollConsoleScreenBufferA( g_ConsOut, &rect, null, doo, &ci) == 0)
+{ int cc = ScrollConsoleScreenBufferA( g_ConsOut, &rect, null, doo, &ci);
+#if _DEBUG
+	if (cc == 0)
     tcapbeep();
-}
+#endif
+}}
 
 //------------------------------------------------------------------------------
 
 void Pascal ttputc(unsigned char ch) /* put character at the current position in
 														   		      current colors */
-{			/* if its a newline, we have to move the cursor */
-  unsigned long  Dum;
+{	HANDLE cout = g_ConsOut;
+
+/*GetConsoleScreenBufferInfo( cout, &ccInfo );*/
+	GetConsoleScreenBufferInfo( cout, &g_csbi );
+
+{ unsigned long  Dum;
 #if VS_CHAR8
 #define gch (char)ch
 #else
 	wchar_t gch = ch;
 #endif
+																		/* write char to screen with current attrs */
+  WriteConsoleOutputCharacter(cout, &gch,1, g_csbi.dwCursorPosition, &Dum);
 
-/*GetConsoleScreenBufferInfo( g_ConsOut, &ccInfo );*/
-	GetConsoleScreenBufferInfo( g_ConsOut, &csbiInfo );
 /* ttcol = col;*/
-{	int row = csbiInfo.dwCursorPosition.Y;
-  int col = csbiInfo.dwCursorPosition.X + 1;
+{	int row = g_csbi.dwCursorPosition.Y;
+  int col = g_csbi.dwCursorPosition.X + 1;
 
   if (ch != '\n' && ch != '\r')
   { if (ch != '\b')
-    { if (col >= csbiInfo.dwSize.X)
-      { mlwrite("%pRow %d Col %d Lim %d", ttrow, col, csbiInfo.dwSize.X);
+    { if (col >= g_csbi.dwSize.X)
+    	{
+#if _DEBUG
+        mlwrite("%pRow %d Col %d Lim %d", ttrow, col, g_csbi.dwSize.X);
+#endif
 				return;
       }
     }
@@ -322,18 +326,17 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
   else
   { col = 0;
   	++row;
-    if (row >= csbiInfo.dwSize.Y)
+    if (row >= g_csbi.dwSize.Y)
     { --row;
-    	ttscupdn(1);                 /* direction the window moves */
+//   	ttscup(g_csbi.dwSize.X, g_csbi.dwSize.Y);	/* direction the window moves*/
     }
+	  g_csbi.dwCursorPosition.Y = row;
   }
-									/* write char to screen with current attrs */
-  WriteConsoleOutputCharacter(g_ConsOut, &gch,1, csbiInfo.dwCursorPosition, &Dum);
-  csbiInfo.dwCursorPosition.X = col;
+
+  g_csbi.dwCursorPosition.X = col;
 //ttrow = row;
-  csbiInfo.dwCursorPosition.Y = row;
-  SetConsoleCursorPosition( g_ConsOut, csbiInfo.dwCursorPosition);
-}}
+  SetConsoleCursorPosition( cout, g_csbi.dwCursorPosition);
+}}}
 
 
 
@@ -348,8 +351,8 @@ int Pascal tcapbeep()
 
 void Pascal tcapopen()
 
-{ int plen = csbiInfo.srWindow.Bottom-csbiInfo.srWindow.Top+1;
-  int pwid = csbiInfo.srWindow.Right -csbiInfo.srWindow.Left+1;
+{ int plen = g_csbi.srWindow.Bottom-g_csbi.srWindow.Top+1;
+  int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+1;
 
   newdims(pwid, plen);
 	setMyConsoleIP();
@@ -364,7 +367,7 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 { 									/* build the attribute byte and setup the screen pointer */
 	SC_CHAR buf[NCOL];
 	WORD 		cuf[NCOL];
-	const SC_WORD sclen = csbiInfo.dwSize.X >= 148 ? 148 : csbiInfo.dwSize.X;
+	const SC_WORD sclen = g_csbi.dwSize.X >= 148 ? 148 : g_csbi.dwSize.X;
 	unsigned long n_out;
 	WORD attr = color;
 

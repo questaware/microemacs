@@ -183,26 +183,6 @@ union REGS {
 # define DIRSEPCHAR	'/'
 #endif
 
-					/*	internal constants	*/
-#define NBINDS	210			/* max # of bound keys		*/
-#if AOSVS
-# define NFILEN 80			/* # of bytes, file name	*/
-#else
-# define NFILEN 256
-#endif
-#define NBUFN	48			/* # of bytes, buffer name	*/
-#define NLINE	160			/* # of bytes, input line	*/
-#define	NSTRING	1026			/* # of bytes, string buffers	*/
-#define NKBDM	256			/* # of strokes, keyboard macro */
-#define NPAT	128			/* # of bytes, pattern		*/
-#define HUGE	1000			/* Huge number			*/
-#define	NLOCKS	100			/* max # of file locks active	*/
-#define	KBLOCK	250			/* sizeof kill buffer chunks	*/
-#define	NBLOCK	16			/* line block chunk size	*/
-#define	NVSIZE	10			/* max #chars in a var name	*/
-#define NMARKS	 2			/* number of marks must be po2  */
-#define MAXVARS 64
-
 #if	S_UNIX5 | S_HPUX | S_BSD | S_XENIX
 # define PATHCHR ':'
 #else

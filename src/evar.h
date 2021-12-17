@@ -36,7 +36,6 @@ NOSHARE const char * g_envars[] = {
 	"hardtab",		/* current hard tab size */
 	"highlight",	/* highlighting string */
 	"hjump",			/* horizontal screen jump size */
-	"hscroll",		/* horizontal scrolling flag */
 	"incldirs",		/* directories to search */
 	"keycount",		/* consecutive times key has been pressed */
 	"kill", 			/* kill buffer (read only) */
