@@ -187,7 +187,6 @@ case-word-capitalize     M-C  Make the first letter of word upper case
 case-word-lower          M-L
 case-word-upper          M-U
 change-file-name         ^XN  Change the file name of the current buffer
-clear-and-redraw         M-^L
 clear-message-line
 copy-region              ^XC  Copy the region into the n.th kill buffer.
 copy-word                A-W  Copy the word into the n.th kill buffer.
@@ -317,7 +316,10 @@ query-replace-string     ^R   An illegal response shows legal choices
 quick-exit               M-Z
 quote-character          ^Q   Take the following keypress as a letter
 read-file                     Clear the current buffer and read in a file
-redraw-display           ^L   Redraw with current position in middle of buffer
+redraw         					 ^L		Redraw
+															With an arg 0   : current line at centre
+															With an arg +ve : current line on line n	
+															With an arg -ve : current line on line from bottom.
 remove-mark
 replace-string           M-R
 resize-window            ^XW
@@ -343,7 +345,7 @@ search-incls             M-FNP  Search for a define,variable through C++ include
 				offered to append new directories to $incldirs.
 
 search-reverse           M-S
-select-buffer                 Show the buffer in the current window
+select-buffer            ^XB  Show the buffer in the current window
 set                      ^XA  Set a variable
 set-encryption-key       M-E	Per buffer; 
                               For all encryption keys pressing and releasing the

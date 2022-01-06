@@ -39,7 +39,6 @@ const NBIND names[] =
 	{"case-word-lower",			lowerword},
 	{"case-word-upper",			upperword},
 	{"change-file-name",		filename},
-	{"clear-and-redraw",		refresh},
 	{"clear-message-line",	clrmes},
 	{"copy-region",					copyregion},
 	{"copy-word",						copyword},
@@ -205,7 +204,7 @@ const NBIND names[] =
 #endif
 	{"quote-character",			quote},
 	{"read-file",						fileread},
-	{"redraw-display",			reposition},
+	{"redraw",							refresh},
 	{"remove-mark",					remmark},
 	{"replace-string",			sreplace},
 	{"resize-window",				resize},

@@ -202,13 +202,13 @@ int  tgetc()
         if (--pd_kbdrep <= 0)
           break;
       }
-			lastkey = (int)g_kbdm[pd_kbdrd-2];
-      return lastkey;
+			pd_lastkey = (int)g_kbdm[pd_kbdrd-2];
+      return pd_lastkey;
     }
 					/* at the end of last repetition? */
 		g_execlevel = 0;					/* weak code ! */
     pd_kbdrd = 0;							/* mode STOP; */
-//	lastkey = g_slastkey;
+//	pd_lastkey = g_slastkey;
 		g_ll = g_sll;
     strcpy(pat,g_savepat);
 #if VISMAC == 0
@@ -216,23 +216,23 @@ int  tgetc()
 #endif
   }
 
-  lastkey = ttgetc();	   				/* fetch a character from the terminal driver */
+  pd_lastkey = ttgetc();	   				/* fetch a character from the terminal driver */
 													  	 
   if (g_kbdwr > 0)		/* record it for $lastkey */
   {//char buf[30];
     if (g_kbdwr > NKBDM)				/* don't overrun the buffer */
       TTbeep();
 		else
-    	g_kbdm[(++g_kbdwr)-2] = lastkey;
+    	g_kbdm[(++g_kbdwr)-2] = pd_lastkey;
 #if _DEBUG && 0
 	{ char buf[40];
-	  sprintf(buf,"Rec at %d %x",g_kbdwr-2, lastkey);
+	  sprintf(buf,"Rec at %d %x",g_kbdwr-2, pd_lastkey);
 	  mbwrite(buf);
 	}
 #endif
   }
 
-  return lastkey;
+  return pd_lastkey;
 }
 
 /*	getkey: Get one keystroke. The only prefixs legal here
@@ -495,21 +495,23 @@ int g_chars_since_ctrl;
 //int gs_keyct;
 
 static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
-	  
+
 { int llix = -1;
   int llcol = -1;
+	int cc = TRUE;
   int fulllen = 0;    /* maximum buffer position */
   int cpos = 0;
-  char * autostr = "";
+	int redo = 0;
 #if S_MSDOS == 0
 	int twid = FALSE;
 #endif
+  char * autostr = "";
   int woffs = curwp->w_doto;
-	int redo = 0;
 //int plain = gs_type - CMP_COMMAND;
   
   buf[0] = 0;
 
+  ++g_cursor_on;
   g_chars_since_ctrl = 1000;
 //gs_keyct = 0;
   
@@ -558,14 +560,14 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
                               /* if they hit the line terminate, wrap it up */
     if (ch == sterm)
     { mlerase();                  /* clear the message line */
-      if (buf[0] != 0)
-        break;
-                          /* if we default the buffer, return FALSE */
-      return FALSE;
+      cc = buf[0] != 0;						/* if we default the buffer, return FALSE */
+      break;
     }
 
     if (ch == abortc)
-    	return ctrlg(FALSE, 0);    /* ABORT, Abort any kb macro */
+    {	cc = ctrlg(FALSE, 0);    /* ABORT, Abort any kb macro */
+    	break;
+    }
 
 //  gs_keyct += 1;
                      /* change from command form back to character form */
@@ -598,8 +600,9 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 				redo = 3;
       }
     }
-    else if (c == 'A'-'@' && gs_type >= 0)
-    { return buildlist(null);			// TRUE
+    else if (c == 'A'-'@')
+    { cc = buildlist(null);			// TRUE
+    	break;
     }
     else if (c == 'F'-'@')
     { int tpos,ix;
@@ -675,7 +678,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 					autostr = curbp->b_fname;
 				when 'S'-'@':
 				case ALTD | 'S':
-					autostr = pd_patmatch;
+					autostr = pd_patmatch == NULL ? "" : pd_patmatch;
 				otherwise
 		      woffs = getwtxt(c, &combuf[0], HICHAR-3-cpos, woffs);
 					autostr = combuf;
@@ -721,9 +724,14 @@ getliteral:
     }
   }}
 
-  g_ll.ll_ix += 1;
-  strpcpy(&g_ll.lastline[g_ll.ll_ix & MLIX][0], buf, NSTRING-1);
-  return TRUE;
+  ++g_cursor_on;
+
+	if (cc > FALSE)
+  {	g_ll.ll_ix += 1;
+  	strpcpy(&g_ll.lastline[g_ll.ll_ix & MLIX][0], buf, NSTRING-1);
+  }
+
+  return cc;
 }
 
 /*	A more generalized prompt/reply function allowing the caller
@@ -733,11 +741,8 @@ getliteral:
 int  getstring(char * buf, int nbuf, const char * prompt)
 
 {				  /* prompt the user for the input string */
-  --g_cursor_on;
-{ int res = getstr(buf, nbuf, mlwrite(prompt), -1);
-  ++g_cursor_on;
-  return res;
-}}
+  return getstr(buf, nbuf, mlwrite(prompt), -1);
+}
 
 
 static
@@ -757,9 +762,7 @@ char * complete(const char * prompt, char * defval, int type)
 { int plen = ! prompt ? 0
 											: mlwrite(defval ? "%s[%s]: " :
 																			   "%s: ",   prompt, defval);
-  --g_cursor_on;
   cc = getstr(gs_buf, NFILEN, plen, type);
-  ++g_cursor_on;
 
   return cc < 0				          	? NULL   : 
          defval && gs_buf[0] == 0 ? strpcpy(gs_buf,defval,NFILEN) : gs_buf;

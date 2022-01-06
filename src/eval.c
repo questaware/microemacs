@@ -419,8 +419,8 @@ const char * Pascal gtfun(char * fname)/* evaluate a function */
 		when UFSEQUAL:
 		case UFSLESS:
 		case UFSGREAT:	iarg1 = strcmp(arg1, arg2);
-				/*if (! in_range(iarg1, -1, 1))
-				    adb(iarg1);*/
+										/*if (! in_range(iarg1, -1, 1))
+				    						adb(iarg1);*/
 		                if      (fnum == UFSLESS)
 		                  iarg1 = (iarg1 & 0x100);
 		                else if (fnum == UFSEQUAL)

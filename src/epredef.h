@@ -70,7 +70,7 @@ extern PD_VAR predefvars[];
 #define pd_lastdir	predefvars[EVLASTDIR].i
 #define pd_col1ch   predefvars[EVCOL1CH].i
 #define pd_col2ch   predefvars[EVCOL2CH].i
-#define lastkey   predefvars[EVLASTKEY].i
+#define pd_lastkey  predefvars[EVLASTKEY].i
 #define seed      predefvars[EVSEED].i
 #define g_gmode	  predefvars[EVGMODE].i
 #define g_univct  predefvars[EVUARG].i

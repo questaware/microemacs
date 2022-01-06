@@ -933,8 +933,6 @@ void Pascal updline(int force)
 static 
 int Pascal reframe(WINDOW * wp)
 
-{	wp->w_force = 0;
-
 {	LINE *lp;			 /* search pointer */
 	LINE * top = wp->w_linep;
 	int nlines = wp->w_ntrows;
@@ -947,7 +945,7 @@ int Pascal reframe(WINDOW * wp)
 		for (i = nlines; --i >= 0; ) 
 		{												 		/* if the line is in the window, no reframe */
 			if (lp == wp->w_dotp)
-				return flags;
+				goto nop_here;
 																/* if we are at the end of the file, reframe */
 			if (lp->l_props & L_IS_HD)
 				break;
@@ -996,13 +994,13 @@ int Pascal reframe(WINDOW * wp)
 			centre = nlines;
 	} 
 	else if (centre < 0)	/* negative update???? */
-	{ centre += nlines - 1;
+	{ centre += nlines + 1;
 	} 
 	else
 		centre = nlines >> 1;
 																			/* backup to new line at top of window */
 	for (lp = wp->w_dotp; 
-			 ((lp = lback(lp))->l_props & L_IS_HD) == 0 && --centre >= 0; )
+			 ((lp = lback(lp))->l_props & L_IS_HD) == 0 && --centre > 0; )
 		;
 
 						 /* and reset the current line at top of window */
@@ -1011,9 +1009,11 @@ int Pascal reframe(WINDOW * wp)
 	lp = lforw(lp);
 ret:
 	wp->w_linep = lp;
+nop_here:
+	wp->w_force = 0;
 
 	return flags;
-}}
+}
 
 
 /* Make sure that the display is right. This is a three part process.

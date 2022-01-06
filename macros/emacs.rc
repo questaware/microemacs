@@ -91,10 +91,10 @@ btk execute-macro-3 ^@
 btk execute-macro-4 ^X
 
 5 store-macro		; search in the last direction
-  !if &gre $lastdir 0
-    hunt-forward
-  !else
+  !if &les $lastdir 0
     hunt-backward
+  !else
+    hunt-forward
   !endif  
 !endm  
 
@@ -247,10 +247,6 @@ btk beginning-of-line FN9
 btk backward-word FN0
 btk next-word FN:
 btk end-of-line FN;
-
-btk redraw-display ^L
-
-btk clear-and-redraw M-^L
 
 17 store-macro       ; 
   !if &equ $keycount 1	; sequence of keystrokes

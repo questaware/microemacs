@@ -81,8 +81,8 @@ scan_mallist()
   for (lst = mallist; lst != null && --ct >= 0; lst = *(char**)lst)
   { short nbytes = (lst[SIZEOF_PTR] << 8) + (lst[SIZEOF_PTR+1] & 0xff);
 
-    if (lst[SIZEOF_PTR+2+nbytes] != MEM_TAG or
-	lst[SIZEOF_PTR+3+nbytes] != MEM_TAG)
+    if (lst[SIZEOF_PTR+2+nbytes] != MEM_TAG ||
+				lst[SIZEOF_PTR+3+nbytes] != MEM_TAG)
       adb(7);
   }
   if (ct != 0)

@@ -423,8 +423,11 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
     }
 
 		if (dotp->l_used-(doto+chunk) <= 0)
-	  { if (dotp->l_used-(doto+chunk) < 0)
+	  {
+#if _DEBUG
+	  	if (dotp->l_used-(doto+chunk) < 0)
 				adb(44);
+#endif
 	  }
 		else
     	memmove(&dotp->l_text[doto], &dotp->l_text[doto+chunk],

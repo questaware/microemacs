@@ -368,7 +368,7 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 
 	int dir = 1;
 	int cc;
-	if (n <= 0)
+	if (n < 0)
 	{ n = -n;
 	  dir = -1;
 //	paren.sdir = -1;

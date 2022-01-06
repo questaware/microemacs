@@ -157,9 +157,6 @@ void Pascal dcline(int argc, char * argv[])
 	int genflag = 0;
 	const char * def_bname = "main";
 	int	carg;
-#if S_WIN32 == 0
-  g_nopipe = nopipe;
-#endif
 
   g_ll.ll_ix = -1;
 #if S_MSDOS && 0
@@ -209,8 +206,8 @@ void Pascal dcline(int argc, char * argv[])
 										filev[strlen(filev)-1] = 0;
 									}
 					
-									strcpy(&g_ll.lastline[0][0],
-												 strpcpy(&pat[0],filev+2, sizeof(pat)));
+									pd_patmatch = strdup(strcpy(&g_ll.lastline[0][0],
+																				 strpcpy(&pat[0],filev+2, sizeof(pat))));
 									g_ll.ll_ix = 0;
 
 //			when 't': /* -T for search directory structure */
@@ -300,6 +297,10 @@ void Pascal dcline(int argc, char * argv[])
 		  	bp->b_flag |= MDVIEW;
 		}
 	} // loop
+
+#if S_WIN32 == 0
+  g_nopipe = nopipe;
+#endif
 
 	if (firstbp == null)
 	{	firstbp = bfind(def_bname, TRUE, 0);
@@ -419,6 +420,9 @@ int main(int argc, char * argv[])
 	log_init("emacs.log", 300000, 0);
 	loglog("***************Started***************");
 #endif
+	wheadp =
+	 curwp = (WINDOW *)mallocz(sizeof(WINDOW)); /* First window	*/
+
 //char ch  = ttgetc();
 	tcapopen(); 	/* open the screen */
 #if S_MSDOS == 0
@@ -432,9 +436,6 @@ int main(int argc, char * argv[])
 {	KEYTAB * hpp;
 	for (hpp = &hooks[6]; --hpp >= &hooks[0]; )
 	  hpp->k_ptr.fp = nullproc;
-
-	wheadp =
-	 curwp = (WINDOW *)mallocz(sizeof(WINDOW)); /* First window	*/
 
 	set_var("$incldirs", getenv("INCLUDE"));
 

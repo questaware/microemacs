@@ -67,7 +67,10 @@ REGION * Pascal getregion()
 				flp = lforw(flp);
 			}
 			else if ((blp->l_props & L_IS_HD) != 0)
-			{	adb(99);
+			{
+#if _DEBUG			
+				adb(99);
+#endif
 				break;
 			}
 		}

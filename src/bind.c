@@ -236,7 +236,7 @@ bind-to-key filter-buffer ^X|
 	{META|CTRL|'G', BINDFNC, gotomark},
 	{META|CTRL|'H', BINDFNC, delbword},
 	{META|CTRL|'K', BINDFNC, unbindkey},
-	{META|CTRL|'L', BINDFNC, reposition},
+//{META|CTRL|'L', BINDFNC, refresh},
 	{META|CTRL|'M', BINDFNC, delgmode},
 #if 0
 	{META|CTRL|'N', BINDFNC, namebuffer},  /* no longer supported */
@@ -253,7 +253,7 @@ bind-to-key filter-buffer ^X|
 	{META|' ',	BINDFNC, setmark},
 	{META|'?',	BINDFNC, help},
 #if FLUFF
-	{META|'!',	BINDFNC, reposition},
+	{META|'!',	BINDFNC, refresh},
 #endif
 	{META|'=',	BINDFNC, setvar},
 	{META|'>',	BINDFNC, gotoeob},
@@ -1150,19 +1150,19 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 	return TRUE;
 }
 
+
 int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 
-{	register int c; 	/* key to describe */
-	char outseq[NSTRING];
-			     /* prompt the user to type us a key to describe */
+{	char outseq[NSTRING];
+												     /* prompt the user to type us a key to describe */
 	mlwrite(TEXT13);
 			  /* ": describe-key " */
-	c = getechockey(2);
+{	int	c = getechockey(2);
 
-{	const char * ptr = getfname(c);				/* find the right ->function */
+	const char * ptr = getfname(c);				/* find the right ->function */
 																				/* change it to something printable */
-	mlwrite("\001 %d %s %s", lastkey, cmdstr(&outseq[0], c),
-																		*ptr != 0 ? ptr : TEXT14);  
+	mlwrite("\001 %d %s %s", pd_lastkey, cmdstr(&outseq[0], c),
+																			 *ptr != 0 ? ptr : TEXT14);  
 																										/*"Not Bound" */
 	return TRUE;
 }}

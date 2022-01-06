@@ -19,7 +19,8 @@ CONSOLE_SCREEN_BUFFER_INFO g_csbi;   /* Console information */
 //CONSOLE_CURSOR_INFO        ccInfo;
 
 
-#define BG_GREY (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE)
+#define BG_GREY  (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE)
+#define FG_WHITE (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)
 
 
 long unsigned int thread_id(void)
@@ -185,7 +186,7 @@ void Pascal tcapsetsize(int wid, int dpth, int clamp)
     flagerr("SCWI %d");
 #endif
 #else
- 	SMALL_RECT rect = { 0, 0, wid - 1, dpth-1 };
+ 	SMALL_RECT rect = { 0, 0, wid-1, dpth-1 };
 	COORD size;
   size.X = wid;
   size.Y = dpth;
@@ -226,6 +227,39 @@ void Pascal tcapmove(int row, int col)
 
 {/* if (row == ttrow && col == ttcol)
       return; */
+#if 0
+	DWORD  Dummy;
+  COORD  Coords;
+
+{ WORD MyAttr = window_bgfg(curwp) | BACKGROUND_INTENSITY;
+	if      (row == term.t_nrowm1)
+		MyAttr = /* FG_WHITE + */ BG_GREY;
+	else if (row  > term.t_nrowm1)
+  {
+#if _DEBUG
+    tcapbeep();
+#endif
+    row = 0;
+  }
+
+  ttrow = row;
+  Coords.Y = row;
+  ttcol = col;
+  Coords.X = ttcol;
+
+{ HANDLE h = g_ConsOut;
+
+  if (g_cursor_on >= 0)
+  { 
+  	WriteConsoleOutputAttribute( h, &g_oldattr, 1, g_oldcur, &Dummy );
+    WriteConsoleOutputAttribute( h, &MyAttr, 1, Coords, &Dummy );
+
+	  g_oldattr = refresh_colour(row, col);
+    g_oldcur = Coords;
+  }
+  SetConsoleCursorPosition( h, Coords);
+}}
+#else
  if (row > term.t_nrowm1)
   { tcapbeep();
     row = 0;
@@ -248,7 +282,9 @@ void Pascal tcapmove(int row, int col)
     g_oldcur = Coords;
   }
   SetConsoleCursorPosition( g_ConsOut, Coords);
-}}
+}
+#endif
+}
 
 
 
@@ -304,8 +340,7 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
   WriteConsoleOutputCharacter(cout, &gch,1, g_csbi.dwCursorPosition, &Dum);
 
 /* ttcol = col;*/
-{	int row = g_csbi.dwCursorPosition.Y;
-  int col = g_csbi.dwCursorPosition.X + 1;
+{ int col = g_csbi.dwCursorPosition.X + 1;
 
   if (ch != '\n' && ch != '\r')
   { if (ch != '\b')
@@ -325,13 +360,12 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
   }
   else
   { col = 0;
-  	++row;
-    if (row >= g_csbi.dwSize.Y)
-    { --row;
+	{	int row = g_csbi.dwCursorPosition.Y;
+    if (row < g_csbi.dwSize.Y)
+    { g_csbi.dwCursorPosition.Y = row + 1;
 //   	ttscup(g_csbi.dwSize.X, g_csbi.dwSize.Y);	/* direction the window moves*/
     }
-	  g_csbi.dwCursorPosition.Y = row;
-  }
+  }}
 
   g_csbi.dwCursorPosition.X = col;
 //ttrow = row;
@@ -367,9 +401,9 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 { 									/* build the attribute byte and setup the screen pointer */
 	SC_CHAR buf[NCOL];
 	WORD 		cuf[NCOL];
-	const SC_WORD sclen = g_csbi.dwSize.X >= 148 ? 148 : g_csbi.dwSize.X;
 	unsigned long n_out;
 	WORD attr = color;
+	const SC_WORD sclen = g_csbi.dwSize.X >= 148 ? 148 : g_csbi.dwSize.X;
 
 	COORD Coords;
 	int col;

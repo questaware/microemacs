@@ -17,22 +17,12 @@
 
 int Pascal window_ct(BUFFER* bp)
 
-{
-#if 1
-  WINDOW * wp;
+{ WINDOW * wp;
 	int ct = 0;
   for (wp = wheadp; wp != NULL; wp = wp->w_next)
   	if (wp->w_bufp == bp)
   		++ct;
   return ct;
-#else
-	BUFFER * s_bp = curbp;
-	curbp = bp;
-{	int ct = orwindmode(WFONLY);
-	curbp = s_bp;
-  return ct;
-}
-#endif
 }
 
 
@@ -101,29 +91,20 @@ void openwindbuf(char * bname)
   }
 }}
 
-/* Reposition dot in the current window to line "n". If the argument is
- * positive, it is that line. If it is negative it is that line from the
- * bottom. If it is 0 the window is centered (this is what the standard
- * redisplay code does). With no argument it defaults to 0. Bound to M-!.
- */
-int Pascal reposition(int f, int n)
-
-{   curwp->w_force = f == FALSE ? 0 : n;
-    curwp->w_flag |= WFFORCE;
-    return TRUE;
-}
-
 /*
- * Refresh the screen. With no argument, it just does the refresh. With an
- * argument it recenters "." in the current window. Bound to "C-L".
+ * Refresh the screen. With no argument, it just does the refresh.
+ * otherwise the window is centered.  Bound to M-^L.
  */
 int Pascal refresh(int f, int n)
 
-{  if (f != FALSE)
-      return reposition(0, 0);  /* Center dot. */
-//  pd_sgarbf = TRUE;
-		upwind();
-    return TRUE;
+{ if (f != FALSE)
+	{	curwp->w_force = n;
+    curwp->w_flag |= WFFORCE;
+  }
+//pd_sgarbf = TRUE;
+	upwind();
+
+  return TRUE;
 }
 
 /*
