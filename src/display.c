@@ -158,6 +158,23 @@ void Pascal scroll_vscr()
 #endif
 #endif
 
+#if S_WIN32 == 0
+
+static
+char * use_tput(char * buf, int bufsz, const char * cmd)
+
+{ char v = NULL;
+	FILE * ip = popen(cmd, "r");
+	if (ip != NULL)
+	{ v = fgets(buf, bufsz-1, ip);
+		pclose(ip);
+	}
+	
+	return v;
+}
+
+#endif
+
 /* Initialize this module. The edge vectors to access the screens are set up. 
  * The operating system's terminal I/O channel is set up. 
  * The original window has "WFCHG" set, so that it will get completely
@@ -169,39 +186,25 @@ void Pascal vtinit(int cols, int dpthm1)
 /*	if (pd_gflags & MD_NO_MMI)
 			return; */
 //  millisleep(16000);
-#if S_WIN32
-#else
+#if S_WIN32 == 0
 {   char buf[40];
   	int lines = 0;
 		char * v = getenv("COLUMNS");
-		if (v == NULL)
-		{	FILE * ip = popen("stty size", "r");
-			if (ip != NULL)
-			{ v = fgets(buf, sizeof(buf), ip);
-			  if (v != NULL)
-				{	while (*v > ' ')
-						++v;
-					lines = atoi(buf);
-				}
-				pclose(ip);
-			}
-		}
+		v = v != NULL ? v : use_tput(buf, sizeof(buf), "tput cols");
 		cols = v == NULL ? NCOL : atoi(v);
-
+		
 		if (cols > 0)
 		{ term.t_ncol = cols;
 			term.t_margin = cols / 10;
 		}
 
-		if (lines <= 0)
-		{ lines = SCR_LINES;
-			v = getenv("LINES");
-			if (v != NULL)
-				lines = atoi(v);
-		}
+		v = getenv("LINES");
+		v = v != NULL ? v : use_tput(buf, sizeof(buf), "tput lines");
+		lines = v == NULL ? SCR_LINES : atoi(v);
+		
 		lines -= 2;
-		if (lines < 2)
-			lines = 2;
+		if (lines < 10)
+			lines = 10;
 		term.t_nrowm1 = lines;
 		dpthm1 = lines;
 }
@@ -1149,6 +1152,8 @@ void Pascal updateline(int row)
 { int same_ct = 0;
   short *phz = &ph->v_text[term.t_ncol];
   short *ph9 = phz;
+#if 0
+														/* terminals cannot do this */
 	while (cp9 > cp1)
 	{	if (*--cp9 != *--ph9)		/* find out if there is a match on the right */
 		{	if (cp9[0] == ' ' && same_ct == 0)
@@ -1158,7 +1163,7 @@ void Pascal updateline(int row)
 		if (*cp9 != ' ')
 			++same_ct;
 	}
-
+#endif
  	--cp1;
 	while (++cp1 <= cp9 /* cpend */)		/* Ordinary. */
 	{	*ph1++ = *cp1;
@@ -1221,7 +1226,11 @@ void Pascal upmode()	/* update all the mode lines */
 
 void Pascal upwind()	/* force hard updates on all windows */
 
-{ orwindmode(WFMODE | WFHARD | WFMOVE);
+{ 
+#if S_MSDOS == 0
+	pd_sgarbf = TRUE;
+#endif
+	orwindmode(WFMODE | WFHARD | WFMOVE);
 }
 
 /* Write a message into the message line. Keep track of the physical cursor

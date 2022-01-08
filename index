@@ -53,7 +53,7 @@ src/dolock.c
 src/edef.h
 src/efunc.h
 src/elang.h
-src/emacs.md
+src/microemacs.md
 src/english.h
 src/epredef.h
 src/etype.h

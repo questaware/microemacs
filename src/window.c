@@ -101,7 +101,7 @@ int Pascal refresh(int f, int n)
 	{	curwp->w_force = n;
     curwp->w_flag |= WFFORCE;
   }
-//pd_sgarbf = TRUE;
+ 
 	upwind();
 
   return TRUE;

@@ -1129,7 +1129,7 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 		   bring up a fake buffer and read the help file
 		   into it with view mode			*/
 {
-  static const char emacshlp[] = "emacs.md";
+  static const char emacshlp[] = "microemacs.md";
 	       char *fname = (char*)flook(0, emacshlp);
 
 	BUFFER *bp;

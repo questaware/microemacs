@@ -12,11 +12,6 @@ extern Cc msd_push (void);
 extern Char * msd_pop (void);
 extern int  msd_getprops (Char * fn);
 
-
-#if 0
-extern Set16     msd_attrs;
-#endif
-
 extern struct stat msd_stat;
 
 

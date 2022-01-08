@@ -140,10 +140,6 @@ int g_nopipe;
 
 static void Pascal editloop(int c_); /* forward */
 
-//void Pascal load_pat(const char * src);
-
-
-
 /*	Process a command line.   May be called any time.	*/
 
 static
@@ -427,6 +423,7 @@ int main(int argc, char * argv[])
 	tcapopen(); 	/* open the screen */
 #if S_MSDOS == 0
   vtinit(0,0);
+  tcap_init();
 #endif
 	varinit();		/* user variables */
 #if DIACRIT

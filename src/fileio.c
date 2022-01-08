@@ -76,58 +76,49 @@ int Pascal ffropen(const char * fn)
   if (fn != NULL && !(fn[0] == '-' && fn[1] == 0))
 		g_ffp = fopen(fn, "rb");
   else
-  {
-#if _WINDOWS
-//  g_ffp = fdopen(0, "rb");
-		g_ffp = NULL;							// Not needed
-	  return FIOSUC;
-#else
-    int g_pipefd = dup(0);
-    if (g_pipefd < 0)
+  { int pipefd = dup(0);
+    if (pipefd < 0)
       return 0;
-    g_ffp = fdopen(g_pipefd, "rb");
-#endif
+    g_ffp = fdopen(pipefd, "rb");
+
     fclose(stdin);
  
   { int fd =
 #if S_MSDOS
-        open("CON", O_RDONLY+O_BINARY);
-#else
-        open("/dev/tty", O_RDONLY+O_NOCTTY);
-#endif
+			       open("CON", O_RDONLY+O_BINARY);
     if (fd != 0)
-    {
       return 0;
-    }
+#else
+		         open("/dev/tty", O_RDONLY+O_NOCTTY);
+#endif
 #if S_LINUX
-  { struct termios  tty;
-    speed_t     spd;
-    unsigned char   buf[80];
-    int     reqlen = 79;
-    int     rdlen;
-    int     pau = 0;
-    int rc = tcgetattr(fd, &tty);
-    if (rc < 0)
-      adb(88);
-
-    g_savetty = tty;    /* preserve original settings for restoration */
-
-    spd = B115200;
-    cfsetospeed(&tty, (speed_t)spd);
-    cfsetispeed(&tty, (speed_t)spd);
-
-    cfmakeraw(&tty);
-
-    tty.c_cc[VMIN] = 1;
-    tty.c_cc[VTIME] = 10;
-
-    tty.c_cflag &= ~CSTOPB;
-//  tty.c_cflag &= ~CRTSCTS;    /* no HW flow control? */
-    tty.c_cflag |= CLOCAL | CREAD;
-    rc = tcsetattr(fd, TCSANOW, &tty);
-    if (rc < 0)
-      adb(89);
-  }
+		extern int g_stdin_fileno;
+    if (fd)
+	  { struct termios  tty;
+	    speed_t     spd;
+			g_stdin_fileno = fd;
+	  { int rc = tcgetattr(fd, &tty);
+	    if (rc < 0)
+	      adb(88);
+	
+	    g_savetty = tty;    /* preserve original settings for restoration */
+	
+	    spd = B115200;
+	    cfsetospeed(&tty, (speed_t)spd);
+	    cfsetispeed(&tty, (speed_t)spd);
+	
+	    cfmakeraw(&tty);
+	
+	    tty.c_cc[VMIN] = 1;
+	    tty.c_cc[VTIME] = 10;
+	
+	    tty.c_cflag &= ~CSTOPB;
+	//  tty.c_cflag &= ~CRTSCTS;    /* no HW flow control? */
+	    tty.c_cflag |= CLOCAL | CREAD;
+	    rc = tcsetattr(fd, TCSANOW, &tty);
+	    if (rc < 0)
+	      adb(89);
+	  }}
 #endif
   }}
 
