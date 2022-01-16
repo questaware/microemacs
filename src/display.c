@@ -161,7 +161,7 @@ void Pascal scroll_vscr()
 #if S_WIN32 == 0
 
 static
-char * use_tput(char * buf, int bufsz, const char * cmd)
+char * use_cmd(char * buf, int bufsz, const char * cmd)
 
 { char v = NULL;
 	FILE * ip = popen(cmd, "r");
@@ -190,7 +190,7 @@ void Pascal vtinit(int cols, int dpthm1)
 {   char buf[40];
   	int lines = 0;
 		char * v = getenv("COLUMNS");
-		v = v != NULL ? v : use_tput(buf, sizeof(buf), "tput cols");
+		v = v != NULL ? v : use_cmd(buf, sizeof(buf), "tput cols");
 		cols = v == NULL ? NCOL : atoi(v);
 		
 		if (cols > 0)
@@ -199,7 +199,7 @@ void Pascal vtinit(int cols, int dpthm1)
 		}
 
 		v = getenv("LINES");
-		v = v != NULL ? v : use_tput(buf, sizeof(buf), "tput lines");
+		v = v != NULL ? v : use_cmd(buf, sizeof(buf), "tput lines");
 		lines = v == NULL ? SCR_LINES : atoi(v);
 		
 		lines -= 2;

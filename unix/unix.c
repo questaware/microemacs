@@ -17,6 +17,7 @@
 #include  <sys/select.h>
 #include  <sys/time.h>
 #include  <sys/poll.h>
+#include	<errno.h>
 #undef CTRL
 #include	"estruct.h"
 #include	"build.h"
@@ -61,9 +62,9 @@ char tobuf[TBUFSIZ];		/* terminal output buffer */
 
 #include        <signal.h>
 
-int g_stdin_fileno;
+extern int g_stdin_fileno;
 
-#define  STDIPCHAN g_stdin_fileno /* can have been reopened */
+#define  STDIPCHAN g_stdin_fileno    /* can have been reopened */
 
   static int  kbdflgs;			/* saved keyboard fd flags	*/
   static int  kbdqp;			/* how many chars in kbdq	*/
@@ -159,6 +160,47 @@ int Pascal millisleep(unsigned int n)
 #endif
 }
 
+
+static
+void mk_pipe(int fds[2]) 
+{
+  if (pipe(fds) == -1) { perror("Could not create pipe"); exit(1); }
+}
+
+static
+void mv_fd(int fd1, int fd2) 
+{
+  if (dup2(fd1,  fd2) == -1) { perror("Could not duplicate pipe end"); exit(1); }
+  close(fd1);
+}
+														// Start program at argv[0] with arguments argv.
+														// Set up new stdin, stdout and stderr.
+														// Puts references to new process and pipes into `p`.
+void subproc_call(int argc, char* argv[], struct subprocess * p) 
+
+{ int ch_in[2], ch_out[2], ch_err[2];
+  pipe(ch_in); pipe(ch_out); pipe(ch_err);
+
+  pid_t pid = fork();
+  if (pid == 0)									/* am child */
+  { // printf("In child for %s\n", argv[1]);
+  	close(0); close(1); close(2);                              // close parent pipes
+    close(ch_in[1]);    close(ch_out[0]);    close(ch_err[0]); // child pipe ends
+    mv_fd(ch_in[0], 0); mv_fd(ch_out[1], 1); mv_fd(ch_err[1], 2);
+  { char* envp[] = { NULL };
+		argv[argc] = NULL;
+    execve(argv[1], argv+1, envp);
+    mlwrite("Exec failed %d", errno);
+    exit(-1);
+  }} 
+  else 
+	{ close(ch_in[0]); close(ch_out[1]); close(ch_err[1]); // unused child pipe ends
+    p->pid = pid;
+    p->stdin = ch_in[1];   // parent wants to write to subprocess ch_in
+    p->stdout = ch_out[0]; // parent wants to read from subprocess ch_out
+    p->stderr = ch_err[0]; // parent wants to read from subprocess ch_err
+  }
+}
 
 
 #if	S_UNIX5 | S_HPUX | S_SUN | S_XENIX

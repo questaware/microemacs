@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include	"estruct.h"
 #include	"build.h"
@@ -56,14 +57,16 @@ static char * mytgoto(char * cmd, int p1, int p2);
 
 typedef struct TBIND
 {	char  p_tiname[6]; /* terminfo name */
-	short p_name;      /* sequence name, not in use */
-	short p_code;	   /* resulting keycode of sequence */
-	char  p_seq[8];	   /* terminal escape sequence */
+	short p_name;      /* not in use */
+	short p_code;	     /* resulting keycode of sequence */
+	char  p_seq[22];	 /* terminal escape sequence */
 } TBIND;
 
 			/* The numbers in column 1 are terminfo numbers
 			   and are not fixed universally */
-TBIND keytbl[] = {
+int key_tbl_top;
+
+TBIND keytbl[23*4+1] = {
 #define BS_O 0
 #if S_LINUX
 { "kbs",/* bspace*/        102,	CTRL | 'H', "\177"},
@@ -231,7 +234,7 @@ short scbot = SCR_LINES;  /* set by tcapopen */
 
 static short alarm_went_off = 0;
 
-static see_alarm(n)
+static void see_alarm(int n)
 
 { alarm_went_off = n;
   signal(SIGALRM, see_alarm);
@@ -347,9 +350,117 @@ void ttopen()
 
 /**********************************************************************/
 
+int 	g_stdin_fileno;
+char * g_rsmcup[2];
+
 void Pascal tcap_init()
 
-{
+{ FILE * ip = popen("infocmp -1", "r");
+	if (ip != NULL)
+	{ char buf[80];
+	  int tix = 1;
+		char * v;
+
+		while ((v = fgets(buf, sizeof(buf)-1, ip))
+				 && g_rsmcup[1] == 0)
+		{ char * t = v;
+			char ch;
+			while ((ch = *++t) != 0 && ch != '=')
+				;
+			*t = 0;
+			if (ch != '=' || t - v < 4)
+				continue;
+		{ int cc = -1;
+			if (strcmp(v+3, "cup") == 0 && v[2] == 'm' && (v[1] == 'r' || v[1] == 's'))
+				cc = 128;
+			else
+				while (tix < sizeof(keytbl) / sizeof(keytbl[0]) 
+						&& keytbl[tix].p_tiname[0] != 0)
+				{ cc = strcmp(v+1, keytbl[tix].p_tiname);
+					if (cc <= 0)
+						break;
+					++tix;
+				}
+			if ((cc & 0x7f) != 0)
+				continue;
+		{ char * tt = t;
+		  char * comma = t;
+			while ((ch = *++comma) != 0 && ch != ',')
+				;
+			*comma = 0;
+			++t;
+			if (*t == '\\' && t[1] == 'E')
+				*++t = '\033';
+			for (tt = t; *++tt != 0; )
+				if (*tt == 'E')
+				{	tt[-1] = '\033';
+					strpcpy(tt, tt+1, 15);
+				}
+			if 			(cc == 128)
+				g_rsmcup[v[1] - 'r'] = strdup(t);
+			else if (tix < sizeof(keytbl) / sizeof(keytbl[0]))
+				strpcpy(keytbl[tix].p_seq, t, sizeof(keytbl[0].p_seq));
+		}}}
+		
+		pclose(ip);
+
+	{ int top;
+		for (top = NTBINDS; --top > 0 && keytbl[top].p_tiname[0] == 0; )
+			;
+
+		for (tix = top + 1;  --tix > 0; )
+		{ char * seq = keytbl[tix].p_seq;
+			if (seq == NULL)								/* should not happen */
+				continue;
+		  int seqlen = strlen(seq);
+			char * nseq = strcpy((char*)malloc(seqlen+4), seq);
+			char ch = seq[seqlen-1];
+			if 			(ch == 'P' && seq[seqlen-2] != 'O')
+				strcpy(nseq+seqlen-2, ";5P");
+			else if (ch == '~')
+				strcpy(nseq+seqlen-1, ";5~");
+			else if (ch >= 'A' && ch <= 'Z')
+			{	strcpy(nseq+seqlen-3, "\033[1;2.");
+				nseq[strlen(nseq)-1] = ch;
+			}
+			else
+				continue;
+
+			seqlen = strlen(nseq);
+																			/* now the CTRL sequence */
+			++top;
+			keytbl[top] = keytbl[tix];
+			keytbl[top].p_code += CTRL;
+			keytbl[top].p_name += 256;
+			nseq[seqlen-2] = '5';
+			strpcpy(keytbl[top].p_seq, nseq, sizeof(keytbl[0].p_seq));
+			strcat(keytbl[top].p_tiname, "C");
+			++top;
+			keytbl[top] = keytbl[tix];
+			keytbl[top].p_code += SHFT;
+			keytbl[top].p_name += 8192;
+			nseq[seqlen-2] = '2';
+			strpcpy(keytbl[top].p_seq, nseq, sizeof(keytbl[0].p_seq));
+			strcat(keytbl[top].p_tiname, "S");
+			++top;
+			keytbl[top] = keytbl[tix];
+			keytbl[top].p_code += ALTD;
+			keytbl[top].p_name += 8192*2;
+			nseq[seqlen-2] = '3';
+			strpcpy(keytbl[top].p_seq, nseq, sizeof(keytbl[0].p_seq));
+			strcat(keytbl[top].p_tiname, "A");
+		}
+
+		if (g_rsmcup[0] == 0)
+			g_rsmcup[1] = 0;
+		if (g_rsmcup[1])
+		{ putpad(g_rsmcup[1]);
+//		putpad("\033[6n");
+//		<ESC>[{ROW};{COLUMN}R
+		}
+	}}
+
+	g_stdin_fileno = fileno(stdin);
 }
 
 
@@ -394,15 +505,24 @@ int tcapclose(int lvl)
 {			/* send end-of-keypad-transmit string if defined */
  /* if (gflags & MD_NO_MMI)
     return; */
-#if COLOR
-	tcapchrom(0);
-#endif
 #if FTRACE
 	if (ftrace != 0) fprintf(ftrace, "K_RS1 : %s\n", captbl[K_RS1].p_seq);
 #endif
-  putpad(captbl[K_RS1].p_seq);
-  tcapscreg(0, lvl == 0 ? term.t_nrowm1 : scbot);
   /* tcapmove(term.t_nrowm1, 0); */
+	if (lvl == 0 && g_rsmcup[0])
+	{	putpad(g_rsmcup[0]);
+		usleep(1000);
+	  ttcol = 1;
+//	putpad("\r");
+		tcapmove(term.t_nrowm1+1, 0);
+	}
+	else
+	{ putpad(captbl[K_RS1].p_seq);
+#if COLOR
+		tcapchrom(0);
+#endif
+  	tcapscreg(0, lvl == 0 ? term.t_nrowm1 : scbot);
+	}
   serialclose();
 	return OK;
 }
@@ -428,23 +548,10 @@ int Pascal ttsystem(const char * cmd, const char * data)
 
 
 
-int Pascal get1key(); /* forward */
-
-/*	TCAPGETC:	Get on character.  Resolve and setup all the
-			appropriate keystroke escapes as defined in
-			the comments at the beginning of input.c
-*/
-
-
 int g_chars_since_ctrl; /* these do not work in unix */
 int g_timeout_secs = 0;
 
 
-int Pascal ttgetc()
-
-{                     /* if there are already keys waiting.... send them */
-  return in_check() ? in_get() : get1key();
-}
 
 /*	GET1KEY:	Get one keystroke. The only prefixs legal here
 			are the SPEC and CTRL prefixes.
@@ -515,15 +622,12 @@ static short kbtl = 0;
 #define bpushk(c) \
   { keybuf[kbtl] = c; kbtl = (kbtl + 1) & 7; }
 
+#define ESC_DELAY 30
 
-int Pascal get1key()
+static
+int getukey(void)
 
-{
-  int c;     /* also index into termcap binding table */
-  short skbtl;
-	char cseq[10];		/* current sequence being parsed */
-	TBIND * btbl;
-
+{ int c;     /* also index into termcap binding table */
 	bgetk(c);
 	if (c != A_ESC)
 	{ if (c == key_bspace)
@@ -544,7 +648,7 @@ int Pascal get1key()
 	    	return ecco(CTRL | '[');
 			}
 	  else 
-	  { alarm(1);											/* it could be esc then function key */
+	  { alarm(ESC_DELAY);											/* it could be esc then function key */
 	  { int third_key;
 	    alarm_went_off = false;
 	    bgetk(third_key);
@@ -561,6 +665,8 @@ int Pascal get1key()
 
 { int mct = 0;
   int ix;
+	TBIND * btbl;
+	char cseq[10];		/* current sequence being parsed */
 //cseq[4] = 0;
 	cseq[0] = 
 	cseq[2] = A_ESC;
@@ -569,6 +675,7 @@ int Pascal get1key()
 	  cseq[3] = '[';
 	else
 	  cseq[3] = 'O';
+
 	for (btbl = &keytbl[NTBINDS]; --btbl >= &keytbl[0];)
 	{ btbl->p_name = false;
 	  if (*(short*)cseq == *(short*)(btbl->p_seq) ||
@@ -604,6 +711,16 @@ int Pascal get1key()
 	  bpushk(*sp++);
 	return ecco(CTRL | '[');
 }}}
+
+/*	TTGETC:	Get on character.  Resolve and setup all the
+			appropriate keystroke escapes as defined in
+			the comments at the beginning of input.c
+*/
+int Pascal ttgetc()
+
+{                     	/* if there are already keys waiting.... send them */
+  return in_check() ? in_get() : getukey();
+}
 
 
 /*

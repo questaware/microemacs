@@ -40,19 +40,7 @@ char * ktbl[] =
 "kf11\", 135,	SPEC | ':'",
 "kf12\", 136,	SPEC | ';'",
 "kf2\",  126,	SPEC | '2'",
-"kf21\", 137,	SPEC | CTRL | '1'",
-"kf22\", 138,	SPEC | CTRL | '2'",
-"kf23\", 139,	SPEC | CTRL | '3'",
-"kf24\", 140,	SPEC | CTRL | '4'",
-"kf25\", 141,	SPEC | CTRL | '5'",
-"kf26\", 142,	SPEC | CTRL | '6'",
-"kf27\", 143,	SPEC | CTRL | '7'",
-"kf28\", 144,	SPEC | CTRL | '8'",
-"kf29\", 145,	SPEC | CTRL | '9'",
 "kf3\",  127,	SPEC | '3'",
-"kf30\", 146,	SPEC | CTRL | '0'",
-"kf31\", 147,	SPEC | CTRL | ':'",
-"kf32\", 148,	SPEC | CTRL | ';'",
 "kf4\",  128,	SPEC | '4'",
 "kf5\",  129,	SPEC | '5'",
 "kf6\",  130,	SPEC | '6'",
@@ -64,16 +52,6 @@ char * ktbl[] =
 "kll\",  /* home down [END?] key */ 194, SPEC | '>'",
 "knp\",  /* next page */            199, SPEC | 'V'",
 "kpp\",  /* previous page */        202, SPEC | 'Z'",
-"ksub1\",/* left cursor */1193,	ALTD | SPEC | 'B'",
-"ksud1\",/* down cursor */1117,	ALTD | SPEC | 'N'",
-"ksuf1\",/* right cursor */1211,ALTD | SPEC | 'F'",
-"ksuu1\",/* up cursor */1247,	ALTD | SPEC | 'P'",
-"kzch1\",/* delete character */1115,ALTD | SPEC | 'D'",
-"ksub2\",/* left cursor */1193,	CTRL | SPEC | 'B'",
-"ksud2\",/* down cursor */1117,	CTRL | SPEC | 'N'",
-"ksuf2\",/* right cursor */1211,CTRL | SPEC | 'F'",
-"ksuu2\",/* up cursor */1247,	CTRL | SPEC | 'P'",
-"kzch2\",/* delete character */1115,CTRL | SPEC | 'D'",
 };
 
 char * kname[] =
@@ -88,19 +66,7 @@ char * kname[] =
 "F11",
 "F12",
 "F2",
-"F^1",
-"F^2",
-"F^3",
-"F^4",
-"F^5",
-"F^6",
-"F^7",
-"F^8",
-"F^9",
 "F3",
-"F^10",
-"F^11",
-"F^12",
 "F4",
 "F5",
 "F6",
@@ -112,6 +78,7 @@ char * kname[] =
 "end",
 "next page",
 "previous page",
+#if 0
 "alt left cursor",
 "alt down cursor",
 "alt right cursor",
@@ -122,12 +89,13 @@ char * kname[] =
 "ctrl right cursor",
 "ctrl up cursor",
 "ctrl delete",
+#endif
 };
 
 
-int order[] = { 0,1,2,3,30,29,33,4,31,32,
- 5,9,19,23,24,25,26,27,28,6,7,8,
- 10,11,12,13,14,15,16,17,18,20,21,22,34,35,36,37,38};
+int order[] = { 0,1,2,3,4,5,9,10,11,12,13,14,15,16,
+ 6,7,8,17,18,19,20,21
+ };
 
 
 int main(int argc, char *argv[])
@@ -149,6 +117,8 @@ int main(int argc, char *argv[])
     if (ln[0] != 0)
       printf("{ \"%s, \"%s\" },\n", ktbl[order[i]], tr_esc(ln));
   }
+  
+  
   exit(0);
 }
 

@@ -416,6 +416,10 @@ void Pascal freewhile(WHBLOCK * wp)/* free a list of while block pointers */
 	*LBL01
 */
 
+#if _DEBUG
+int g_rc_lineno;
+#endif
+
 BUFFER * g_dobuf;
 
 int Pascal dobuf(BUFFER * bp, int iter)
@@ -429,6 +433,10 @@ int Pascal dobuf(BUFFER * bp, int iter)
 #if LIM_WHILE
 	WHBLOCK whiles[LIM_WHILE];
 	int topwh = LIM_WHILE-1;
+#endif
+
+#if _DEBUG
+	g_rc_lineno = 0;
 #endif
 
 	g_dobuf = bp;
@@ -517,6 +525,10 @@ failexit:
 	    if (eexitflag || cc <= FALSE ||
 				  ((lp = lforw(lp))->l_props & L_IS_HD) != 0)
 				break;
+
+#if _DEBUG
+			++g_rc_lineno;
+#endif
 													/* allocate eline and copy macro line to it */
 		{	int dirnum;					/* directive index */
 			int linlen = lp->l_used+1;

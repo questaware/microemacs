@@ -1555,7 +1555,6 @@ rpl_all	./src/line.c
 rtfrmshell	./unix/unix.c
 rval	./src/epredef.h
 rvstrcpy	./src/search.c
-s	./src/msdir.c
 save_pos	./src/basic.c
 saveflag	./src/epredef.h
 savematch	./src/search.c
@@ -1631,6 +1630,7 @@ strpcpy	./src/char.c
 strpcpypfx	./src/char.c
 strxct_mtch	./src/search.c
 strxct_mtch	./src/sinc.cpp
+subproc_call	./unix/unix.c
 svar	./src/eval.c
 swapmark	./src/basic.c
 swb_luct	./src/epredef.h

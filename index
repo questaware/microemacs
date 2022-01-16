@@ -88,6 +88,7 @@ terminfo/console
 terminfo/uk.map
 unix/build.h
 unix/estruct.h
+unix/keys.h
 unix/lock.c
 unix/makefile
 unix/makekeys.c
