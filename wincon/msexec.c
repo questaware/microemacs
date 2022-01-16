@@ -51,11 +51,11 @@ int Pascal execprog(cmd)
 	     /* look up the program on the path trying various extensions */
     for (ch = 3; ; )
     { if (--ch < 0)
-	return false;
+				return false;
       strcpy(&prog[ix], &exetyps[ch][0]);
       sp = flook(0, prog);
       if (sp != NULL)
-	break;
+				break;
     }
     strcpy(prog, sp);
 				       /* and parse out the command tail */

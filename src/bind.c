@@ -380,12 +380,12 @@ KEYTAB * Pascal getbind(int c)
 #if NBINDS
   KEYTAB *ktp;
   short  code;
-	Emacs_cmd * f;
 /*
   if (c == (CTRL | SPEC | 'N'))
     adb(44);
 */
 #if 0
+	Emacs_cmd * f;
   for (ktp = &keytab[0]-1; (f = (++ktp)->k_ptr.fp) != 0 && f != copyword; )
     ;
 #endif
@@ -771,20 +771,31 @@ int Pascal buildlist(const char * mstring)
 
 void Pascal flook_init(char * cmd)
 
-{ g_invokenm = strdup(cmd);
+{ 
+#if S_MSDOS == 0
+	int c = strdup(cmd);
+#define HOMEPATH "HOME"
+#else
+#define HOMEPATH "HOMEPATH"
+	int clen = strlen(cmd);
+	char * c = strcpy(malloc(clen+5),cmd);
 
-  if (g_invokenm[0] == '"')
-  { ++g_invokenm;
-    g_invokenm[strlen(g_invokenm)-1] = 0;
+  if (c[0] == '"')
+  { ++c;
+    c[--clen] = 0;
   }
-{ char * sp;
-  for (sp = g_invokenm; *sp != 0 && *sp != ' '; ++sp)
-    if (*sp == '\\')
-      *sp = '/';
 
-  if (*sp != 0)
-    *sp = 0;
-}}
+	if (clen-4 >= 0 && strcmp(c+clen-4, ".exe") == 0)
+		c[clen-4] = 0;
+	c = strcat(c,".exe");
+#endif
+	g_invokenm = c;
+#if S_MSDOS
+  for (; *c != 0; ++c)
+    if (*c == '\\')
+      *c = '/';
+#endif
+}
 
 
 /*!********************************************************
@@ -872,7 +883,7 @@ char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 
 
 
-static char fspec[256+2];	/* full path spec to search */
+static char g_fspec[256+2];	/* full path spec to search */
 
 #if 0
 					/* the text in dir following the last / is ignored*/
@@ -880,13 +891,13 @@ char * fex_up_dirs(const char * dir, const char * file)
 
 { if (dir != NULL)
   { int clamp;
-//	strpcpy(fspec, dir, sizeof(fspec)-2);
+//	strpcpy(g_fspec, dir, sizeof(g_fspec)-2);
  		
     for (clamp = 8; --clamp >= 0; )
-    { char * pc = pathcat(fspec, sizeof(fspec), dir, file);
+    { char * pc = pathcat(g_fspec, sizeof(g_fspec), dir, file);
       if (fexist(pc))
-        return fspec;
-      dir = pathcat(fspec, sizeof(fspec), fspec, "../a");
+        return g_fspec;
+      dir = pathcat(g_fspec, sizeof(g_fspec), g_fspec, "../a");
     }
   }
   
@@ -895,132 +906,110 @@ char * fex_up_dirs(const char * dir, const char * file)
 
 #endif
 
+
 static
-int fex_path(const char * dir, const char * file)
-	
-{ 
+const char * fex_file(const char ** ref_dir, const char * file)
+												// next_dir == NULL => do not append file	
+{ char ch;
+	char * dir = *ref_dir;
   if (dir != NULL)
-  { char * pc = pathcat(&fspec[0], sizeof(fspec), dir, file);
-    if (fexist(pc))
-      return 1;
-  }
+	{	int ix = -1;
+		if (// dir[0] == '-' && dir[1] == 'I' ||
+		 		   dir[0] == '.' && dir[1] == '/')
+			dir += 2;
   
-  return 0;  
+// 	mlwrite("Fex_file %s %s%p\n", file, dir);
+
+		while ((ch = dir[++ix]) != 0 && ch != PATHCHR)
+			;
+			
+		*ref_dir = dir + ix - (ch == 0);
+	{	char * diry = strcat(strpcpy(g_fspec, dir, ix + 1),"/");
+// 	mbwrite(diry);
+	{	const int sz = sizeof(g_fspec);
+  	char * pc = pathcat(g_fspec, sz, diry, file);
+// 	mlwrite("After %s%p", pc);
+    if (fexist(pc))
+    	return (const char*)pc;
+  }}}
+  
+  return NULL;
 }
 
 /*char * inclmod;			** initial mod to incldirs */
 
 /*	wh == I => 
-	Look up the existence of a file in the current working directory || 
+	Look up the existence of a file in the directory of the buffer || 
 	along the include path in the INCLDIRS environment variable. 
-	wh == E => 
-	Look up the existence of a file in the current working directory || 
-	along the normal $PATH
-	else 
-	  if wh is in uppercase then look first in the $HOME directory
-	  always look up a file along the normal $PATH.
+		wh == P => 
+	Look up the existence of a file along the normal $PATH
+		else 
+	Look first in the $HOME directory
+	then in the directory containing the executable.
 */
 const char * Pascal flook(char wh, const char * fname)
 
-{ char uwh = toupper(wh);
-  char *path;	/* environmental PATH variable */
+{ char *path;	/* environmental PATH variable */
+  const char * res;
 //char buf[100];
-
-	if (fexist(fname))
-	  return fname;
 			                  /* if we have an absolute path check only there! */
-	if (*fname == '\\' || *fname == '/' ||
-	    *fname != 0 && fname[1] == ':')
-	  return NULL;
-
-	//loglog1("not so far %s", fname);
-
-	if (uwh == 'I')
-  { //loglog2("from file %s inc %s", curbp->b_fname, fname);
-    if (fex_path(curbp->b_fname, fname))
-      return fspec;
-
-#if ENVFUNC
-	  if (wh < 'a')
-	    if (fex_path(getenv("HOME"), fname))
-	      return fspec;
+	if (*fname == '\\' || *fname == '/'
+#if S_MSDOS
+	 || *fname != 0 && fname[1] == ':'
 #endif
+	   )
+		return !fexist(fname) ? NULL : fname;
 
-	  if (pd_incldirs != NULL)								// gtenv("incldirs");
-	  { char * incls;
-	  	for (incls = pd_incldirs; *incls != 0; )
-	  	{ char * ln = incls;
-	  		char ch;
-	  		while ((ch = *++ln) != 0 && ch != PATHCHR)
-	  			;
-			{	int len = ln - incls + 1;
-				if (len < sizeof(fspec))
-	  		{	if (fex_path(strpcpy(fspec, incls, len), fname))
-						return fspec;
-	  		}
-	  		incls = ln + (ch != 0);
-	  	}}
-	  }
+	switch (wh)
+	{ case 'I':
+		case 'P':
+			if (wh != 'I')
+				path = getenv("PATH");
+			else
+	    {	path = curbp->b_fname;
+	    	if ((res = fex_file(&path, fname)))
+	      	return res;
+			  path = pd_incldirs;
+	    }
+	
+			if (path != NULL)
+			{	for (--path; *++path != 0;)
+			  { if ((res = fex_file(&path, fname)))
+			      return res;
+				}
+			}
 
-	  return NULL;
-	}
+			return NULL;
+		otherwise
+			path = getenv(HOMEPATH);
+	    if ((res = fex_file(&path, fname)))
+	      return res;
+
 #if S_VMS
-  if (g_invokenm != NULL && strlen(g_invokenm)+strlen(fname) < sizeof(fspec))
-  { strcpy(fspec, g_invokenm);
-    for (path = fspec-1; *++path != 0 && *path != ']'; )
-      ;
-    if (*path != 0)
-    { strcpy(path+1, fname);
-      if (fexist(fspec))
-        return fspec;
-    }
-  }
+		  if (g_invokenm && strlen(g_invokenm)+strlen(fname) < sizeof(g_fspec))
+		  { strcpy(g_fspec, g_invokenm);
+		    for (path = g_fspec-1; *++path != 0 && *path != ']'; )
+		      ;
+		    if (*path != 0)
+		    { strcpy(path+1, fname);
+		      if (fexist(g_fspec))
+		        return g_fspec;
+		    }
+		  }
 #else
-	if (fname != g_invokenm)
-  { if (fex_path(flook('E', g_invokenm), fname))
-	    return fspec;
+			path = flook('P', g_invokenm);
+		{	char * lastsl = NULL;
+			char * s;
+			char ch;
+			for (s = path; (ch = *++s) != 0; )
+				if (ch == '/')
+					lastsl = s;
+			if (lastsl != NULL)
+			  *lastsl = 0;
+		 	return fex_file(&path, fname);
+		}
+#endif
 	}
-#endif
-
-#if ENVFUNC
-	path = getenv("PATH");
-
-	if (path != NULL)
-	  for (; *path != 0; ++path)
-	  { int ix;
-
-	    if (// path[0] == '-' && path[1] == 'I' ||
-	     		   path[0] == '.' && path[1] == '/')
-	      path += 2;
-
-/*	    fspec[0] = 0;
-            if (inclmod != NULL && path[0] != '/')
-              strcpy(&fspec[0], inclmod);
-*/
-	    for (ix = -1; ix < (int)sizeof(fspec)-2 &&
-	            	   *path != 0
-#if S_MSDOS == 0
-           		   && *path != ' '
-#endif
-          		   && *path != PATHCHR
-		              ; )
-	      fspec[++ix] = *path++;
-	    
-	    if (path[-1] != DIRSEPCHAR)
-	      fspec[++ix] = DIRSEPCHAR;
-	        
-	    fspec[ix+1] = 0;	        
-/*	{ char buf[200];
-  	  strcat(strcat((buf, "PATHE "),fspec);
-  	  MessageBox(NULL, buf, "pe",MB_YESNO|MB_ICONQUESTION);
-    } */
-	    if (fex_path(fspec, fname))
-	      return fspec;
-
-	    if (*path == 0)
-	      break;
-	  }
-#endif
 
 	return NULL;	/* no such luck */
 }
@@ -1047,13 +1036,13 @@ char *Pascal flooknear(knfname, name)
 	char *knfname;		/* known file name */
 	char *name;				/* file to look for */
 { 
-	strpcpy(&fspec[0], knfname, sizeof(fspec));
-{ Char * t = &fspec[strlen(fspec)]
-  while (t > fspec && * t != DIRSEPCHR && *t != '/')
+	strpcpy(&g_fspec[0], knfname, sizeof(g_fspec));
+{ Char * t = &g_fspec[strlen(g_fspec)]
+  while (t > g_fspec && * t != DIRSEPCHR && *t != '/')
     --t;
-  strpcpy(&t[0], name, NFILEN - (t - fspec));
+  strpcpy(&t[0], name, NFILEN - (t - g_fspec));
   
-  return fexist(fspec) ? fspec : NULL;
+  return fexist(g_fspec) ? g_fspec : NULL;
 }}
 
 #endif
@@ -1157,6 +1146,26 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 												     /* prompt the user to type us a key to describe */
 	mlwrite(TEXT13);
 			  /* ": describe-key " */
+#define DESC_TO_FILE 0
+#if DESC_TO_FILE
+{	BUFFER *bp = bufflink("pjsout", (g_clexec > 0) | 64);
+	if (bp != NULL)
+	{	swbuffer(bp);
+		gotoeob(0,0);
+		while (pd_lastkey > 32)
+		{ mlerase();
+			update(FALSE);
+
+		{	int	c = getechockey(2);
+			const char * ptr = getfname(c);				/* find the right ->function */
+			mlwrite("\001 %d %s %s", pd_lastkey, cmdstr(&outseq[0], c),
+																			 *ptr != 0 ? ptr : TEXT14);
+			strcat(lastmesg,"\n");
+			linstr(lastmesg);
+		}}
+	}
+}
+#else
 {	int	c = getechockey(2);
 
 	const char * ptr = getfname(c);				/* find the right ->function */
@@ -1164,5 +1173,7 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 	mlwrite("\001 %d %s %s", pd_lastkey, cmdstr(&outseq[0], c),
 																			 *ptr != 0 ? ptr : TEXT14);  
 																										/*"Not Bound" */
+}
+#endif
 	return TRUE;
-}}
+}

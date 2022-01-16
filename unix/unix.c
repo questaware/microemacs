@@ -61,7 +61,9 @@ char tobuf[TBUFSIZ];		/* terminal output buffer */
 
 #include        <signal.h>
 
-#define  STDIPCHAN 0 /* not fileno(stdin), it's closed */
+int g_stdin_fileno;
+
+#define  STDIPCHAN g_stdin_fileno /* can have been reopened */
 
   static int  kbdflgs;			/* saved keyboard fd flags	*/
   static int  kbdqp;			/* how many chars in kbdq	*/

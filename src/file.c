@@ -498,21 +498,6 @@ int Pascal readin(char const * fname, int props)
 	fname = LFN_to_8dot3(LFN_to_83, 0, fname, &spareli[0]);
 }
 #endif
-{ BUFFER * bp = curbp;
-  if (!ins)
-	{ Cc cc = bclear(bp);
-  	if (cc <= FALSE)			/* Changes not discarded */
-  	  return cc;
-
-  	bp->b_flag &= ~(BFINVS|BFCHG);
-  	fname = repl_bfname(bp, fname);
-  	if (fname == null)
-  	  return ABORT;
-
-  			/* let a user macro get hold of things...if he wants */
-  	execkey(&readhook, FALSE, 1);
-  }
-  
 { char fnbuff[NFILEN+1];
   int diry = FALSE;
 	Cc cc;
@@ -527,6 +512,7 @@ int Pascal readin(char const * fname, int props)
       rname = s;
   }
 
+{ BUFFER * bp = curbp;
   cc = FIOSUC;
   if (!got_at)
   { if (s[-1] == '/')                           /* remove trailing slash */
@@ -576,6 +562,21 @@ int Pascal readin(char const * fname, int props)
 /*            "[Reading file]" */
   if (cc < 0)
     return FALSE;
+
+  if (!ins)
+	{ Cc cc = bclear(bp);
+  	if (cc <= FALSE)			/* Changes not discarded */
+  	  return cc;
+
+  	bp->b_flag &= ~(BFINVS|BFCHG);
+  	fname = repl_bfname(bp, fname);
+  	if (fname == null)
+  	  return ABORT;
+
+  			/* let a user macro get hold of things...if he wants */
+  	execkey(&readhook, FALSE, 1);
+  }
+  
   if (cc != 0)
     goto out;
 

@@ -924,12 +924,13 @@ int Sinc::srchdeffile(int depth, const char * fname)
 
     if (bp == NULL)
     { const char * ids = pd_incldirs;
-      int idlen = strlen(ids);
+      int idlen = ids == NULL ? 0 : strlen(ids);
       if (idlen >= SLEN-6 || Sinc::ask_type != 0 ||
 					mlreply(concat(&lbuf[0], fname, TEXT224, null),
 									&lbuf[idlen+1], SLEN-3-idlen) != TRUE)
 				return 0;
-      strcpy(&lbuf[0], ids)[idlen] = PATHCHR;
+      if (idlen > 0)
+      	strcpy(&lbuf[0], ids)[idlen] = PATHCHR;
 			remallocstr(&pd_incldirs, lbuf, 0);
     }
   }

@@ -159,7 +159,7 @@ void Pascal dcline(int argc, char * argv[])
 	for (carg = argc; --carg > 0; )
 		clean_arg(argv[carg]);
 #endif
-	flook_init(g_invokenm = argv[0]);
+	flook_init(argv[0]);
 																						/* Parse a command line */
 	for (carg = argc; --carg > 0; )
 	{ char * filev = argv[argc-carg];

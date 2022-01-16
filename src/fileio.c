@@ -63,6 +63,7 @@ int Pascal iskboard()
 #if S_VMS == 0
 
 #if S_LINUX
+extern 	int     g_stdin_fileno;
 struct termios  g_savetty;
 #endif
 
@@ -92,7 +93,6 @@ int Pascal ffropen(const char * fn)
 		         open("/dev/tty", O_RDONLY+O_NOCTTY);
 #endif
 #if S_LINUX
-		extern int g_stdin_fileno;
     if (fd)
 	  { struct termios  tty;
 	    speed_t     spd;

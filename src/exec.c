@@ -860,10 +860,9 @@ int Pascal startup(const char * sfname)
 																			      /* if it isn't around */
 	if (fspec == NULL)
 	{				  																/* complain if we are interactive */
-	  if (g_clexec <= 0)
-	    mlwrite(TEXT214, sfname);
+	  mlwrite(TEXT214, sfname);
 						/* "%%No such file as %s" */
-	   return 13;
+	  return 13;
 	}
 																						/* otherwise, execute it */
 	return dofile(fspec);

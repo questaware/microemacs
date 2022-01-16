@@ -77,7 +77,7 @@ typedef struct Mapstrm_s
 		     			{{typ, keyoffs, sizeof(tbl[0])}, \
 	/*srch_key*/  null, -1, \
 	/*max_len*/		sizeof(tbl), sizeof(tbl)-(deduct)*sizeof(tbl[0]), \
-					      sizeof(tbl)/sizeof(tbl[0])-(deduct), 0, 0, {0}, \
+	/*cur_mult*/  sizeof(tbl)/sizeof(tbl[0])-(deduct), 0, 0, {0}, \
               }
 
 
