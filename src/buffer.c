@@ -124,10 +124,13 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 	if (bestbp == NULL)
 		return FALSE;
 
-  bestlu = bestbp->b_luct;
-	swbuffer(bestbp);
-	bestbp->b_luct = bestlu;
-  --g_top_luct;
+  if (bestbp != curbp)
+  {	bestlu = bestbp->b_luct;
+		swbuffer(bestbp);
+		bestbp->b_luct = bestlu;
+  	--g_top_luct;
+  }
+
 	return TRUE;
 }
 

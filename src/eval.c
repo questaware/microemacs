@@ -96,8 +96,8 @@ UNDEF, /* EVWRITEHK */
 
 void Pascal varinit()	/* initialize the user variable list */
 
-{ predefvars[EVHIGHLIGHT].p = mallocz(1);
-	predefvars[EVPALETTE].p = mallocz(1);
+{ predefvars[EVHIGHLIGHT].p = mallocz(2);
+	predefvars[EVPALETTE].p = mallocz(2);
 //predefvars[EVINCLD].p = strdup("");
 #if CALLED
   for (i = MAXVARS; --i >= 0;)

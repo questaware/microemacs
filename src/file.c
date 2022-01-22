@@ -856,11 +856,11 @@ int Pascal filesave(int f, int n)
 			  memset(bp->b_remote, 0, cmd - pw);
 				++g_clexec;
 //		  pd_sgarbf = TRUE;
-		  }}}
+		  }}}}
 		}
 //  cryptremote(bp);							// reencrypt it
 		return rc;
-  }}}}
+  }}}
 
   mlwrite(TEXT8);
 /*				"[Aborted]" */

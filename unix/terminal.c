@@ -898,7 +898,7 @@ void tcapsetfgbg(int chrom)
 typedef union
 { char   c[12];
   struct
-  { char prefix[4];
+  { char prefix[6];
     struct
     { char a[8];
     } rest;
@@ -911,34 +911,32 @@ void tcapchrom(short chroms)
 { static Col_pat chromattrs;
   static short last_chm;
 
-  int tix = 4;
   short chm = chroms & 0x7f;  /* background,foreground */
   if (chm == 0 || (chroms & CHROM_OFF))
     chm = def_colour;
 
   if (chm != last_chm)
-  { Col_pat chroma;
+	{	int tix = 6;
+  	Col_pat chroma;
     chroma.c[2] = '\033';
     chroma.c[3] = '[';
+    chroma.c[4] = '0';
+    chroma.c[5] = ';';
     chroma.d.rest = chromattrs.d.rest;
 
     if      (chroms & CHROM_OFF)
     { if (last_chm == 0)
         return;
-      if (last_chm & 8)
-      { chroma.c[4] = 'm';
-        chroma.c[5] = 0;
-        putpad(chroma.c+2);
-      }
     }
 
-    chroma.c[4] = '4';          // Only underline works
-    if (chm & 8) ;    // bold
+    if (chm & 8)	    // bold
+	    chroma.c[4] = '1';          // 1: bold, 4: underline
     else
-    { chroma.c[5] = '0' + ((chm & 0x70) >> 4);
-      chroma.c[6] = ';';
-      chroma.c[7] = '3';
-      chroma.c[8] = '0' + (chm & 0x7);
+    { chroma.c[6] = '4';
+    	chroma.c[7] = '0' + ((chm & 0x70) >> 4);
+      chroma.c[8] = ';';
+      chroma.c[9] = '3';
+      chroma.c[10] = '0' + (chm & 0x7);
 //    sprintf(&chromattrs[2], "4%d;3%d", (chm & 0x70) >> 4, chm & 0x7);
 //    concat(&chromattrs[3], int_asc((chm & 0x70) >> 4), ";3",
 //                           int_asc(chm & 0x7), null);

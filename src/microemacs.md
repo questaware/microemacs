@@ -507,8 +507,9 @@ $gmode         The default (i.e. global) mode for buffers
 $hardtab       The tab stop interval
 $highlight     The first character is a digit selecting a colour from $palette
                All sequences the same as the rest of the characters are
-               highlighted in that colour.
+               highlighted in that colour. (Cleared by searches).
 $hjump         Horizontal scrolling jump
+               (set this to 0 before large pastes through the terminal)
 $hscroll       Enable $hjump
 $incldirs      Path of directories to search with srch-incls
 $keycount      Keys pressed since last command

@@ -21,15 +21,6 @@ extern Pair g_eaten_pair;
 #define WinChar wchar_t
 #else
 #define WinChar void
-
-struct subprocess {
-  pid_t pid;
-  int stdin;
-  int stdout;
-  int stderr;
-};
-void subproc_call(int argc, char* argv[], struct subprocess * p);
-
 #endif
 											/* ALL global function declarations */
 extern int rubbish;

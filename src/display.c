@@ -480,13 +480,13 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 	if (vtc > 0 && chrom_on != 0)
 	{
-#if S_MSDOS == 0
-		if (mode > 0)
+#if S_MSDOS
+		if ((tgt[vtc] & 0xff00) && ct > 0)
+#else
+		if (ct > 0)
 #endif
-		{ if ((tgt[vtc] & 0xff00) && ct < 0)
-				tgt[++vtc] = ' ';
-			tgt[vtc] |= CHR_OLD;
-		}
+			tgt[++vtc] = ' ';
+		tgt[vtc] |= CHR_OLD;
 	}
 	while (--ct > 0)
 	{ if (++vtc >= 0)
@@ -892,8 +892,7 @@ void Pascal updline(int force)
 #if MEMMAP == 0
 	if (pd_sgarbf)
 	{  
-	 /*tcapmove(0, 0);		** Erase the screen. */
-		 tcapepage();			 /* Erase-page, also clears the message area. */
+		 tcapepage();			 /* Erase-whole page, also clears the message area. */
 		 pd_got_msg = FALSE;		 
 	}
 #endif
@@ -1093,9 +1092,8 @@ void Pascal updateline(int row)
 	short *cp1 = &vp1->v_text[0];
 	short *cp9 = &cp1[term.t_ncol];
 	int revreq = vp1->v_flag & VFREQ;		/* reverse video flags */
-	int caution = ((revreq ^ ph->v_flag) & VFREQ) ||
-										vp1->v_color != pscreen[row]->v_color;
-								// (vp1->v_flag & VFML) != 0;
+	int caution = (((revreq ^ ph->v_flag) & VFREQ) ||
+										vp1->v_color != pscreen[row]->v_color) && !pd_sgarbf;
 
 	vp1->v_flag &= ~(VFCHG+VFREQ/*+VFML*/);/* flag this line is unchanged */
 
@@ -1152,8 +1150,8 @@ void Pascal updateline(int row)
 { int same_ct = 0;
   short *phz = &ph->v_text[term.t_ncol];
   short *ph9 = phz;
-#if 0
 														/* terminals cannot do this */
+#if 0
 	while (cp9 > cp1)
 	{	if (*--cp9 != *--ph9)		/* find out if there is a match on the right */
 		{	if (cp9[0] == ' ' && same_ct == 0)

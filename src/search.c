@@ -374,6 +374,8 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 //	paren.sdir = -1;
 	}
 
+	pd_highlight[1] = 0;
+
   if (pat[0] == '\0')
 	{ mlwrite(TEXT78);
 				  /* "No pattern set" */
@@ -401,7 +403,8 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 
 		if (ct <= 2)
 			mvdnwind(1,2 + ct);
-	{ int plen = strlen(pd_patmatch) + 5;
+	{ int pmlen = strlen(pd_patmatch) + 5;
+		int plen = pmlen;
 		int e = wp->w_doto + plen;
 		if (e - lp->l_used > 0)
 		{ plen -= e - lp->l_used;
@@ -416,8 +419,11 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		  wp->w_doto -= plen;
 		}
 #endif
+	{	char color = '2'; // pd_highlight == NULL ? '2' : pd_highlight[0];
+		pd_highlight = remallocstr(&pd_highlight, NULL, pmlen);
+		strcpy(pd_highlight+1, pd_patmatch)[-1] = color;
 	  update(TRUE);
-	}}
+	}}}
 	return cc;
 }
 
@@ -722,7 +728,7 @@ int Pascal scanner(int direct, int again)
   if (patptr != NULL)
   {
     for (ch = matchlen; --ch >= 0; )
-      *patptr++ = nextch(&sm, FORWARD);
+      *patptr++ = nextch(&lpos, FORWARD);
   }
 
 //g_Dmatchlen = matchlen;

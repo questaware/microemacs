@@ -160,6 +160,14 @@ int Pascal millisleep(unsigned int n)
 #endif
 }
 
+#if 0
+
+struct subprocess {
+	pid_t pid;
+	int stdin;
+	int stdout;
+	int stderr;
+};
 
 static
 void mk_pipe(int fds[2]) 
@@ -202,6 +210,7 @@ void subproc_call(int argc, char* argv[], struct subprocess * p)
   }
 }
 
+#endif
 
 #if	S_UNIX5 | S_HPUX | S_SUN | S_XENIX
 
