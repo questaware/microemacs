@@ -163,7 +163,7 @@ void Pascal scroll_vscr()
 static
 char * use_cmd(char * buf, int bufsz, const char * cmd)
 
-{ char v = NULL;
+{ char * v = NULL;
 	FILE * ip = popen(cmd, "r");
 	if (ip != NULL)
 	{ v = fgets(buf, bufsz-1, ip);
@@ -356,6 +356,7 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 {	VIDEO *vp = vscreen[row];
 	short * tgt = &vp->v_text[0];
 	Short  clring = g_clring;
+	char * hlite = (vp->v_flag & VFML) ? "" : pd_highlight;
 	int mode = clring == 0 || cmt_chrom == 0 || (vp->v_flag & VFML)
 								 		? -1 : s_props & VFCMT;
 												
@@ -376,9 +377,9 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 		}
 		
 	{ int c = *++str;
-		if (c != 0 && c == pd_highlight[(++highlite)])
-		{ if (pd_highlight[1+highlite] == 0 && vtc-highlite+1 >= 0)
-			{ tgt[vtc-highlite+1] |= palcol(pd_highlight[0]-'1') | CHR_NEW;
+		if (c != 0 && c == hlite[(++highlite)])
+		{ if (hlite[1+highlite] == 0 && vtc-highlite+1 >= 0)
+			{ tgt[vtc-highlite+1] |= palcol(hlite[0]-'1') | CHR_NEW;
 				highlite = 0;
 			//chrom_on = 1;
 				chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
@@ -386,7 +387,7 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 		}
 		else
 		{ highlite = 0;
-			if (c != 0 && c == pd_highlight[1])
+			if (c != 0 && c == hlite[1])
 				highlite = 1;
 		}
 

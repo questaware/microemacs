@@ -44,8 +44,7 @@ export LIB
 Path :=c:/bin;$(C_HOME)/bin;$(C_HOME)/lib;\$(C_HOME)/../Common/msdev98/bin/;\
 export Path
 
-.SUFFIXES: .c .o .asm
-
+.SUFFIXES: .c .obj .asm
 
 LINK32_OBJS= \
 basic.obj bind.obj buffer.obj \

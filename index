@@ -92,6 +92,7 @@ unix/keys.h
 unix/lock.c
 unix/makefile
 unix/makekeys.c
+unix/microemacs.spec
 unix/myterm.h
 unix/terminal.c
 unix/unix.c

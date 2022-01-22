@@ -236,7 +236,7 @@ void Pascal MySetCoMo()
                         &sa,
                         OPEN_EXISTING,
                         0, NULL); // ignored
-	if (h == INVALID_HANDLE_VALUE || !SetStdHandle(STD_INPUT_HANDLE, h))
+	if (!SetStdHandle(STD_INPUT_HANDLE, h))
     flagerr("SCCFSHErr");
 
 	setMyConsoleIP();
@@ -1011,7 +1011,7 @@ int pipefilter(wh)
 		if (line[0] == '%' || line[0] == '\'')
 		{ char sch;
       int ix;
-			for (ix = 0; isalpha(line[++ix]); )
+			for (ix = 0; isalpha((sch = line[++ix])); )
 				;
 
 			line[ix] = 0;
@@ -1172,7 +1172,12 @@ static HANDLE	g_hClipData;
 
 static int g_clix = 0;
 
-DWORD WINAPI ClipThread(void * data);
+static 
+DWORD WINAPI ClipSet_(void * data)
+
+{ return ClipSet(data);
+}
+
 
 Cc ClipSet(char * data)
 
@@ -1194,7 +1199,7 @@ Cc ClipSet(char * data)
 	if (OpenClipboard(mwh))
 	{	
 		EmptyClipboard();
-		if (thread == NULL && data != NULL)
+		if (thread == 0 && data != NULL)
 		{	int len = strlen(data);
 			HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
 			if (!m_hData)  
@@ -1214,17 +1219,12 @@ Cc ClipSet(char * data)
 
 #if 1
 	if (!thread && pd_cliplife != 0)
-  {	HANDLE thread = CreateThread(NULL, 0, ClipThread, (void*)-(++g_clix),0,NULL);
+  {	HANDLE thread = CreateThread(NULL, 0, ClipSet_, (void*)-(++g_clix),0,NULL);
   }
 #endif
 	return OK;
 }
 
-
-DWORD WINAPI ClipThread(void * data)
-
-{ return ClipSet(data);
-}
 
 #if 0
 

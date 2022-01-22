@@ -28,11 +28,11 @@ CFILES=	../$(SRC)/basic.c ../$(SRC)/bind.c ../$(SRC)/buffer.c ../$(SRC)/char.c \
 HFILES=	estruct.h ../$(SRC)/edef.h ../$(SRC)/efunc.h ../$(SRC)/epath.h \
           ../$(SRC)/ebind.h ../$(SRC)/evar.h ../$(SRC)/etype.h
 
-all:	makekeys emacs
-emacs:	$(OFILES) $(UOFILES) $(MOFILES)
+all:	microemacs
+microemacs:	$(OFILES) $(UOFILES) $(MOFILES)
 #	$(CC)  -L/opt/FSFlibg++/lib -o emacs $(OFILES) $(MOFILES) $(UOFILES) /opt/FSFlibg++/lib/libstdc++.a
 #	$(CC) $(CFLAGS) $(OFILES) $(MOFILES) $(UOFILES) -lncurses -o emacs
-	$(LK) $(CFLAGS) $(OFILES) $(MOFILES) $(UOFILES)  -o emacs
+	$(LK) $(CFLAGS) $(OFILES) $(MOFILES) $(UOFILES)  -o microemacs
 
 line.i:   ../$(SRC)/line.c
 	$(CC) -E -I../$(USRC)/ -I../$(SRC) ../$(SRC)/line.c
@@ -55,7 +55,7 @@ unix.o:         unix.c
 
 unix.i:		unix.c
 		$(CC) -E $(CFLAGS) unix.c
-terminal.o:     terminal.c keys.h
+terminal.o:     terminal.c
 		$(CC) $(CFLAGS) -c terminal.c
 lock.o:         lock.c
 		$(CC) $(CFLAGS) -c lock.c
@@ -119,5 +119,16 @@ window.o:  ../$(SRC)/window.c
 word.o: ../$(SRC)/word.c
 	$(CC) -c $(CFLAGS) ../$(SRC)/word.c
         
-CLEAN:
+rpm:
+	rm -rf ~/rpmbuild
+	mkdir -p ~/rpmbuild/BUILD
+	mkdir -p ~/rpmbuild/RPMS
+	mkdir -p ~/rpmbuild/SRPMS
+	mkdir -p ~/rpmbuild/SPECS
+	cp microemacs.spec ~/rpmbuild/SPECS
+	mkdir -p ~/rpmbuild/SOURCES
+	cd ..;tar cfz ~/rpmbuild/SOURCES/microemacs-2.9.tar.gz -T index
+
+clean:
 	rm -f *.o
+	rm makekeys

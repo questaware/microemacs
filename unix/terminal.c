@@ -454,7 +454,8 @@ void Pascal tcap_init()
 		if (g_rsmcup[0] == 0)
 			g_rsmcup[1] = 0;
 		if (g_rsmcup[1])
-		{ putpad(g_rsmcup[1]);
+		{ tcapmove(term.t_nrowm1, 0);
+			putpad(g_rsmcup[1]);
 //		putpad("\033[6n");
 //		<ESC>[{ROW};{COLUMN}R
 		}
@@ -510,11 +511,12 @@ int tcapclose(int lvl)
 #endif
   /* tcapmove(term.t_nrowm1, 0); */
 	if (lvl == 0 && g_rsmcup[0])
-	{	putpad(g_rsmcup[0]);
-		usleep(1000);
-	  ttcol = 1;
-//	putpad("\r");
-		tcapmove(term.t_nrowm1+1, 0);
+	{	putpad("\033[r");
+		putpad(g_rsmcup[0]);
+//	usleep(1000);
+//  ttcol = 1;
+//	tcapmove(term.t_nrowm1, 0);
+		tcapeeol();
 	}
 	else
 	{ putpad(captbl[K_RS1].p_seq);

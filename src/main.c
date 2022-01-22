@@ -724,17 +724,15 @@ Pascal quit(int f, int n)
 		status = mlyesno(TEXT104);
 								/* "Modified buffers exist. Leave anyway" */
 	if (status > 0)
-	{ tcapmove(term.t_nrowm1, 0);
-//	pd_discmd = true;
-
+	{
+#if S_MSDOS
+		tcapmove(term.t_nrowm1, 0);
+#endif
 #if FILOCK
 		if (lockrel() != TRUE)
 		{ f = 1;
 			n = 1;
 		}
-#endif
-#if S_WIN32 == 0
-		tcapclose(0);
 #endif
 		eexitval = f ? n : GOOD;
 		eexitflag = TRUE; /* flag a program exit */
