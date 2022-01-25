@@ -725,9 +725,6 @@ Pascal quit(int f, int n)
 								/* "Modified buffers exist. Leave anyway" */
 	if (status > 0)
 	{
-#if S_MSDOS
-		tcapmove(term.t_nrowm1, 0);
-#endif
 #if FILOCK
 		if (lockrel() != TRUE)
 		{ f = 1;
@@ -736,7 +733,11 @@ Pascal quit(int f, int n)
 #endif
 		eexitval = f ? n : GOOD;
 		eexitflag = TRUE; /* flag a program exit */
+#if S_MSDOS
+		tcapmove(term.t_nrowm1, 0);
+#endif
 	}
+
 	return status;
 }
 

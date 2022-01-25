@@ -513,9 +513,9 @@ int tcapclose(int lvl)
 	if (lvl == 0 && g_rsmcup[0])
 	{	putpad("\033[r");
 		putpad(g_rsmcup[0]);
-//	usleep(1000);
+		usleep(1000);
 //  ttcol = 1;
-//	tcapmove(term.t_nrowm1, 0);
+		tcapmove(term.t_nrowm1, 0);
 		tcapeeol();
 	}
 	else

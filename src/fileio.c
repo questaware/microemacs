@@ -93,7 +93,7 @@ int Pascal ffropen(const char * fn)
 		         open("/dev/tty", O_RDONLY+O_NOCTTY);
 #endif
 #if S_LINUX
-    if (fd)
+    if (fd >= 0)
 	  { struct termios  tty;
 	    speed_t     spd;
 			g_stdin_fileno = fd;

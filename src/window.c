@@ -93,7 +93,7 @@ void openwindbuf(char * bname)
 
 /*
  * Refresh the screen. With no argument, it just does the refresh.
- * otherwise the window is centered.  Bound to M-^L.
+ * otherwise the line becomes line n from the top/bottom.  Bound to M-^L.
  */
 int Pascal refresh(int f, int n)
 
@@ -194,33 +194,57 @@ int Pascal getwpos()
 int Pascal mvupwind(int notused, int n)
 
 {   int wpos = getwpos();
-	  LINE * lp = curwp->w_linep;
-    LINE * p = &curwp->w_bufp->b_baseline;
-    int i = n;
-
-    if (i < 0)
-		{	--i;
-      while (lp != p && ++i < 0)
-				lp = lforw(lp);
+#if S_MSDOS == 0
+                                      // W ^ : n == 1   goto end, 1 down
+                                      // W V : n == -1  goto top, 1 up
+    if (n == 1 || n == -1)
+    { Lpos_t lpos = *(Lpos_t*)&curwp->w_dotp;
+      int lineno = curwp->w_line_no;
+      int mv = n > 0 ? -wpos : curwp->w_ntrows - wpos - 1;
+      (void)forwbyline(mv);
+      update(FALSE);
+      forwbyline(-n);
+      update(FALSE);
+      if      (wpos == 0 && n < 0)        // keep line in window
+      { lpos.curline = lforw(lpos.curline);
+        lpos.curoff = 0;
+        lpos.line_no += 1;
+      }
+      else if (curwp->w_ntrows == wpos + 1 && n > 0)
+      { lpos.curline = lback(lpos.curline);
+        lpos.curoff = 0;
+        lpos.line_no -= 1;
+      }
+      rest_l_offs(&lpos);
     }
-    else
-    { p = lforw(p);
-			++i;
-      while (lp != p && --i > 0)
-				lp = lback(lp);
+		else
+#endif
+    { LINE * lp = curwp->w_linep;
+      LINE * p = &curwp->w_bufp->b_baseline;
+      int i = n;
+
+      if (i < 0)
+      { --i;
+        while (lp != p && ++i < 0)
+          lp = lforw(lp);
+      }
+      else
+      { p = lforw(p);
+        ++i;
+        while (lp != p && --i > 0)
+          lp = lback(lp);
+      }
+
+      upwind(FALSE);
+      curwp->w_linep = lp;
+
+      if (getwpos() < 0 && wpos >= 0)
+      { curwp->w_line_no += i - n - wpos;
+        curwp->w_dotp = lp;
+        refresh(1, curwp->w_ntrows >> 1);
+      }
     }
-
-		upwind();
-    curwp->w_linep = lp;
-//  curwp->w_flag |= WFHARD;		/* Mode line is OK. */
-
-    if (getwpos() < 0 && wpos >= 0)
-    { curwp->w_line_no += i - n - wpos;
-      curwp->w_dotp = lp;
-      (void)forwbyline(curwp->w_ntrows >> 1);
-    }
-
-    return TRUE;
+	  return TRUE;
 }
 
 
