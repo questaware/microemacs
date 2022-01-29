@@ -447,8 +447,7 @@ int bktoshell()		/* suspend MicroEMACS and wait to wake up */
 int rtfrmshell()
 
 { ttopen();
-  upwind();
-  pd_sgarbf = TRUE;
+  upwind(TRUE);
   return 0;     /* dont know the value */
 }
 #endif
@@ -484,8 +483,7 @@ static void usehost(line, end)
      ;
   }
 #endif
-  upwind();
-  pd_sgarbf = TRUE;
+  upwind(TRUE);
 }
 
 

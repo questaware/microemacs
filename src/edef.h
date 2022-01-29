@@ -371,8 +371,7 @@ typedef struct Paren_s
   short				  sdir;
 } Paren_t, *Paren;
 
-extern Paren_t paren;
-extern Paren_t g_sparen;
+extern Paren_t g_paren;
 
 #include "epredef.h"
 

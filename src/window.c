@@ -102,7 +102,7 @@ int Pascal refresh(int f, int n)
     curwp->w_flag |= WFFORCE;
   }
  
-	upwind();
+	upwind(TRUE);
 
   return TRUE;
 }
@@ -235,13 +235,13 @@ int Pascal mvupwind(int notused, int n)
           lp = lback(lp);
       }
 
-      upwind(FALSE);
+      curwp->w_flag |= WFHARD;
       curwp->w_linep = lp;
-
+            
       if (getwpos() < 0 && wpos >= 0)
       { curwp->w_line_no += i - n - wpos;
         curwp->w_dotp = lp;
-        refresh(1, curwp->w_ntrows >> 1);
+	      (void)forwbyline(curwp->w_ntrows >> 1);
       }
     }
 	  return TRUE;
@@ -588,7 +588,7 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 #else
     onlywind(1, 1);		/* can only make this work */
 #endif
-		upwind();
+		upwind(TRUE);
 //  tcapepage();
 #if S_WIN32
 	{ char buf[35];
@@ -596,7 +596,6 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 	}
 #endif
 //  pd_sgarbf = TRUE;			  /* screen is garbage */
-		upwind();
 	}
 #if 0				       
 	if (!inr)

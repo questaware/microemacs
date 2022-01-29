@@ -438,7 +438,12 @@ void Pascal upmode();
 int Pascal upperregion(int, int);
 int Pascal upperword(int, int);
 int Pascal upscreen(int, int);
-void Pascal upwind(void);
+#if S_MSDOS
+void Pascal upwind_(void);
+#define upwind(x) upwind_()
+#else
+void Pascal upwind(int garbage);
+#endif
 int Pascal usebuffer(int, int);
 int Pascal use_named_str(Char *,Char *);
 int Pascal varclean();

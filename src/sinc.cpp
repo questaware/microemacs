@@ -1,8 +1,7 @@
-/* -*- C -*- ****************************************************************
+/**************************************************************************
  *
  *  			Copyright 2003 <unknown>.
  *			      All Rights Reserved
- *
  *
  *  System        : Microemacs (jasspa version)
  *  Module        : sinc
@@ -20,8 +19,6 @@
  *
  *  History
  *	
- *  $Log$
- *
  ****************************************************************************
  *
  *  Copyright (c) 2003 <unknown>.
@@ -139,20 +136,20 @@ typedef struct Paren_s
 } Paren_t, *Paren;
 
 
-static Paren_t paren;
+static Paren_t g_paren;
 
 
 
 int Pascal init_paren(const char * str, int len)
 
-/*paren.nestclamped = 1;*/
-{ paren.sdir = 1;
-  paren.nest = 0;
-  paren.in_mode = 0;
-  paren.prev = 0;
-  paren.ch = *str;
+/*g_paren.nestclamped = 1;*/
+{ g_paren.sdir = 1;
+  g_paren.nest = 0;
+  g_paren.in_mode = 0;
+  g_paren.prev = 0;
+  g_paren.ch = *str;
   
-{ char ch = paren.ch;
+{ char ch = g_paren.ch;
 					     /* setup proper matching fence */
   switch (ch)
   {
@@ -170,22 +167,22 @@ int Pascal init_paren(const char * str, int len)
     case '#': if    (len > 2 && str[1] == 'i' &&  str[2] == 'f')
 			    			;
 	    	      else if (len > 2 && str[1] == 'e' && (str[2] =='n' || str[2] =='l'))
-				        paren.sdir = -1;
+				        g_paren.sdir = -1;
     		      else
-              { paren.nest = 0;
+              { g_paren.nest = 0;
                 ch = 0;
               }
 					    break;
     case ')': ch = '(';
 					    break;
 #endif
-    default:  paren.nest = 0;
+    default:  g_paren.nest = 0;
   }
-  paren.fence = ch;
-  if (ch < paren.ch)
-    paren.sdir = -1;
+  g_paren.fence = ch;
+  if (ch < g_paren.ch)
+    g_paren.sdir = -1;
 
-  return paren.sdir;
+  return g_paren.sdir;
 }}
 
 #define Q_IN_ESC   1
@@ -209,15 +206,15 @@ int Pascal init_paren(const char * str, int len)
 int Pascal scan_paren(char ch)
 	
 {
-  int mode = paren.in_mode;
+  int mode = g_paren.in_mode;
 
   do
   { if ((mode & (Q_IN_STR + Q_IN_CHAR)) != 0)
     { if      (ch == '\n')
         mode = 0;
-      else if ((mode & Q_IN_ESC) && paren.sdir > 0)
+      else if ((mode & Q_IN_ESC) && g_paren.sdir > 0)
         mode &= ~Q_IN_ESC;
-      else if (ch == '\\' && paren.sdir > 0)
+      else if (ch == '\\' && g_paren.sdir > 0)
         mode |= Q_IN_ESC;
       else if ((mode & Q_IN_STR) && ch == '"' ||
                (mode & Q_IN_CHAR) && ch == '\'') 
@@ -230,8 +227,8 @@ int Pascal scan_paren(char ch)
         mode = mode == '\'' ? Q_IN_CHAR :
                mode == '"'  ? Q_IN_STR  :
                mode == '/'  ? Q_IN_CMT0 : 
-               mode == '\\' && paren.sdir < 0 && (paren.prev == '\'' || paren.prev == '"')
-                            ? paren.prev == '"' ? Q_IN_STR : Q_IN_CHAR : 0;
+               mode == '\\' && g_paren.sdir < 0 && (g_paren.prev == '\'' || g_paren.prev == '"')
+                            ? g_paren.prev == '"' ? Q_IN_STR : Q_IN_CHAR : 0;
       }
       else if (mode & Q_IN_CMT)
       { if      (mode & Q_IN_EOL)
@@ -239,29 +236,29 @@ int Pascal scan_paren(char ch)
             break;
           mode = 0;
         }
-        else if (ch == '/' && paren.prev == '*')
+        else if (ch == '/' && g_paren.prev == '*')
         { mode = Q_IN_CMT_;
           break;
         }
       }
       else /* if (mode & Q_IN_CMT0) */
       { mode = ch == '*'		    ? Q_IN_CMT	          :
-				       ch == '/' && paren.sdir > 0 ? Q_IN_CMT + Q_IN_EOL : 0;
+				       ch == '/' && g_paren.sdir > 0 ? Q_IN_CMT + Q_IN_EOL : 0;
       }	      
 
       if (mode == 0)
       { 
-        if (ch == paren.ch)
-        { /*loglog2("INC %d %s", paren.nest, str);*/
-          ++paren.nest;
-          ++paren.nestclamped;
-          if (paren.nestclamped <= 0)
-            paren.nestclamped = 1;
+        if (ch == g_paren.ch)
+        { /*loglog2("INC %d %s", g_paren.nest, str);*/
+          ++g_paren.nest;
+          ++g_paren.nestclamped;
+          if (g_paren.nestclamped <= 0)
+            g_paren.nestclamped = 1;
         }
-        if (ch == paren.fence)
-        { /*loglog2("DEC %d %c", paren.nest, ch);*/
-          --paren.nest;	/* srchdeffile needs relative and clamped nestings */
-          --paren.nestclamped;
+        if (ch == g_paren.fence)
+        { /*loglog2("DEC %d %c", g_paren.nest, ch);*/
+          --g_paren.nest;	/* srchdeffile needs relative and clamped nestings */
+          --g_paren.nestclamped;
         }
       }
     } 
@@ -270,8 +267,8 @@ int Pascal scan_paren(char ch)
 /* if (mode & Q_IN_EOL)
      mode &= ~(Q_IN_CMT+Q_IN_EOL);
 */
-  paren.prev = ch;
-  paren.in_mode = mode;
+  g_paren.prev = ch;
+  g_paren.in_mode = mode;
   return mode;
 }
 
@@ -279,11 +276,10 @@ int Pascal scan_paren(char ch)
 			 * the first / of / / */
 int Pascal USE_FAST_CALL scan_for_sl(meLine * lp)
 
-{ int cplim = lp->linelength;
+{ Paren_t s_paren = paren;
+	int cplim = lp->linelength;
   int ix;
   
-  Paren_t sparen = paren;
-
   init_paren("{",0);
   for (ix = -1; ++ix < cplim; )
   { 
@@ -293,7 +289,7 @@ int Pascal USE_FAST_CALL scan_for_sl(meLine * lp)
       break;
   }
 
-  paren = g_sparen;
+  g_paren = s_paren;
   return ix;
 }
 #endif
@@ -413,7 +409,8 @@ meBuffer * Sinc::best_bp;
 const char * const Sinc::ops[] =
 		 	{ "class","struct","union","enum",  /* 4: */
 //	  	"public","private","protected", /* 7: */
-		   	"and","or","not",
+//	   	"and","or","not",
+				"\"C\"", "namespace",
 		   	"return","if", "while", "then","else", "switch", // end of ops
 				"define", "include", };
 
@@ -423,16 +420,16 @@ int Pascal Sinc::strxct_mtch(int stt, const char * s_,
 											 								const char * slim)
 { const char * * t_;
 	int ix = 1;
-	if      (stt < 0)
+	if      (stt < 0)				// just Sinc::target
 	{ t_ = &Sinc::target;
 	}
-	else if (stt > 0)
+	else if (stt > 0)				// last two
 	{ t_ = (const char **)&Sinc::ops[upper_index(Sinc::ops) - 1];
 		++ix;
 	}
-	else
+	else										// all except last two
 	{ t_ = (const char **)&Sinc::ops;
-		ix = upper_index(Sinc::ops) - 1;
+		ix = upper_index(Sinc::ops) - 2;
 	}
   for ( ; --ix >= 0; )
   { const char * pat = t_[ix];
@@ -483,7 +480,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_)
     lp = meLineGetPrev(lp);
   }
 //Sinc::prev_block = -1;
-{ int  obrace_dpth = paren.nestclamped;
+{ int  obrace_dpth = g_paren.nestclamped;
   init_paren("[",-1);
 { bool in_esc = false;		/* line after \ */
   int  paren_dpth = 0;
@@ -543,7 +540,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_)
 //         	continue;
 //			}
       }
-      else if (paren.nest == 0 && directive <= 0)
+      else if (g_paren.nest == 0 && directive <= 0)
       { if (paren_dpth < 2 && isword((char)ch))
         {
           if ((state & M_IN_W) == 0)
@@ -563,7 +560,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_)
 				      { // prev_block = ch;
 	    		    /*if ((state & M_IN_SCT) == 0)*/
 	        		  state |= M_PRE_SCT;
-	        			if (ch == 3)
+	        			if (ch == 3)						// enum
 				          state |= M_IN_ENUM;
 	      			}
 	    			}
@@ -832,7 +829,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_)
 					    type of occurrence */
 int Sinc::srchdeffile(int depth, const char * fname)
   	
-{ Paren_t sparen = paren;
+{ Paren_t sparen = g_paren;
   char lbuf[SLEN+2];
   char mybuf[SLEN];
   int rcc;
@@ -936,7 +933,7 @@ int Sinc::srchdeffile(int depth, const char * fname)
   }
 
   swbuffer(bp);
-  paren = sparen;
+  g_paren = sparen;
   loglog2("origbp %x bp %x", origbp, bp);
  
   if (bp->b_flag & MDSRCHC)
@@ -1011,8 +1008,8 @@ int Sinc::srchdeffile(int depth, const char * fname)
     if (! not_directive)
 		{	cp = skipspaces(cp+1, cplim);
 
-      if (strxct_mtch(upper_index(ops)-1, cp, cplim) >= 0 &&	 // define, include
-          (paren.in_mode & (Q_IN_STR+Q_IN_CHAR+Q_IN_CMT+Q_IN_EOL)) == 0)
+      if (strxct_mtch(1, cp, cplim) >= 0 &&	 					// define, include
+          (g_paren.in_mode & (Q_IN_STR+Q_IN_CHAR+Q_IN_CMT+Q_IN_EOL)) == 0)
       { ch = *cp;
         cp = skipspaces(&cp[7], cplim);
     
@@ -1045,7 +1042,7 @@ int Sinc::srchdeffile(int depth, const char * fname)
 				  {
 /*			    strcpy(&b[0], "Search at (N)");
 				    b[11] = '1' + depth;
-				    if (paren.in_mode != 0)
+				    if (g_paren.in_mode != 0)
 				      strcat(&b[0], "NP!");
 */
 #if AM_ME  
@@ -1082,11 +1079,11 @@ int Sinc::srchdeffile(int depth, const char * fname)
 				  rest_l_offs(&save);
 #endif
 				/*++srchdpth;*/
-			    loglog2("srchdeffile %d %s", paren.nest, fnb);
+			    loglog2("srchdeffile %d %s", g_paren.nest, fnb);
 				  rcc = srchdeffile(depth+1, &fnb[0]);
 				  if (rcc > 0)
 				    cand.curline = NULL;
-          loglog3("SRCHDEFFILE %d %d %s", paren.nest, rcc, fnb);
+          loglog3("SRCHDEFFILE %d %d %s", g_paren.nest, rcc, fnb);
 					(void)Sinc::bufappline(depth * 3, fnb);
         /*--srchdpth;*/
         }
@@ -1098,7 +1095,7 @@ int Sinc::srchdeffile(int depth, const char * fname)
 		cp = cpstt + offs;
     while (--offs >= 0 && Sinc::best_nest > 0)
     { ch = *--cp;
-      if (paren.in_mode || !not_directive)
+      if (g_paren.in_mode || !not_directive)
 scan:   
         scan_paren(ch);
       else        
@@ -1115,32 +1112,37 @@ scan:
 				  when '*':
 				  case '&': word_ct -= 1;
 				  
-          when '}':{ Cc rc = FALSE;
-          					 Lpos_t here = *(Lpos_t*)&wp->w_dotp;
+          when '}':{ Lpos_t here = *(Lpos_t*)&wp->w_dotp;
           					 wp->w_dotp = lp;
           					 wp->w_doto = cp - cpstt;
 									 
-          					 if (paren.nest <= 0)
+          				 { int rc = - g_paren.nest;
+          					 if (rc >= 0)
           					 { if (getfence(0,1))
           					   { Sinc::ext_c = *(Lpos_t*)&wp->w_dotp;
-          					 	   rc = nextword(0,-1);
-          					 	   if (rc)
-	          					   { int offs = wp->w_doto;
-	          					   	 LINE * tlp = wp->w_dotp;
-  	        					 	   int rem = tlp->l_used - offs - 3;
-    	      					 	   if (rem < 0 || tlp->l_text[offs]  != '"'
-    	      					 	 						   || tlp->l_text[offs+2]!= '"'
-    	      					 	 						   || tlp->l_text[offs+1]!= 'C')
-    	      					 	 	   rc = false;
+          					   	 int iter = 2;
+          					   	 while (--iter >= 0)
+          					   	 { rc = nextword(0,-1);
+	          					 	   if (rc)
+		          					   { int offs = wp->w_doto;
+	  	        					   	 LINE * tlp = wp->w_dotp;
+  	  	      					 	   const char * lim = &tlp->l_text[tlp->l_used - 1];
+        	  					 	   	 int wh = strxct_mtch(0, &tlp->l_text[offs], lim);
+          					 	   
+    	      					 	   	 if (wh == 4 || wh == 5)		// "C", namespace
+    	      					 	   	 	 break;
+	    	      					 	 	 if (iter == 0)
+														   rc = false;
+													 }
     	      					   }
           					   }
           					 }
 
           					 rest_l_offs(&here);
-    	      				 if (rc)						// dont scan
+    	      				 if (rc > 0)						// dont scan
     	      				 	 break;
 	    	      			 Sinc::ext_c.curline = NULL;
-          				 }	
+          				 }}	
           case '/': case '\\': 
           case '"': case '\'': 
           					goto scan;
@@ -1149,7 +1151,7 @@ scan:
 				  					word_ct = 0;
 				  					got_prochead = 0;
 						  		/*if (Sinc::best_nest != NO_BEST)
-          					  loglog1("CBRACE %d", paren.nest);*/
+          					  loglog1("CBRACE %d", g_paren.nest);*/
           when ']': sword_ct = word_ct;
           when '[': word_ct = sword_ct;
           when ')': word_ct = 0;
@@ -1168,34 +1170,34 @@ scan:
 				  when ':': if (ccontext == Q_NEED_RP)
 						  	    { if (offs > 0 && cp[-1]==':')
 	  	    					  { 
-						  	        if      (good_class > 0 ?  good_class < paren.nest
-	  	    														    			: -good_class < paren.nest)
-	  	          					good_class = paren.nest;
-						  	        else if (good_class = paren.nest)
-						  	          good_class = -paren.nest;
+						  	        if      (good_class > 0 ?  good_class < g_paren.nest
+	  	    														    			: -good_class < g_paren.nest)
+	  	          					good_class = g_paren.nest;
+						  	        else if (good_class = g_paren.nest)
+						  	          good_class = -g_paren.nest;
 	  	    					  //mbwrite("[from class]");
 	  	      					}
 	  	    					}
           when '{': word_ct = 0;
           				/*if (Sinc::best_nest != NO_BEST) 
-                      loglog1("OBRACE %d", paren.nest);*/
+                      loglog1("OBRACE %d", g_paren.nest);*/
 										if (Sinc::ext_c.curline != lp ||
 												Sinc::ext_c.curoff  != cp - cpstt)
 	            				scan_paren(ch);
-      		  			/*if (paren.nest < 0)
-                      paren.nest = 0;*/
+      		  			/*if (g_paren.nest < 0)
+                      g_paren.nest = 0;*/
                				      /* structure definitions */
-							    	if (paren.nest <= min_paren_nest)
-			    					{ min_paren_nest = paren.nest;
+							    	if (g_paren.nest <= min_paren_nest)
+			    					{ min_paren_nest = g_paren.nest;
 								      ccontext = Q_NEED_RP;
 			    					}
 																	    					/* is the candidate good? */
-								    if (paren.nest < sparen_nest &&
-								      /*paren.nest >= 0          && */Sinc::best_nest != NO_BEST) 
+								    if (g_paren.nest < sparen_nest &&
+								      /*g_paren.nest >= 0          && */Sinc::best_nest != NO_BEST) 
 		    						{ int ct;									/* look back for class or struct */
 								      wp->wLine = lp;
 								      wp->wOffset = offs;
-							 	      loglog3("TRYDEC %d %d %d", best_nest, paren.nest, rcc);
+							 	      loglog3("TRYDEC %d %d %d", best_nest, g_paren.nest, rcc);
 
 								      for (ct = 40; --ct > 0 && backWord(1, 1); )
 								      { int wh;
@@ -1210,11 +1212,11 @@ scan:
 												}
 								        wh = strxct_mtch(0, wd,
 													 							 &wd[wp->wLine->linelength - wp->wOffset]);
-								        if (!in_range(wh, 0, 4) )
+								        if (!in_range(wh, 0, 4))	// all to "C"
 												  continue;
 
 												ct = 0;			/* end of looping */
-								        if      (wh == 4)	/* "C" */
+								        if      (wh == 5)	/* "C" */
 												  ;
 												else if (wh == 3)	/* enum */
 												{ if (from_wh & 1)/* field */
@@ -1229,7 +1231,7 @@ scan:
 												else
 												/* if (!from_class) */
 												    break;
-												Sinc::best_nest -= 1;		/* "C", enum, class unnest */
+												Sinc::best_nest -= 1;		/* "C", enum, class, unnest */
 												loglog4("dec bn to %d, %d %d %s", best_nest, wh, rcc, wd);
 												ct = -1;
 							  	    }
@@ -1274,12 +1276,12 @@ scan:
 												  Sinc::best_nest = 0;
 												}
 											}
-											else if (word_ct <= 1 && /*paren.nestclamped<=2 &&*/ 
+											else if (word_ct <= 1 && /*g_paren.nestclamped<=2 &&*/ 
 															(ccontext <= Q_NEED_RP || 
 															 got_prochead <= 0)
 															&& Sinc::best_nest == NO_BEST)
-											{ sparen_nc = paren.nestclamped;
-											  sparen_nest = paren.nest;
+											{ sparen_nc = g_paren.nestclamped;
+											  sparen_nest = g_paren.nest;
 											  loglog2("TRY %d %s", sparen_nest, cpstt);
 											  loglog2("Try %d %s", sparen_nc, cp);
 //											sprintf(buf, "Try %d %d %50.50s", sparen_nest, sparen_nc, cp);
@@ -1309,8 +1311,8 @@ scan:
 												    good_fld = true;
 		        						}}
 		        						init_paren("}",0);
-	      								paren.nest = sparen_nest;
-												paren.nestclamped = sparen_nc;
+	      								g_paren.nest = sparen_nest;
+												g_paren.nestclamped = sparen_nc;
 								      }}
 		    						}
 				            goto scan;
@@ -1388,8 +1390,7 @@ int Pascal searchIncls(int f, int n)
 #else
   LINE * lp = curwp->w_dotp;
 #endif
-  int slpu = lp->linelength;
-  int ix;
+  int s_lpu = lp->linelength;
 
   if (Sinc::g_outbuffer != NULL)
   { tgt_[0] = '?';
@@ -1421,8 +1422,8 @@ int Pascal searchIncls(int f, int n)
   Sinc::best_bp = NULL;
 
   init_paren("}",-1);						// set nest and nestclamped to 0
-//paren.nest = 0;
-//paren.nestclamped = 0;				// <= 0 => visible
+//g_paren.nest = 0;
+//g_paren.nestclamped = 0;				// <= 0 => visible
 
   /* namelist = null;*/
   /* srchdpth = 0;*/
@@ -1464,7 +1465,7 @@ int Pascal searchIncls(int f, int n)
     g_nosharebuffs = false;
  #endif
 
-    lp->linelength = slpu;
+    lp->linelength = s_lpu;
   }
 
   for ( lp = (meLine*)Sinc::namelist; lp != null; lp = (meLine*)Sinc::namelist)

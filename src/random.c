@@ -13,21 +13,20 @@
 
 static int g_s_cmt, g_ps_cmt;
 
-Paren_t paren;
-Paren_t g_sparen;
+Paren_t g_paren;
 
 int Pascal init_paren(const char * str,
 										  int len
 										 )
 {	Paren_t p = {0,};
-	int p_cmt = (curbp->b_langprops & BCPAS);
 	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL+BCPAS));
+	int p_cmt = (f_cmt						  & BCPAS);
 	int s_cmt = (f_cmt							& BCSQL);
 	int c_cmt = (curbp->b_langprops & BCCOMT);
 		
 	p.olcmt = c_cmt ? '/' :
-								s_cmt ? '-' : 
-								p_cmt ? ')' : (char)-1;
+						s_cmt ? '-' : 
+						p_cmt ? ')' : (char)-1;
 	p.complex = true;
 	p.sdir = 1;
 //p.in_mode = 0;
@@ -118,10 +117,10 @@ int Pascal init_paren(const char * str,
 			p.olcmt = '(';
 			
 	}
-{	g_sparen = paren;
-	paren = p;	
+
+	g_paren = p;	
 	return p.sdir;
-}}}}
+}}}
 
 
 
@@ -791,8 +790,8 @@ int Pascal scan_paren(char ch)
 								g_clring & BCPRL ? '#' :
 	              g_clring & (BCCOMT+BCSQL) ? '/' : 257;
 	int end_cmt = g_clring & BCPAS ? ')' : '/';
-	int mode = paren.in_mode;
-	int dir = paren.sdir;
+	int mode = g_paren.in_mode;
+	int dir = g_paren.sdir;
 
 	do
 	{ if (mode & (Q_IN_CMT + Q_IN_CMT0))
@@ -803,19 +802,19 @@ int Pascal scan_paren(char ch)
 						mode = 0;
 					break;
 				}
-				else if (ch == end_cmt && paren.prev == '*')
+				else if (ch == end_cmt && g_paren.prev == '*')
 				{ mode = Q_IN_CMT_;
 					break;
 				}
 			}
 			else // if (mode & Q_IN_CMT0)
 			{ mode = ch == '*'													  ? Q_IN_CMT 					 :
-							 ch == paren.olcmt &&
-							 ch == paren.prev  && dir >= 0 ? Q_IN_CMT + Q_IN_EOL : 0;
+							 ch == g_paren.olcmt &&
+							 ch == g_paren.prev  && dir >= 0 ? Q_IN_CMT + Q_IN_EOL : 0;
 			} 			
 		} 
 		else if ((mode & (Q_IN_STR + Q_IN_CHAR)) != 0)
-		{ if			(ch == '\n' && paren.olcmt != '-')
+		{ if			(ch == '\n' && g_paren.olcmt != '-')
 				mode = 0;
 			else if ((mode & Q_IN_ESC) && dir >= 0)
 				mode &= ~Q_IN_ESC;
@@ -830,38 +829,38 @@ int Pascal scan_paren(char ch)
 		{ mode = ch == '\'' 	 ? Q_IN_CHAR :
 						 ch == '"'		 ? Q_IN_STR	:
 						 ch == beg_cmt ? beg_cmt == '#' ? Q_IN_CMT + Q_IN_EOL : Q_IN_CMT0 :
-						 ch == paren.olcmt ? Q_IN_CMT0 :
+						 ch == g_paren.olcmt ? Q_IN_CMT0 :
 						 ch == '\\' && dir < 0 
-												&& (paren.prev == '\'' || paren.prev == '"')
-													? paren.prev == '"' ? Q_IN_STR : Q_IN_CHAR : 0;
+												&& (g_paren.prev == '\'' || g_paren.prev == '"')
+													? g_paren.prev == '"' ? Q_IN_STR : Q_IN_CHAR : 0;
 		}
 
 		if (mode == 0)
 #if 0
-    {   if (ch == paren.ch)
-        { /*loglog2("INC %d %s", paren.nest, str);*/
-          ++paren.nest;
-          ++paren.nestclamped;
-//        if (paren.nestclamped <= 0)
-//          paren.nestclamped = 1;
+    {   if (ch == g_paren.ch)
+        { /*loglog2("INC %d %s", g_paren.nest, str);*/
+          ++g_paren.nest;
+          ++g_paren.nestclamped;
+//        if (g_paren.nestclamped <= 0)
+//          g_paren.nestclamped = 1;
         }
-        if (ch == paren.fence)
-        { /*loglog2("DEC %d %c", paren.nest, ch);*/
-          --paren.nest;	/* srchdeffile needs relative and clamped nestings */
-          --paren.nestclamped;
+        if (ch == g_paren.fence)
+        { /*loglog2("DEC %d %c", g_paren.nest, ch);*/
+          --g_paren.nest;	/* srchdeffile needs relative and clamped nestings */
+          --g_paren.nestclamped;
         }
     }
 #else
 		{ int adj = 0;
-			if (ch == paren.ch)
+			if (ch == g_paren.ch)
 				++adj;
-			if (toupper(ch) == paren.fence)
+			if (toupper(ch) == g_paren.fence)
 				--adj;
 										/* -ve srchdeffile needs relative and clamped nestings */
-			paren.nest += adj;
-			paren.nestclamped += adj;
-//		if (paren.nestclamped <= 0)
-//			paren.nestclamped = 1;
+			g_paren.nest += adj;
+			g_paren.nestclamped += adj;
+//		if (g_paren.nestclamped <= 0)
+//			g_paren.nestclamped = 1;
 		}
 #endif
 	} while (0);
@@ -869,8 +868,8 @@ int Pascal scan_paren(char ch)
 /* if (mode & Q_IN_EOL)
 		 mode &= ~(Q_IN_CMT+Q_IN_EOL);
 */
-	paren.prev = ch;
-	paren.in_mode = mode;
+	g_paren.prev = ch;
+	g_paren.in_mode = mode;
 	return mode;
 }
 
@@ -888,7 +887,8 @@ int Pascal scan_par_line(LINE * lp)
 												 * the first / of / / */
 int Pascal USE_FAST_CALL scan_for_sl(LINE * lp)
 
-{	init_paren("{", 0);
+{	Paren_t s_paren = g_paren;
+	init_paren("{", 0);
 
 {	int cplim = lp->l_used;
 	int ix;
@@ -896,7 +896,7 @@ int Pascal USE_FAST_CALL scan_for_sl(LINE * lp)
 	for (ix = -1; ++ix < cplim && !(scan_paren(lp->l_text[ix]) & Q_IN_EOL); )
 		;
 
-	paren = g_sparen;
+	g_paren = s_paren;
 	return ix == cplim ? ix : ix - 1;
 }}
 
@@ -1049,8 +1049,8 @@ int got_f_key(fdcr * fd, int tabsz)
 			{ int ix = 3;
 				if (is_space(pos[3]) || len > 4 && is_space(pos[4]))
 					++ix;
-				if (*strmatch("ELSE", pos) == 0 && paren.ch != 'D') 
-				{ if (paren.nest == 0 && (len == 4 || is_space(pos[4])))
+				if (*strmatch("ELSE", pos) == 0 && g_paren.ch != 'D') 
+				{ if (g_paren.nest == 0 && (len == 4 || is_space(pos[4])))
 						return 1;
 					++ix;
 					if (len <= ix)
@@ -1068,7 +1068,7 @@ int got_f_key(fdcr * fd, int tabsz)
 					int i = wordmatch(ix, "IF");
 			/*	char buf[2];
 					buf[1] = 0;
-					buf[0] = '5' + paren.nest;
+					buf[0] = '5' + g_paren.nest;
 
 					mbwrite(pos);
 					mbwrite(buf);*/
@@ -1101,19 +1101,16 @@ int Pascal getfence(int f, int n)
 	g_ps_cmt = ps_cmt;
 	g_s_cmt = s_cmt;
 
-{	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;						/* original line pointer */
+{ Paren_t s_paren = g_paren;
+	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;						/* original line pointer */
 	int rem = llength(s.curline) - s.curoff - 1;
 	char * lstr = lgets(s.curline, s.curoff);
 
-	if (lstr[0] != '#')
-	{ if (rem < 0)
-			return FALSE;
-	}
-	else
+	if (lstr[0] == '#')
 	{ c_cmt = 1;
 		f_cmt = 0;
-		if (rem < 2)
-			return FALSE;
+//	if (rem < 2)
+//		return FALSE;
 	}
 
 	if (rem >= 0 && f_cmt && toupper(lstr[0])=='I' && toupper(lstr[1]) == 'F')
@@ -1135,25 +1132,27 @@ int Pascal getfence(int f, int n)
 	int dir = init_paren(lstr,len);
   int ch;
 	int rc = true;
-	int stt_ko = -1;
-	int lastko = -1;
+	int lastko = -127;
+	int stt_ko = lastko;
+
+	n *= 128;
 
 	if (n <= 0)
-		if (paren.complex == 0)
-			dir = init_paren(&paren.fence,0);
+		if (g_paren.complex == 0)
+			dir = init_paren(&g_paren.fence,0);
 		else
 			dir = -dir;
 	
-	if (s_cmt && dir == 0 && paren.complex == 0)	// search backwards for begin
-	{ paren.complex = true;
-	  paren.ch = 'E';
-	  paren.fence = 'B';
-		fd.blk_type = paren.fence;
-	  paren.nest = 1;
+	if (s_cmt && dir == 0 && g_paren.complex == 0)	// search backwards for begin
+	{ g_paren.complex = true;
+	  g_paren.ch = 'E';
+	  g_paren.fence = 'B';
+		fd.blk_type = g_paren.fence;
+	  g_paren.nest = 1;
 	  dir = -1;
 	}
 
-	while (paren.complex)						//once only
+	while (g_paren.complex)						// once only 
 	{ int ix = lstr[0] == '#';
 		if (c_cmt > ix || len < 2)
 		{ dir = 0;
@@ -1165,8 +1164,8 @@ int Pascal getfence(int f, int n)
 					wordmatch(ix,"ELSE") + wordmatch(ix,"ELSEIF"))
 			{ /*mbwrite("GotELSEIF");*/
 				fd.blk_type = 'T';
-				paren.ch = 'T';
-				paren.fence = 'E';
+				g_paren.ch = 'T';
+				g_paren.fence = 'E';
 				dir = 1;
 			}
 			else		
@@ -1176,18 +1175,20 @@ int Pascal getfence(int f, int n)
 				if (fd.blk_type == 'E' && ch == 'N')   // END DO, END LOOP, etc
 				{ int ix = len <= 3 ? 0 : lstr[3] == ' ' ? 4 : 3;
 					char fch = toupper(lstr[ix]);
+					if (fch == 'I')
+						fch = 'B';
 	
 					rc = wordmatch(0,"END");
 	
 				  if			(ps_cmt)
-				  	paren.fence = 'B';
+				  	g_paren.fence = 'B';
 				  else if (ix <= 0)
 				  	;
 					else if	(wordmatch(ix,fch == 'D' ? "DO" :
 															  fch == 'L' ? "LOOP" : 
 															  fch == 'S' ? "SELECT" : "IF"))
-					  paren.fence = fch == 'I' ? 'B' : fch;
-					fd.blk_type = paren.fence;
+					  g_paren.fence = fch;
+					fd.blk_type = g_paren.fence;
 				}
 				else
 				{ if (fd.blk_type == 'T' && ch != 'H' ||
@@ -1203,14 +1204,16 @@ int Pascal getfence(int f, int n)
 			}
 		}
 	  if (f_cmt > s_cmt)
-		{ char * start = lgets(s.curline, 0);
-			char * ls = start + s.curoff;
+		{ char * start = lgets(s.curline, -1);
+//		char * ls = start + s.curoff;
+			int ct = s.curoff;
+			char ch;
 			lastko = 0;
 
-			while (start < ls && (*start <= ' ' || lastko == 5))
+			while (--ct >= 0 && ((ch = *++start) <= ' ' || lastko == 5))
 			{ 
 				lastko = lastko + 1;
-				if (*start++ == '\t')
+				if (ch == '\t')
 					lastko = (lastko + tabsz - 1) & -tabsz;
 			}
 			stt_ko = lastko;
@@ -1218,12 +1221,12 @@ int Pascal getfence(int f, int n)
 		break;
 	}
 
-	paren.sdir = dir;
+	g_paren.sdir = dir;
 
 /*mbwrite("Lkg");
 	mbwrite(&fd.blk_type);*/
-													 /* scan until we find it, or reach the end of file */
-	while (paren.nest > 0 && forwbychar(dir))
+													 			/* until we find it or reach the end of file */
+	while (g_paren.nest > 0 && (rc = forwbychar(dir)))
 	{ LINE * lp = curwp->w_dotp;
 		int offs = curwp->w_doto;
 		if (offs == llength(lp))
@@ -1243,67 +1246,80 @@ int Pascal getfence(int f, int n)
 			continue;
 		if (offs > 0)
 		 if ((in_range(ch,'A','Z') || ch == '_')
-			&& in_range(toupper(lp->l_text[offs-1]),'A','Z'))// inside word
+			&& in_range(toupper(lp->l_text[offs-1]),'A','Z'))			// inside word
 				continue;
 
 		if (ps_cmt && ch == 'C')
 				ch = 'B';
 
-		if (scan_paren(ch) == 0 && paren.complex)
-		{/*char buf[6];
+		if (scan_paren(ch))
+			continue;
+
+		if (g_paren.nest <= 0)
+		{	g_paren.nest = 1;
+			if (++n >= 0)
+		  	break;
+
+			s = *(Lpos_t*)&curwp->w_dotp;						// last match
+		}
+
+		if (!g_paren.complex)
+			continue;
+/*	  char buf[6];
 			buf[2] = 0;
 			buf[4] = 0;*/																					// Fortran comment
-			if			(f_cmt > s_cmt && ch == 'C' && offs == 0 && dir > 0)	
-			{ curwp->w_doto = llength(lp);
+		if			(lastko >= 0 && ch == 'C' && offs == 0 && dir > 0)	
+		{ curwp->w_doto = llength(lp);
+		}
+		else if (ch == g_paren.ch)
+		{ 
+			const char * w = &lp->l_text[offs];
+			if			(c_cmt != 0 && llength(lp) - offs > 2 &&
+							 (toupper(w[1]) == 'I' && toupper(w[2]) == 'F' 
+						 || toupper(w[1]) == 'E' && toupper(w[2]) == 'N'))
+			{ g_paren.nest += (2*(toupper(w[1]) == 'I')-1)*dir;				// do it
+			/*buf[0] = 'f' + g_paren.nest;
+				mbwrite(buf);*/
 			}
-			else if (ch == paren.ch)
-			{ 
-				const char * w = &lp->l_text[offs];
-				if			(c_cmt != 0 && llength(lp) - offs > 2 &&
-								 (toupper(w[1]) == 'I' && toupper(w[2]) == 'F' 
-							 || toupper(w[1]) == 'E' && toupper(w[2]) == 'N'))
-				{ paren.nest += (2*(toupper(w[1]) == 'I')-1)*dir;				// do it
-				/*buf[0] = 'f' + paren.nest;
-					mbwrite(buf);*/
-				}
-				else if (f_cmt)
-				{ ch = got_f_key(&fd, tabsz);
-					if (ch < 0 && ch > -2 && paren.nest == 2 
-					 && ( s_cmt || fd.koffs - 9 <= lastko))
-					{ /*mbwrite("GotElse");*/
-						paren.nest = 0;
-					 /*mbwrite("Zero");*/
-						lastko = fd.koffs;
-					}
-					else if (ch <= 0 || s_cmt == 0 && fd.koffs - 9 > lastko)
-					{ --paren.nest;  // undo it
-					/*buf[0] = 'n' + paren.nest;
-						buf[1] = 'x'+ch;
-						buf[2] = '@'+ko;
-						buf[3] = '@'+lastko;
-						mbwrite(buf);
-						mbwrite(w);*/
-					}
-					else if (fd.koffs >= 0)
-						lastko = fd.koffs;
-				}
-			}
-			else if (ch == paren.fence && f_cmt != 0)
+			else if (f_cmt)
 			{ ch = got_f_key(&fd, tabsz);
-				if (ch <= 0 || s_cmt == 0 && fd.koffs - 8 > lastko)
-				{ ++paren.nest;  // undo it
-				/*buf[0] = 'W' + paren.nest;
-					mbwrite(buf);*/
+				if (ch < 0 && ch > -2 && g_paren.nest == 2 
+				 && fd.koffs - 9 <= lastko)
+				{ 
+					lastko = fd.koffs;
+					break;
 				}
-				else if (f_cmt > s_cmt && fd.koffs >= 0)
+				else if (ch <= 0 || s_cmt == 0 && fd.koffs - 9 > lastko)
+				{ --g_paren.nest;  // undo it
+				/*buf[0] = 'n' + g_paren.nest;
+					buf[1] = 'x'+ch;
+					buf[2] = '@'+ko;
+					buf[3] = '@'+lastko;
+					mbwrite(buf);
+					mbwrite(w);*/
+				}
+				else if (fd.koffs >= 0)
 					lastko = fd.koffs;
 			}
 		}
+		else if (ch == g_paren.fence && f_cmt != 0)
+		{ ch = got_f_key(&fd, tabsz);
+			if (ch <= 0 || s_cmt == 0 && fd.koffs - 8 > lastko)
+			{ ++g_paren.nest;  // undo it
+			/*buf[0] = 'W' + g_paren.nest;
+				mbwrite(buf);*/
+			}
+			else if (lastko >= 0 && fd.koffs >= 0)
+				lastko = fd.koffs;
+		}
 	}	/* while */
-											/* if count is zero, we have a match, move the sucker */
-	if (paren.nest != 0)
-		rc = FALSE;
-	else
+	
+	if (n < 0)
+	{ rc = TRUE;
+		rest_l_offs(&s);
+	}
+																				
+	if (rc)														// not at EOF
 	{ curwp->w_flag |= WFMOVE;
 		if (stt_ko >= 0)
 		{ LINE * lp = curwp->w_dotp;
@@ -1312,7 +1328,7 @@ int Pascal getfence(int f, int n)
 			int len = lp->l_used;
 		  int ko = 0;
 
-			while (--len >= 0 && (*start <= ' ' || f_cmt > s_cmt && ko == 5))
+			while (--len >= 0 && (*start <= ' ' || lastko >= 0 && ko == 5))
 			{ ko = ko + 1;
 				if (*start++ == '\t')
 					ko = (ko + tabsz - 1) & -tabsz;
@@ -1326,10 +1342,10 @@ int Pascal getfence(int f, int n)
 		}
 	}
 
-  paren = g_sparen;
+  g_paren = s_paren;
 
 beeper:																/* restore the current position */
-	if (!rc)
+	if (rc <= 0)
 	{	rest_l_offs(&s);
 		TTbeep();
 	}

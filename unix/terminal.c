@@ -334,9 +334,7 @@ void ttopen()
 #endif
   putpad(s[0] == 0 ? "\033[m\033[2J" : s);
 
-{ int top = sctop;
   sctop = -1;
-  tcapscreg(top, scbot);
  
 #if FTRACE
   if (ftrace != 0) fprintf(ftrace, "K_KICH1: %s\n", captbl[K_KICH1].p_seq); 
@@ -345,7 +343,7 @@ void ttopen()
 
   ttrow = 2;     /* must be in range */
   ttcol = 2;
-}}
+}
 
 
 /**********************************************************************/
@@ -523,7 +521,8 @@ int tcapclose(int lvl)
 #if COLOR
 		tcapchrom(0);
 #endif
-  	tcapscreg(0, lvl == 0 ? term.t_nrowm1 : scbot);
+  	if (lvl == 0)
+  		scbot = term.t_nrowm1;
 	}
   serialclose();
 	return OK;
@@ -836,8 +835,8 @@ void Pascal tcapsetsize(int width, int length, int clamp)
 
 { char buf[40];
 //sprintf(buf, "\033[8;%d;%dt", length, width);
-  putpad(concat(buf, "\033[8;", int_asc(length),";",int_asc(width),"t",null));
-  scbot = length - 2;
+//putpad(concat(buf, "\033[8;", int_asc(length),";",int_asc(width),"t",null));
+  scbot = length - 1;
 }
 
 

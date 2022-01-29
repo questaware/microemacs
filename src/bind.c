@@ -773,7 +773,7 @@ void Pascal flook_init(char * cmd)
 
 { 
 #if S_MSDOS == 0
-	int c = strdup(cmd);
+	char * c = strdup(cmd);
 #define HOMEPATH "HOME"
 #else
 #define HOMEPATH "HOMEPATH"
@@ -908,7 +908,7 @@ char * fex_up_dirs(const char * dir, const char * file)
 
 
 static
-const char * fex_file(const char ** ref_dir, const char * file)
+const char * fex_file(int app, const char ** ref_dir, const char * file)
 												// next_dir == NULL => do not append file	
 { char ch;
 	char * dir = *ref_dir;
@@ -924,7 +924,9 @@ const char * fex_file(const char ** ref_dir, const char * file)
 			;
 			
 		*ref_dir = dir + ix - (ch == 0);
-	{	char * diry = strcat(strpcpy(g_fspec, dir, ix + 1),"/");
+	{	char * diry = strpcpy(g_fspec, dir, ix + 1);
+		if (app)
+			strcat(diry,"/");
 // 	mbwrite(diry);
 	{	const int sz = sizeof(g_fspec);
   	char * pc = pathcat(g_fspec, sz, diry, file);
@@ -963,18 +965,18 @@ const char * Pascal flook(char wh, const char * fname)
 	switch (wh)
 	{ case 'I':
 		case 'P':
-			if (wh != 'I')
+			if (wh == 'P')
 				path = getenv("PATH");
 			else
 	    {	path = curbp->b_fname;
-	    	if ((res = fex_file(&path, fname)))
+	    	if ((res = fex_file(0, &path, fname)))
 	      	return res;
 			  path = pd_incldirs;
 	    }
 	
 			if (path != NULL)
 			{	for (--path; *++path != 0;)
-			  { if ((res = fex_file(&path, fname)))
+			  { if ((res = fex_file(1, &path, fname)))
 			      return res;
 				}
 			}
@@ -982,7 +984,7 @@ const char * Pascal flook(char wh, const char * fname)
 			return NULL;
 		otherwise
 			path = getenv(HOMEPATH);
-	    if ((res = fex_file(&path, fname)))
+	    if ((res = fex_file(1, &path, fname)))
 	      return res;
 
 #if S_VMS
@@ -998,16 +1000,7 @@ const char * Pascal flook(char wh, const char * fname)
 		  }
 #else
 			path = flook('P', g_invokenm);
-		{	char * lastsl = NULL;
-			char * s;
-			char ch;
-			for (s = path; (ch = *++s) != 0; )
-				if (ch == '/')
-					lastsl = s;
-			if (lastsl != NULL)
-			  *lastsl = 0;
-		 	return fex_file(&path, fname);
-		}
+		 	return fex_file(0, &path, fname);
 #endif
 	}
 

@@ -364,14 +364,14 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 
 {								/* Make sure a pattern exists, or that we didn't switch
 								 * into MAGIC mode until after we entered the pattern. */
-//paren.sdir = 1;
+//g_paren.sdir = 1;
 
 	int dir = 1;
 	int cc;
 	if (n < 0)
 	{ n = -n;
 	  dir = -1;
-//	paren.sdir = -1;
+//	g_paren.sdir = -1;
 	}
 
 	pd_highlight[1] = 0;
@@ -663,7 +663,7 @@ int Pascal scanner(int direct, int again)
     nextch(&lpos, direct);    /* Advance the cursor.*/
 
   init_paren("",0);
-  paren.sdir = direct;
+  g_paren.sdir = direct;
 
 { MC * mcptr = &g_pats[direct > 0 ? 1 : g_pats_top];
 	int matchlen = 0;

@@ -670,8 +670,10 @@ void Pascal editloop(int c)
 			mlwrite(c == '-'-'0' ? "Arg: -" : "Arg: %d", n * sign);
 			c = getkey(); /* get the next key */
 		}
-		n *= sign;
 		c += '0';
+		n *= sign;
+		if (sign < 0 && n == 0)					// -0 means -1
+			--n;
 #undef sign
 	}
 

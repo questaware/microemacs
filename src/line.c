@@ -159,7 +159,7 @@ int Pascal lchange(int flag)
 		ct = 24;
 
 		init_paren("",0);
-		paren.in_mode = (lp->l_props & Q_IN_CMT);
+		g_paren.in_mode = (lp->l_props & Q_IN_CMT);
 
     while (true)
 		{ scan_par_line(lp);
@@ -169,7 +169,7 @@ int Pascal lchange(int flag)
 		  if (--ct <= 0)
 	  	  break;
 		
-		  if      ((lp->l_props ^ paren.in_mode) & Q_IN_CMT)
+		  if      ((lp->l_props ^ g_paren.in_mode) & Q_IN_CMT)
 		  { lp->l_props ^= Q_IN_CMT;
 		    all = 1; // wp->w_flag |= WFEDIT;
 		  }

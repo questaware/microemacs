@@ -716,6 +716,16 @@ void Pascal pteeol(int row)
 			*tgt++ = ' ';
 }
 
+
+void Pascal ptclear()
+
+{	Int row;
+	for (row = term.t_nrowm1; --row >= 0; )
+		pteeol(row);
+}
+
+
+
 static void Pascal pscroll(int dir, int stt, int lenm1)
 		/*	dir;			** < 0 => window down */
 		/*	stt;			** start target location */
@@ -742,7 +752,7 @@ static void Pascal pscroll(int dir, int stt, int lenm1)
 static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN */
 	 
 { int n = 1;
-	int lenm1 = wp->w_ntrows-2;
+	int lenm1 = wp->w_ntrows-1;
 
 	if (set & WFTXTD)
 	{ 
@@ -893,6 +903,7 @@ void Pascal updline(int force)
 #if MEMMAP == 0
 	if (pd_sgarbf)
 	{  
+		 ptclear();
 		 tcapepage();			 /* Erase-whole page, also clears the message area. */
 		 pd_got_msg = FALSE;		 
 	}
@@ -1203,9 +1214,9 @@ void Pascal updateline(int row)
 			*ph1++ = *++cp1;
 	//millisleep(300);
 		tcapeeol();
-		if (row < scbot)
-		{	//millisleep(300);
-		  ttputc(13);
+		if (row < scbot)					/* CRLF is required so that highlight- 		 */
+		{	//millisleep(300);			/* copy can recognise line ends. 					 */
+		  ttputc(13);							/* It cannot be done ahead of the modeline */
 		  ttputc(10);
 		  ++ttrow;
 		  ttcol = 0;
@@ -1223,11 +1234,14 @@ void Pascal upmode()	/* update all the mode lines */
 }
 
 
+#if S_MSDOS
 void Pascal upwind()	/* force hard updates on all windows */
-
+#else
+void Pascal upwind(int garbage)	/* force hard updates on all windows */
+#endif
 { 
 #if S_MSDOS == 0
-	pd_sgarbf = TRUE;
+	pd_sgarbf |= garbage;
 #endif
 	orwindmode(WFMODE | WFHARD | WFMOVE);
 }

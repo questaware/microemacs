@@ -790,7 +790,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 		when EVHARDTAB:	if (val != 0)
                  	    curbp->b_tabsize = val;
 
-	                  upwind();
+	                  upwind(TRUE);
 										goto storeint;
     when EVHJUMP:   if (val > term.t_ncol - 1)
 				              val = term.t_ncol - 1;

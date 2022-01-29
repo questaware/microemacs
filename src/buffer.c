@@ -178,7 +178,7 @@ void Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 		}
 	}
 
-	upwind();
+	upwind(TRUE);
 {	WINDOW *wp = curwp;
 	wp->w_flag |= WFMODE|WFHARD;			 /* Quite nasty.			 */
 	wp->w_bufp	= bp;

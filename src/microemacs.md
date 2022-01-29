@@ -22,9 +22,12 @@
 
  Prefixing S- denotes the shifted version of that key.
 
- Prefixing M- denotes prefixing Esc before a key.
- 
  Prefixing ^X denotes prefixing ^X before a key.
+ 
+ Prefixing M- denotes prefixing *ESC* before a key.
+ M-0, M-1, M-2, ... M-10, ... Prefix the following key with a count
+ M-- Prefixes the following key with -1
+ M---1, M--2, ... Prefix the following key with this count
  
  All of the above combinations are keys, e.g. ^XS-FN6
 
@@ -259,7 +262,8 @@ forward-character        ^L
 goto-line                M-G
 goto-mark                M-^G
 goto-matching-fence      M-^F Goto a matching bracket, parenthesis, etc
-															If arg <= 0 and on left brace use a right brace.
+															If arg = 0 and on left brace use a right brace.
+															If arg < 0 same but repeatedly.
 															So ESC - ^T does this.
                          ^T
 grow-window              ^X^

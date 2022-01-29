@@ -692,7 +692,7 @@ Cc WinLaunch(int flags,
   sa.bInheritHandle = TRUE;         //allow inheritable handles
 
   pd_sgarbf = TRUE;
-	upwind();
+	upwind(TRUE);
 //memset(&pi, 0, sizeof(pi));
 	memset(&si, 0, sizeof(si));
 	si.cb = sizeof(si);

@@ -589,7 +589,7 @@ int Pascal readin(char const * fname, int props)
 	    curwp->w_line_no -= 1;
 	  }
 	  curwp->w_doto    = 0;
-    paren.in_mode |= curwp->w_dotp->l_props & Q_IN_CMT;
+    g_paren.in_mode |= curwp->w_dotp->l_props & Q_IN_CMT;
 	/*curwp->mrks.c[0].markp = lback(curwp->w_dotp);
 	  curwp->mrks.c[0].marko = 0;*/
   }
@@ -632,8 +632,8 @@ int Pascal readin(char const * fname, int props)
 	  		break;
 			ln = g_fline;
 #if 0
-      if ((paren.in_mode & 0x3f) && len > 2)
-        ln[0] = 'A' + (paren.in_mode & 0x3f);
+      if ((g_paren.in_mode & 0x3f) && len > 2)
+        ln[0] = 'A' + (g_paren.in_mode & 0x3f);
 #endif
 	  }
 	  
@@ -648,7 +648,7 @@ int Pascal readin(char const * fname, int props)
 	    break;
 	  }
 
-    lp1->l_props = paren.in_mode & Q_IN_CMT;
+    lp1->l_props = g_paren.in_mode & Q_IN_CMT;
 	  ibefore(nextline, lp1);
 	  ++nline;
 

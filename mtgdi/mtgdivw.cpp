@@ -768,7 +768,7 @@ static Pascal NEAR pipefilter(char wh)
 	  init_paren(0);
 
 	  while (((lp = lforw(lp))->l_props & L_IS_HD) == 0)
-          { lp->l_props = paren.in_mode & Q_IN_CMT;
+          { lp->l_props = g_paren.in_mode & Q_IN_CMT;
 	    scan_par_line(lp);
 	  }
 

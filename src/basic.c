@@ -351,7 +351,7 @@ int Pascal forwpage(int f, int n)
 #endif
 
 #if 1
-	upwind();
+	upwind(TRUE);
 //pd_sgarbf = -1;
 #endif
 

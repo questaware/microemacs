@@ -170,26 +170,32 @@ btk execute-macro-11 ^D
 btk execute-macro-11 M-^H
 
 12 store-macro		; User defined word movement
-	set %lk $lastkey
-	set %clamp 50
+  set %lk $lastkey
+  set %clamp 50
+  set %ch &low &chr $curchar
+	set %class &xla %ch "abcdefghijklmnopqrstuvwxyz0123456789" "____________________________________" 
+  set %dir -1
+  !if &equ %lk 2362
+    set %dir 1
+  !endif
 
-	!while &gre %clamp 0
-		set %clamp &sub %clamp 1
-		set %ch &low &chr $curchar
+  !while &gre %clamp 0
+    set %clamp &sub %clamp 1
+    %dir forward-character
+    set %ch &low &chr $curchar
 		set %x &xla %ch "abcdefghijklmnopqrstuvwxyz0123456789" "____________________________________" 
-;		set %oo @&cat "char " %x
-		!if &not &seq %x "_"
-			set %clamp &sub %clamp 48
-;			!break
-		!endif
-		!if &gre %clamp 0
-		!if &equ %lk 2362
-			forward-character
-		!else
-			backward-character
-		!endif
-		!endif
-	!endw
+    !if &les %clamp 49
+      !if &not &seq %x %class
+        set %clamp &sub %clamp 49
+;       !break
+      !endif
+    !endif
+    set %class %x
+  !endw
+  !if &not &equ %clamp 0
+    set %dir &sub 0 %dir
+    %dir forward-character
+  !endif
 !endm
 
 btk execute-macro-12 FN^0
