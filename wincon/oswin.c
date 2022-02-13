@@ -41,29 +41,6 @@ static int oldbut;	/* Previous state of mouse buttons */
 #define millisleep(n) Sleep(n)
 
 
-int flagerr(const char *str)  //display detailed error info
-
-{	DWORD ec = GetLastError();
-#if _DEBUG
-	LPVOID msg;
-  FormatMessage(
-              FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-              NULL,
-              GetLastError(),
-              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-              (LPTSTR) &msg,
-              0,
-              NULL
-               );
-  mlwrite("%p%s: %s\n",str,msg);
-  LocalFree(msg);
-#else
-  mlwrite("%p%s %d", str, ec);
-#endif
-	return -(int)ec;
-}
-
-
 #if 0
 /*
 sprintf()
@@ -147,18 +124,58 @@ void maxlines(lines)		/* set number of vertical rows for mouse */
 }
 
 #endif  /* MOUSE */
-
-
+
 #if 0
-/* Flush terminal buffer. Does real work where the terminal output is buffered
- * up. A no-operation on systems where byte at a time terminal I/O is done.
- */
-Pascal ttflush()
-{
-}
+
+static
+BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
+
+{ INPUT_RECORD rec_;
+  rec_.EventType = KEY_EVENT;
+  rec_.Event.KeyEvent.bKeyDown = true;
+  rec_.Event.KeyEvent.wRepeatCount = 1;
+  rec_.Event.KeyEvent.uChar.AsciiChar = 'C';
+  rec_.Event.KeyEvent.wVirtualKeyCode = 'C';
+  rec_.Event.KeyEvent.dwControlKeyState = RIGHT_CTRL_PRESSED;
+  rec_.Event.KeyEvent.wVirtualScanCode = 0x20;
+
+{ DWORD ct;
+  int rc = WriteConsoleInputA( g_ConsIn, &rec_, 1, &ct);
+#if _DEBUG
+  if (rc == 0 || ct != 1)
+  { g_got_ctrl = true;
+    flagerr("Err");
+  }
+#endif
+  return true;
+}}
 
 #endif
-
+
+
+int flagerr(const char *str)  //display detailed error info
+
+{	DWORD ec = GetLastError();
+#if _DEBUG
+	LPVOID msg;
+  FormatMessage(
+              FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+              NULL,
+              GetLastError(),
+              MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+              (LPTSTR) &msg,
+              0,
+              NULL
+               );
+  mlwrite("%p%s: %s\n",str,msg);
+  LocalFree(msg);
+#else
+  mlwrite("%p%s %d", str, ec);
+#endif
+	return -(int)ec;
+}
+
+
 extern CONSOLE_SCREEN_BUFFER_INFO csbiInfo;  /* Orig Console information */
 extern CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
 
@@ -195,42 +212,14 @@ void setMyConsoleIP()
 }
 
 
-#if 0
-
-static
-BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
-
-{ INPUT_RECORD rec_;
-  DWORD ct;
-  int rc;
- 
-/* Beep(400,200);*/
-
-  rec_.EventType = KEY_EVENT;
-  rec_.Event.KeyEvent.bKeyDown = true;
-  rec_.Event.KeyEvent.wRepeatCount = 1;
-  rec_.Event.KeyEvent.uChar.AsciiChar = 'C';
-  rec_.Event.KeyEvent.wVirtualKeyCode = 'C';
-  rec_.Event.KeyEvent.dwControlKeyState = RIGHT_CTRL_PRESSED;
-  rec_.Event.KeyEvent.wVirtualScanCode = 0x20;
-
-  rc = WriteConsoleInputA( g_ConsIn, &rec_, 1, &ct);
-#if _DEBUG
-  if (rc == 0 || ct != 1)
-  { g_got_ctrl = true;
-    flagerr("Err");
-  }
-#endif
-  return true;
-}
-
-#endif
-
 
 void Pascal MySetCoMo()
 
-{ SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
-	HANDLE h = CreateFile("CONIN$",
+{ SECURITY_ATTRIBUTES sa;
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.bInheritHandle = TRUE;         //allow inheritable handles
+  sa.lpSecurityDescriptor = NULL;
+{	HANDLE h = CreateFile("CONIN$",
                         GENERIC_READ | GENERIC_WRITE,
                         FILE_SHARE_READ | FILE_SHARE_WRITE,
                         &sa,
@@ -256,7 +245,7 @@ void Pascal MySetCoMo()
 }}
 #endif
 //g_origwin = GetForegroundWindow();
-}
+}}
 
 
 /*
@@ -496,7 +485,7 @@ error error
 #endif
 
 
-static char * mkTempCommName(/*out*/char *filename, char *suffix)
+static char * mkTempCommName(char suffix, /*out*/char *filename)
 {
 #ifdef _CONVDIR_CHAR
  #define DIRY_CHAR _CONVDIR_CHAR
@@ -519,12 +508,17 @@ static char * mkTempCommName(/*out*/char *filename, char *suffix)
 		if (td[strlen(td)-1] != DIRY_CHAR)
 			c2[0] = DIRY_CHAR;
 	
-{	char *ss = concat(filename,td,c2,"me",int_asc(_getpid()),suffix,0);
+{	char *ss = concat(filename,td,c2,"me",int_asc(_getpid()),0);
 	int tail = strlen(ss);
-	int iter = 25;
+	int iter; 
+	ss[tail] = suffix;
+	ss[tail+1] = 0;
 	
-	while (--iter >= 0 && fexist(ss))
+	for (iter = 25; --iter >= 0; )
 	{
+		if (!fexist(ss))
+			break;
+		
 		ss[tail-3] = 'A' + 24 - iter;				// File should not exist anyway
 		ss[tail-2] = '~';
 	}
@@ -650,6 +644,7 @@ Cc WinLaunch(int flags,
 		if (app == NULL)							// ignore buff
 			ca = (char*)cmd;
 	}}}
+
 	if (app == NULL && (flags & WL_SHELL))					// use comspec
 	{	app = (char*)getenv("COMSPEC");
 		if (app == NULL)
@@ -994,7 +989,6 @@ int pipefilter(wh)
 		return FALSE;
 
 { Cc cc;
-	char * fnam1 = NULL;
 	char prompt[2];
 	prompt[0] = wh;
 	wh -= '@';											
@@ -1024,9 +1018,11 @@ int pipefilter(wh)
 		}}
 	}
 
+{	char * fnam1 = NULL;
+
 	if (wh == '#'-'@') 						 /* setup the proper file names */
 	{ 			
-		fnam1 = mkTempCommName(pipeInFile,"si");
+		fnam1 = mkTempCommName('i', pipeInFile);
 
 		if (writeout(fnam1) <= FALSE)		/* write it out, checking for errors */
 		{ mlwrite(TEXT2);
@@ -1036,10 +1032,9 @@ int pipefilter(wh)
 		mlwrite(TEXT159);					/* "\001Wait ..." */
 	}
 
-//char * fnam2 = wh == '!' - '@' ? NULL : mkTempCommName(pipeOutFile,"so");
-{	char * fnam2 = mkTempCommName(pipeOutFile,"so");
-
 //tcapmove(term.t_nrowm1, 0);
+
+{	char * fnam2 = mkTempCommName('o', pipeOutFile);
 
 	cc = WL_IHAND + WL_HOLD;
 
@@ -1056,7 +1051,7 @@ int pipefilter(wh)
 		cc |= LAUNCH_STDIN;
 	}
 #endif
-	cc = WinLaunch(cc,line, NULL, fnam1, fnam2);
+	cc = WinLaunch(cc,line, null, fnam1, fnam2);
 	if (cc != OK)
 	{	mlwrite(TEXT3, cc); 							/* "[Execution failed]" */
 //	return FALSE;
@@ -1114,7 +1109,7 @@ int pipefilter(wh)
 //if (wh == 'E' - '@')
 //	unlink(fnam3);
 	return rc;
-}}}}}
+}}}}}}
 
 	/* Pipe a one line command into a window
 	 * Bound to ^X @
@@ -1142,6 +1137,46 @@ int Pascal spawn(int f, int n)
 {
 	return pipefilter('!');
 }
+
+
+#if 1
+
+int searchfile(int size_res, char * result, char * * fname_ref)
+
+{ char * fname = *fname_ref;
+
+	if (fname[0] == '.' && fname[1] == '.' && fname[2] == '.')
+	{ char * cmd = strcat(strcpy(result, "ffg -/ "), fname+3);
+		char	 pipeOutFile[NFILEN];
+		char * fnam2 = mkTempCommName('o', pipeOutFile);
+		Cc cc = WinLaunch(WL_IHAND+WL_HOLD+WL_SHELL,
+											cmd, NULL, NULL, fnam2);
+		if (cc == OK)
+		{ fname = NULL;
+		{ FILE * ip = fopen(fnam2, "rb");
+			if (ip != NULL)
+			{	fname = fgets(result, size_res, ip);
+			  fclose(ip);
+				unlink(fnam2);
+			}
+			if (fname == NULL)
+			{ mbwrite(TEXT79);
+				return 1;
+			}
+			
+		{ int sl = strlen(fname)-2;
+			if (sl > 0)
+			{	fname[sl] = 0;
+				*fname_ref = fname;
+				return 0;
+			}
+		}}}
+	}
+	
+	return -1;
+}
+
+#endif
 
 #if 0
 X 			/* return a system dependant string with the current time */

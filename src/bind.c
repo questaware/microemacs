@@ -82,8 +82,6 @@ static int Pascal cbuf40(int f, int n) { return execporb(-38,n); }
 
 //--------------------------------------------------------------------------
 
-NOSHARE int g_numcmd = NCMDS;	/* number of bindable functions */
-
 static KEYTAB keytab[NBINDS+1] = 
 {
 	{CTRL|'A',	BINDFNC, gotobol},
@@ -168,7 +166,6 @@ static KEYTAB keytab[NBINDS+1] =
 	{META|CTRL|'R', BINDFNC, qreplace},
 				/* personal keys */
 #if PERSONAL_KEYS == 0
-	{CTRL|'C',	BINDFNC, insspace},
 	{CTRL|'D',	BINDFNC, forwdel},
 	{CTLX|'E',	BINDFNC, ctlxe},
 	{CTRL|'F',	BINDFNC, ctrlg},
@@ -459,11 +456,11 @@ int Pascal addnewbind(int c, int (Pascal *func)(int, int))
     ktp = &oflowkeytab[oflowcursize++];
   }
 #endif
-  ktp->k_code   = c;
   ktp->k_type   = BINDFNC;
+  ktp->k_code   = c;
   ktp->k_ptr.fp = func;
-	if (func == ctrlg)						/* if the function is a unique prefix key */
-	 	abortc = c;								  /* reset the appropriate global prefix variable*/
+	if (func == ctrlg)					/* if the function is a unique prefix key */
+	 	abortc = c;								/* reset the appropriate global prefix variable*/
 
   return TRUE;
 }}
@@ -516,7 +513,7 @@ char * Pascal cmdstr(char * t, int c)
 	a keystroke.  Allowable prefixes must be in the following order:
 
 	^X	preceeding control-X
-	A-	simeltaneous ALT key (on PCs mainly)
+	A-	simultaneous ALT key (on PCs mainly)
 	S-	shifted function key
 	MS	mouse generated keystroke
 	M-	Preceding META key
@@ -533,30 +530,30 @@ unsigned int Pascal stock(char * keyname)
 {
   unsigned int c = 0;
   int i;
-
-  if (in_range(keyname[0], '0','9'))
-    return keyname[0]-'0';
-  
 	for (i = sizeof(viskeys)/sizeof(viskeys[0]); --i > 0; )
     if (keyname[0] == viskeys[i].key[0] && keyname[1] == viskeys[i].key[1])
     { c |= viskeys[i].code;
       keyname += 2;
     }
-				    /* a control char?	(Always upper case) */
+															     	/* a control char?	(Always upper case) */
   if (keyname[0] == '^' && keyname[1] != 0)
-  { c |= CTRL;
-    ++keyname;
-  }
-				
-  if(!(c & (MOUS|SPEC|ALTD|SHFT))) /* If not a special key */
-  {	if (*keyname < 32)						 /* A literal control character? (Boo, hiss) */
+ 	{ c |= CTRL;
+   	++keyname;
+ 	}
+
+  if(!(c & (MOUS|SPEC|ALTD|SHFT))) 	/* If not a special key */
+  {
+	  if (in_range(keyname[0], '0','9'))
+  	  return atoi(keyname);
+
+  	if (keyname[0] < 32)						/* A literal control char? (Boo, hiss) */
 	  { c |= CTRL;
   	  *keyname += '@';
   	}
 	}
 
   if (c & (CTRL|CTLX|META))
-    mkul(1, keyname);							/* Make sure it's upper case */
+    mkul(1, keyname);								/* Make sure it's upper case */
 
   return c | *keyname & 255;
 }
@@ -569,7 +566,7 @@ int Pascal getechockey(int mode)
 	char tok[NSTRING];
 								/* check to see if we are executing a command line */
 	int c;
-	if (g_clexec <= 0)
+	if (g_macargs <= 0)
 		c = mode & 1 ? getkey() : getcmd();
 	else
 	{ macarg(tok);	/* get the next token */
@@ -606,7 +603,7 @@ int Pascal bindtokey(int f, int n)
 Pascal unbindkey(int f, int n)
 							/* int f, n;	** command arguments [IGNORED] */
 {
-  if (g_clexec <= 0)		/* prompt the user to type in a key to unbind */
+  if (g_macargs <= 0)		/* prompt the user to type in a key to unbind */
     mlwrite(TEXT18);
 				 /* ": unbind-key " */
 
@@ -1115,7 +1112,7 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 	       char *fname = (char*)flook(0, emacshlp);
 
 	BUFFER *bp;
-	if (fname == NULL || (bp = bufflink(fname, (g_clexec > 0) | 64)) == NULL)
+	if (fname == NULL || (bp = bufflink(fname, (g_macargs > 0) | 64)) == NULL)
 	{ mlwrite(TEXT12);
 					/* "[Help file missing]" */
 	  return FALSE;
@@ -1141,7 +1138,7 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 			  /* ": describe-key " */
 #define DESC_TO_FILE 0
 #if DESC_TO_FILE
-{	BUFFER *bp = bufflink("pjsout", (g_clexec > 0) | 64);
+{	BUFFER *bp = bufflink("pjsout", (g_macargs > 0) | 64);
 	if (bp != NULL)
 	{	swbuffer(bp);
 		gotoeob(0,0);

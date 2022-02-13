@@ -299,7 +299,6 @@ union REGS {
 #define	TTflush()	ttflush()
 #define	TTeeol		tcapeeol
 #define	TTeeop		tcapepage
-#define	TTbeep		tcapbeep
 #define	TTrev(x)	tcaprev(x)
 //#define TTrez		tcapcres
 

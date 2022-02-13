@@ -95,6 +95,7 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
   short tgtlu = curbp->b_luct - 1;
 	short bestlu = -1;
 	short toplu = -1;
+	int count = 0;
 
 #if _DEBUG
   scan_buf_lu();
@@ -102,6 +103,7 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 		if ((bp->b_flag & BFINVS) == 0)
+		{ ++count;
 		{ int lu = bp->b_luct;
 			if (lu == 0)
 				continue;
@@ -113,10 +115,13 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
       if (lu <= tgtlu && lu > bestlu)
 	  	{	bestbp = bp;
 		  	bestlu = lu;
-        if (lu == tgtlu)
+        if (lu == tgtlu && n >= 0)
           break;
 			}
-    }
+    }}
+
+	if (n < 0)
+		return count;
 
   if (bestbp == NULL)
   	bestbp = maxbp;
@@ -212,10 +217,7 @@ BUFFER *Pascal getdefb()	/* get the default buffer for a use or kill */
 }
 
 
-/* Attach a buffer to a window. The
- * values of dot and mark come from the buffer
- * if the use count is 0. Otherwise, they come
- * from some other window.
+/* Attach a buffer to a window. 
  */
 int Pascal usebuffer(int f, int n)
 {
@@ -223,9 +225,6 @@ int Pascal usebuffer(int f, int n)
 							/* "Use buffer" */
 	if (!bp)
 		return ABORT;
-				/* make it invisable if there is an argument */
-	if (f != FALSE)
-		bp->b_flag |= BFINVS;
 
 	swbuffer(bp);
 	return TRUE;
@@ -377,7 +376,8 @@ void Pascal fmt_modecodes(char * t, int mode)
 
 	t[c] = 0;
 	while (--c >= 0)
-		t[c] = mode & (1 << c) ? modecode[c] : '.';
+		if (mode & (1 << c))
+			t[c] = modecode[c];
 }
 
 /*	List all of the active buffers.  First update the special
@@ -392,9 +392,8 @@ void Pascal fmt_modecodes(char * t, int mode)
 int Pascal listbuffers(int iflag, int n)
 		 
 { BUFFER * bp;
-	Char line[15+NUMMODES-2] = "Global Modes ";
-	Int nbytes; 		/* # of bytes in current buffer */
- 
+	Char line[15+NUMMODES-2+80] = "Global Modes .........\n"
+																"ACT 	Modes 		Size  Buffer			File\n";
 	openwindbuf("[List]");
 
 {	Int avail = curwp->w_ntrows - 2;
@@ -403,13 +402,7 @@ int Pascal listbuffers(int iflag, int n)
 //strcpy(&line[0], "Global Modes ");
 	fmt_modecodes(&line[13], g_gmode);
 
-	line[13+NUMMODES-2] = '\n';
-	line[14+NUMMODES-2] = 0;
-
 	if (linstr(line) == FALSE)
-		return FALSE;
-
-	if (linstr("ACT 	Modes 		 Size Buffer			File\n") == FALSE)
 		return FALSE;
 																					/* output the list of buffers */
 	for (bp = bheadp; bp != NULL; bp = bp->b_next) 
@@ -417,8 +410,8 @@ int Pascal listbuffers(int iflag, int n)
 			continue;
 
 		--avail;
-		nbytes = 0L;													/* Count bytes in buf.	*/
-	{	LINE * lp;
+	{ Int	nbytes = 0L;													/* Count bytes in buf.	*/
+		LINE * lp;
 		for (lp = &bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
  /* for (lp = bp->b_baseline; (lp = lforw(lp)) != bp->b_baseline; ) */
 			nbytes += (Int)llength(lp)+1L;
@@ -473,7 +466,7 @@ void Pascal unqname(char * name)			/* make sure a buffer name is unique */
 int g_bfindmade;
 
 /* Find a buffer, by name.
- * If the buffer is not found and the "cflag" is TRUE, create it. 
+ * If the buffer is not found and the cflag & 1 is TRUE, create it. 
  * The "bflag" is the settings for the flags in buffer.
  */
 BUFFER *Pascal bfind(char * bname,
@@ -528,7 +521,7 @@ BUFFER *Pascal bfind(char * bname,
 	if (!(cflag & 1))
 		return null;
 
-{	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+10); // was 2
+{	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+4); // was 2
 	if (bp != NULL)
 	{	init_buf(bp);
 																				/* and set up the other buffer fields */

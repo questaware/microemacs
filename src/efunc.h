@@ -148,7 +148,9 @@ const NBIND names[] =
 #endif
   {"indent-search",   		indentsearch},
 	{"insert-file",					insfile},
+#if FLUFF
 	{"insert-space",				insspace},
+#endif
 	{"insert-string",				istring},
 	{"kill-kill",						kdelete},
 #if	WORDPRO && 0
@@ -255,7 +257,7 @@ const NBIND names[] =
 	{"write-file",					filewrite},
 	{"write-message",				writemsg},
 	{"yank",								yank},
-	{"",			NULL}
+	{NULL,			NULL}
 };
 
 #define	NCMDS	(sizeof(names)/sizeof(NBIND)) - 1

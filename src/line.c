@@ -141,7 +141,7 @@ int Pascal lchange(int flag)
 	{	curbp->b_flag |= BFCHG;
 	  curwp->w_flag |= WFMODE;
   /*mbwrite(curbp->b_fname);*/
-    TTbeep();
+    tcapbeep();
     flag = WFHARD;
   }
 												   /* make sure all the needed windows get this flag */ 
@@ -229,14 +229,13 @@ int g_overmode;
  * You update mark, and a dot in another window, if it is greater than the 
  * place where you did the insert.  Return TRUE if all is well.
  */
-int Pascal linsert(int n, char c)
+int Pascal linsert(int ins, char c)
 
 {	if (rdonly())
 		return FALSE;
 /*if (! (curbp->b_flag & BFCHG)	&& pd_discmd > 0)
     TTbeep();		
 */
-{ int ins = n;
 	if (ins <= 0)
 		return TRUE;
 
@@ -246,8 +245,7 @@ int Pascal linsert(int n, char c)
     return lnewline();
   }
 
-{ LINE * lp = curwp->w_dotp;		/* Current line */
-	int tabsize = curbp->b_tabsize;
+{	int tabsize = curbp->b_tabsize;
 	if (tabsize < 0)
 	{	tabsize = - tabsize;
 		if (ins == 1 && c == '\t')
@@ -256,12 +254,13 @@ int Pascal linsert(int n, char c)
 		}
 	}
 
-{	int doto = curwp->w_doto;
+{ LINE * lp = curwp->w_dotp;		/* Current line */
+	int doto = curwp->w_doto;
 
-	if (g_overmode >= ins  && 
-      doto < lp->l_used  &&
+	if ( g_overmode >= ins &&
+			 doto < lp->l_used  &&
 			(lgetc(lp, doto) != '\t' ||
-			 (unsigned short)doto % tabsize == (tabsize - 1)))
+			(unsigned short)doto % tabsize == (tabsize - 1)))
   	ins = 0;
 
 { LINE * newlp;
@@ -275,9 +274,8 @@ int Pascal linsert(int n, char c)
   }
 
   if (ins != 0)
-  {	if ((Int)lp->l_used - doto > 0)
+  	if ((Int)lp->l_used - doto > 0)
    		memmove(&newlp->l_text[doto+ins],&lp->l_text[doto],(Int)lp->l_used-doto);
-  }
 
   if (lp != newlp)
   { newlp->l_props = lp->l_props & ~L_IS_HD;
@@ -298,8 +296,10 @@ int Pascal linsert(int n, char c)
 
   rpl_all(1, ins, lp, newlp, doto);
   return lchange(WFEDIT);
-}}}}}
+}}}}
 
+#if FLUFF
+
 int Pascal insspace(int f, int n)/* insert spaces forward into text */
 
 {	Cc cc = linsert(n, ' ');
@@ -308,7 +308,7 @@ int Pascal insspace(int f, int n)/* insert spaces forward into text */
 	return backbychar(n);
 }
 
-
+#endif
 
 /*
  * linstr -- Insert a string at the current point
@@ -318,19 +318,19 @@ int Pascal linstr(const char * instr)
 {	int status = TRUE;
 
 	if (instr != NULL && *instr != 0)
-	{ g_inhibit_scan += 1;
-	  g_header_scan = 1;
+	{ g_header_scan = 1;
+		g_inhibit_scan += 1;
 	  
-	  while (*instr)
+		do
 	  { status = linsert(1, *instr);
 																							/* Insertion error? */
-/*	    if (! status)
+/*	  if (! status)
 	    { mlwrite(TEXT99);
  *					"%%Can not insert string" *
 	      break;
 	  } */
-	    instr++;
-	  }
+	  }	while (*++instr);
+
 	  g_inhibit_scan -= 1;
 	}
 	return status;
@@ -338,8 +338,8 @@ int Pascal linstr(const char * instr)
 
 const char * stoi_msg[] = {TEXT68, TEXT69};
 
-int Pascal istring(int f, int n)	/* ask for and insert a string into the current
-																	   buffer at the current point */
+int Pascal istring(int f, int n)	/* ask for and insert a string into the
+																	   current buffer at the current point */
 { char tstring[NPAT+1];	/* string to add */
 
 	int status = mltreply(stoi_msg[g_overmode & 1], tstring, NPAT);
@@ -522,7 +522,7 @@ static struct
 
 int Pascal USE_FAST_CALL chk_k_range(int n)
 
-{ if (! in_range(n,0,NOOKILL-1))
+{ if (! in_range(n,0,NOOKILL))
   { mlwrite(TEXT23);
 					/* "Out of range" */
     return -1;

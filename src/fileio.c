@@ -43,8 +43,6 @@
 /*int confd = 0;*/
 
 char * g_fline = NULL;			/* dynamic return line */
-static 
-unsigned int g_flen = 0;		/* space available for chars */
 
 FILE *g_ffp;		/* File pointer, all functions. */
 
@@ -70,8 +68,7 @@ struct termios  g_savetty;
 																			/* Open a file for reading. */
 int Pascal ffropen(const char * fn)
 
-{ 		      		/* g_flen, fline private to ffropen, ffclose, ffgetline */
-  g_flen = 0;		/* force ffgetline to realloc */
+{ 		      					/* g_fline private to ffropen, ffclose, ffgetline */
   g_crlfflag = FALSE;
 
   if (fn != NULL && !(fn[0] == '-' && fn[1] == 0))
@@ -151,16 +148,7 @@ void stdin_close()
  */
 FILE * ffwopen(int mode, char * fn)
 	
-{ if (fn == null)
-  { g_ffp = stdout;
-    return OK;
-  }
-{
-#if S_MSDOS && S_WIN32 == 0
-  char afn[266];
-  fn = LFN_to_8dot3(LFN_to_83, 0, fn, &afn[0]);
-#endif
-{ int fd = open(fn, O_RDWR+O_CREAT+BINM+(mode == 0 ? 0 : O_EXCL), NEW_FILE_MODE);
+{ int fd = open(fn, O_RDWR+O_CREAT+BINM+(mode==0 ? 0 : O_EXCL), NEW_FILE_MODE);
   if (fd < 0)
     return NULL;
 
@@ -169,7 +157,7 @@ FILE * ffwopen(int mode, char * fn)
   	close(fd);
 
   return ffp;
-}}}}
+}}
 
 
 /* Write a line to the already opened file. The "buf" points to the buffer,
@@ -216,6 +204,8 @@ int Pascal ffgetline(int * len_ref)
 	
 {	int c; 							/* current character read */
 	int i = -1; 				/* current index into g_fline */
+	static 
+		 int g_flen;			/* space available for chars */
 											
   if (g_flen > NSTRING)		/* dump g_fline if it ended up too big */
 	  g_flen = 0;
@@ -232,7 +222,7 @@ int Pascal ffgetline(int * len_ref)
 	        continue;
 	    } 
 //  }
-	  if ((unsigned)++i >= g_flen)
+	  if (++i >= g_flen)
 	  {
 	    if (g_flen >= 0xfffe - NSTRING)
 	      return FIOMEM;
@@ -270,7 +260,7 @@ int Pascal ffgetline(int * len_ref)
 
 int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	
-{ int got_star = 0;
+{ int search_type = 0;
   const char * s = src;
   			char * t;
   			char ch;
@@ -293,7 +283,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
       break;
 
     if      (ch == '*')
-      got_star = MSD_DIRY;
+      search_type = MSD_DIRY;
     else if (ch == '/' || ch == '\\')
     {	t[0] = '/';
     { int dif = (t - tgt) - 3;
@@ -370,7 +360,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 		}
 	}
 		
-  return got_star;
+  return search_type;
 }}}
 
 

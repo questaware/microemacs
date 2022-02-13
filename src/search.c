@@ -275,7 +275,7 @@ int Pascal mk_magic()
  * expandp -- Expand control key sequences for output.
  */
 static 
-void Pascal expandp(char * deststr, char * srcstr, char * tailstr, int maxlength)
+char * expandp(int maxlength, char * srcstr, char * tailstr, char * deststr)
 	/* char	*deststr;	** destination of expanded string (concat) */
 	/* char	*srcstr;	** string to expand */
 	/* char	*tailstr;	** string on the end */
@@ -286,35 +286,37 @@ void Pascal expandp(char * deststr, char * srcstr, char * tailstr, int maxlength
 	char * d = deststr + strlen(deststr) - 1;
 					     /* Scan through the string */
 	while ((c = *srcstr++) != 0)
-	{	char ich = 0;
+	{	char ich;
 
 		if      (c == '\r')	       /* it's a newline */
 		{
 			*++d = '<';
 			*++d = 'C';
-			ich = 'R';
 			c = '>';
+			ich = 'R';
 		}
 		else if (c < 0x20 /* || c == 0x7f */)       /* control character */
 		{
-			ich = '^';
 			c ^= 0x40;
+			ich = '^';
 		}
 		else if (c == '%')
 			ich = '%';
+		else
+			goto just_c;
 			
-		if (ich != 0)
-		  *++d = ich;
-		  
-		*++d = c;
+		*++d = ich;
+just_c:		  
 					      /* check for maxlength */
 		if (d >= maxlength + deststr)
 		{	d = maxlength + deststr;
-			*d = '$';
-			break;
+			c = '$';
 		}
+		*++d = c;
 	}
+
 	strcpy(++d, tailstr);
+	return deststr;
 }
 
 /* readpattern -- Read a pattern.  Stash it in apat.  If it is the
@@ -333,17 +335,17 @@ void Pascal expandp(char * deststr, char * srcstr, char * tailstr, int maxlength
 static
 int Pascal readpattern(const char * prompt, char apat[])
 
-{   char tpat[NPAT+50];
+{		extern int gs_keyct;		 /* from getstring */
+		char tpat[NPAT+10];
     																				/* add old pattern */
-    expandp(concat(tpat, prompt, " [", null), 
-    				strlen(apat) < 30 ? apat : "\"",  "] ",  sizeof(tpat)-1);
+		char * t = expandp(sizeof(tpat)-1, strlen(apat) < 30 ? apat : "\"", "] ",
+												concat(tpat, prompt, " [", null)); 
 
 						  		/* Read a pattern.  Either we get one, or
 			    				 * we just get the META charater and use the previous pat */ 
-{		Cc cc = mltreply(tpat, tpat, NPAT);
+{		Cc cc = mltreply(t, t, NPAT);
     if (cc >= 0)
-    { // extern int gs_keyct;		 /* from getstring */
-      if (cc /* || gs_keyct > 0 */)
+    { if (cc || gs_keyct > 0)
         strcpy(apat, tpat);
 
       cc = TRUE;
@@ -381,6 +383,8 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 				  /* "No pattern set" */
 	  return FALSE;
 	}
+
+	setmark(-1,-1);											/* set the last mark */
 
   pd_lastdir = dir;
   if ((curwp->w_bufp->b_flag & MDSRCHC) == 0)
@@ -424,7 +428,7 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		strcpy(pd_highlight+1, pd_patmatch)[-1] = color;
 	  update(TRUE);
 	}}}
-	return cc;
+	return cc > 0;
 }
 
 /*
@@ -800,9 +804,9 @@ int Pascal replaces(int kind, int f, int n)
 	last.curline = NULL;
 																		/* Build query replace question string */
 											/* "Replace '" */
-	expandp(strcpy(tpat, TEXT87), pat, TEXT88, NPAT-9);
+{	char * t = expandp(NPAT-9, pat, TEXT88, strcpy(tpat, TEXT87));
 													/* "' with '" */
-	expandp(tpat, rpat, "'? ", NPAT-4);
+	expandp(NPAT-4, rpat, "'? ", t);
 
 	while (--n >= 0)
 	{ int matchlen = scanner(1, FALSE);
@@ -916,7 +920,7 @@ qprompt:
 	mlwrite(TEXT92, numsub);				/* And report the results */
 				/* "%d substitutions" */
 	return TRUE;
-}}
+}}}
 
 								/* delins -- Delete a specified length from the current point
 								 *	then either insert the string directly, or make use of
@@ -1117,7 +1121,7 @@ int Pascal indentsearch(int f, int n)
 		} while (offs >= off);
 
     if (offs < 0)
-      TTbeep();
+      tcapbeep();
     else
     { curwp->w_dotp  = lp;
       curwp->w_doto  = offs;

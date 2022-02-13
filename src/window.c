@@ -56,7 +56,6 @@ void Pascal  openwind(WINDOW * wp)
 
 
 
-
 void Pascal leavewind(WINDOW * wp, int dec)
 	
 { BUFFER * bp = wp->w_bufp;
@@ -262,6 +261,64 @@ int Pascal mvdnwind(int f, int n)
 }
 
 
+static
+int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
+
+{	WINDOW *wp;														  /* window to receive deleted space */
+	WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_next);		/* previous */
+	WINDOW *nwp = NULL;
+													     		/* find receiving window and give up space */
+	int top = curwp->w_toprow;
+	int nxttop = top + curwp->w_ntrows + 1;
+        
+	for (wp = wheadp; wp != NULL; wp = wp->w_next)
+	{ if (wh == 0)
+		{	if (wp != curwp)
+		  { //tcapbeep();
+	  	  if (wheadp == wp)
+	    	  wheadp = wp->w_next;
+	    	leavewind(wp, 1);
+	    }
+	    continue;
+	  }
+
+		if (wp->w_next == curwp)
+	    pwp = wp;
+																	 							 /* find window before curwp */
+	  if ((wp->w_toprow + wp->w_ntrows + 1) == top)
+	    nwp = wp;
+	  if (wp->w_toprow == nxttop)
+	  { nwp = wp;
+	    nwp->w_toprow = top;
+	  }
+	}
+
+	if (wh == 0)
+	{	wp = wheadp;
+		wp->w_next = NULL;
+		wp->w_toprow = 0;
+		wp->w_ntrows = term.t_nrowm1-1;
+		wp->w_flag  |= WFMODE|WFHARD;
+	}
+	else
+	{	wp = nwp;
+		if (wp == NULL)
+	  	return FALSE;
+														   					/* unlink the current window */
+		pwp->w_next = curwp->w_next;
+
+		wp->w_ntrows += 1 + curwp->w_ntrows;
+		wp->w_flag |= WFHARD | WFMODE;				/* update all lines */
+		curbp = wp->w_bufp;
+		leavewind(curwp, 1);
+	/*refresh(0, 0); */
+	}
+
+	curwp = wp;
+	return TRUE;
+}
+
+	
 /*
  * This command makes the current window the only window on the screen. Bound
  * to "C-X 1". Try to set the framing so that "." does not have to move on the
@@ -271,31 +328,9 @@ int Pascal mvdnwind(int f, int n)
  */
 int Pascal onlywind(int notused, int n)
 
-{	WINDOW *wp;
-	WINDOW *nwp;
-	if (curbp == NULL)
-	  return FALSE;
-
-	for (wp = wheadp; wp != NULL; wp = nwp)
-	{ nwp = wp->w_next;
-	  if (wp != curwp)
-	  { //tcapbeep();
-	    if (wheadp == wp)
-	      wheadp = nwp;
-	    leavewind(wp, 1);
-	  }
-	}
-#if 0
-  (void)backline(0, curwp->w_toprow);
-#endif
-	wp = wheadp;
-	curwp = wp;
-	wp->w_next = NULL;
-	wp->w_toprow = 0;
-	wp->w_ntrows = term.t_nrowm1-1;
-	wp->w_flag  |= WFMODE|WFHARD;
-	return TRUE;
+{	return dowind(0);
 }
+
 
 /*
  * Delete the current window, placing its space in the window above,
@@ -303,41 +338,7 @@ int Pascal onlywind(int notused, int n)
  */
 int Pascal delwind(int notused, int n)
 				/* arguments are ignored for this command */
-{
-	WINDOW *wp;		/* window to recieve deleted space */
-	WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_next);		/* previous */
-	WINDOW *nwp = NULL;
-													     /* find receiving window and give up our space */
-	int top = curwp->w_toprow;
-	int nxttop = top + curwp->w_ntrows + 1;
-        
-	for (wp = wheadp; wp != NULL; wp = wp->w_next)
-	{ if (wp->w_next == curwp)
-	    pwp = wp;
-																	 /* find window before curwp in linked list */
-	  if ((wp->w_toprow + wp->w_ntrows + 1) == top)
-	    nwp = wp;
-	  if (wp->w_toprow == nxttop)
-	  { nwp = wp;
-	    nwp->w_toprow = top;
-	  }
-	}
-
-	if (nwp == NULL)
-	{ mlwrite(TEXT204);
-					/* "Can not delete this window" */
-	  return FALSE;
-	}
-														   					/* unlink the current window */
-	pwp->w_next = curwp->w_next;
-
-	leavewind(curwp, 1);
-	nwp->w_ntrows += 1 + curwp->w_ntrows;
-	nwp->w_flag |= WFHARD | WFMODE;				/* update all lines */
-	curwp = nwp;
-	curbp = nwp->w_bufp;
-/*refresh(0, 0); */
-	return TRUE;
+{	return dowind(1);
 }
 
 /*

@@ -24,13 +24,13 @@
 
  Prefixing ^X denotes prefixing ^X before a key.
  
+ All of the above combinations are keys, e.g. ^XS-FN6
+
  Prefixing M- denotes prefixing *ESC* before a key.
  M-0, M-1, M-2, ... M-10, ... Prefix the following key with a count
  M-- Prefixes the following key with -1
  M---1, M--2, ... Prefix the following key with this count
  
- All of the above combinations are keys, e.g. ^XS-FN6
-
   *The Conventional Key Bindings*
   M-?   Help
   FN1   Continue search in the same direction as last time
@@ -66,26 +66,25 @@
 
   *Invocation Arguments*
   Flags may be interleaved with file names
-      -b**name**
-            Name the buffer **name**. 
-						Useful to override file suffix attributes
-      -e    Process error.rc after the startup file
-      -m    Show failing macros in a visible buffer
-      -i{%$}var value   Set variable with value before startup
-      -Kkey   Use encryption key key
-      -p    search for the file in $PATH
-      -r    Forbid access to the OS
+      -b**name**  Name the buffer **name**. 
+						  Useful to override file suffix attributes
+      -e      Process error.rc after the startup file
+      -m      Show failing macros in a visible buffer
+      -i{%$}  var value   Set variable with value before startup
+      -k{key} Use encryption key key
+      -p      search for the file in $PATH
+      -r      Forbid access to the OS
       -s pattern  Set the search pattern; the space is optional
       -/ pattern  Same but also search
-      -v    Open files in view mode
-            viewflag = TRUE;
-      -w#   exit the editor after # seconds inactivity (default 900)
-      -x    Keep ^M characters in files being editted/viewed
-      -z    select the newset file matching the pattern
-      @filename   Name of the startup file; can be relative to emacs diry.
-      filename    Filenames may be specified with patterns using *,?
-                  Any file name may be **user**@**host**:**file**
-                  The first filename may be followed by :**linenumber**
+      -v      Open files in view mode
+              viewflag = TRUE;
+      -w#     exit the editor after # seconds inactivity (default 900)
+      -x      Keep ^M characters in files being editted/viewed
+      -z      select the newset file matching the pattern
+      @filename  Name of the startup file; can be relative to emacs diry.
+      filename   Filenames may be specified with patterns using *,?
+                 Any file name may be **user**@**host**:**file**
+                 The first filename may be followed by :**linenumber**
 
   *Fundamentals*
    The current position can be set as a (zero) mark by the set-mark command. 
@@ -93,14 +92,14 @@
 
    The modes of operation can be added/deleted by add-mode/delete-mode
    and are:
-     Ms      file contain(ed) ^M
-     AbC     distinguish upper and lower case.
-     RE      treat ^$.<asterix>[ in pattern as parts of regular expressions.
-						 The regular expressions are POSIX regular expressions.
-             (In them \0ab where a and b are hex digits can be used)
-     Overstrike  Typing overstrikes existing text.
-     View    Disallow editing.
-     Crypt   Encrypt when saving, decrypt when reading.
+     Ms       file contain(ed) ^M
+     AbC      distinguish upper and lower case.
+     RE       treat ^$.<asterix>[ in pattern as parts of regular expressions.
+						  The regular expressions are POSIX regular expressions.
+              (In them \0ab where a and b are hex digits can be used)
+     Over     Typing overstrikes existing text.
+     View     Disallow editing.
+     Crypt    Encrypt when saving, decrypt when reading.
      Ink colours.
         black, red, green, yellow, blue, magenta, cyan, grey, gray, 
         lred, lgreen, lyellow, lblue, lmagenta, lcyan, white
@@ -115,7 +114,7 @@
    A key macro is different in kind, being only a sequence of key strokes.
 
    The only parameter to a command/macro is the count supplied to it
-   as a number in scripts or by the prefix Esc n where n is a number.
+   as a number in scripts or by the prefix *ESC* **n** where **n** is a number.
 
   *The Colours*
   Setting the above colour modes colour the current window.
@@ -143,6 +142,8 @@
  Before comparing paths all sequences abc/../ are removed iteratively.
  Note that any file name starting ./ is treated as different from any 
  file not so starting.
+ ...file means find the first file so called under this directory;
+ This is found using the command ffg if installed.
 
   *Completion*
   The system can (partially) complete certain names; it does this by
@@ -157,6 +158,11 @@
   *The Commands*
   (The commands may be listed by pressing M-A CR.)
   (All commands can be aborted by pressing ^G)
+
+	*Strings in scripts*
+	Arguments to commands are strings delimited by white space.
+	A string can be enclosed in single or double quotes which are stripped off.
+	Within a string ~{rnltb} denote respectively CR,NL,^L,TAB,BS.
 
 abort-command                 abort to the command line
 add-global-mode          M-M  Add colours or modes to the default mode
@@ -275,7 +281,6 @@ hunt-forward             A-S
 i-shell                  ^X%  Execute an OS Shell command
 incremental-search       ^XS
 insert-file              ^X^I Insert a file at the current point
-insert-space
 insert-string
 kill-kill                ^F   Clear the kill buffer
                          ^G
@@ -356,8 +361,13 @@ set-encryption-key       M-E	Per buffer;
                               control key at a specific point affects the key.
                               Assists in keeping the key secret. (Windows only)
 set-fill-column          ^XF  For use in word processing
-set-mark                 M- 
-                         M-.
+set-mark                 M- 	Sets a mark at the current point in the buffer.
+                         M-.	The **ESC** prefix selects which of the 8 markers
+															(modulo 8 so -1 is the last one).
+															All the search commands set mark 7 so
+															-1 goto-mark returns to the search point. **ESC**-^G
+															goto-line also sets mark 7.
+
 shell-command            ^X!  Execute an OS command in a new task
                          A-6
 shrink-window            ^X^Z
@@ -446,12 +456,12 @@ execute-macro-40
 Note that many macros are overloaded and use the keycode which invoked them.
 
 For example macro-18 is bound to both A-FNB and A-FNF. (Alt the arrow keys).
-These bindings search for the word to the right of the cursor backwards resp. forwards.
+These bindings search for a word to the right of the cursor backwards resp. forwards.
 
   The Variables
   -------------
   (The variables can be set using the set command.)
-  (All but termcap variables can be shown with the describe-variables command.)
+  (All but termcap variables can be shown with the list-variables command.)
 
  The following bits are used in flags
 
@@ -568,26 +578,23 @@ $zcmd          The last command
     They apply only to Unix.)
    
 #cols   The number of columns on the screen
-#colors   Not in use
+#colors Not in use
 #csr    The sequence to define the scroll region
 #cup    The sequence to position the cursor
 #dl1    The sequence to go down a line (only used if #csr = "")
-#ed   The sequence to erase to end of the screen
-#el   The sequence to erase to end of the line
+#ed     The sequence to erase to end of the screen
+#el     The sequence to erase to end of the line
 #il1    The sequence to go up a line (only used if #csr = "")
 #ind    The sequence to scroll the window down, text up
 #is1    The sequence to initialise the terminal for EMACS
-#kich1    Another sequence to initialise the terminal.
-#lines    The number of lines on the screen to be used
+#kich1  Another sequence to initialise the terminal.
+#lines  The number of lines on the screen to be used
 #rev    
-#ri   The sequence to scroll the window up, text down
+#ri     The sequence to scroll the window up, text down
 #rs1    The sequence to restore the terminal after EMACS use
 #sgr0   The sequence to unset reverse video (only after the modeline)
 
-   (Currently the variables giving the sequences sent by the keyboard keys
-    are not readable/writable under EMACS but may be changed by recompilation
-    of terminal.c
-   )
+In Unix EMACS uses the command infocmp to read the keyboard codes.
 
  The .rc Functions
  -----------------

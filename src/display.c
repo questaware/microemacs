@@ -73,6 +73,7 @@ typedef struct	VIDEO
 static VIDEO	 **vscreen; 	/* Virtual screen. */
 #if MEMMAP == 0
  static VIDEO 	**pscreen;		/* Physical screen. */
+ static char      g_cmd_line[sizeof(lastmesg)+1];
 #endif
 
 #if MEMMAP
@@ -294,17 +295,15 @@ const short ctrans_[] = 	/* ansi to ibm color translation table */
 #endif
 
 #if S_MSDOS
-static const int bu_cols[] = { 4, 1 };
 
 static int palcol(int ix)
 
-{ int clr = toupper(pd_palstr[ix]);
+{ int clr = pd_palstr[ix];
 	return (in_range(clr,'0','9') ? clr - '0' :
 				  in_range(clr,'A','F') ? clr - 'A' + 10 :
 				  in_range(clr,'a','f') ? clr - 'a' + 10 : 0) << 8;
 }
 #else
-static const int bu_cols[] = { '4'-1, '1'-1};
 #define palcol(c) (((c) + 1) << 8)
 #endif
 //89:;<=>?                
@@ -327,24 +326,9 @@ Short g_clring;
  * 8 : Use line foreground
  * An attribute of 0 therefore means the attributes for the line/new foreground
  */
-static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
+static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 {	const int BCD = BCCOMT + BCPRL + BCSQL + BCPAS;
-	int  markuplen = 1;
-	char markupterm = 0;
-	int highlite = 0;
-	int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
-	int chrom_nxt = 0;
-	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
-	int tabsize = curbp->b_tabsize;
-	if (tabsize < 0)
-		tabsize = - tabsize;
-
-{	int len = llength(lp); 		/* an upper limit */
-  unsigned char * str = (unsigned char *)&lp->l_text[-1];
-	unsigned char s_props = *str;												/* layout dependent */
-	*str = 0;																						/* restored below */
-
 #if _DEBUG
 	if (row >= term.t_nrowm1)
 	{
@@ -354,12 +338,16 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 #endif
 
 {	VIDEO *vp = vscreen[row];
-	short * tgt = &vp->v_text[0];
-	Short  clring = g_clring;
+	short * tgt = &vp->v_text[-1];
 	char * hlite = (vp->v_flag & VFML) ? "" : pd_highlight;
+	int len = llength(lp); 		/* an upper limit */
+  unsigned char * str = (unsigned char *)&lp->l_text[-1];
+	unsigned char s_props = *str;												/* layout dependent */
+	*str = 0;																						/* restored below */
+{	Short  clring = g_clring;
 	int mode = clring == 0 || cmt_chrom == 0 || (vp->v_flag & VFML)
 								 		? -1 : s_props & VFCMT;
-												
+	int chrom_nxt = 0;
 	if ((clring & BCD) && (s_props & VFCMT) ||
 			(clring & BCFOR) && toupper(str[1]) == 'C' && len > 0)
 		chrom_nxt = cmt_chrom;
@@ -367,19 +355,28 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 //int chrom_in_peril = false;
 
 {	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
+	int  markuplen = 1;
+	char markupterm = 0;
+	int highlite = 0;
+//int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
+	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
+	int tabsize = curbp->b_tabsize;
+	if (tabsize < 0)
+		tabsize = - tabsize;
+
 
 	while (--len >= 0)
 	{	int chrom = chrom_nxt;
 		chrom_nxt = CHR_0;
 		if (vtc >= term.t_ncol)
-		{ tgt[term.t_ncol - 1] = (short)(chrom + '$');
+		{ tgt[term.t_ncol] = (short)(chrom + '$');
 			break;
 		}
 		
 	{ int c = *++str;
 		if (c != 0 && c == hlite[(++highlite)])
 		{ if (hlite[1+highlite] == 0 && vtc-highlite+1 >= 0)
-			{ tgt[vtc-highlite+1] |= palcol(hlite[0]-'1') | CHR_NEW;
+			{ tgt[vtc-highlite+2] |= palcol(hlite[0]-'1') | CHR_NEW;
 				highlite = 0;
 			//chrom_on = 1;
 				chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
@@ -399,15 +396,14 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			}
 		}
 		else if (c < 0x20 || c == 0x7F)
-		{ if (c >= pd_col1ch && c <= pd_col2ch)
+		{ if (c <= pd_col2ch && c - pd_col1ch >= 0)
 			{ 
 				chrom_nxt = palcol(c - pd_col1ch); /* this is manual colouring */
 				continue;
 			}
 			else
-			{ if (vtc >= 0)
+			{ if (++vtc > 0)
 					tgt[vtc] = '^';
-				++vtc;
 				c ^= 0x40;
 			}
 		}
@@ -422,9 +418,9 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			  { if (c == markupterm && (markuplen == 0 || str[1] == markupterm))//safe
 			    { len -= markuplen;
             str += markuplen;
-			      chrom_on = 1;
+//		      chrom_on = 1;
 			      chrom_nxt = CHR_OLD;
-			      mode &= ~(Q_IN_CMT0+Q_IN_CMT);
+			      mode = 0;				// &= ~(Q_IN_CMT0+Q_IN_CMT);
 			      continue;
 			    }
 			  }
@@ -459,37 +455,37 @@ static VIDEO * Pascal vtmove(int row, int col, int cmt_chrom, LINE * lp)
 				{ mode = c != '*' ? Q_IN_EOL : Q_IN_CMT;
 					chrom = cmt_chrom;
  					if (((clring & (BCFOR | BCPRL)) == 0) && vtc-1 >= 0)
- 						tgt[vtc-1] |= chrom;
+ 						tgt[vtc] |= chrom;
 				}
 		}
 
 //	if (chrom_in_peril && chrom_on > 0)
 //	{ chrom_in_peril = false;
 //		if (vtc > 1)
-//			tgt[vtc-2] |= CHR_OLD;
+//			tgt[vtc-1] |= CHR_OLD;
 //		chrom_on = 0;
 //	}
 //	if (chrom_on > 0)
 //		chrom_in_peril = true;
-		if (vtc >= 0)
+		if (++vtc > 0)
 			tgt[vtc] = c | chrom;
-		++vtc;
 	}}
 
-  --vtc;
 { int ct = term.t_ncol - vtc;
 
-	if (vtc > 0 && chrom_on != 0)
+	if (vtc > 1 && 0 /* && chrom_on != 0 */)
 	{
 #if S_MSDOS
 		if ((tgt[vtc] & 0xff00) && ct > 0)
 #else
-		if (ct > 0)
+		if (ct >= 0)
 #endif
 			tgt[++vtc] = ' ';
 		tgt[vtc] |= CHR_OLD;
 	}
-	while (--ct > 0)
+
+//--vtc;
+	while (--ct >= 0)
 	{ if (++vtc >= 0)
 			tgt[vtc] = ' ';
 	}
@@ -621,9 +617,14 @@ void Pascal modeline(WINDOW * wp)
 		tline.lc.l_text[strlen(tline.lc.l_text)] = ' ';
 	}
 
+{	int numbuf = lastbuffer(-1,-1);
+	if (numbuf > 9)
+		tline.lc.l_text[tline.lc.l_used-3] = '0' + numbuf / 10;
+	tline.lc.l_text[tline.lc.l_used-2] = '0' + numbuf % 10;
+	
 //tline.lc.l_text[tline.lc.l_used] = 0;
 	
-	(void)vtmove(row, 0, 0, &tline.lc); 	/* Seek to right line. */
+	(void)vtmove(row, 0, 0, &tline.lc); 	/* Seek to correct line. */
 #if 0
 	vtputs((wp->w_flag&WFCOLR) != 0  ? "C" : "");
 	vtputs((wp->w_flag&WFMODE) != 0  ? "M" : "");
@@ -631,7 +632,7 @@ void Pascal modeline(WINDOW * wp)
 	vtputs((wp->w_flag&WFEDIT) != 0  ? "E" : "");
 	vtputs((wp->w_flag&WFFORCE) != 0 ? "F" : "");
 #endif
-}}}}}
+}}}}}}
 
 /*	updall: update all the lines in a window on the virtual screen */
 
@@ -795,8 +796,8 @@ int Pascal window_bgfg(WINDOW * wp)
 }
 
 
-
-void Pascal updline(int force)
+static
+void Pascal updline()
 /*	updpos: update the position of the hardware cursor and handle extended
 		lines. This is the only update for simple moves.
 */
@@ -842,31 +843,32 @@ void Pascal updline(int force)
 
 { int i;
 	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
+#if MOUSE == 0
+	int g_lbound = 0;		/* leftmost column of line being displayed */
+#endif							
 	int rhs = col - term.t_ncol + 1;
-										
-	if (pd_hjump)					/* if horizontal scrolling is enabled, shift if needed */
-	{	if (rhs >= 0)
+  if (rhs >= 0)
+	{	if (pd_hjump)				/* if horizontal scrolling is enabled, shift if needed */
 		{ int mv = ((rhs + pd_hjump - 1) / pd_hjump) * pd_hjump;
 			fcol += mv;
 			col -= mv;
+			rhs -= mv;
 			flag = WFHARD | WFMODE | WFMOVE;
 		}
-	}
-	else								// Not used in Windows
-	{	if (rhs < 0)
-			lbound = 0;
-		else		 /*  updext: update the extended line which the cursor is currently
+		else								// Not used in Windows
+						 /*  updext: update the extended line which the cursor is currently
 								 on at a column greater than the terminal width. The line
 								 will be scrolled right or left to let the user see where
 								 the cursor is. Called only in non Hscroll mode.
 							*/
 		{ 				/* calculate what column the real cursor will end up in */
-			lbound = col - ((rhs - 1) % term.t_scrsiz) - term.t_margin + 1;
+			g_lbound = col - ((rhs - 1) % term.t_scrsiz) - term.t_margin + 1;
+			col -= g_lbound;
 
 											/* scan through the line copying to the virtual screen*/
 											/* once we reach the left edge						*/
 											/* start scanning offscreen */
-		{ VIDEO * vp = vtmove(row, lbound + fcol, cmt_clr, g_up_lp);
+		{ VIDEO * vp = vtmove(row, g_lbound + fcol, cmt_clr, g_up_lp);
 			
 //		vp->v_text[0] = /*BG(C_BLUE)+FG(C_WHITE)+*/'$';
 								 			/* and put a '$' in column 1 */
@@ -883,10 +885,9 @@ void Pascal updline(int force)
 		updall(1, wp);
 
 //g_curcol = col;
-	if (col < term.t_ncol - 1)			// allow deextension on this line
+	if (rhs < 0)			// allow deextension on this line
 		wp->w_dotp = NULL;
 																/*	upddex: de-extend any line that deserves it */
-
 {	WINDOW * p;
 
 	for (p = wheadp; p != NULL; p = p->w_next)
@@ -903,8 +904,8 @@ void Pascal updline(int force)
 #if MEMMAP == 0
 	if (pd_sgarbf)
 	{  
-		 ptclear();
 		 tcapepage();			 /* Erase-whole page, also clears the message area. */
+		 ptclear();
 		 pd_got_msg = FALSE;		 
 	}
 #endif
@@ -929,7 +930,7 @@ void Pascal updline(int force)
 //			break;			/* this prob. breaks updgar !! */
 #endif
 #if MEMMAP
-							/* UPDATELINE specific code for the IBM-PC and other compatables */
+							  /* UPDATELINE specific code for IBM-PC and other compatables */
 			vp->v_flag &= ~VFCHG;
 			scwrite(i, vp->v_text, vp->v_color);
 #else
@@ -937,8 +938,12 @@ void Pascal updline(int force)
 #endif
 		}
 	}
+#if MEMMAP == 0
+	if (pd_sgarbf)
+		mlwrite(g_cmd_line);
+#endif
 	pd_sgarbf = FALSE;
-	tcapmove(row, col - lbound);
+	tcapmove(row, col - g_lbound);
 	TTflush();	/* there may be cause to reverse move and flush */
 }}}}}}
 
@@ -1041,10 +1046,10 @@ int /*Pascal*/ update(int force)
 {
 	WINDOW *wp;
 
-	if (vscreen != NULL
+	if (TRUE
 
 #if GOTTYPEAH || VISMAC == 0
-						&& (force || ( 1 
+				&& (force || ( 1 
 #endif
 #if GOTTYPAH
 				&& ! typahead() 
@@ -1072,7 +1077,7 @@ int /*Pascal*/ update(int force)
 			}
 								/* update physical screen from virtual screen */
 								/* update the cursor and flush the buffers */
-		updline(force);
+		updline();
 	}
 	return TRUE;
 }
@@ -1256,23 +1261,18 @@ void Pascal mlout(char c)
 { if (c == '\b')
 	{ if (ttcol <= 0)
 			return;
-		ttcol -= 2;
+		ttcol -= 1;
 	}
 	else
 	{ if (ttcol + 1 >= term.t_ncol)
 			return;
 		lastmesg[ttcol] = c;
-		lastmesg[ttcol+1] = 0;
+		lastmesg[++ttcol] = 0;
 	}
 	if (pd_discmd > 0)
 	{ int notused = pd_discmd;
-		
 		ttputc(c);
-#if S_WIN32
-		vscreen[ttrow]->v_text[ttcol] = c;
-#endif
 	}
-	ttcol += 1;
 }
 
 
@@ -1309,8 +1309,7 @@ int mlwrite(const char * fmt, ...)
 	else if (pd_discmd == 0)
 		return 0;
 
-{	int width = 0;
-	int  ch;
+{	int  ch;
 	int  s_discmd = pd_discmd++;
 	Bool popup = false;
 	--g_cursor_on;
@@ -1341,19 +1340,20 @@ int mlwrite(const char * fmt, ...)
 				 when 'w':  TTflush();
 									  millisleep(4800);
 #endif
-				 when 'c':  mlout((char)get_arg(int,ap));
 				 when 'o':  radix = 8 - 6;
 				 case 'x':  radix += 6;
-				 case 'd':  sp = int_radix_asc(get_arg(int,ap), radix);
+				 case 'd':  
+				 case 'f':  sp = int_radix_asc(get_arg(int,ap), radix);
+				 				  	if (ch == 'f' - '0')
+										{ int sl = strlen(sp);
+										  sp[sl] = sp[sl-1];
+										  sp[sl-1] = sp[sl-2];
+										  sp[sl-2] = '.';
+										}
 				 when 'p':  popup = true;
-				 when 'f':  sp = int_asc(get_arg(int,ap));
-									{ int sl = strlen(sp);
-									  sp[sl] = sp[sl-1];
-									  sp[sl-1] = sp[sl-2];
-									  sp[sl-2] = '.';
-									}
 				 when 's':  sp = get_arg(char *, ap);
-				 otherwise mlout((char)(ch+'0'));
+				 when 'c':  mlout((char)get_arg(int,ap));
+//			 otherwise	mlout((char)(ch+'0'));
 			}
 			if (sp != NULL)
 				mlputs(width, sp);
@@ -1368,15 +1368,25 @@ int mlwrite(const char * fmt, ...)
 	}
 #if S_WIN32
 	else
-		memset(&vscreen[term.t_nrowm1]->v_text[ttcol], 0, (term.t_ncol-ttcol)*2);
+	{ int scol = ttcol;
+		mlputs(term.t_ncol-ttcol,NULL);
+		tcapmove(ttrow, scol);
+//	memset(&vscreen[term.t_nrowm1]->v_text[ttcol], 0, (term.t_ncol-ttcol)*2);
+	}
+#else
+	strcpcpy(g_cmd_line, lastmesg, sizeof(lastmesg));
 #endif
 
 	loglog1("mlw %s", lastmesg);
-		
-	pd_discmd = s_discmd;
-	if (popup)
-		mbwrite(lastmesg);
 
+	if (popup)
+#if S_MSDOS
+		mbwrite(lastmesg);
+#else
+		(void)ttgetc();
+#endif
+
+	pd_discmd = s_discmd;
 	++g_cursor_on;
 	return ttcol;															/* Number of characters */
 }}
@@ -1408,8 +1418,10 @@ void Pascal mlforce(const char * s)
  */
 void Pascal mlerase()
 
-{
-	mlwrite("");
+{	mlwrite("");
+#if S_WIN32 == 0
+	g_cmd_line[0] = 0;
+#endif
 	pd_got_msg = FALSE;
 }
 

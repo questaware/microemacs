@@ -56,9 +56,9 @@ extern char nulls[];
 #define kbd_play(x)   (x < STOP)
 #define kbd_record(x) (x > STOP)
 				/* Completion types	*/
-#define	CMP_BUFFER	0
-#define	CMP_COMMAND	1
-#define	CMP_FILENAME	2
+#define	CMP_BUFFER	 0
+#define	CMP_COMMAND	 1
+#define	CMP_FILENAME 2
 				/* Directive definitions */
 #define DIF		0
 #define DELSE		1
@@ -268,14 +268,14 @@ typedef struct	BUFFER
 	unsigned char b_mode;	    /* Flags and modes (extra) */
 	signed char 	b_tabsize;	/* size of hard tab		*/
 #if	CRYPT
-	CRYPTKEY b_key;
+	CRYPTKEY  b_key;
 #endif
-	char *  b_fname;					/* malloc'd and owned by BUFFER */
-	char *	b_remote;					/* remote command 		*/
+	char *    b_fname;					/* malloc'd and owned by BUFFER */
+	char *	  b_remote;					/* remote command 		*/
 #if	COLOR
 	short   	b_color;					/* current colors		*/
 #endif
-	char	  b_bname[1]; 			/* Buffer name			*/
+	char	    b_bname[6]; 			/* Buffer name	(or bigger than this)	*/
 }	BUFFER;
 				/* for compatibility: */
 
@@ -405,24 +405,24 @@ extern int g_got_search;
 /* initialized global external declarations */
 NOSHARE extern short g_colours;		/* backgrnd (black*16) + foreground (white) */
 
-NOSHARE extern int g_numcmd;	/* number of bindable functions */
-NOSHARE extern int g_clexec;	/* command line execution flag	*/
-NOSHARE extern int g_nosharebuffs;  /* dont allow different files in same buffer */
+NOSHARE extern int g_numcmd;			/* number of bindable functions */
+NOSHARE extern int g_nosharebuffs;/* disallow different files in same buffer*/
 
-NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
+NOSHARE extern int   g_macargs;		/* take values from command arguments */
 NOSHARE extern char *g_execstr;		/* pointer to string to execute */
+NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
 NOSHARE extern char golabel[];		/* current line to go to	*/
-NOSHARE extern int g_execlevel;		/* execution IF level		*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
-extern const NBIND names[];	/* name to function table	*/
-NOSHARE extern int ttinit;		/* => ttrow is wrong */
-NOSHARE extern int ttrow;		/* Row location of HW cursor	*/
-NOSHARE extern int ttcol;		/* Column location of HW cursor */
-NOSHARE extern int lbound;		/* leftmost col of current line being displayed*/
-NOSHARE extern int abortc;		/* current abort command char	*/
-NOSHARE extern int sterm;		/* search terminating character */
+extern const NBIND names[];				/* name to function table	*/
+NOSHARE extern int ttrow;		  		/* Row location of HW cursor	*/
+NOSHARE extern int ttcol;		  		/* Column location of HW cursor */
+#if MOUSE
+NOSHARE extern int g_lbound;		/* leftmost col of current line being displayed*/
+#endif
+NOSHARE extern int abortc;			/* current abort command char	*/
+NOSHARE extern int sterm;				/* search terminating character */
 
-NOSHARE extern int prenum;		/*     "       "     numeric arg */
+NOSHARE extern int prenum;			/*     "       "     numeric arg */
 
 //NOSHARE extern char highlight[64];	/* the highlight string */
 
@@ -442,7 +442,6 @@ NOSHARE extern int eexitflag;		/* EMACS exit flag */
 
 NOSHARE extern int g_thisflag;	/* Flags, this command		*/
 NOSHARE extern int g_lastflag;	/* Flags, last command		*/
-NOSHARE extern int curgoal;	/* Goal for C-P, C-N		*/
 NOSHARE extern Short g_clring;
 
 NOSHARE extern WINDOW *curwp; 		/* Current window		*/

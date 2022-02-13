@@ -630,7 +630,7 @@ static void usehost(char * line, char end)
 
 { TTflush();
 	tcapclose(0);
-	if (g_clexec <= 0)
+	if (g_macargs <= 0)
 		ttputc('\n'); 							 /* Already have '\r' 	 */
 
 	system(line);
@@ -677,7 +677,7 @@ int Pascal spawn(int f, int n)
 	TTflush();
 
 		/* if we are interactive, pause here */
-	if (g_clexec <= 0) 
+	if (g_macargs <= 0) 
 	{
 #if S_VMS
 		write(1, "\r\n\n[End2]", 9);
@@ -899,15 +899,14 @@ int pipecmd(int f, int n)
 
 	usehost(strcat(strcat(line,">"), filnam), FALSE);
 
-			 /* split the current window to make room for the command output */
+			 				/* split the current window to make room for the command output */
 	if (splitwind(FALSE, 1) == FALSE)
 		return FALSE;
-							/* and read the stuff in */
-	bp = bufflink(filnam, (g_clexec > 0) + 64);
+																			/* and read the stuff in */
+	bp = bufflink(filnam, (g_macargs > 0) + 64);
 	if (bp == NULL)
 		return FALSE;
-		
-				 /* make this window in VIEW mode, update all mode lines */
+										 /* make this window in VIEW mode, update all mode lines */
 	curwp->w_bufp->b_flag |= MDVIEW;
 	orwindmode(WFMODE);
 

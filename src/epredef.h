@@ -93,6 +93,7 @@ extern PD_VAR predefvars[];
 #define mouseflag  predefvars[EVMSFLAG].i
 #define predef     predefvars[EVLINE].i /* stolen */
 #define quotec     predefvars[EVPOPUP].i
+#define pd_sterm	 predefvars[EVSTERM].i
 #define pd_sgarbf  predefvars[EVBUFHOOK].i
 #define pd_palstr  predefvars[EVPALETTE].p
 #define pd_pat		 predefvars[EVSEARCH].p

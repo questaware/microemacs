@@ -44,6 +44,8 @@ extern "C"
 # include	"estruct.h"
 #endif
 
+extern int g_bfindmade;
+
 #if MEOPT_SINC
 
 #if AM_ME
@@ -399,7 +401,8 @@ short Sinc::from_wh;		/* INHERITED ONLY */
 short Sinc::ccontext;
 short Sinc::ccont_need_eq;
 
-short Sinc::ask_type;
+short Sinc::ask_type;						/* response from SP,CR,N,1,^G */
+
 short Sinc::srch_exact;
 short Sinc::min_paren_nest;
 
@@ -829,8 +832,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_)
 					    type of occurrence */
 int Sinc::srchdeffile(int depth, const char * fname)
   	
-{ Paren_t sparen = g_paren;
-  char lbuf[SLEN+2];
+{ char lbuf[SLEN+2];
   char mybuf[SLEN];
   int rcc;
   meBuffer * bp;
@@ -857,11 +859,10 @@ int Sinc::srchdeffile(int depth, const char * fname)
 	WINDOW * wp = curwp;
   meBuffer * origbp = curbp;
 #endif
-  meBuffer * ebp;
+	int bf_made = 0;
   
 #if AM_ME
-  ebp = fname[0] == 0 ? origbp : bfind(fname, 0);
-	bp = ebp;
+  bp = fname[0] == 0 ? origbp : bfind(fname, 0);
 
   while (bp == NULL)		      /* yuk, newfile writes curbp ! */
   { char * ffile;
@@ -900,12 +901,12 @@ int Sinc::srchdeffile(int depth, const char * fname)
   }}
 
   swbuffer(wp, bp);
-  
+
   if (bp->intFlag & BIFSRCH)
     return 0;
 #else
-  ebp = fname[0] == 0 ? origbp : gotfile(fname);
-	bp = ebp;
+	
+	bp = fname[0] == 0 ? origbp : NULL;
 
   loglog3("WHILE SBP %x BP %x CBP %x", origbp, bp, curbp);
 
@@ -915,7 +916,8 @@ int Sinc::srchdeffile(int depth, const char * fname)
     if (fcp == NULL)
       loglog1("flook failed %s", fname);
     else
-    { bp = bufflink(fcp, TRUE);
+    {	bp = bufflink(fcp, TRUE);
+			bf_made = g_bfindmade;
       loglog3("SBP %x BP %x CBP %s", origbp, bp, curbp);
     }
 
@@ -932,12 +934,17 @@ int Sinc::srchdeffile(int depth, const char * fname)
     }
   }
 
-  swbuffer(bp);
-  g_paren = sparen;
-  loglog2("origbp %x bp %x", origbp, bp);
- 
   if (bp->b_flag & MDSRCHC)
     return 0;
+
+{ Paren_t sparen = g_paren;
+	int sdiscmd = pd_discmd;
+	pd_discmd = 0;
+  swbuffer(bp);
+	pd_discmd = sdiscmd;
+  g_paren = sparen;
+}  
+  loglog2("origbp %x bp %x", origbp, bp);
 #endif
 
   if (Sinc::ask_type == '1')
@@ -1170,11 +1177,11 @@ scan:
 				  when ':': if (ccontext == Q_NEED_RP)
 						  	    { if (offs > 0 && cp[-1]==':')
 	  	    					  { 
-						  	        if      (good_class > 0 ?  good_class < g_paren.nest
-	  	    														    			: -good_class < g_paren.nest)
-	  	          					good_class = g_paren.nest;
-						  	        else if (good_class = g_paren.nest)
+						  	        if 		 (good_class == g_paren.nest)
 						  	          good_class = -g_paren.nest;
+						  	        else if ((good_class > 0 ?  good_class : -good_class)
+						  	        					 < g_paren.nest)
+	  	          					good_class = g_paren.nest;
 	  	    					  //mbwrite("[from class]");
 	  	      					}
 	  	    					}
@@ -1363,7 +1370,7 @@ scan:
 #endif
   if (bp != origbp)
   { swbuffer(EXTRA_SW_ARG(wp) origbp);
-		if (ebp == NULL && Sinc::best_bp != bp)
+		if (bf_made && Sinc::best_bp != bp)
       zotbuf(bp EXTRA_ZOT_ARG);
   }
 
@@ -1386,7 +1393,6 @@ int Pascal searchIncls(int f, int n)
 #if AM_ME
   meWindow * curwp = frameCur->windowCur;
   meLine * lp = curwp->dotLine;
-  int g_nosharebuffs;
 #else
   LINE * lp = curwp->w_dotp;
 #endif
@@ -1428,7 +1434,8 @@ int Pascal searchIncls(int f, int n)
   /* namelist = null;*/
   /* srchdpth = 0;*/
   lp->linelength = curwp->wOffset;	/*we dont need an Me 0 terminator here*/
-  g_nosharebuffs = true;
+  
+  setmark(-1,-1);
 
   int cc = Sinc::srchdeffile(0, "");
 
@@ -1446,23 +1453,27 @@ int Pascal searchIncls(int f, int n)
   #if MEOPT_TYPEAH
       	      TTahead() ? "Interrupted" : 
   #endif
-    				          TEXT85, tgt);
+    				          		TEXT85, tgt);
     }
  #else
-    { mlwrite("Found typ %d", cc);
-      if (Sinc::best_bp != NULL)
+    {
+#if S_WIN32 == 0
+    	pd_sgarbf = TRUE
+#endif
+    	mlwrite(TEXT64, cc);
+						/* "Found typ %d" */
+	    if (Sinc::best_bp != NULL)
         swbuffer(Sinc::best_bp);
     }
     else
     {
       mlwrite(
- #if GOTTYPAH
+ #if GOTTYPAH && 0
               typahead() ? TEXT220 : 
  #endif
-				     TEXT85, tgt);
+											     TEXT85, tgt);
       curwp->w_flag &= ~(WFFORCE|WFMODE|WFHARD);	     /* stay put */
     }
-    g_nosharebuffs = false;
  #endif
 
     lp->linelength = s_lpu;

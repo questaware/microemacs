@@ -157,6 +157,7 @@ int Pascal nextword(int notused, int n)
 				if (ch < 0)
 				{	if (dir < 0)
 						gotobob(0,0);
+
   	      return FALSE;
   	    }
     	  f_size += 1;

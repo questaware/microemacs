@@ -43,19 +43,15 @@ extern char * getenv();
 
 extern int g_overmode;			/* from line.c */
 
-/* initialized global definitions */
-NOSHARE int g_nosharebuffs = FALSE; /* dont allow different files in same buffer*/
-NOSHARE int g_clexec = TRUE;	/* command line execution flag	*/
+																	/* initialized global definitions */
+NOSHARE int g_macargs = TRUE;		/* take values from command arguments */
 
-NOSHARE char *g_execstr = NULL; /* pointer to string to execute */
-NOSHARE int   g_execlevel = 0;	/* execution IF level		*/
 NOSHARE short g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
-NOSHARE int ttrow = 0; 	/* Row location of HW cursor	*/
-NOSHARE int ttcol = 0; 	/* Column location of HW cursor */
-NOSHARE int lbound = 0;		/* leftmost column of current line
-					   being displayed		*/
+NOSHARE int ttrow = 0; 					/* Row location of HW cursor	*/
+NOSHARE int ttcol = 0; 					/* Column location of HW cursor */
+
 NOSHARE int abortc = CTRL | 'G';	/* current abort command char	*/
-NOSHARE int sterm = CTRL | 'M';	/* search terminating character */
+NOSHARE int sterm = CTRL | 'M';	  /* search terminating character */
 
 static
 NOSHARE int g_prefix = 0;	/* currently pending prefix bits */
@@ -63,7 +59,6 @@ NOSHARE int prenum = 0;		/*     "       "     numeric arg */
 
 //char highlight[64] = "4hello";
 
-NOSHARE int g_restflag = FALSE;	    /* restricted use?		*/
 //NOSHARE int g_newest = 0;       /* choose newest file */
 //#define USE_SVN
 #ifdef USE_SVN
@@ -86,7 +81,6 @@ NOSHARE int eexitval = 0; 	/* and the exit return value	*/
 
 /* uninitialized global definitions */
 
-NOSHARE int g_restflag;	/* restricted use?		*/
 NOSHARE int g_thisflag;	/* Flags, this command		*/
 NOSHARE int g_lastflag;	/* Flags, last command		*/
 NOSHARE WINDOW *curwp; 		/* Current window		*/
@@ -184,8 +178,6 @@ void Pascal dcline(int argc, char * argv[])
 										g_gmode |= MDCRYPT;
 									}
 #endif						
-				when 'r': g_restflag = TRUE;	/* -r restrictive use */
-									
 				when 'b': def_bname = filev+2;
 									genflag |= 1;
 //			when 'v': genflag |= MDVIEW; /* 0x100 */ /* -v for View File */
@@ -276,6 +268,12 @@ void Pascal dcline(int argc, char * argv[])
 				if (s != null)
 					filev = s;
 		  }
+
+{ 		char buf[NFILEN+1];
+			Cc cc = searchfile(sizeof(buf)-1, buf, &filev);
+			if (cc > 0)
+				continue;
+}
 		  bp = bufflink(filev,TRUE/*|(genflag & 16)*/); /* setup buffer for file */
 		  if (bp != NULL)
 			{ if (genflag & 1)
@@ -285,12 +283,11 @@ void Pascal dcline(int argc, char * argv[])
 					if (bp != NULL)													// safe against out of memory 
 				  	repl_bfname(bp, filev);
 			  }
+			  if (bp != NULL && is_opt('V'))
+			  	bp->b_flag |= MDVIEW;
 				if (firstbp == NULL)
 				  firstbp = bp;
 			}
-
-		  if (bp != NULL && is_opt('V'))
-		  	bp->b_flag |= MDVIEW;
 		}
 	} // loop
 
@@ -318,6 +315,7 @@ void Pascal dcline(int argc, char * argv[])
 		return 1;
 	}
 #endif
+
 	if (carg != TRUE)
 	{ firstbp = g_dofilebuff;
 		if (firstbp == NULL)
@@ -384,7 +382,7 @@ void Pascal dcline(int argc, char * argv[])
 		(void)forwhunt(FALSE, 0);
 
   g_gmode &= ~MDCRYPT;
-	g_clexec = FALSE;
+	g_macargs = FALSE;
 }
 
 
@@ -566,7 +564,7 @@ static int Pascal execute(int c, int f, int n)
 			c = '\t';
 
 		if (!in_range(c, ' ', 0xFF) && c != '\t') /* Self inserting.	*/
-		{//TTbeep();
+		{//tcapbeep();
 //    mbwrite(int_asc(c));
 			mlwrite(TEXT19);								/* complain 	*/
 						/* [Key not bound]" */
@@ -759,7 +757,7 @@ int rdonly()
 
 int resterr()
 
-{ if (g_restflag)
+{ if (is_opt('r'))
 	{	mlwrite(TEXT110);
 					/* "[That command is RESTRICTED]" */
 		return TRUE;
@@ -795,10 +793,10 @@ int Pascal cex(int f, int n)	/* set ^X prefixing pending */
 
 int Pascal uniarg(int f, int n) /* set META prefixing pending */
 
-{ char buff[NSTRING+2];
+{ char buff[8+2];
 
-	if (g_clexec > 0)
-	{ if (mlreply("", &buff[0], NSTRING) <= FALSE)
+	if (g_macargs > 0)
+	{ if (mlreply("", &buff[0], 8) <= FALSE)
 			return ABORT;
 						
 		n = atoi(buff);

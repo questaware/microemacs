@@ -218,10 +218,11 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 	  fseek(fp, seq, 0);
 
   { int got = get_to_newline();
-    pos += got;
 //  Tag::g_LastStart = pos;					/* point after newline */
 	if (got)
+    { pos += got;
       fd_cc = strcmp(key, tagline);
+    }
   }}
   else
   {	int got = get_to_newline();
@@ -361,7 +362,7 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 	  			;
 
 			fn = file + ix;
-			fn[file[ix] == 0] = 0;
+			*fn = 0;
 			char * root = Tag::g_alt_root == NULL ? tagfile : Tag::g_alt_root;
 
 			bp = bufflink(pathcat(tagfile,sizeof(tagfile), root, file), 1 + 64);
@@ -377,9 +378,9 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 				gotobob(0, 0);
 
 			char * dd = pat - 1;
-		
+#if 0
 			strcpy(tagfile,pat);			/* save for restore */
-
+#endif
 			if (typ == 0)	
 	    		strcat(strpcpy(dd+1, key, sizeof(pat)-20), "[^A-Za-z0-9_]");
 	
@@ -405,8 +406,9 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 
 			int rc = hunt(typ != '?' ? 1 : -1, 0);
 			bp->b_flag = smode;
+#if 0
 	    	strcpy(pat,tagfile);
-
+#endif
 		    return rc;
 		}
 	}

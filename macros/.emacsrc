@@ -170,32 +170,40 @@ btk execute-macro-11 ^D
 btk execute-macro-11 M-^H
 
 12 store-macro		; User defined word movement
-  set %lk $lastkey
-  set %clamp 50
-  set %ch &low &chr $curchar
-	set %class &xla %ch "abcdefghijklmnopqrstuvwxyz0123456789" "____________________________________" 
-  set %dir -1
-  !if &equ %lk 2362
-    set %dir 1
-  !endif
+	set %lk $lastkey
+	set %clamp 50
+	set %inspace &xla $curchar " 	" "  " " "
+	set %class -1
+	set %stage 0
 
-  !while &gre %clamp 0
-    set %clamp &sub %clamp 1
-    %dir forward-character
-    set %ch &low &chr $curchar
-		set %x &xla %ch "abcdefghijklmnopqrstuvwxyz0123456789" "____________________________________" 
-    !if &les %clamp 49
-      !if &not &seq %x %class
-        set %clamp &sub %clamp 49
-;       !break
-      !endif
-    !endif
-    set %class %x
-  !endw
-  !if &not &equ %clamp 0
-    set %dir &sub 0 %dir
-    %dir forward-character
-  !endif
+	!while &gre %clamp 0
+		set %clamp &sub %clamp 1
+		set %ch &low &chr $curchar
+		set %x &xla %ch " 	abcdefghijklmnopqrstuvwxyz0123456789" "  ____________________________________" 
+		!if &les %class 0
+			set %class %x
+		!else
+			!if &not &seq %x %class
+				!if &equ %stage 0
+					set %class %x
+					set %stage 1
+				!else
+					set %clamp &sub %clamp 48
+				!endif
+			!endif
+		!endif
+		!if &equ %lk 2362
+			forward-character
+		!else
+			backward-character
+		!endif
+	!endw
+	!if &not &equ %lk 2362 
+		forward-character
+		!if &not &equ %clamp 0
+			forward-character
+		!endif
+	!endif
 !endm
 
 btk execute-macro-12 FN^0

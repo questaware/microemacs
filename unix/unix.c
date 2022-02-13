@@ -458,7 +458,7 @@ static void usehost(line, end)
 { extern int g_nopipe;
 	TTflush();
   tcapclose(1);
-  if (g_clexec <= 0)
+  if (g_macargs <= 0)
   { ttputc('\n');                /* Already have '\r'    */
 
 	  if (g_nopipe == 0)
@@ -505,7 +505,7 @@ int gen_spawn(f, n, prompt, line)
       return s;
   }
 
-  usehost(line, prompt != NULL && g_clexec <= 0);
+  usehost(line, prompt != NULL && g_macargs <= 0);
 
   ttcol = 0;  		   /* otherwise we shall not see the message */
 			   /* if we are interactive, pause here */
@@ -590,7 +590,8 @@ int pipecmd(int f, int n)
 	  return FALSE;
 					    /* and read the stuff in */
 {	char * h = getenv("HOME");
-  bp = bufflink(strcat(strcpy(rcmd, h == NULL ? "/tmp" : h), line+s+1), (g_clexec > 0) + 64);
+	h = h == NULL ? "/tmp" : h
+  bp = bufflink(strcat(strcpy(rcmd, h), line+s+1),64+(g_macargs > 0));
 	if (bp == NULL)
 	  return FALSE;
 	  
@@ -666,6 +667,36 @@ int filter(int f, int n)
   bp->b_flag |= BFCHG;			/* flag it as changed */
   return TRUE;
 }}}
+
+
+int searchfile(int size, char * result, char * * fname_ref)
+
+{ char * fname = *fname_ref;
+
+	if (fname[0] == '.' && fname[1] == '.' && fname[2] == '.')
+	{
+		char cmd = strcat(strcpy(result, "ffg -/ ", fname+3);
+		FILE * ip = popen(cmd, "r");
+		if (ip != NULL)
+		{ int tix = 1;
+			fname = fgets(result, size_res, ip);
+			pclose(ip);
+			if (name == NULL)
+			{ mlwrite(TEXT79);
+				return 1;
+			}
+			
+		{ int sl = strlen(fname)-1;
+			if (sl > 0)
+			{	fname[sl] = 0;
+				*fname_ref = fname;
+				return 0;
+			}
+		}}
+	}
+		
+	return -1;
+}
 
 		   /* return a system dependant string with the current time */
 char *Pascal timeset()

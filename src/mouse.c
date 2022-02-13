@@ -20,6 +20,7 @@
 NOSHARE int	lastypos = HUGE;	/* Last mouse event row.	*/
 NOSHARE int	lastxpos = HUGE;	/* Last mouse event column.	*/
 NOSHARE int	lastmcmd = MNONE;	/* Last mouse command.		*/
+NOSHARE int g_lbound = 0;		 	/* leftmost column of line being displayed */
 
 /*
  * Move mouse button, down. The window that the
@@ -51,7 +52,7 @@ Pascal movemd(f, n)
 
 	/* if we are on the line with the point, adjust for extended lines */
 	if (wp == curwp && (lp = mouseline(wp, ypos)) == curwp->w_dotp)
-		xpos += lbound;
+		xpos += g_lbound;
 
 	/* make the window the mouse points to current */
 	curwp = wp;
@@ -103,7 +104,7 @@ Pascal mregdown(f, n)
 
 	/* if we are on the line with the point, adjust for extended lines */
 	if (wp == curwp && (lp = mouseline(wp, ypos)) == curwp->w_dotp)
-		xpos += lbound;
+		xpos += g_lbound;
 
 	/* make the window the mouse points to current */
 	curwp = wp;
@@ -174,7 +175,7 @@ Pascal mregup(f, n)
 
 	/* if we are on the line with the point, adjust for extended lines */
 	if (wp == curwp && (lp = mouseline(wp, ypos)) == curwp->w_dotp)
-		xpos += lbound;
+		xpos += g_lbound;
 
 	/* make the window the mouse points to current */
 	curwp = wp;

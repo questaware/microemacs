@@ -325,7 +325,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 				curwp->w_doto = offs;
 			{	int ins_ct = tabsz - (offs % tabsz) - 1;
 				offs += ins_ct;
-				insspace(TRUE, ins_ct);
+				linsert(ins_ct,' ');
 			}}
 
  		if ((f & 0x8000))											/* entab the resulting spaced line */
@@ -1127,6 +1127,11 @@ int Pascal getfence(int f, int n)
 	}
 
   lstr = lgets(curwp->w_dotp, curwp->w_doto);
+{	char sch = lstr[0];
+	if (sch <= ' ')
+	{ mlwrite(TEXT65);
+		lstr[0] = ttgetc();
+	}
 
 {	int len = llength(curwp->w_dotp) - curwp->w_doto;
 	int dir = init_paren(lstr,len);
@@ -1134,6 +1139,7 @@ int Pascal getfence(int f, int n)
 	int rc = true;
 	int lastko = -127;
 	int stt_ko = lastko;
+	lstr[0] = sch;
 
 	n *= 128;
 
@@ -1338,7 +1344,7 @@ int Pascal getfence(int f, int n)
 			if (in_range(ko - stt_ko,-4,4) && (offs == 0 ||
 																				  lp->l_text[offs] != 
 																				   lp->l_text[offs-1] ))
-				TTbeep();					/* indent error */
+				tcapbeep();					/* indent error */
 		}
 	}
 
@@ -1347,10 +1353,10 @@ int Pascal getfence(int f, int n)
 beeper:																/* restore the current position */
 	if (rc <= 0)
 	{	rest_l_offs(&s);
-		TTbeep();
+		tcapbeep();
 	}
 	return rc;
-}}}
+}}}}
 
 #endif
 

@@ -24,7 +24,7 @@
 
 #define UNDEF 0
 
-PD_VAR predefvars[NEVARS] =
+PD_VAR predefvars[NEVARS+2] =
 
 //NOSHARE const int predefinits[NEVARS] =
 {
@@ -79,8 +79,8 @@ UNDEF, /* EVSEARCH */
 0,     /* EVSEED */       /* random number seed */
 1,     /* EVSSAVE */      /* safe save flag */
 1,     /* EVSTATUS */			/* last command status */
+CTRL |'M' /* EVSTERM */ 	/* search terminating character */
 #if 0
-UNDEF, /* EVSTERM */ 	
 0,     /* EVUARG */				/* universal argument */
 UNDEF, /* EVVERSION */	
 UNDEF, /* EVWINTITLE */
@@ -570,7 +570,6 @@ const char *Pascal USE_FAST_CALL gtenv(const char * vname)
 	  when EVREGION:   return getreg(&result[0]);
 	  
 	  when EVLINE:	   return getctext(&result[0]);
-	  when EVSTERM:    return cmdstr(&result[0], sterm);
 	  when EVLASTMESG: return strpcpy(result,lastmesg,NPAT);
 	  when EVFCOL:	   res = curwp->w_fcol;
 
@@ -625,7 +624,7 @@ fvar:	vtype = -1;
 					vtype |= TKVAR << 11;
 		    }				/* indirect operator? */
 	  when '&': 
-		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd' && g_clexec > 0)
+		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
 		    {			  /* grab token, and eval it */
 		      (void)token(var, NVSIZE+1);
 		      getval(&var[0], var);
@@ -643,7 +642,7 @@ int Pascal setvar(int f, int n)	/* set a variable */
 	char ch;
   int cc;
 	char var[2*NSTRING+1];									/* name of variable to fetch */
-	int clex = g_clexec;
+	int clex = g_macargs;
 	if (clex <= 0)
 	{ cc = getstring(&var[0], NVSIZE+1, TEXT51);
 /*				 "Variable to set: " */
@@ -762,7 +761,6 @@ int Pascal svar(int var, char * value)	/* set a variable */
 				           //  upwind();
 	  when EVKILL:
 	  when EVLINE:	   return FALSE;						// read only
-	  when EVSTERM:	   sterm = stock(value);
 	  when EVFCOL:	   if (val < 0)
 	                     val = curwp->w_doto;
 	                   minfcol = val;
@@ -778,6 +776,8 @@ int Pascal svar(int var, char * value)	/* set a variable */
 #if S_WIN32
 		when EVWINTITLE:setconsoletitle(value);
 #endif
+	  when EVSTERM:	  val = stock(value);
+										goto storeint;
 	  when EVDEBUG:	
 	  case EVSTATUS:	
 	  case EVDISCMD:	
@@ -1032,14 +1032,14 @@ int Pascal dispvar(int f, int n)	/* display a variable's value */
 	char val[NSTRING];
 
 												/* first get the variable to display.. */
-	if (g_clexec <= 0)
+	if (g_macargs > 0)
+	  (void)token(var, NVSIZE + 1);			/* grab token and skip it */
+	else
   { int cc = getstring(&var[0], NVSIZE+1, TEXT55);
 																/* "Variable to display: " */
 	  if (cc != TRUE)
 	    return cc;
 	} 
-	else																/* macro line argument */
-	  (void)token(var, NVSIZE + 1);			/* grab token and skip it */
 
 	if (findvar(var) < 0)								/* check the legality, find the var */
 	{ mlwrite(TEXT52, var);

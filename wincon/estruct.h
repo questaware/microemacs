@@ -264,7 +264,6 @@ struct SREGS {
 #define	TTsetcol(col)
 #define	TTeeol		tcapeeol
 #define	TTeeop		tcapepage
-#define	TTbeep		tcapbeep
 #define	tcaprev(x)	/* not used in MSDOS */
 //#define TTrez		tcapcres
 

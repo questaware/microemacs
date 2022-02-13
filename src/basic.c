@@ -79,7 +79,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	char c = '\n';
   int ct = dir == 0 ? 1 : dir;
 
-  if (dir >= FORWARD)
+  if (ct > 0)
   { while (--ct >= 0)
   	{	if (off != llength(lp)) 	    	/* if at EOL */
 	      c = lgetc(lp, off++);					/* get the char */
@@ -101,11 +101,15 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	    }
 		}
   }
-  lpos->curoff = off;
-	lpos->line_no += adj;
-  lpos->curline = lp;
-  return lp->l_props & L_IS_HD ? -1 : c & 0xff;
-}
+{ int res = lp->l_props & L_IS_HD ? -1 : c & 0xff;
+  if (res >= 0)
+  {	lpos->curoff = off;
+		lpos->line_no += adj;
+  	lpos->curline = lp;
+  }
+
+  return res;
+}}
 
 
 int Pascal forwchar(int notused, int n)
@@ -176,19 +180,25 @@ int Pascal gotobob(int notused, int n)
 
 
 int Pascal gotoline(int f, int n)	/* move to a particular line.
-				   argument (n) must be a positive integer for
-				   this to actually do anything 	*/
-{ char arg[20];
-
+																	   The argument n must be a positive integer 
+																   	 for this to actually do anything */
+{ 
 	/* get an argument if one doesnt exist */
-  if (!f)
-  { int cc = mlreply(TEXT7, arg, sizeof(arg)-1);
+  if (f)
+  { if (n < 0)									/* goto -1 : goto last mark */
+  		return gotomark(n, n);
+  }
+  else
+  { char arg[20];
+  	int cc = mlreply(TEXT7, arg, sizeof(arg)-1);
 									/* "Line to GOTO: " */
     if (cc <= FALSE)
     { mlwrite(TEXT8);
 						/* "[Aborted]" */
       return cc;
     }
+		
+		setmark(-1,-1);		/* set the last mark */
     n = atoi(arg);
   }
 
@@ -364,7 +374,7 @@ int Pascal backpage(int f, int n)
 {
 #if S_MSDOS == 0
   if (n > 0 && (lback(curwp->w_linep)->l_props & L_IS_HD))
-  {/*TTbeep();*/
+  {/*tcapbeep();*/
     return TRUE;
   }
 #endif
@@ -381,7 +391,8 @@ int Pascal setmark(int f, int n)
   g_rem = *mrk;
   *mrk = *(MARK*)&curwp->w_dotp;
 
-  mlwrite(TEXT9, n);
+	if (f >= 0)
+	  mlwrite(TEXT9, n);
 			  /* "[Mark %d set]" */
   return TRUE;
 }}

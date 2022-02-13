@@ -227,63 +227,29 @@ void Pascal tcapmove(int row, int col)
 
 {/* if (row == ttrow && col == ttcol)
       return; */
-#if 0
-	DWORD  Dummy;
+  DWORD  Dummy;
   COORD  Coords;
 
-{ WORD MyAttr = window_bgfg(curwp) | BACKGROUND_INTENSITY;
-	if      (row == term.t_nrowm1)
-		MyAttr = /* FG_WHITE + */ BG_GREY;
-	else if (row  > term.t_nrowm1)
-  {
-#if _DEBUG
-    tcapbeep();
-#endif
-    row = 0;
-  }
+	ttcol = col;
+	Coords.X = ttcol;
+	ttrow = row;
+	Coords.Y = row;
 
-  ttrow = row;
-  Coords.Y = row;
-  ttcol = col;
-  Coords.X = ttcol;
-
-{ HANDLE h = g_ConsOut;
-
-  if (g_cursor_on >= 0)
-  { 
-  	WriteConsoleOutputAttribute( h, &g_oldattr, 1, g_oldcur, &Dummy );
-    WriteConsoleOutputAttribute( h, &MyAttr, 1, Coords, &Dummy );
-
-	  g_oldattr = refresh_colour(row, col);
-    g_oldcur = Coords;
-  }
-  SetConsoleCursorPosition( h, Coords);
-}}
-#else
- if (row > term.t_nrowm1)
+	if (row > term.t_nrowm1)
   { tcapbeep();
     row = 0;
   }
-  
-{ WORD MyAttr = row == term.t_nrowm1 ? BG_GREY
-                        					   : window_bgfg(curwp) | BACKGROUND_INTENSITY;
-  DWORD  Dummy;
-  COORD  Coords;
-  ttrow = row;
-  Coords.Y = ttrow;
-  ttcol = col;
-  Coords.X = ttcol;
 
-  if (g_cursor_on >= 0)
-  { WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
-    WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );
-
-    g_oldattr = refresh_colour(row, col);
-    g_oldcur = Coords;
-  }
-  SetConsoleCursorPosition( g_ConsOut, Coords);
-}
-#endif
+	if (row < term.t_nrowm1 && g_cursor_on >= 0)
+	{ WORD MyAttr = row == term.t_nrowm1 ? BG_GREY
+                       					  	: window_bgfg(curwp) | BACKGROUND_INTENSITY;
+		WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
+	  WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );
+	
+	  g_oldattr = refresh_colour(row, col);
+	  g_oldcur = Coords;
+	}
+	SetConsoleCursorPosition( g_ConsOut, Coords);
 }
 
 

@@ -39,9 +39,9 @@ extern void Pascal reeat(int ch);
 /*#define cmd_buff ((int*)gs_buf) ** Save the command args here */
 
 typedef struct
-{ short cmd_buff[CMDBUFLEN];
+{	int 	cmd_reexecute;					/* > 0 if re-executing command */
 	int 	cmd_offset; 						/* Current offset into command buff */
-	int 	cmd_reexecute;					/* > 0 if re-executing command */
+	short cmd_buff[CMDBUFLEN];
 } T_is;
 
 static T_is g_isb;
@@ -64,7 +64,8 @@ int Pascal USE_FAST_CALL echochar(int c, int col)
 #endif
 	when '\t':
 //	if ((col += 4) > 0)
-		mlputs(4,"<TAB>");
+		col += 4;
+		mlputs(0,"<TAB>");
 
 	when 0x7F:
 		c = '?' - 'A' + 1;
@@ -149,7 +150,7 @@ int Pascal isearch(int n)
 	/*char	tpat[NPAT+20]; */
 	int  cc = -1;
 
-	if (!g_clexec) 
+//if (g_macargs <= 0)					incremental-search from a macro makes little sense
 	{ /*expandp(&tpat[0],TEXT165,pat,"]<META>: ",NPAT/2-5);** add old pattern */
 		 col = mlwrite(TEXT165/*tpat*/);
 							/*			"ISearch: " */
@@ -164,7 +165,7 @@ int Pascal isearch(int n)
 	 */
 	for (;;)			/* ISearch per character loop */
 	{ int raw = get_char();
-		if (raw == sterm)
+		if (raw == pd_sterm)
 			 return TRUE;
 	{ int c = ectoc(raw);
 													/* Check for special characters first: */
@@ -181,7 +182,7 @@ int Pascal isearch(int n)
 
 				if (cpos == 0)
 				{ char ch;
-					backbychar(1); 														/* Be defensive about EOB  */
+					backbychar(1); 														/* Be defensive about EOB */
 					for (cpos = -1; (ch = pat[++cpos]) != 0; )/* find the length */
 						col = echochar(ch, col);								/* and re-echo the string */
 				}
@@ -212,7 +213,7 @@ int Pascal isearch(int n)
 				if (c < ' ')			/* Is it printable? 			*/
 				{ 				/* Nope.					*/
 //				reeat(c); 		/* Re-eat the char				*/
-					return TRUE;
+					return FALSE;
 				}
 		}  /* Switch */
 
@@ -232,7 +233,7 @@ int Pascal isearch(int n)
 		else
 		{ forwchar(TRUE, cpos+1);
 			cc = scanner(-1, 2);
-			if (cc > 0)
+			if (cc)
 				continue;
 			forwchar(TRUE, -(cpos+1));
 		}
@@ -253,7 +254,7 @@ sm:
 
 		cc = scanner(n, (c == IS_FORWARD) | 2);
 		if (cc <= 0)
-			TTbeep(); /* Beep if search fails 			*/
+			tcapbeep(); /* Beep if search fails 			*/
 	}} /* for {;;} */
 }
 
@@ -263,7 +264,7 @@ sm:
 /* Subroutine to do incremental search.
  */
 
-int Pascal fisearch(int notused, int n)
+int Pascal fisearch(int f, int n)
 
 { /*char	pat_save[NPAT+1]; 				* Saved copy of the old pattern str */
 		Lpos_t save = *(Lpos_t*)&curwp->w_dotp;/* Save the current position */
@@ -277,16 +278,17 @@ int Pascal fisearch(int notused, int n)
 { 	int srchres;
 		while ((srchres = isearch(n)) <= 0)
 		{ rest_l_offs(&save); 						/* Reset the position 			*/
+			is->cmd_reexecute = 0;					/* Start the whole mess over	*/
 			if (srchres == 0) break;
 			/*strpcpy(pat, pat_save, NPAT);  * Restore the old search str */
-			is->cmd_reexecute = 0;					/* Start the whole mess over	*/
 		}
-		if (srchres)
+
+		if (srchres || 1)
 			mlerase();											/* If happy, just erase the cmd line */
 		else 
 		{ // curwp->w_flag |= WFMOVE;
 			// update(FALSE);
-			mlwrite (TEXT79);
+			// mlwrite (TEXT79);
 					/* "Not found" */
 		}
 		return srchres;
@@ -294,9 +296,9 @@ int Pascal fisearch(int notused, int n)
 
 
 
-int Pascal risearch(int notused, int n)
+int Pascal risearch(int f, int n)
 
-{ return fisearch(n ^ 0x80000000, n ^ 0x80000000);
+{ return fisearch(f, n ^ 0x80000000);
 }
 
 #endif

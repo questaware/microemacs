@@ -4,10 +4,6 @@
 	and lookup of disk files.  All of details about the
 	reading and writing of the disk are in "fileio.c".
 */
-#ifndef _POSIX_SOURCE
-#define _POSIX_SOURCE
-#endif
-
 #include	<stdio.h>
 #include	<stdlib.h>
 #include	<fcntl.h>
@@ -143,15 +139,14 @@ void Pascal customise_buf(BUFFER * bp)
 
 
 BUFFER * Pascal bufflink(const char * filename, int create)
-												/* create: 1:create, 16:dont search, 
-																	 32:dont stay, 64: swbuffer */
+												/* create: 1: create, MSD_DIRY=16: dont search, 
+																	 32:dont stay, 64: swbuffer, 128 no_share */
 { BUFFER * firstbp = NULL;
   char fname[NFILEN];
-  char * fn = fname;
-
+  char * fn;
+#if 0
   if 			(create & 32)
     ;
-#if 0
   else if (create & 16)
   { for (; *fn != 0; ++fn)
       if (*fn == '/')
@@ -166,16 +161,16 @@ BUFFER * Pascal bufflink(const char * filename, int create)
   }
 #endif
 
-{ int cr = create & ~(16+32+64);
-  int fno;
-  char bname[NFILEN];
 #if NFILEN < 2 * NBUFN + 30
   error error
 #endif
+{ int fno;
+  char bname[NFILEN];
 #define text (&bname[NBUFN+1])
+	int cr = create & ~(16+32+64);
   int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
   if (srch)
-  { msd_init(fn, NULL, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC);
+  { msd_init(fname, NULL, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC);
     if (is_opt('Z'))
     { unsigned int newdate = 0;
 
@@ -191,10 +186,6 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 
   while ((fn = ! srch ? fname : msd_nfile(&fno)) != NULL)
   { BUFFER * bp;
-#if S_MSDOS && S_WIN32 == 0
-    if (srch & MSD_DIRY)
-      fn = LFN_to_8dot3(LFN_from_83, 0, fn, &fname[0]);
-#endif
     for (bp = bheadp; bp != NULL; bp = bp->b_next)
       if ((bp->b_flag & BFINVS)==0 &&
           bp->b_fname != null && strcmp(fn, bp->b_fname) == 0)
@@ -216,7 +207,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 	  			continue;
 				} 
 				else
-				{ if (cr || g_nosharebuffs)
+				{ if (cr)
 				  { if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
 	            break;
 	        }
@@ -303,8 +294,8 @@ Pascal filefind(int f, int n)
 		return FALSE;
 
 {	char * s;
-  char *fname = gtfilename(TEXT133);
-                      /* "Find file" */
+  char * fname = gtfilename(TEXT133);
+                      	/* "Find file" */
 	if	(fname == NULL || fname[0] <= ' ')
 	  return FALSE;
 
@@ -318,12 +309,19 @@ Pascal filefind(int f, int n)
 	else
 		*s = 0;
 
-{	BUFFER * bp = bufflkup(fname, (g_clexec > 0));
+{ char buf[NFILEN+1];
+	Cc cc = searchfile(sizeof(buf)-1, buf, &fname);
+	if (cc > 0)
+		return FALSE;
+}	
+
+{	BUFFER * bp = bufflkup(fname, (g_macargs > 0));
 	if (bp == NULL)
 	  return FALSE;
+
 	if (bp->b_flag & BFACTIVE)
 	  mlwrite(TEXT135);
-/*			       "[Old buffer]" */
+					/* "[Old buffer]" */
 	swbuffer(bp);
 	
 	return s == NULL ? TRUE : gotoline(1,atoi(s+1));
@@ -393,7 +391,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 		if (rnm == cmdbody) 
 	    return NULL;
 
-  --g_clexec;
+  --g_macargs;
   ++pd_discmd;
 { int o_disinp = g_disinp;
 
@@ -411,7 +409,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 { char * cmd = fullcmd + strlen(fullcmd) + 1;
 
   --pd_discmd;
-  ++g_clexec;
+  ++g_macargs;
   g_disinp = o_disinp;
   if (cc == 0)
     return NULL;
@@ -431,7 +429,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 	 //	mbwrite(diag_p);
 	
 		if (bp == NULL)
-			bp = bufflink(cmd+clen, (g_clexec > 0));
+			bp = bufflink(cmd+clen, (g_macargs > 0));
 		if (bp != NULL)
 		{ cmd[-1] = 1;
 		  bp->b_remote = strdup(fullcmd);											  // allow leak
@@ -785,87 +783,83 @@ int Pascal filewrite(int f, int n)
  */
 int Pascal filesave(int f, int n)
 
-{	if (rdonly())
-		return FALSE;
+{	// if (rdonly())
+//		return FALSE;
 
 {	BUFFER * bp = curbp;
 	if ((bp->b_flag & BFCHG) == 0)	/* Return, no changes.	*/
 		return TRUE;
+
     					/* complain about truncated files */
-  if      ((bp->b_flag & BFTRUNC) && mlyesno(TEXT146) <= 0)
-/*			    "Narrowed Buffer..write it out" */
-    ;
-  else if ((bp->b_flag & BFNAROW) && mlyesno(TEXT147) <= 0)
-/*			    "Truncated file..write it out" */
-    ;
-  else
-  {	if (bp->b_fname == null)		/* Must have a name.	*/
-		{	mlwrite(TEXT145);
-						/* "No file name" */
-			return FALSE;
+  if (bp->b_flag & (BFTRUNC+BFNAROW))
+  { char * txt = (bp->b_flag & BFTRUNC) ? TEXT146 :
+																			/* "Truncated file..write it out" */
+	    																	  TEXT147;
+																			/* "Narrowed Buffer..write it out" */
+  	if (mlyesno(txt) <= 0)
+			return ctrlg(-1,-1);			/* "[Aborted]" */
+  }
+
+  if (bp->b_fname == null)		/* Must have a name.	*/
+	{	mlwrite(TEXT145);
+					/* "No file name" */
+		return FALSE;
+	}
+{	char * fn = bp->b_fname;
+	char * cmd = bp->b_remote;
+  if (cmd != NULL)
+	{	fn = cmd;
+	{	int sl = strlen(fn);
+    if (sl == 0)
+	  { mlwrite(TEXT102);
+	  	return FALSE;
 	  }
-	{	char * fn = bp->b_fname;
-		char * cmd = bp->b_remote;
-    if (cmd != NULL)
-		{	fn = cmd;
-		{	int sl = strlen(fn);
-      if (sl == 0)
-		  { mlwrite(TEXT102);
-		  	return FALSE;
-		  }
 //		cryptremote(fn);									// read it
 
 #if _DEBUG
-      mbwrite(fn);
+    mbwrite(fn);
 #endif
-      for (fn = &fn[sl]; *--fn != ' '; )
-        ;
-      ++fn;
-    }}
+    for (fn = &fn[sl]; *--fn != ' '; )
+      ;
+    ++fn;
+  }}
 
-  {	int rc = writeout(fn);
-		if (rc > FALSE)
-		{ bp->b_flag &= ~BFCHG;
-		  upmode();		/* Update mode lines.	*/
+{	int rc = writeout(fn);
+	if (rc > FALSE)
+	{ bp->b_flag &= ~BFCHG;
+	  upmode();		/* Update mode lines.	*/
 
-		  if (cmd != NULL)
-			{	fn[-1] = 0;																				// terminate 1st name
+	  if (cmd != NULL)
+		{	fn[-1] = 0;																				// terminate 1st name
   
-			{	char * ss = fn;																	// file precedes it
-			  while (--ss > cmd && *ss != ' ')
-			    ;
-			  *ss = 0;																					// terminate cmd
+		{	char * ss = fn;																	// file precedes it
+		  while (--ss > cmd && *ss != ' ')
+		    ;
+		  *ss = 0;																					// terminate cmd
 		    
-			{	char * pw = cmd;
-				--cmd;
-		    while (*++cmd != 0 && *cmd != 1)
-		    	;
-		    *cmd++ = 0;
+		{	char * pw = cmd;
+			--cmd;
+	    while (*++cmd != 0 && *cmd != 1)
+	    	;
+	    *cmd++ = 0;
 		    	
-//			mbwrite(cmd+3*NFILEN);                  					// Security concerns
-				--g_clexec;
-				g_disinp -= 7; 							/* turn command input echo off */
+//		mbwrite(cmd+3*NFILEN);                  					// Security concerns
+			g_disinp -= 7; 							/* turn command input echo off */
 				
-		  { char cmd_[3*NFILEN+1];
-				Cc cc = ttsystem(concat(cmd_,cmd, " ",fn," ",ss+1,NULL),pw);
-			  if (cc != 0)
-			  { mlwrite(TEXT155" %d", cc);
-			  	rc = FALSE;
-			  }
-				g_disinp += 7; 							/* turn command input echo off */
-			  memset(bp->b_remote, 0, cmd - pw);
-				++g_clexec;
-//		  pd_sgarbf = TRUE;
-		  }}}}
-		}
+		{ char cmd_[3*NFILEN+1];
+			Cc cc = ttsystem(concat(cmd_,cmd, " ",fn," ",ss+1,NULL),pw);
+		  if (cc != 0)
+		  { mlwrite(TEXT155" %d", cc);
+		  	rc = FALSE;
+		  }
+			g_disinp += 7; 							/* turn command input echo off */
+		  memset(bp->b_remote, 0, cmd - pw);
+//	  pd_sgarbf = TRUE;
+		}}}}
+	}
 //  cryptremote(bp);							// reencrypt it
-		return rc;
-  }}}
-
-  mlwrite(TEXT8);
-/*				"[Aborted]" */
-  return FALSE;
-}}
+	return rc;
+}}}}
 
 #define MYUMASK 0644
 
