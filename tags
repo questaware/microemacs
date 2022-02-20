@@ -1570,6 +1570,8 @@ scrollupdn	./src/display.c
 scwrite	./wincon/msemacs.c
 searchIncls	./src/search.c
 searchIncls	./src/sinc.cpp
+searchfile	./unix/unix.c
+searchfile	./wincon/oswin.c
 see_alarm	./unix/terminal.c
 seed	./src/epredef.h
 serialclose	./unix/unix.c

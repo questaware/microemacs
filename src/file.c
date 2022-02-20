@@ -6,6 +6,7 @@
 */
 #include	<stdio.h>
 #include	<stdlib.h>
+#include	<string.h>
 #include	<fcntl.h>
 #include	<sys/types.h>
 #include	<sys/stat.h>
@@ -17,6 +18,10 @@
 #include	"base.h"
 #include	"msdir.h"
 #include	"logmsg.h"
+
+#if S_WIN32 == 0
+#include	<unistd.h>
+#endif
 
 extern int    g_crlfflag;
 extern char * g_fline;					/* from fileio.c */
@@ -141,7 +146,7 @@ void Pascal customise_buf(BUFFER * bp)
 BUFFER * Pascal bufflink(const char * filename, int create)
 												/* create: 1: create, MSD_DIRY=16: dont search, 
 																	 32:dont stay, 64: swbuffer, 128 no_share */
-{ BUFFER * firstbp = NULL;
+{ BUFFER * bp_first = NULL;
   char fname[NFILEN];
   char * fn;
 #if 0
@@ -165,11 +170,14 @@ BUFFER * Pascal bufflink(const char * filename, int create)
   error error
 #endif
 { int fno;
+	FILE * ip = 0;
+	char pipefn[NFILEN] = "";
   char bname[NFILEN];
 #define text (&bname[NBUFN+1])
 	int cr = create & ~(16+32+64);
   int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
-  if (srch)
+
+  if 		  (srch > 0)
   { msd_init(fname, NULL, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC);
     if (is_opt('Z'))
     { unsigned int newdate = 0;
@@ -184,7 +192,9 @@ BUFFER * Pascal bufflink(const char * filename, int create)
     }
   }
 
-  while ((fn = ! srch ? fname : msd_nfile(&fno)) != NULL)
+  while ((fn = srch == 0 ? fname : 
+  						 srch < 0  ? searchfile(fname, pipefn, &ip) :
+													 msd_nfile(&fno)) != NULL)
   { BUFFER * bp;
     for (bp = bheadp; bp != NULL; bp = bp->b_next)
       if ((bp->b_flag & BFINVS)==0 &&
@@ -207,22 +217,24 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 	  			continue;
 				} 
 				else
-				{ if (cr)
+				{ // if (cr)
 				  { if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
 	            break;
 	        }
+#if 0
 				  else				/* old buffer name conflict code */
 				  { int cc = mlreply(concat(&text[0], TEXT136, bname, "):", null),
 								     							  bname, NBUFN);
                                             /* "Buffer (" */
 				    if (cc < 0) 		  /* ^G to just quit	*/
-				      return firstbp;
+				      return bp_first;
 				    if (cc != FALSE) 		  /* CR to clobber it	*/
 				      continue;
 
 				    makename(bname, fn);	/* restore it */
 				    cr |= 1;		    			/* It already exists but this causes */
 				  }         				      /* a quit the next time around	     */
+#endif
 				}
 	    }
 	    
@@ -230,17 +242,17 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 	    repl_bfname(bp, fn);
 	    customise_buf(bp);
 	  }
-	  if (firstbp == NULL)
-	    firstbp = bp;
+	  if (bp_first == NULL)
+	    bp_first = bp;
 
 	  if (!srch)
 	    break;
   }
 
 	if (create & 64)
-		swbuffer(firstbp);
+		swbuffer(bp_first);
 
-  return firstbp;
+  return bp_first;
 }}
 
 
@@ -288,7 +300,7 @@ BUFFER * Pascal bufflkup(const char * filename, int create)
  * and switch to the new buffer.
  * Bound to C-X C-F.
  */
-Pascal filefind(int f, int n)
+int Pascal filefind(int f, int n)
 
 {	if (resterr())		/* don't allow this command if restricted */
 		return FALSE;
@@ -308,12 +320,6 @@ Pascal filefind(int f, int n)
 		s = NULL;
 	else
 		*s = 0;
-
-{ char buf[NFILEN+1];
-	Cc cc = searchfile(sizeof(buf)-1, buf, &fname);
-	if (cc > 0)
-		return FALSE;
-}	
 
 {	BUFFER * bp = bufflkup(fname, (g_macargs > 0));
 	if (bp == NULL)
@@ -375,6 +381,20 @@ BUFFER * Pascal gotfile(const char * fname)
 }
 
 
+const char * gettmpfn()
+
+{	const  char * td = (char *)getenv("TEMP");
+	if (td == NULL)
+#if (defined _DOS) || (defined _WIN32)
+						/* the C drive : better than ./ as ./ could be on a CD-Rom etc */
+		td = "c:" ;
+#else
+		td = "." ;
+#endif
+	return td;
+}
+
+
 static 
 BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbody)
 								//Bool inherit_props, Bool popup
@@ -415,9 +435,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
     return NULL;
 
 {	int clen = strlen(concat(cmd, cmdnm, /*pw,*/" ", cmdbody," ",0));
-	char * tmp = (char *)getenv("TEMP");
-	if (tmp == NULL)
-		tmp = "./";
+	const char * tmp = gettmpfn();
 
   cc = ttsystem(strcat(strcat(strcat(cmd,tmp),"/"),rnm+1), fullcmd);
   if (cc != OK)

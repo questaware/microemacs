@@ -24,7 +24,6 @@ NOSHARE const char * g_envars[] = {
 	"curline",		/* current line in file */
 	"cwline",			/* current screen line in window */
 	"debug",			/* macro debugging */
-	"diagflag",		/* diagonal mouse movements enabled? */
 	"discmd",			/* display commands on command line */
 	"disinp",			/* display command line input characters */
 	"exbhook",		/* exit buffer switch hook */
@@ -63,6 +62,7 @@ NOSHARE const char * g_envars[] = {
 	"version",		/* current version number */
 	"wintitle",		/* the title on the window */
 	"wline",			/* # of lines in current window */
+	"work",				/* # of buffers modified or not yet read */
 	"wraphook",		/* wrap word execution hook */
 	"writehook",	/* write file hook */
 	"xpos", 			/* current mouse X position */

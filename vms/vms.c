@@ -606,25 +606,6 @@ int Pascal typahead()
 /*
  * Shell out to DCL.
  */
-int Pascal spawncli(int f, int n)
-{
-	register char *cp;
-
-		/*
-		 * Don't allow this command if restricted
-		 */
-	if (resterr()) 
-		return FALSE;
-
-	tcapmove(term.t_nrowm1, 0);
-	/*movecursor(term.t_nrow, 0); 			** Seek to last line. 	*/
-	TTclose(0); 					/* stty to old settings */
-	test( LIB$SPAWN( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
-	TTopen(0);
-	pd_sgarbf = TRUE;
-	return TRUE;
-}
-
 
 static void usehost(char * line, char end)
 

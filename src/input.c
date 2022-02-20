@@ -778,10 +778,9 @@ const char * gtfilename(const char * prompt)
 
 						I was goaded into this by lots of other people's completion code.
 */
-BUFFER * getcbuf(const char *prompt, int createflag)
+BUFFER * getcbuf(int createflag, BUFFER * bp, const char *prompt)
 												/* prompt to user on command line */
-{	BUFFER *bp = getdefb();	
-				
+{				
   char *sp = complete(prompt, bp ? bp->b_bname : "main", CMP_BUFFER);
 
   return sp == NULL ? NULL : bfind(sp, createflag, 0);

@@ -485,6 +485,23 @@ static void usehost(line, end)
 #endif
   upwind(TRUE);
 }
+/* Create a subjob with a copy of the command intrepreter in it. When the
+ * command interpreter exits, mark the screen as garbage so that you do a full
+  * repaint. Bound to "^X C". The message at the start in VMS puts out a newline.
+   * Under some (unknown) condition, you don't get one free when DCL starts up.
+    */
+int spawncli(int f, int n)
+    
+{ register char *cp = getenv("SHELL");
+  if (cp == NULL || *cp == 0)
+#if S_BSD
+    cp = "exec /bin/csh";
+#else
+    cp = "exec /bin/sh";
+#endif
+  return gen_spawn(f, n, NULL, cp);
+}
+
 
 
 int gen_spawn(f, n, prompt, line)
@@ -512,24 +529,6 @@ int gen_spawn(f, n, prompt, line)
   return TRUE;
 }
 
-/* Create a subjob with a copy of the command intrepreter in it. When the
- * command interpreter exits, mark the screen as garbage so that you do a full
- * repaint. Bound to "^X C". The message at the start in VMS puts out a newline.
- * Under some (unknown) condition, you don't get one free when DCL starts up.
- */
-int spawncli(int f, int n)
-
-{ register char *cp = getenv("SHELL");
-  if (cp == NULL || *cp == 0)
-#if	S_BSD
-    cp = "exec /bin/csh";
-#else
-    cp = "exec /bin/sh";
-#endif
-  return gen_spawn(f, n, NULL, cp);
-}
-
-
 /* Run a one-liner in a subjob. When the command returns, wait for a single
  * character to be typed, then mark the screen as garbage so a full repaint is
  * done. Bound to "C-X !".
@@ -544,130 +543,216 @@ int spawn(int f, int n)
 
 
 
+static char * mkTempCommName(char suffix, /*out*/char *filename)
+{
+#define DIRY_CHAR '/'
+  char * td = getenv("HOME");
+         char c2[2];
+  c2[0] = c2[1] = 0;
+
+  if (td[strlen(td)-1] != DIRY_CHAR)
+    c2[0] = DIRY_CHAR;
+
+{ char *ss = concat(filename,td,c2,g_emacsdir+10, "me",int_asc(getpid()),NULL);
+  int tail = strlen(ss);
+  int iter;
+  ss[tail] = suffix;
+  ss[tail+1] = 0;
+
+  for (iter = 25; --iter >= 0; )
+  {
+    if (!fexist(ss))
+      break;
+
+    ss[tail-3] = 'A' + 24 - iter;       // File should not exist anyway
+    ss[tail-2] = '~';
+  }
+  return filename;
+}}
+
+Cc write_diag(int cc)
+
+{ mlwrite(cc == 1000 ? TEXT2 : TEXT3);
+/*                      "[Cannot write filter file]" */
+/*                      "[Execution failed]" */
+  sleep(1);
+  return cc;
+}
+
+
 /* Pipe a one line command into a window
  * Bound to ^X @
  */
-int pipecmd(int f, int n)
 
-{	register WINDOW *wp;	/* pointer to new window */
-	register BUFFER *bp;	/* pointer to buffer to zot */
-        char	line[NLINE];	/* command line send to shell */
+int pipefilter(wh)
+   char    wh;        /* # ! < @ */
+{
+ static int bix;
+        char   bname [10];
+        char   pipeInFile[NFILEN];
+        char   pipeOutFile[NFILEN];
 
- static char bname[12] = "cmd";
- static char filnam[] = "cmd";
- static int  bix;
-
-	if (resterr())
-	  return FALSE;
-
-{ int s = mlreply("@", line, NLINE);     /* get the command to pipe in */
-	if (s != TRUE)
-    return s;
-													/* get rid of the command output buffer if it exists */
-	bp = bfind(strcpy(bname+3, int_asc(++bix)), FALSE, 0);
-  if (bp != NULL)
-	{		/* try to make sure we are off screen */
-	  for (wp = wheadp; wp != NULL; wp = wp->w_next)
-	    if (wp->w_bufp == bp)
-	    { onlywind(1, 1);
-	      break;
-	    }
-
-	  s = zotbuf(bp);
-	  if (s != TRUE)
-	    return s;
-	}
-
-  char rcmd[256];
-  system(g_emacsdir);  
-  strcat(strcat(strcat(strcpy(rcmd,"rm -f ")," "),g_emacsdir+9),filnam);
-  system(rcmd);  
-  strcat(line,">");
-  s = strlen(line);
-  usehost(strcat(strcat(strcat(line, g_emacsdir+9),filnam), int_asc(bix)), FALSE);
-  	           /* split the current window to make room for the command output*/
-	if (splitwind(FALSE, 1) == FALSE)
-	  return FALSE;
-					    /* and read the stuff in */
-{	char * h = getenv("HOME");
-	h = h == NULL ? "/tmp" : h
-  bp = bufflink(strcat(strcpy(rcmd, h), line+s+1),64+(g_macargs > 0));
-	if (bp == NULL)
-	  return FALSE;
-	  
-	free(bp->b_fname);
-	bp->b_fname = NULL;
-	  		     					/* make this window in VIEW mode, update all mode lines */
-	curwp->w_bufp->b_flag |= MDVIEW;
-	orwindmode(WFMODE);
-
-	unlink(filnam);			/* get rid of the temporary file */
-	return TRUE;
-}}}
-
-Cc unix_rename(old, new)	/* change the name of a file */
-	char *new;	/* new file name */
-	char *old;	/* original file name */
-{ int cc = link(old, new);
-  return cc != 0 ? cc : unlink(old);
-}
-
-#define FILNAM1 "/tmp/fltinp"
-#define FILNAM2 "/tmp/fltout"
-
-			/* filter a buffer through an external program
-			 * Bound to ^X #
-			 */
-int filter(int f, int n)
-
-{ char line[NLINE];			/* command line send to shell */
-
- static char filnam1[] = FILNAM1;
- static char filnam2[] = FILNAM2;
-
-	strcpy(line,"sort");
-
-	if (rdonly())
-		return FALSE;
+        char line[NSTRING+2*NFILEN+100];       /* command line send to shell */
 
   if (resterr())
     return FALSE;
-															/* get the filter name and its args */
-{ int cc = f < 0 ? TRUE : mlreply("#", line, NLINE);
-  if (cc != TRUE)
-    return cc;
 
-{ BUFFER *bp = curbp;
-  char * tmpnam = bp->b_fname;		/* place to store real file name */
+{ Cc cc;
+  char prompt[2];
+  prompt[0] = wh;
+  wh -= '<';
+  if (wh == '#'-'<' && rdonly())
+    return FALSE;
 
-  bp->b_fname = null;			/* prevent freeing */
-					/* write it out, checking for errors */
-  cc = writeout(filnam1);
-  if (cc != TRUE)
-    cc = 1000;
+#ifdef USE_SVN
+  if (wh == 'e'-'<')
+    strpcpy(line, g_ll.lastline[0], sizeof(line)-2*NFILEN);
   else
-  { usehost(strcat(line," </tmp/fltinp >/tmp/fltout"), FALSE);
-					  /* on failure, escape gracefully */
-    cc = readin(filnam2,0);
-    unlink(filnam1);			  /* and get rid of the temporary file */
-    unlink(filnam2);
-  }
-    
-  free(bp->b_fname);
-  bp->b_fname = tmpnam;
+#endif
+  { prompt[1] = 0;
+    if (mlreply(prompt, line, NLINE) <= FALSE)
+      return FALSE;
 
-  if (cc != TRUE)
-  { mlwrite(cc == 1000 ? TEXT2 : TEXT3);
-/*                      "[Cannot write filter file]" */
-/*                      "[Execution failed]" */
-    sleep(1);
-    return cc;
+    if (line[0] == '%' || line[0] == '\'')
+    { char sch;
+      int ix;
+      for (ix = 0; isalpha((sch = line[++ix])); )
+        ;
+
+      line[ix] = 0;
+
+    { const char * val = gtusr(line+1);
+      line[ix] = sch;
+
+      if (val != NULL)
+        strcpy(line,strcat(strcpy(pipeInFile,val),line+ix));
+    }}
   }
 
-  bp->b_flag |= BFCHG;			/* flag it as changed */
-  return TRUE;
+{ char * fnam1 = NULL;
+
+  if (wh <= '#'-'<' || wh == '<'-'<')       /* setup the proper file names */
+  {
+    fnam1 = mkTempCommName('i', pipeInFile);
+
+    if (writeout(fnam1) <= FALSE)   /* write it out, checking for errors */
+			return write_diag(1000);
+
+    mlwrite(TEXT159);         /* "\001Wait ..." */
+  }
+
+//tcapmove(term.t_nrowm1, 0);
+
+{ char * fnam2 = strcat(mkTempCommName('o', pipeOutFile), int_asc(++bix));
+
+//char rcmd[256];
+//system(g_emacsdir);
+//strcat(strcat(strcat(strcpy(rcmd,"rm -f ")," "),g_emacsdir+9),fnam2);
+//system(rcmd);  
+	if (fnam1 != NULL)
+	  strcat(strcat(line,"<"), fnam1);
+
+  strcat(line,">");
+
+  usehost(strcat(line,fnam2), FALSE);
+
+  if (wh >= '<'-'<')   /* <  @ */
+  { BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(bix)), TRUE, 0);
+    if (bp == NULL)
+      return FALSE;
+/*
+    if (splitwind(FALSE, 1) == FALSE)
+      return FALSE;
+*/
+    swbuffer(bp);
+  /*linstr(tmpnam); */
+                /* make this window in VIEW mode, update all mode lines */
+    curwp->w_bufp->b_flag |= MDVIEW;
+    upmode();
+                                  /* and get rid of the temporary file */
+  }
+{	Cc rc = FALSE;
+  if (wh == '!'-'<')
+  { FILE * ip = fopen(fnam2, "rb");
+    if (ip != NULL)
+    { char * ln;
+      while ((ln = fgets(&line[0], NSTRING+NFILEN*2-1, ip))!=NULL)
+        fputs(ln, stdout);
+
+      fclose(ip);
+      puts(TEXT6);
+      ttgetc();
+    /*homes();*/
+      rc = TRUE;
+    }
+  }
+  else                          /* on failure, escape gracefully */
+  { BUFFER * bp = curbp;
+    char * sfn = bp->b_fname;
+    bp->b_fname = null;                 /* otherwise it will be freed */
+    rc = readin(fnam2, FILE_NMSG);
+    bp->b_fname = sfn;                  /* restore name */
+    bp->b_flag |= BFCHG;                /* flag it as changed */
+    if (wh == '#'-'<')
+      flush_typah();
+  }
+                                  /* get rid of the temporary files */
+  if (fnam1 != NULL)
+    unlink(fnam1);
+  unlink(fnam2);
+//if (wh == 'E' - '<')
+//  unlink(fnam3);
+  return rc;
+}}}}}
+
+
+  /* Pipe a one line command into a window
+   * Bound to ^X @
+   */
+int Pascal pipecmd(int f, int n)
+
+{ return pipefilter(n >= 0 ? '@' : '<');
+}
+
+  /*
+   * filter a buffer through an external DOS program
+   * Bound to ^X #
+   */
+int Pascal filter(int f, int n)
+
+{ return pipefilter('#');
+}
+
+
+
+char * searchfile(char * result, char * pipefile, FILE ** ip_ref)
+
+{ (void)pipefile;
+{ FILE * ip = *ip_ref;
+	if (ip == NULL)
+	{ char buf[NFILEN+20];
+		char * basename = result+strlen(result)+1;	
+		char * cmd = concat(buf, "ffg -/ ", basename, " ", result, NULL);
+		FILE * ip = popen(cmd, "r");
+
+		*ip_ref = ip;
+		if (ip == NULL)
+			return NULL;
+	}
+
+{ char * fname = fgets(result, NFILEN, ip);
+	if (fname == NULL)
+		pclose(ip);
+	else
+	{ int sl = strlen(fname)-1;
+		if (sl <= 0)
+			fname = NULL;
+		else														// strip off CR,LF
+			fname[sl] = 0;
+	}
+
+	return fname;
 }}}
-
 
 int searchfile(int size, char * result, char * * fname_ref)
 

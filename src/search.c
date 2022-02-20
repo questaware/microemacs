@@ -97,11 +97,10 @@ typedef struct
 	char   lchar;
 } MC;
 
-static BITMAP * g_cclarray[NPAT / 16 /* say */ ];
+static BITMAP * g_cclarray[NPAT / 16 /* say */ + 1];
 static int g_cclarr_ix = 0;
 
 static MC   g_pats[NPAT+2];
-static int	g_pats_top;
 
 //unsigned int g_Dmatchlen = 0;
 
@@ -122,14 +121,9 @@ static int Pascal cclmake(int patix, MC *  mcptr)
 	mcptr->lchar = to;
 	mcptr->mc_type = CCL;
 
-{	BITMAP * p_bmap = g_cclarray[to];
+{	BITMAP * p_bmap = (BITMAP *)remallocstr(&g_cclarray[ to ], NULL, HICHAR >> 3);
 	if (p_bmap == NULL)
-		p_bmap = (BITMAP*)mallocz(HICHAR >> 3);
-
-	if (p_bmap == NULL)
-	  return ERR_OOMEM;
-
-	g_cclarray[ to ] = p_bmap;			/* Test the initial character(s) in ccl for
+	  return ERR_OOMEM;							/* Test the initial character(s) in ccl for
 																	 * special cases - negate ccl, or an end ccl
 																	 * character as a first character.
 																	 * Anything else gets set in the bitmap. */
@@ -206,7 +200,7 @@ int Pascal mk_magic()
 		}
 
 	{	int pchr = pat[++patix];
-		if (pchr == 0)
+		if (pchr == 0 /* == ERR_SYN */)
 			break;
 
 		if (magic & MDMAGIC)
@@ -256,17 +250,18 @@ int Pascal mk_magic()
 		 */
 	mcptr->mc_type = MCNIL; 	/* Close off the meta-string */
 
-	g_pats_top = (--mcptr) - g_pats;
-	if (mcptr->lchar == MC_EOL)
-	{ mcptr->mc_type = EOL;
-		mcptr->lchar = '\n';
-	}
-	if (g_pats[1].lchar == MC_BOL)
-		g_pats[1].mc_type = BOL;
-
-	if (patix < 0)
+	if (patix <= 0)
 		mbwrite(patix == ERR_SYN ? TEXT97		/* Out of Memory */
 	  												 : TEXT99);	/* "%%Missing ]" */
+	else 
+	{ patix = (--mcptr) - g_pats;
+		if (mcptr->lchar == MC_EOL)
+		{ mcptr->mc_type = EOL;
+			mcptr->lchar = '\n';
+		}
+		if (g_pats[1].lchar == MC_BOL)
+			g_pats[1].mc_type = BOL;
+  }
 	return patix;
 }}
 
@@ -339,13 +334,13 @@ int Pascal readpattern(const char * prompt, char apat[])
 		char tpat[NPAT+10];
     																				/* add old pattern */
 		char * t = expandp(sizeof(tpat)-1, strlen(apat) < 30 ? apat : "\"", "] ",
-												concat(tpat, prompt, " [", null)); 
+																			 concat(tpat, prompt, " [", null)); 
 
-						  		/* Read a pattern.  Either we get one, or
-			    				 * we just get the META charater and use the previous pat */ 
+						  							/* Read a pattern.  Either we get one, or just
+			    									 * get the META charater and use the previous pat */ 
 {		Cc cc = mltreply(t, t, NPAT);
-    if (cc >= 0)
-    { if (cc || gs_keyct > 0)
+    if (cc >= FALSE)
+    { if (cc > FALSE || gs_keyct > 0)
         strcpy(apat, tpat);
 
       cc = TRUE;
@@ -364,40 +359,32 @@ int last_was_srch()
 
 int Pascal USE_FAST_CALL hunt(int n, int again)
 
-{								/* Make sure a pattern exists, or that we didn't switch
-								 * into MAGIC mode until after we entered the pattern. */
-//g_paren.sdir = 1;
+{											/* Make sure a pattern exists, or that we didn't switch
+											 * into MAGIC mode until after we entered the pattern. */
+	int cc = pat[0] - '\0';
+	if (cc)
+	{	setmark(-1,-1);											/* set the last mark */
 
-	int dir = 1;
-	int cc;
-	if (n < 0)
-	{ n = -n;
-	  dir = -1;
-//	g_paren.sdir = -1;
-	}
+	{	int dir = 1;
+		if (n < 0)
+		{ n = -n;
+		  dir = -1;
+		}
+	  pd_lastdir = dir;
+		pd_highlight[1] = 0;
+	  if ((curwp->w_bufp->b_flag & MDSRCHC) == 0)
+	  	again |= 2;
+	
+		while ((cc = scanner(dir, again))
+						&& --n > 0)
+		  again |= true;
 
-	pd_highlight[1] = 0;
-
-  if (pat[0] == '\0')
-	{ mlwrite(TEXT78);
-				  /* "No pattern set" */
-	  return FALSE;
-	}
-
-	setmark(-1,-1);											/* set the last mark */
-
-  pd_lastdir = dir;
-  if ((curwp->w_bufp->b_flag & MDSRCHC) == 0)
-  	again |= 4;
-
-	while ((cc = scanner(dir, again))
-					&& --n > 0)
-	  again |= true;
-			   /* Save away the match, or complain if not there. */
-	if (cc <= 0)
-	  mlwrite(TEXT79);
+		if (cc == 0)
+		  mlwrite(TEXT79);
 					/* "Not found " */
-	else
+	}
+			   /* Save away the match, or complain if not there. */
+	if (cc > 0)
 	{ WINDOW * wp = curwp;
 		LINE * lim = wp->w_linep;
 		LINE * lp = wp->w_dotp;
@@ -424,12 +411,13 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		}
 #endif
 	{	char color = '2'; // pd_highlight == NULL ? '2' : pd_highlight[0];
+		pd_sgarbf = TRUE;
 		pd_highlight = remallocstr(&pd_highlight, NULL, pmlen);
 		strcpy(pd_highlight+1, pd_patmatch)[-1] = color;
 	  update(TRUE);
 	}}}
 	return cc > 0;
-}
+}}
 
 /*
  * forwhunt -- Search forward for a previously acquired search string.
@@ -468,7 +456,7 @@ int Pascal forwsearch(int f, int n)
 	 */
 	int cc = readpattern(n >= 0 ? TEXT80 : TEXT81, &pat[0]);
 												             /* "Search" */
-	if (cc == TRUE)
+	if (cc > FALSE)
 	  cc = hunt(n, FALSE);
 
 	return cc;
@@ -653,24 +641,23 @@ void Pascal savematch()
  */
 int Pascal scanner(int direct, int again)
 									/* int	direct; 	** which way to go.*/
-									/* int again ; 		** 1 : again, 2: call mk_magic, 4 : skip */
-	
-{ Lpos_t lpos = *(Lpos_t*)&curwp->w_dotp;
+									/* int again ; 		** 1 : again, 2 : skip */
+{ int pats_top = mk_magic();
+  if (pats_top < 0)
+	  return pats_top;
+
+{ MC * mcptr = &g_pats[direct > 0 ? 1 : pats_top];
+ 	Lpos_t lpos = *(Lpos_t*)&curwp->w_dotp;
   Lpos_t sm; //  = lpos;			/* match line and offs */
 
-  Cc cc = mk_magic();
-  if (cc < 0)
-	  return cc;
-
-{ int skip = again & 4 && g_clring != 0;
+  int skip = (again & 2) * g_clring;
   if ((again & 1) ? direct > 0 : (lpos.curline->l_props & L_IS_HD))
     nextch(&lpos, direct);    /* Advance the cursor.*/
 
   init_paren("",0);
   g_paren.sdir = direct;
 
-{ MC * mcptr = &g_pats[direct > 0 ? 1 : g_pats_top];
-	int matchlen = 0;
+{	int matchlen = 0;
 	int ch = 0;
 									 /* Scan each character until we hit the head link record. */
   while (true)
@@ -680,9 +667,9 @@ int Pascal scanner(int direct, int again)
 			     /* lpos.curline  == lforw(&curbp->b_baseline) && */
     if (ch < 0)
       return -1;
-		  	  /* Save the current position in case we need to restore it on a match. 
-		    	 * Initialize g_Dmatchlen to zero for any search for replacement.
-		  	   */
+		  	   /* Save the current position in case we need to restore it on a match. 
+		    		* Initialize g_Dmatchlen to zero for any search for replacement.
+		  	  	*/
 	{	char ptyp = mcptr->mc_type;
     if      (ptyp != LITCHAR)
     	ptyp = 0;
@@ -713,18 +700,18 @@ int Pascal scanner(int direct, int again)
 		if (skip)
 		  scan_paren(ch);
   }}
-		   
+	   
   if (direct > 0)     /* at beginning of string */
     lpos = sm;
 
   rest_l_offs(&lpos);
-  curwp->w_flag |= WFMOVE; /* flag that we have moved */
 
 	if (matchlen > 0)
 	{ extern int macro_start_col;
 		macro_start_col = -1;
 	}
 
+  curwp->w_flag |= WFMOVE; /* flag that we have moved */
   free(pd_patmatch);
   pd_patmatch = (char*)mallocz(matchlen+1);
 
@@ -782,7 +769,7 @@ int Pascal replaces(int kind, int f, int n)
 	cc = readpattern(kind == FALSE ? TEXT82 : TEXT83, &pat[0]);
 																	/* "Replace" */
 																	/* "Query replace" */
-	if (cc != TRUE)
+	if (cc <= FALSE)
 	  return cc;
 					   /* Ask for the replacement string. */
 	cc = readpattern(TEXT84, &rpat[0]);
@@ -933,7 +920,7 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 
 {	int len = 0;
   int cc = ldelchrs((Int)dlength, FALSE);
-	if (cc == TRUE)
+	if (cc > FALSE)
 	{ int ix = -1;
 	  char buf[120];
 
@@ -952,13 +939,13 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 	    { buf[++ix] = 0;
 	    	len += ix;
 	      cc = linstr(buf);
-	      if (cc != TRUE || instr[0] == 0)
+	      if (cc <= FALSE || instr[0] == 0)
 	        break;
 	      ix = -1;
 	      if (instr[0] == use_meta)
 	      { len += strlen(pd_patmatch);
 	      	cc = linstr(pd_patmatch);
-	        if (cc != TRUE)
+	        if (cc <= FALSE)
 	          break;
 	        continue;
 	      }
@@ -1016,8 +1003,8 @@ int Pascal wordsearch(int f, int n)
     while (backword(1, 1))
     {
     	int doto = curwp->w_doto;
-      char * w = &curwp->w_dotp->l_text[doto];
       int len = curwp->w_dotp->l_used - doto;
+      char * w = &curwp->w_dotp->l_text[doto];
       
       if (w[0] == buff[0])
         if (strcmp_right(w,buff) == 0)
@@ -1093,7 +1080,7 @@ static int get_indent(LINE * lp, int tabsz)
 /*
  * indentsearch -- Reverse search for an indent less than current.
  */
-int Pascal indentsearch(int f, int n)
+int Pascal indentsearch(int notused, int n)
 
 {
   LINE * lp = curwp->w_dotp;
@@ -1102,23 +1089,27 @@ int Pascal indentsearch(int f, int n)
 //sprintf(buff,"offs %d", offs);
 //mbwrite(buff);
 
-	int off = get_indent(lp,tabsz);
-
-  if (off > 0 && n > 0)
+  if ( n > 0)
   { int moved = 0;
 		int offs = 0;
+		int off = -1;
 
     do
-    { lp = lback(lp);
+ 		{	offs = get_indent(lp,tabsz);
+ 			if      (off < 0)
+ 			{ if (offs <= 0)
+ 					break;
+ 				off = offs;
+ 			}
+ 			else if (offs < off)
+ 				break;
+      lp = lback(lp);
     	offs = -(lp->l_props & L_IS_HD);
       if (offs != 0) 
 				break;
 
       moved += 1;
-
- 			offs = get_indent(lp, tabsz);
-
-		} while (offs >= off);
+    } while (TRUE);
 
     if (offs < 0)
       tcapbeep();

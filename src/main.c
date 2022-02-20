@@ -269,11 +269,6 @@ void Pascal dcline(int argc, char * argv[])
 					filev = s;
 		  }
 
-{ 		char buf[NFILEN+1];
-			Cc cc = searchfile(sizeof(buf)-1, buf, &filev);
-			if (cc > 0)
-				continue;
-}
 		  bp = bufflink(filev,TRUE/*|(genflag & 16)*/); /* setup buffer for file */
 		  if (bp != NULL)
 			{ if (genflag & 1)
@@ -646,7 +641,7 @@ void Pascal editloop(int c)
 		}
 	}
 																						/* do META-# processing if needed */
-	if ((c & META) && ((unsigned)((c & 0xff) - '0') <= 9 || (c & 0xff) == '-')
+	if ((c & META) && in_range((c & 0xff), '-', '9')
 								 && getbind(c)->k_code == 0)
 	{ n = 0;		/* start with a zero default */
 		f = 1; 		/* there is a # arg */
@@ -734,6 +729,7 @@ Pascal quit(int f, int n)
 		eexitval = f ? n : GOOD;
 		eexitflag = TRUE; /* flag a program exit */
 #if S_MSDOS
+//	ttrow = 0;
 		tcapmove(term.t_nrowm1, 0);
 #endif
 	}

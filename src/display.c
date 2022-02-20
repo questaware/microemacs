@@ -956,7 +956,7 @@ int Pascal reframe(WINDOW * wp)
 	LINE * top = wp->w_linep;
 	int nlines = wp->w_ntrows;
 	int centre = wp->w_force;
-  int flags = wp->w_flag;
+  int flags = wp->w_flag | pd_sgarbf;
 												/* if not a requested reframe, check for a needed one */
 	if ((flags & WFFORCE) == 0)
 	{ int i;
@@ -1023,9 +1023,9 @@ int Pascal reframe(WINDOW * wp)
 		;
 
 						 /* and reset the current line at top of window */
-	pd_sgarbf = 1;
-	flags |= WFHARD;
 	lp = lforw(lp);
+	flags |= WFHARD;
+	pd_sgarbf = 1;
 ret:
 	wp->w_linep = lp;
 nop_here:
@@ -1240,7 +1240,7 @@ void Pascal upmode()	/* update all the mode lines */
 
 
 #if S_MSDOS
-void Pascal upwind()	/* force hard updates on all windows */
+void Pascal upwind_()	/* force hard updates on all windows */
 #else
 void Pascal upwind(int garbage)	/* force hard updates on all windows */
 #endif

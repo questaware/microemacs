@@ -35,26 +35,16 @@ btk execute-macro-1 
 	  save-file
   !endif
 
-  set %disc $discmd
-  set $discmd FALSE
+	set %wk $work
+;	set %oo @&cat "W " %wk
   set %mybuf $cbufname
   set $status 0
-  !if &not %goon
-    !force last-buffer
-  !endif
-  !if &seq %mybuf $cbufname
-    !force next-buffer
-  !endif
-  !if &seq %mybuf $cbufname
-    !force exit-emacs
-  !endif
+	!force drop-buffer %mybuf
 	!if $status
-	  !force delete-buffer %mybuf
-	  !if &not $status
-	    !force select-buffer %mybuf
+;		set %oo @&cat "WW " $work
+	  !if &equ $work %wk
+  	  !force exit-emacs
 	  !endif
-	  !force delete-window
-	  set $discmd %disc
   !endif
 !endm
 
@@ -83,7 +73,7 @@ btk execute-macro-3 ^@
      set %bnm $cbufname
      find-file %fle
      !if &not &seq %bnm $cbufname
-       delete-buffer %bnm
+       drop-buffer %bnm
      !endif
   !endif
 !endm
@@ -317,6 +307,13 @@ btk execute-macro-19 ^O
 !endm
 
 btk execute-macro-20 ^P
+
+21 store-macro ; test
+	set %cmd &cat &cat "git diff --no-index -- " $cfname " -"
+	-1 pipe-command %cmd
+!endm
+
+btk execute-macro-21 ^XV
 
 btk search-forward A-S
 btk save-file ^XA-S

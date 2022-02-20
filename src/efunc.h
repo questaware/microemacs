@@ -47,7 +47,6 @@ const NBIND names[] =
 #endif
 //{"ctlx-prefix",					cex},
 	{"delete-backward-word",delbword},
-	{"delete-buffer",				killbuffer},
 	{"delete-global-mode",	delgmode},
 	{"delete-mode",					delmode},
 	{"delete-next-character",forwdel},
@@ -61,6 +60,7 @@ const NBIND names[] =
 #if	DEBUGM
 	{"display",							dispvar},
 #endif
+	{"drop-buffer",					dropbuffer},
 	{"end-macro",						ctlxrp},
 	{"end-of-file",					gotoeob},
 	{"end-of-line",					gotoeol},
@@ -142,7 +142,6 @@ const NBIND names[] =
 	{"help",								help},
 	{"hunt-backward",				backhunt},
 	{"hunt-forward",				forwhunt},
-	{"i-shell",							spawncli},
 #if	ISRCH
 	{&irsrchm[ISRCHM_OFFS],	fisearch},
 #endif

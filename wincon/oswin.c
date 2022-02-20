@@ -492,23 +492,14 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
 #else
  #define DIRY_CHAR DIRSEPCHAR
 #endif
+	char * td = gettmpfn();
 				 char c2[2];
-	const  char * td = (char *)getenv("TEMP");
-
 	c2[0] = c2[1] = 0;
 
-	if (td == NULL)
-#if (defined _DOS) || (defined _WIN32)
-						/* the C drive : better than ./ as ./ could be on a CD-Rom etc */
-		td = "c:/" ;
-#else
-		td = "./" ;
-#endif
-	else
-		if (td[strlen(td)-1] != DIRY_CHAR)
-			c2[0] = DIRY_CHAR;
+	if (td[strlen(td)-1] != DIRY_CHAR)
+		c2[0] = DIRY_CHAR;
 	
-{	char *ss = concat(filename,td,c2,"me",int_asc(_getpid()),0);
+{	char *ss = concat(filename,td,c2,"me",int_asc(_getpid()),NULL);
 	int tail = strlen(ss);
 	int iter; 
 	ss[tail] = suffix;
@@ -618,6 +609,7 @@ Cc WinLaunch(int flags,
 	char * ca = NULL;
 	int quote = 0;
 	char ch;
+
 	if (cmd != NULL)
 	{	const char * s = cmd - 1;
 		if (*cmd == '"')
@@ -797,11 +789,9 @@ Cc WinLaunch(int flags,
 			FILE * ip_ = infile == NULL ? NULL  : fopen(infile, "r");
 			FILE * ip = ip_;
 	  	FILE * op = outfile == NULL ? NULL_OP : fopen(outfile, "w");
-	  	int append_nl = 1;
+		{	int append_nl = 1;
 	  	int std_delay = 5;
 	  	int delay = 0;
-			if (ipstr == NULL)
-				ipstr = "";
 #if _DEBUG			
 			if (read_stdout == 0)
 			{ mbwrite("Int Err");
@@ -857,12 +847,13 @@ Cc WinLaunch(int flags,
 
 				//mbwrite("Getting");
 
+				if (ipstr == NULL)
+					ipstr = "";
 				if (*ipstr == 0)
-		    {	if (ip != 0)
+		    {	if (ip != NULL)
 				  {	ipstr = fgets(&fbuff[0], sizeof(fbuff)-1-bwrote, ip);
 				    if (ipstr == NULL)
 				    {	ip = NULL;
-				    	ipstr = "";
 							continue;
 				    }
 					}
@@ -912,9 +903,9 @@ Cc WinLaunch(int flags,
 				fclose(ip_);
 			if (op != NULL_OP)
 				fclose(op);
-		}
+		}}
 	}
-  
+
 //printf("Exitted %d\n", exit);
   
 	if (pi.hProcess)
@@ -958,25 +949,11 @@ int ttsystem(const char * cmd, const char * data)
   								 data,null,null);
 	return cc;
 }
-
-/*
- * Create a subjob with a copy of the command intrepreter in it. When the
- * command interpreter exits, mark the screen as garbage so that you do a full
- * repaint. Bound to "^X %". The message at the start in VMS puts out a newline.
- * Under some (unknown) condition, you don't get one free when DCL starts up.
- */
-int spawncli (int f, int n)
-{
-	return WinLaunch(WL_SHELL+WL_CNPG+WL_NOIHAND,   // +WL_SHOWW,
-										NULL, NULL, NULL, NULL);
-//return WinLaunchProgram(NULL, LAUNCH_SHELL, NULL, NULL, NULL, &rc EXTRA_ARG);
-}
 
 	/* Pipe a one line command into a window
-	 * Bound to ^X @ or ^X #
 	 */
 int pipefilter(wh)
-	 char 	 wh;
+	 char 	 wh;				/* # ! < @ */
 {
  static int bix;
  				char 	 bname [10];
@@ -991,13 +968,15 @@ int pipefilter(wh)
 { Cc cc;
 	char prompt[2];
 	prompt[0] = wh;
-	wh -= '@';											
-	if (wh != 0 && wh != '!'-'@' && rdonly())
+	wh -= '<';											
+	if (wh == '#'-'<' && rdonly())
 		return FALSE;
 
-	if (wh == 'e'-'@')
+#ifdef USE_SVN
+	if (wh == 'e'-'<')
 		strpcpy(line, g_ll.lastline[0], sizeof(line)-2*NFILEN);
 	else
+#endif
 	{ prompt[1] = 0;
 		if (mlreply(prompt, line, NLINE) <= FALSE)
 			return FALSE;
@@ -1020,7 +999,7 @@ int pipefilter(wh)
 
 {	char * fnam1 = NULL;
 
-	if (wh == '#'-'@') 						 /* setup the proper file names */
+	if (wh <= '#'-'<' || wh == '<'-'<') 			/* setup the proper file names */
 	{ 			
 		fnam1 = mkTempCommName('i', pipeInFile);
 
@@ -1038,15 +1017,17 @@ int pipefilter(wh)
 
 	cc = WL_IHAND + WL_HOLD;
 
-	if      (wh == '#'-'@')
+	if      (wh == '#'-'<')
 //	cc |= WL_SPAWN+WL_CNC;
 		cc |= WL_SHELL+WL_CNC;
-	else if	(wh <= 0)					// %@
+	else if	(wh >= '<'-'<')					// < @ 
 		cc |= WL_SHELL;
 #if 0
-	else if (wh == 'E' -'@')
+	else if (wh == 'E' -'<')
 		cc |= LAUNCH_STDERROUT;
-	else if (wh == 'e' -'@')
+#endif
+#ifdef USE_SVN
+	else if (wh == 'e' -'<')
 	{ wh = 'E';
 		cc |= LAUNCH_STDIN;
 	}
@@ -1062,7 +1043,7 @@ int pipefilter(wh)
 		return FALSE;
 	close(fid);
 */
-	if (/*sysRet == OK && */ wh == '@'-'@')
+	if (wh >= '<'-'<')   /* <  @ */
 	{ BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), TRUE, 0);
 		if (bp == NULL)
 			return FALSE;
@@ -1078,7 +1059,7 @@ int pipefilter(wh)
 																	/* and get rid of the temporary file */
 	}
 {	Cc rc = FALSE;
-	if (wh == '!'-'@')
+	if (wh == '!'-'<')
 	{ FILE * ip = fopen(fnam2, "rb");
 		if (ip != NULL)
 		{ char * ln;
@@ -1099,14 +1080,14 @@ int pipefilter(wh)
 		rc = readin(fnam2, FILE_NMSG);
 		bp->b_fname = sfn; 									/* restore name */
 		bp->b_flag |= BFCHG; 								/* flag it as changed */
-		if (wh == '#'-'@')
+		if (wh == '#'-'<')
 			flush_typah();
 	}
 																	/* get rid of the temporary files */
 	if (fnam1 != NULL)
 		unlink(fnam1);							
 	unlink(fnam2);
-//if (wh == 'E' - '@')
+//if (wh == 'E' - '<')
 //	unlink(fnam3);
 	return rc;
 }}}}}}
@@ -1116,7 +1097,7 @@ int pipefilter(wh)
 	 */
 int Pascal pipecmd(int f, int n)
 
-{ return pipefilter('@');
+{ return pipefilter(n >= 0 ? '@' : '<');
 }
 
 	/*
@@ -1139,44 +1120,41 @@ int Pascal spawn(int f, int n)
 }
 
 
-#if 1
+char * searchfile(char * result, char * pipefile, FILE ** ip_ref)
 
-int searchfile(int size_res, char * result, char * * fname_ref)
+{ FILE * ip = *ip_ref;
+	if (ip == NULL)
+	{ char buf[NFILEN+20];
+		char * basename = result+strlen(result)+1;
+		
+		char * cmd = concat(buf, "ffg -/ ", basename, " ", result, NULL);
 
-{ char * fname = *fname_ref;
-
-	if (fname[0] == '.' && fname[1] == '.' && fname[2] == '.')
-	{ char * cmd = strcat(strcpy(result, "ffg -/ "), fname+3);
-		char	 pipeOutFile[NFILEN];
-		char * fnam2 = mkTempCommName('o', pipeOutFile);
+		char * fnam2 = mkTempCommName('o', pipefile);
 		Cc cc = WinLaunch(WL_IHAND+WL_HOLD+WL_SHELL,
 											cmd, NULL, NULL, fnam2);
-		if (cc == OK)
-		{ fname = NULL;
-		{ FILE * ip = fopen(fnam2, "rb");
-			if (ip != NULL)
-			{	fname = fgets(result, size_res, ip);
-			  fclose(ip);
-				unlink(fnam2);
-			}
-			if (fname == NULL)
-			{ mbwrite(TEXT79);
-				return 1;
-			}
-			
-		{ int sl = strlen(fname)-2;
-			if (sl > 0)
-			{	fname[sl] = 0;
-				*fname_ref = fname;
-				return 0;
-			}
-		}}}
+		if (cc != OK)
+			return NULL;
+		ip = fopen(fnam2, "rb");
+		*ip_ref = ip;
+		if (ip == NULL)
+			return NULL;
 	}
-	
-	return -1;
-}
 
-#endif
+{ char * fname = fgets(result, NFILEN, ip);
+	if (fname == NULL)
+	{	fclose(ip);
+		unlink(pipefile);
+	}
+	else
+	{ int sl = strlen(fname)-2;
+		if (sl <= 0)
+			fname = NULL;
+		else														// strip off CR,LF
+			fname[sl] = 0;
+	}
+
+	return fname;
+}}
 
 #if 0
 X 			/* return a system dependant string with the current time */

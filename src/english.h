@@ -57,7 +57,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT20	"Apropos string: "
 #define	TEXT21	"Binding list"
 #define	TEXT24	"Use buffer"
-#define	TEXT26	"Kill buffer"
+#define	TEXT26	"Drop buffer"
 #define	TEXT28	"Buffer in use"
 #define	TEXT29	"Change buffer name to: "
 #define	TEXT30	"ACT   Modes      Size Buffer          File"

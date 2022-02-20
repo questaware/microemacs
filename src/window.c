@@ -56,9 +56,10 @@ void Pascal  openwind(WINDOW * wp)
 
 
 
-void Pascal leavewind(WINDOW * wp, int dec)
+void Pascal leavewind(int dec, WINDOW * wp_)
 	
-{ BUFFER * bp = wp->w_bufp;
+{ WINDOW * wp = wp_ == NULL ? curwp : wp_;
+  BUFFER * bp = wp->w_bufp;
 	if (bp != NULL)
 		*(WUFFER*)bp = *(WUFFER*)wp;
 
@@ -85,7 +86,7 @@ void openwindbuf(char * bname)
   { bp->b_flag &= ~MDVIEW;
     bp->b_flag |= BFACTIVE;
 		bp->b_luct = ++g_top_luct;
-    leavewind(curwp, 0);
+    leavewind(0, NULL);
     openwind(curwp);
   }
 }}
@@ -119,7 +120,7 @@ int Pascal nextwind(int f, int n)
 {
 	WINDOW *wp;
 
-	leavewind(curwp,0);
+	leavewind(0, NULL);
 
 	if (! f)
 	{ wp = curwp->w_next;
@@ -277,7 +278,7 @@ int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 		  { //tcapbeep();
 	  	  if (wheadp == wp)
 	    	  wheadp = wp->w_next;
-	    	leavewind(wp, 1);
+	    	leavewind(1, wp);
 	    }
 	    continue;
 	  }
@@ -310,7 +311,7 @@ int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 		wp->w_ntrows += 1 + curwp->w_ntrows;
 		wp->w_flag |= WFHARD | WFMODE;				/* update all lines */
 		curbp = wp->w_bufp;
-		leavewind(curwp, 1);
+		leavewind(1, NULL);
 	/*refresh(0, 0); */
 	}
 

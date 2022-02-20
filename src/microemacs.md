@@ -201,7 +201,6 @@ copy-region              ^XC  Copy the region into the n.th kill buffer.
 copy-word                A-W  Copy the word into the n.th kill buffer.
 count-words              M-^C
 ctlx-prefix              ^X
-delete-buffer            ^XK  
 delete-global-mode       M-^M
 delete-mode              ^X^M
 delete-next-character    FND
@@ -213,6 +212,8 @@ delete-window            ^X0
 demote-buffer                 Treat the current buffer as if not yet shown
 detab-region             ^X^D Expand tabs
 display                  ^XG  Display a variable
+drop-buffer            	 ^XK  If the buffer is displayed in two windows drop the window
+                       	      Otherwise drop the buffer (asks if modified).
 end-macro                ^X)  End collecting keys to be executed by execute macro.
                          A-FNx (this is alt backslash)
 end-of-file              M->

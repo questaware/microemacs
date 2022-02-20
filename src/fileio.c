@@ -284,6 +284,11 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 
     if      (ch == '*')
       search_type = MSD_DIRY;
+    else if (ch == '.' && s[0] == '.' && s[1] == '.' && s[2] != '/')
+    {	search_type = (tgt - t) - 1;
+    	--t;
+    	s += 2;
+    }
     else if (ch == '/' || ch == '\\')
     {	t[0] = '/';
     { int dif = (t - tgt) - 3;
@@ -305,8 +310,8 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
   }
 
   t[1] = 0;
-{
-  const char * cwd_ = getcwd(tmp, NFILEN);
+
+{ const char * cwd_ = getcwd(tmp, NFILEN);
   if (cwd_ == null)
     cwd_ = "/";
 	
@@ -359,7 +364,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 			strcpy(tt+1, t);
 		}
 	}
-		
+
   return search_type;
 }}}
 

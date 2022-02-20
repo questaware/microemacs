@@ -150,7 +150,7 @@ static KEYTAB keytab[NBINDS+1] =
 #if DEBUGM
 	{CTLX|'G',	BINDFNC, dispvar},
 #endif
-	{CTLX|'K',	BINDFNC, killbuffer},
+	{CTLX|'K',	BINDFNC, dropbuffer},
 	{CTLX|'M',	BINDFNC, togmod},
 	{CTLX|'N',	BINDFNC, filename},
 	{CTLX|'O',	BINDFNC, nextwind},
@@ -181,7 +181,6 @@ static KEYTAB keytab[NBINDS+1] =
 	{CTRL|'W',	BINDFNC, killregion},
 	{CTRL|'V',	BINDFNC, forwpage},
 	{CTRL|'Y',	BINDFNC, yank},
-	{CTLX|'C',	BINDFNC, spawncli},
 #else
 /*
 bind-to-key execute-macro ^W
@@ -218,7 +217,6 @@ bind-to-key filter-buffer ^X|
 	{CTRL|'G', BINDFNC, kdelete}, /* tbd: freed up ^G to agree with jasspa */
 	{CTRL|'F', BINDFNC, kdelete},
 	{CTRL|'V', BINDFNC, yank},
-	{CTLX|'%', BINDFNC, spawncli},
 	{CTLX|'\\', BINDFNC, filter},
 	{CTLX|'|', BINDFNC, filter},
 	{CTRL|' ', BINDFNC, setmark},

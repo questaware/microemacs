@@ -45,7 +45,6 @@ TRUE,  /* EVCURCHAR */		/* actual: revexist -does reverse video exist?*/
 0,     /* EVCURLINE */		/* */
 FALSE, /* EVCWLINE */		  /* */
 0,     /* EVDEBUG */      /* macro debugging flag	*/
-0,     /* EVDIAGFLAG */   /* diagonal mouse movements? */
 1,     /* EVDISCMD */     /* display command flag */
 1,     /* EVDISINP */     /* display input characters */
 0,     /* EVEXBHOOK */    /* actual: swb_luct */
@@ -586,6 +585,7 @@ const char *Pascal USE_FAST_CALL gtenv(const char * vname)
 #if S_WIN32
 	  when EVWINTITLE: return null;	// getconsoletitle();
 #endif
+		when EVWORK:		 res = lastbuffer(-1,-1);
 	  when EVPENDING:
 #if	GOTTYPAH
 									   res = typahead();
@@ -595,7 +595,6 @@ const char *Pascal USE_FAST_CALL gtenv(const char * vname)
 	  case EVDISCMD:  
 	  case EVDISINP:  
 	  case EVSSAVE:   
-	  case EVDIAGFLAG:
 	  case EVMSFLAG:   return ltos(res);
 
 	  default:	       loglog2("Var %d = %x", vnum, res);
@@ -783,7 +782,6 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  case EVDISCMD:	
 	  case EVDISINP:	
 	  case EVSSAVE:	
-    case EVDIAGFLAG:	
     case EVMSFLAG:  val = stol(value);
 										goto storeint;
 
@@ -880,7 +878,7 @@ char *Pascal getval(char * tgt, char * tok)
 						  return getvalnull;
 						  
 						if (bp == curbp)			/* if the buffer is displayed get the window */
-							leavewind(curwp,0); /* vars instead of the buffer vars */
+							leavewind(0, NULL); /* vars instead of the buffer vars */
 													      			 
 					{ LINE * lp = bp->b_dotp;
 						src = (const char *)&lp->l_text[0];

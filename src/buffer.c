@@ -164,9 +164,9 @@ void Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 
 	bp->b_luct = ++g_top_luct;
 
- 	leavewind(curwp, 0);
-
 	curbp = bp; 			/* Switch. */
+ 	leavewind(0, NULL);
+
 { char * fn = bp->b_fname;
 	int flag = bp->b_flag;
   bp->b_flag |= BFACTIVE;			/* code added */
@@ -216,12 +216,30 @@ BUFFER *Pascal getdefb()	/* get the default buffer for a use or kill */
 	return NULL;
 }
 
+#if 0
+
+int count_work(void)
+
+{ BUFFER * bp;
+	int ct = 0;
+
+	for (bp = bheadp; bp != NULL; bp = bp->b_next)
+	{ if      ((bp->b_flag & (BFACTIVE+BFINVS)) == 0)
+			++ct;
+		else if (bp->b_flag & BFCHG)
+			++ct;
+	}
+	
+	return ct;
+}
+
+#endif
 
 /* Attach a buffer to a window. 
  */
 int Pascal usebuffer(int f, int n)
 {
-	BUFFER * bp = getcbuf(TEXT24, TRUE);
+	BUFFER * bp = getcbuf(TRUE, getdefb(), TEXT24);
 							/* "Use buffer" */
 	if (!bp)
 		return ABORT;
@@ -321,25 +339,38 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 
 
 /* Dispose of a buffer, by name.
- * Ask for the name. Look it up (don't get too
- * upset if it isn't there at all!). Get quite upset
- * if the buffer is being displayed. Clear the buffer (ask
- * if the buffer has been changed). Then free the header
- * line and the buffer header. Bound to "C-X K".
+ * Ask for the name. Look it up. Be silent on not found.
+ * If the buffer is being displayed in two windows drop this window.
+ * Otherwise move this window on to the last buffer or next buffer
+ * to move of this buffer.
+ * If this buffer is no longer in a window then
+ * if the buffer has been changed ask for confirmation and remove it.
+ * Bound to "C-X K".
  */
-int Pascal killbuffer(int f, int n)
+int Pascal dropbuffer(int f, int n)
 
-{	BUFFER * bp = getcbuf(TEXT26, FALSE);
+{	flush_typah();
+{	BUFFER * bp = getcbuf(FALSE, curbp, TEXT26);
 				             /* "Kill buffer" */
-	flush_typah();
+	if (bp == NULL)
+		return ABORT;
+{	int ct = window_ct(bp);
+	if (ct > 1)
+	{	(void)delwind(0,0);
+		return FALSE;
+	}
+	
+{ Cc cc = lastbuffer(0,1);
+  BUFFER * nb = curbp;
+	if (nb == bp)
+		nb = (BUFFER*)NEXTBUFFER(0,1);
+	
+	if (nb == NULL || nb == bp)			/* fake deletion of last buffer */
+		return TRUE;
 
-	return bp == NULL 													? TRUE :
-#if 0
-				 bp == curbp && window_ct(bp) > 0 &&
-				 bp == (BUFFER*)NEXTBUFFER(0,1) 			? ABORT :
-#endif
-                                              	zotbuf(bp);
-}
+	swbuffer(nb);
+	return zotbuf(bp);
+}}}}
 
 
 
@@ -374,10 +405,8 @@ void Pascal fmt_modecodes(char * t, int mode)
 { int c = NUMMODES-2; 																	/* ignore CHGD, INVS */
 	static const char modecode[NUMMODES-2] = "WCSEVOMYA"; /* letters for modes */
 
-	t[c] = 0;
 	while (--c >= 0)
-		if (mode & (1 << c))
-			t[c] = modecode[c];
+		t[c] = mode & (1 << c) ? modecode[c] : '.';
 }
 
 /*	List all of the active buffers.  First update the special
@@ -391,23 +420,25 @@ void Pascal fmt_modecodes(char * t, int mode)
 
 int Pascal listbuffers(int iflag, int n)
 		 
-{ BUFFER * bp;
-	Char line[15+NUMMODES-2+80] = "Global Modes .........\n"
-																"ACT 	Modes 		Size  Buffer			File\n";
-	openwindbuf("[List]");
+{	openwindbuf("[List]");
 
-{	Int avail = curwp->w_ntrows - 2;
-				/* build line to report global mode settings */
-						/* output the mode codes */
-//strcpy(&line[0], "Global Modes ");
-	fmt_modecodes(&line[13], g_gmode);
+{	Char line[15+NUMMODES-2+80] = "Global Modes  ..........\n"
+																"ACT 	Modes 		Size  Buffer			File\n";
+												/* build line to report global mode settings */
+	fmt_modecodes(&line[14], g_gmode);
 
 	if (linstr(line) == FALSE)
 		return FALSE;
+
+{ BUFFER * bp;
+	Int avail = curwp->w_ntrows - 2;
 																					/* output the list of buffers */
 	for (bp = bheadp; bp != NULL; bp = bp->b_next) 
 	{ if ((bp->b_flag & BFINVS) && iflag == FALSE)
 			continue;
+
+		fmt_modecodes(line, bp->b_flag);
+		line[NUMMODES-2] = 0;
 
 		--avail;
 	{ Int	nbytes = 0L;													/* Count bytes in buf.	*/
@@ -416,13 +447,12 @@ int Pascal listbuffers(int iflag, int n)
  /* for (lp = bp->b_baseline; (lp = lforw(lp)) != bp->b_baseline; ) */
 			nbytes += (Int)llength(lp)+1L;
 
-		fmt_modecodes(&line[13], bp->b_flag);
 					/* we could restore lastmesg */
 		mlwrite("%>%c%c%c %s %7d %15s %s\n",
 						bp->b_flag & BFACTIVE ? '@' : ' ',
 						bp->b_flag & BFCHG ? '*' : ' ',
 						bp->b_flag & BFTRUNC ? '#' : ' ',
-						&line[13],
+						line,
 						nbytes,
 						bp->b_bname,
 						bp->b_fname);
@@ -432,7 +462,7 @@ int Pascal listbuffers(int iflag, int n)
 	if (avail > 0)
 		shrinkwind(0, avail);
 	return gotobob(0,0);
-}}
+}}}
 
 
 #if 0

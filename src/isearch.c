@@ -232,7 +232,7 @@ int Pascal isearch(int n)
 			c = 0;
 		else
 		{ forwchar(TRUE, cpos+1);
-			cc = scanner(-1, 2);
+			cc = scanner(-1, FALSE);
 			if (cc)
 				continue;
 			forwchar(TRUE, -(cpos+1));
@@ -252,7 +252,7 @@ sm:
  */ 				/* search forward or back for pattern */
 						/* direction to search					*/
 
-		cc = scanner(n, (c == IS_FORWARD) | 2);
+		cc = scanner(n, (c == IS_FORWARD));
 		if (cc <= 0)
 			tcapbeep(); /* Beep if search fails 			*/
 	}} /* for {;;} */
