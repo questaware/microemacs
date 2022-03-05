@@ -214,45 +214,42 @@ int Pascal execcmd(int f, int n)
 char *Pascal token(char * tok, int size)
 				/* source string, destination token string */
 				/* maximum size of token */
-{	
-	const char * src = g_execstr;
+{
+	const char * src = g_execstr - 1;
 	char quotef = 0;	/* is the current string quoted? */
 	char c;
-	int leading = 1;
+	int leading = -1;
 
-	for (; (c = *src) != 0; ++src)
-	{														/* process special characters */
-		if 			(leading < 0)		
-	    switch (c)
+	for (; (c = *++src) != 0;)
+	{	if (c == quotef)										/* check for the end of the token */
+	  	break;
+		++leading;
+		if (c == '~')													/* process special characters */
+	    switch (*++src)
 	    { case 'r': c = 'J' - '@';
 	      when 'n': c = 'M' - '@'; 
 	      when 'l': c = 'L' - '@'; 
 	      when 't': c = 'I' - '@';  
-	      when 'b': c = 'H' - '@';  
+	      when 'b': c = 'H' - '@';
+	      otherwise --src;
 	    }
-	  else if (c == '~')
-	  	leading = 0;
-	  else if (c == quotef)									/* check for the end of the token */
-	  	break;
-	  else if (c == ' ' || c == '\t')
-	  { if (leading)
-	      continue;
-	    if (quotef == 0)										/* terminates unless in quotes */
+	  else if (c <= ' ')
+		{	if (leading == 0)
+				continue;
+		  if (quotef == 0)										/* terminates unless in quotes */
 	      break;
 	  }
-	  else if ((c == '"' || c == '\'') && quotef == 0 && leading)
+	  else if ((c == '"' || c == '\'') && quotef + leading == 0)
 	  { quotef = c;													/* set quote mode if quote found */
-	    leading = 0;
 	    continue;
 	  }
 	  if (--size <= 0)
 	  	break;
 	  *tok++ = c;
-	  leading = 0;
 	}
 
 	*tok = 0;
-	return g_execstr = (char*)(*src == 0 ? src : src+1);
+	return g_execstr = (char*)(c == 0 ? src : src+1);
 }
 
 
@@ -426,6 +423,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	FILE *fp;		/* file handle for log file */
 #endif
 	int cc = TRUE;
+	int lineno = 0;
 #if LIM_WHILE
 	WHBLOCK whiles[LIM_WHILE];
 	int topwh = LIM_WHILE-1;
@@ -523,6 +521,7 @@ failexit:
 				  ((lp = lforw(lp))->l_props & L_IS_HD) != 0)
 				break;
 
+			++lineno;
 #if _DEBUG
 			++g_rc_lineno;
 #endif
@@ -690,7 +689,7 @@ failexit:
 			    cc = TRUE;
 																							/* check for a command error */
 			  if (cc <= FALSE)
-			  {	rpl_all(-1, 0, (LINE*)bp, lp, 0);		/* point window(s) at line */
+			  { cc = -lineno;
 #if 0
 			    for (wp = wheadp; wp != NULL; wp = wp->w_next)
 			      if (wp->w_bufp == bp)	     /* and point it */
@@ -819,62 +818,46 @@ dinput:
 }
 #endif
 
-
-
-
-BUFFER * g_dofilebuff;
-
-/*	dofile: yank a file into a buffer and execute it
-		if there are no errors, delete the buffer on exit */
-
-static int Pascal dofile(const char * fname)
-				/* file name to execute */
-{ char bname[NBUFN];		/* name of buffer */
-
-  makename(bname, fname); 		/* derive the name of the buffer */
-
-{ BUFFER *dfb = bfind(bname, 3, 0);
-  if (dfb == NULL) 			   		/* get the needed buffer */
-    return FALSE;
-
-{ BUFFER *scb = curbp;	   		
-  curbp = dfb;			      		/* make this one current */
-  curbp->b_flag = MDVIEW;			/* mark the buffer as read only */
-				                  		/* and try to read in the file to execute */
-{ Cc cc = readin(fname, 0);
-  curbp = scb;								/* restore the current buffer */
-  if (cc <= FALSE)
-    return cc;
-							/* go execute it! */
-  cc = dobuf(dfb,1);
-  if (cc > FALSE &&
-      window_ct(dfb) == 0)
-            		    /* not displayed, remove the now unneeded buffer and exit */
-  { zotbuf(dfb);
-    dfb = NULL;
-  }
-  g_dofilebuff = dfb;
-  return cc;
-}}}}
-
 					                        /* execute the startup file */
-int Pascal startup(const char * sfname)
+Cc Pascal startup(const char * sfname)
 	/*  sfname   ** name of startup file ("" if default) */
-{
-																					   /* look up the path for the file */
-	const char *fspec = flook(0, sfname);
-																			      /* if it isn't around */
+{ BUFFER *dfb = NULL;
+	Cc cc = -32000;
+	const char *fspec = flook(0, sfname);			/* look up the path for the file */
+	
 	if (fspec == NULL)
 	{				  																/* complain if we are interactive */
 	  mlwrite(TEXT214, sfname);
 						/* "%%No such file as %s" */
-	  return 13;
 	}
+	else
+	{
 #if _DEBUG
-	mbwrite(fspec);
+		mbwrite(fspec);
 #endif
 																						/* otherwise, execute it */
-	return dofile(fspec);
+	{ char bname[NBUFN];		/* name of buffer */
+
+	  makename(bname, fspec); 		/* derive the name of the buffer */
+
+		dfb = bfind(bname, 3, 0);
+  	if (dfb != NULL) 			   		/* get the needed buffer */
+		{ curbp = dfb;			      		/* make this one current */
+		  curbp->b_flag = MDVIEW;			/* mark the buffer as read only */
+						                  		/* and try to read in the file to execute */
+		  cc = readin(fspec, 0);
+									/* go execute it! */
+		  if (cc > FALSE)
+		  	cc = dobuf(dfb,1);
+
+		  if (cc > FALSE &&
+			    window_ct(dfb) == 0)
+		            		  	/* not displayed, remove the unneeded buffer and exit */
+		  	zotbuf(dfb);
+		}
+	}}
+
+  return cc;
 }
 
 
@@ -882,11 +865,16 @@ int Pascal startup(const char * sfname)
 int Pascal execfile(int f, int n)	/* execute a series of commands in a file */
 	/* int f, n;	** default flag and numeric arg to pass on to file */
 { 
-        char ebuffer[65];
-	register int cc = mlreply(TEXT129, ebuffer, sizeof(ebuffer)-1);
+  char ebuffer[65];
+	Cc cc = mlreply(TEXT129, ebuffer, sizeof(ebuffer)-1);
 /*			      "File to execute: " */
 
 					   /* look up the path for the file */
-	return !cc ? cc : startup(ebuffer);
+	if (cc > FALSE)
+	{ BUFFER *scb = curbp;	   		
+		cc = startup(ebuffer);
+		curbp = scb;								/* restore the current buffer */
+	}
+	return cc;
 }
 

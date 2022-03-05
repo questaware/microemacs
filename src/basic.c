@@ -25,7 +25,7 @@ char * USE_FAST_CALL mallocz(int n)
     mlwrite(TEXT99);
 					/* "out of memory " */
 	else
-    memset(res, 0, n);
+    res = memset(res, 0, n);
   return res;
 }
 

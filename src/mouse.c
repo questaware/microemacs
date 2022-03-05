@@ -17,10 +17,10 @@
 #if	MOUSE
 #define HUGE	1000			/* Huge number			*/
 
-NOSHARE int	lastypos = HUGE;	/* Last mouse event row.	*/
-NOSHARE int	lastxpos = HUGE;	/* Last mouse event column.	*/
-NOSHARE int	lastmcmd = MNONE;	/* Last mouse command.		*/
-NOSHARE int g_lbound = 0;		 	/* leftmost column of line being displayed */
+int	lastypos = HUGE;	/* Last mouse event row.	*/
+int	lastxpos = HUGE;	/* Last mouse event column.	*/
+int	lastmcmd = MNONE;	/* Last mouse command.		*/
+int g_lbound = 0;		 	/* leftmost column of line being displayed */
 
 /*
  * Move mouse button, down. The window that the
@@ -36,23 +36,23 @@ Pascal movemd(f, n)
 	register LINE	*lp;
 
 	/* if anything has changed, reset the click count */
-	if (lastmcmd != MMOVE || lastypos!=ypos || lastxpos!=xpos)
+	if (lastmcmd != MMOVE || lastypos != pd_ypos || lastxpos != pd_xpos)
 		pd_nclicks = 0;
 	++pd_nclicks;
 	lastwp = mousewindow(lastypos); 	/* remember least window */
 
 	/* reset the last position */
-	lastypos = ypos;
-	lastxpos = xpos;
+	lastypos = pd_ypos;
+	lastxpos = pd_xpos;
 	lastmcmd = MMOVE;
 
 	/* if we move the mouse off the windows, don't move anything */
-	if ((wp=mousewindow(ypos)) == NULL)
+	if ((wp=mousewindow(pd_ypos)) == NULL)
 		return(FALSE);
 
 	/* if we are on the line with the point, adjust for extended lines */
-	if (wp == curwp && (lp = mouseline(wp, ypos)) == curwp->w_dotp)
-		xpos += g_lbound;
+	if (wp == curwp && (lp = mouseline(wp, pd_ypos)) == curwp->w_dotp)
+		pd_xpos += g_lbound;
 
 	/* make the window the mouse points to current */
 	curwp = wp;
@@ -63,9 +63,9 @@ Pascal movemd(f, n)
 		upmode();
 
 	/* if we aren't off the end of the text, move the point to the mouse */
-	if ((lp=mouseline(wp, ypos)) != NULL)
+	if ((lp=mouseline(wp, pd_ypos)) != NULL)
 	{	curwp->w_dotp = lp;
-		curwp->w_doto = mouseoffset(wp, lp, xpos);
+		curwp->w_doto = mouseoffset(wp, lp, pd_xpos);
 	}
 
 	return(TRUE);
@@ -88,23 +88,23 @@ Pascal mregdown(f, n)
 	register LINE	*lp;
 
 	/* if anything has changed, reset the click count */
-	if (lastmcmd != MREG || lastypos != ypos || lastxpos != xpos)
+	if (lastmcmd != MREG || lastypos != pd_ypos || lastxpos != pd_xpos)
 		pd_nclicks = 0;
 	++pd_nclicks;
 	lastwp = mousewindow(lastypos); 	/* remember least window */
 
 	/* reset the last position */
-	lastypos = ypos;
-	lastxpos = xpos;
+	lastypos = pd_ypos;
+	lastxpos = pd_xpos;
 	lastmcmd = MREG;
 
 	/* if we move the mouse off the windows, don't move anything */
-	if ((wp=mousewindow(ypos)) == NULL)
+	if ((wp=mousewindow(pd_ypos)) == NULL)
 		return(FALSE);
 
 	/* if we are on the line with the point, adjust for extended lines */
-	if (wp == curwp && (lp = mouseline(wp, ypos)) == curwp->w_dotp)
-		xpos += g_lbound;
+	if (wp == curwp && (lp = mouseline(wp, pd_ypos)) == curwp->w_dotp)
+		pd_xpos += g_lbound;
 
 	/* make the window the mouse points to current */
 	curwp = wp;
@@ -115,9 +115,9 @@ Pascal mregdown(f, n)
 		upmode();
 
 	/* if we aren't off the end of the text, move the point to the mouse */
-	if ((lp=mouseline(wp, ypos)) != NULL)
+	if ((lp=mouseline(wp, pd_ypos)) != NULL)
 	{	curwp->w_dotp = lp;
-		curwp->w_doto = mouseoffset(wp, lp, xpos);
+		curwp->w_doto = mouseoffset(wp, lp, pd_xpos);
 	}
 
 	/* perform the region function */
@@ -152,7 +152,7 @@ Pascal mregup(f, n)
 	register int lastmodeline;	/* was the dowbclick on a modeline? */
 
 	/* if anything has changed, reset the click count */
-	if (lastmcmd != MREG || lastypos != ypos || lastxpos != xpos)
+	if (lastmcmd != MREG || lastypos != pd_ypos || lastxpos != pd_xpos)
 		pd_nclicks = 0;
 	++pd_nclicks;
 	lastwp = mousewindow(lastypos); 	/* remember least window */
@@ -161,8 +161,8 @@ Pascal mregup(f, n)
 	lastmodeline = ismodeline(lastwp, lastypos);
 
 	/* reset the last position */
-	lastypos = ypos;
-	lastxpos = xpos;
+	lastypos = pd_ypos;
+	lastxpos = pd_xpos;
 	lastmcmd = MREG;
 
 	/* if we started on a modeline.... */
@@ -170,21 +170,21 @@ Pascal mregup(f, n)
 		return(delwind(TRUE, 0));
 
 	/* if we move the mouse off the windows, don't move anything */
-	if ((wp=mousewindow(ypos)) == NULL)
+	if ((wp=mousewindow(pd_ypos)) == NULL)
 		return(FALSE);
 
 	/* if we are on the line with the point, adjust for extended lines */
-	if (wp == curwp && (lp = mouseline(wp, ypos)) == curwp->w_dotp)
-		xpos += g_lbound;
+	if (wp == curwp && (lp = mouseline(wp, pd_ypos)) == curwp->w_dotp)
+		pd_xpos += g_lbound;
 
 	/* make the window the mouse points to current */
 	curwp = wp;
 	curbp = wp->w_bufp;
 
 	/* if we aren't off the end of the text, move the point to the mouse */
-	if ((lp=mouseline(wp, ypos)) != NULL && pd_nclicks < 3)
+	if ((lp=mouseline(wp, pd_ypos)) != NULL && pd_nclicks < 3)
 	{	curwp->w_dotp = lp;
-		curwp->w_doto = mouseoffset(wp, lp, xpos);
+		curwp->w_doto = mouseoffset(wp, lp, pd_xpos);
 	}
 
 	/* if we changed windows, update the modelines, abort the new op */
@@ -219,14 +219,14 @@ Pascal movemu(f, n)
 	register WINDOW *wp;
 	register int	lastmodeline;	/* was the dowbclick on a modeline? */
 					/* no movement... fail the command */
-	if (lastypos==ypos && lastxpos==xpos)
+	if (lastypos == pd_ypos && lastxpos == pd_xpos)
 		return FALSE;
 
 			/* if the down click was in the bottom right corner...
 			   then we are resizing */
 	if (lastypos == term.t_nrowm1 && lastxpos + 1 == term.t_ncol)
 	{	(*term.t_eeop)();
-		newdims(xpos + 1, ypos + 1);
+		newdims(pd_xpos + 1, pd_ypos + 1);
 		return TRUE;
 	}
 
@@ -239,14 +239,14 @@ Pascal movemu(f, n)
 	lastmodeline = ismodeline(lastwp, lastypos);
 
 				/* are we not in a window? fail it then */
-	wp = mousewindow(ypos);
+	wp = mousewindow(pd_ypos);
 	if (wp == NULL)
 		return FALSE;
 						/* how far did we move? */
-{	register int	deltay = lastypos-ypos;
-	register int	deltax = lastxpos-xpos;
-	lastypos = ypos;
-	lastxpos = xpos;
+{	register int	deltay = lastypos-pd_ypos;
+	register int	deltax = lastxpos-pd_xpos;
+	lastypos = pd_ypos;
+	lastxpos = pd_xpos;
 					/* if we started on a modeline.... */
 	if (lastmodeline)
 	{				/* move the window horizontally */
@@ -279,7 +279,7 @@ Pascal movemu(f, n)
 		}
 	}
 			      		/* we cannot click in a modeline? */
-	if (ismodeline(wp, ypos))
+	if (ismodeline(wp, pd_ypos))
 		return FALSE;
 				/* we can not move outside the current window */
 	if (lastwp != wp)
@@ -385,7 +385,7 @@ Pascal resizm(int f, int n) /* these are ignored... we get the new size info fro
 														   the mouse driver */
 {
 	(*term.t_eeop)();
-	newdims(xpos, ypos);
+	newdims(pd_xpos, pd_ypos);
 	return TRUE;
 }
 

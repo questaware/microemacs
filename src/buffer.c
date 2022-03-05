@@ -157,9 +157,7 @@ int Pascal topluct()	/* calculate top luct */
 
 void Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 	
-{	if (bp->b_langprops & BCFOR)
-		bp->b_flag &= ~MDEXACT;
-			 /* let a user macro get hold of things...if he wants */
+{			 /* let a user macro get hold of things...if he wants */
 	execkey(&exbhook, FALSE, 1);
 
 	bp->b_luct = ++g_top_luct;
@@ -354,14 +352,15 @@ int Pascal dropbuffer(int f, int n)
 				             /* "Kill buffer" */
 	if (bp == NULL)
 		return ABORT;
+
 {	int ct = window_ct(bp);
 	if (ct > 1)
 	{	(void)delwind(0,0);
 		return FALSE;
 	}
 	
-{ Cc cc = lastbuffer(0,1);
-  BUFFER * nb = curbp;
+	(void)lastbuffer(0,1);
+{ BUFFER * nb = curbp;
 	if (nb == bp)
 		nb = (BUFFER*)NEXTBUFFER(0,1);
 	

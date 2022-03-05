@@ -44,57 +44,61 @@ extern char * getenv();
 extern int g_overmode;			/* from line.c */
 
 																	/* initialized global definitions */
-NOSHARE int g_macargs = TRUE;		/* take values from command arguments */
+int g_macargs = TRUE;		/* take values from command arguments */
 
-NOSHARE short g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
-NOSHARE int ttrow = 0; 					/* Row location of HW cursor	*/
-NOSHARE int ttcol = 0; 					/* Column location of HW cursor */
+#if S_WIN32
+short g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
+#else
+short g_colours = 0x70;		/* (backgrnd (black)) * 16 + foreground (white) */
+#endif
 
-NOSHARE int abortc = CTRL | 'G';	/* current abort command char	*/
-NOSHARE int sterm = CTRL | 'M';	  /* search terminating character */
+int ttrow = 0; 					/* Row location of HW cursor	*/
+int ttcol = 0; 					/* Column location of HW cursor */
+
+int abortc = CTRL | 'G';	/* current abort command char	*/
+int sterm = CTRL | 'M';	  /* search terminating character */
 
 static
-NOSHARE int g_prefix = 0;	/* currently pending prefix bits */
-NOSHARE int prenum = 0;		/*     "       "     numeric arg */
+int g_prefix = 0;	/* currently pending prefix bits */
 
 //char highlight[64] = "4hello";
 
-//NOSHARE int g_newest = 0;       /* choose newest file */
+//int g_newest = 0;       /* choose newest file */
 //#define USE_SVN
 #ifdef USE_SVN
- NOSHARE int del_svn = 0;
+ int del_svn = 0;
 #else
  #define del_svn 0
 #endif
 #if WRAP_MEM
- NOSHARE Int envram = 0l;		/* # of bytes current in use by malloc */
+ Int envram = 0l;		/* # of bytes current in use by malloc */
 #endif
 
 const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
 
-//NOSHARE char palstr[49] = "";		/* palette string		*/
-NOSHARE char lastmesg[NCOL+2] = ""; 	/* last message posted		*/
-NOSHARE int(Pascal *lastfnc)(int, int);/* last function executed	*/
-NOSHARE int eexitflag = FALSE;	/* EMACS exit flag		*/
-NOSHARE int eexitval = 0; 	/* and the exit return value	*/
+//char palstr[49] = "";		/* palette string		*/
+char lastmesg[NCOL+2] = ""; 	/* last message posted		*/
+int(Pascal *lastfnc)(int, int);/* last function executed	*/
+int eexitflag = FALSE;	/* EMACS exit flag		*/
+int eexitval = 0; 	/* and the exit return value	*/
 
 
 /* uninitialized global definitions */
 
-NOSHARE int g_thisflag;	/* Flags, this command		*/
-NOSHARE int g_lastflag;	/* Flags, last command		*/
-NOSHARE WINDOW *curwp; 		/* Current window		*/
-NOSHARE BUFFER *curbp; 		/* Current buffer		*/
-NOSHARE WINDOW *wheadp;		/* Head of list of windows	*/
-NOSHARE BUFFER *bheadp;		/* Head of list of buffers 	*/
+int g_thisflag;	/* Flags, this command		*/
+int g_lastflag;	/* Flags, last command		*/
+WINDOW *curwp; 		/* Current window		*/
+BUFFER *curbp; 		/* Current buffer		*/
+WINDOW *wheadp;		/* Head of list of windows	*/
+BUFFER *bheadp;		/* Head of list of buffers 	*/
 
-NOSHARE char  pat[NPAT+2];	/* search pattern		*/
-NOSHARE char rpat[NPAT+2];	/* replacement pattern		*/
-NOSHARE LL g_ll;
+char  pat[NPAT+2];	/* search pattern		*/
+char rpat[NPAT+2];	/* replacement pattern		*/
+LL g_ll;
 
 /*	Various "Hook" execution variables	*/
 
-NOSHARE KEYTAB hooks[6];
+KEYTAB hooks[6];
 
 /*	The variable matchlen holds the length of the matched string -
 	used by the replace functions. The variable patmatch holds the
@@ -103,14 +107,14 @@ NOSHARE KEYTAB hooks[6];
 	match.
 */
 
-//NOSHARE char *patmatch = NULL;
+//char *patmatch = NULL;
 
 #if	DEBUGM
 				/* vars needed for macro debugging output*/
- NOSHARE char outline[NSTRING];	/* global string to hold debug line text */
+ char outline[NSTRING];	/* global string to hold debug line text */
 #endif
 
-NOSHARE char *g_ekey = NULL;		/* global encryption key	*/
+char *g_ekey = NULL;		/* global encryption key	*/
 
 /*	make VMS happy...	*/
 
@@ -273,12 +277,14 @@ void Pascal dcline(int argc, char * argv[])
 		  if (bp != NULL)
 			{ if (genflag & 1)
 				{ --genflag;
-			  	zotbuf(bp);
+				{ BUFFER * obp = bp;
 					bp = bufflink(def_bname, 1 | MSD_DIRY);
-					if (bp != NULL)													// safe against out of memory 
-				  	repl_bfname(bp, filev);
-			  }
-			  if (bp != NULL && is_opt('V'))
+					if (bp == NULL)													// safe against out of memory 
+						continue;
+				  repl_bfname(bp, obp->b_fname);
+			  	zotbuf(obp);
+			  }}
+			  if (is_opt('V'))
 			  	bp->b_flag |= MDVIEW;
 				if (firstbp == NULL)
 				  firstbp = bp;
@@ -300,10 +306,9 @@ void Pascal dcline(int argc, char * argv[])
 	}
 
 	curwp->w_ntrows = term.t_nrowm1-1; /* "-1" for mode line. */
-	curbp = firstbp;
 //openwind(curwp);
 
-	carg = startup(startfile);
+{ Cc cc = startup(startfile);
 #if 0
 	if (pd_gflags & MD_NO_MMI)
 	{ writeout(null);
@@ -311,24 +316,22 @@ void Pascal dcline(int argc, char * argv[])
 	}
 #endif
 
-	if (carg != TRUE)
-	{ firstbp = g_dofilebuff;
-		if (firstbp == NULL)
-		{	carg = 13;
-			startfile = "No .rc file";
+	if (cc <= FALSE)
+	{ if (cc == -32000)
+		{	startfile = "No .rc file";
+			mbwrite(startfile);
+			exit(1);
 		}
 		else
 		{// firstbp->b_flag |= BFACTIVE;
+			firstbp = curbp;
+		 //openwind(curwp);
 			startfile = "Error in .rc file%w%w";
+			gline = -cc;
 		}
-		mbwrite(startfile);
 	}
-	else															/* if we are C error parsing... run it! */
-	{ if (is_opt('E'))
-			carg = startup("error.rc");
-	}
-	if (carg == 13)
-		exit(1);
+
+	curbp = firstbp;
 																								/* we now have the .rc file */
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 	{ bp->b_flag |= g_gmode;
@@ -378,7 +381,7 @@ void Pascal dcline(int argc, char * argv[])
 
   g_gmode &= ~MDCRYPT;
 	g_macargs = FALSE;
-}
+}}
 
 
 /*	This is the primary entry point that is used by command line
@@ -524,15 +527,15 @@ static int Pascal execute(int c, int f, int n)
 
 { if (c == (CTRL|'['))
 	{ g_prefix |= META;
-	  prenum = n;
-		predef = f;
+	  pd_prenum = n;
+		pd_predef = f;
 		return TRUE;
 	}
 	
 	if (c == (CTRL|'X'))
 	{ g_prefix |= CTLX;
-  	prenum = n;
-		predef = f;
+  	pd_prenum = n;
+		pd_predef = f;
 		return TRUE;
 	}
 { int status;
@@ -614,19 +617,19 @@ void Pascal editloop(int c)
 { int f; 	/* default flag */
 	int n; 	/* numeric repeat count */
 
-					/* if there is something on the command line, clear it */
+										/* if there is something on the command line, clear it */
 	if (pd_got_msg != FALSE)
 	{ mlerase();
 		update(FALSE);
 	}
-					/* override the arguments if prefixed */
+										/* override the arguments if prefixed */
 	if (g_prefix)
 	{	c |= g_prefix;
 		g_prefix = 0;
 	  if (isletter(c & 0xff))
 			c &= ~0x20;
-		f = predef; 		/* pass it on to the next cmd */
-		n = prenum;
+		f = pd_predef; 		/* pass it on to the next cmd */
+		n = pd_prenum;
 	} 
 	else
 	{ 
@@ -772,16 +775,16 @@ int Pascal nullproc(int f, int n) /* user function that does NOTHING */
 int Pascal meta(int f, int n) /* set META prefixing pending */
 
 { g_prefix |= META;
-  prenum = n;
-	predef = f;
+  pd_prenum = n;
+	pd_predef = f;
 	return TRUE;
 }
 
 int Pascal cex(int f, int n)	/* set ^X prefixing pending */
 
 { g_prefix |= CTLX;
-  prenum = n;
-	predef = f;
+  pd_prenum = n;
+	pd_predef = f;
 	return TRUE;
 }
 

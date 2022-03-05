@@ -121,10 +121,10 @@ void Pascal customise_buf(BUFFER * bp)
 
           if (*p != 0 || pr[1] != '=') continue;
 
-          if (pr[2] == '^')
-          { ++pr;
-            bp->b_flag &= ~MDEXACT;
-          }
+				{	int diff = pr[2] == '^';
+					bp->b_flag &= ~ MDIGCASE;
+					bp->b_flag |= diff * MDIGCASE;
+          pr += diff;
         { int six;
           for (six = 6; --six >= 0 && suftag[six] != pr[2]; )
           	;
@@ -135,7 +135,7 @@ void Pascal customise_buf(BUFFER * bp)
           
           tabsize = atoi(pr+2);
           break;
-        }}}
+        }}}}
       }
 		}
     bp->b_tabsize = tabsize;
@@ -580,9 +580,9 @@ int Pascal readin(char const * fname, int props)
     return FALSE;
 
   if (!ins)
-	{ Cc cc = bclear(bp);
-  	if (cc <= FALSE)			/* Changes not discarded */
-  	  return cc;
+	{ Cc rc = bclear(bp);
+  	if (rc <= FALSE)			/* Changes not discarded */
+  	  return rc;
 
   	bp->b_flag &= ~(BFINVS|BFCHG);
   	fname = repl_bfname(bp, fname);
@@ -646,7 +646,7 @@ int Pascal readin(char const * fname, int props)
 	  { cc = ffgetline(&len);
 	  	if (cc != FIOSUC && len == 0)
 	  		break;
-			ln = g_fline;
+	  	ln = g_fline;
 #if 0
       if ((g_paren.in_mode & 0x3f) && len > 2)
         ln[0] = 'A' + (g_paren.in_mode & 0x3f);
@@ -673,12 +673,13 @@ int Pascal readin(char const * fname, int props)
 //curwp->w_dotp = topline;
 	if (g_crlfflag)
 	  bp->b_flag |= MDMS;
-
+#if 0
 	if (!g_fline)
 	{ free(g_fline);
   	g_fline = NULL;
-
 	}
+#endif
+
 {	extern FILE *g_ffp;		/* File pointer, all functions. */
 	if (g_ffp)
 	  (void)fclose(g_ffp);

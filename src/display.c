@@ -85,7 +85,7 @@ static VIDEO	 **vscreen; 	/* Virtual screen. */
 #endif
 
 const char mdname[NUMMODES][8] = {		/* name of modes		*/
- "WRAP ", "CMODE ", "MS ", "AbC ",	"VW ",
+ "WRAP ", "CMODE ", "MS ", "Aa ",	"VW ",
  "OVER ", "RE ", "CRYPT ", "ASAVE ","//","CHGD", "INVS"
  };
 
@@ -956,7 +956,7 @@ int Pascal reframe(WINDOW * wp)
 	LINE * top = wp->w_linep;
 	int nlines = wp->w_ntrows;
 	int centre = wp->w_force;
-  int flags = wp->w_flag | pd_sgarbf;
+  int flags = wp->w_flag;
 												/* if not a requested reframe, check for a needed one */
 	if ((flags & WFFORCE) == 0)
 	{ int i;
@@ -1374,7 +1374,7 @@ int mlwrite(const char * fmt, ...)
 //	memset(&vscreen[term.t_nrowm1]->v_text[ttcol], 0, (term.t_ncol-ttcol)*2);
 	}
 #else
-	strcpcpy(g_cmd_line, lastmesg, sizeof(lastmesg));
+	strpcpy(g_cmd_line, lastmesg, sizeof(lastmesg));
 #endif
 
 	loglog1("mlw %s", lastmesg);

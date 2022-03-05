@@ -475,7 +475,7 @@ void Pascal tcapopen()
 
 { tcapscreg(0,term.t_nrowm1-2);   /* allow for modeline */
 
-{	NOSHARE char * term_type;
+{	char * term_type;
 
 #if S_LINUX
 	term_type = getenv("EMTERM");

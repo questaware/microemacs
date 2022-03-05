@@ -754,34 +754,6 @@ char * searchfile(char * result, char * pipefile, FILE ** ip_ref)
 	return fname;
 }}}
 
-int searchfile(int size, char * result, char * * fname_ref)
-
-{ char * fname = *fname_ref;
-
-	if (fname[0] == '.' && fname[1] == '.' && fname[2] == '.')
-	{
-		char cmd = strcat(strcpy(result, "ffg -/ ", fname+3);
-		FILE * ip = popen(cmd, "r");
-		if (ip != NULL)
-		{ int tix = 1;
-			fname = fgets(result, size_res, ip);
-			pclose(ip);
-			if (name == NULL)
-			{ mlwrite(TEXT79);
-				return 1;
-			}
-			
-		{ int sl = strlen(fname)-1;
-			if (sl > 0)
-			{	fname[sl] = 0;
-				*fname_ref = fname;
-				return 0;
-			}
-		}}
-	}
-		
-	return -1;
-}
 
 		   /* return a system dependant string with the current time */
 char *Pascal timeset()

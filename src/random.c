@@ -311,7 +311,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 	if ((f & 0x7fff) == FALSE)
 		n = reglines(TRUE);
 
-{	int inc = n > 0 ? 1 : -1;				/* increment to next line [sgn(n)] */
+{	int inc = n > 0 ? 1 : -1;				/* increment to next line [sign(n)] */
 
 	for (; n; n -= inc)
 	{ LINE * dotp;

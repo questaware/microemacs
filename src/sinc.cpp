@@ -845,11 +845,6 @@ int Sinc::srchdeffile(int depth, const char * fname)
   if (typahead())
     return 0;
 #endif
-
-  for (src = namelist; src != null; src = *(char**)src)
-  { if (strcmp(fname, &src[sizeof(char*)]) == 0)
-      return 0;
-  }    
 {
 #if AM_ME
    static char incldr[] = "$incldirs";
@@ -1030,13 +1025,7 @@ int Sinc::srchdeffile(int depth, const char * fname)
 				  }
         }
         else if (rcc == 0)
-        { char * fn = (char*)meMalloc(strlen(fname)+sizeof(char *)+2);
-				  if (fn != null)
-				  { *(char**)fn = namelist;
-				    namelist = fn;
-				  	strcpy(&fn[sizeof(char *)], fname);
-				  }
-
+				{
 /*#define fnb ((char*)gs_buf)*/
 #define fnb mybuf
 				  cp = strpcpy(&fnb[0], cp+1, 128);
@@ -1045,6 +1034,23 @@ int Sinc::srchdeffile(int depth, const char * fname)
 				    ;
 				  
 				  *cp = 0;
+				  
+				{ char * fn;
+				  for (fn = namelist; fn != null; fn = *(char**)fn)
+				  { if (strcmp(fnb, &fn[sizeof(char*)]) == 0)
+			      	break;
+				  }
+				  
+				  if (fn != NULL)
+				  	continue;
+
+        	fn = (char*)meMalloc(strlen(fnb)+sizeof(char *)+2);
+				  if (fn != null)
+				  { *(char**)fn = namelist;
+				    namelist = fn;
+				  	strcpy(&fn[sizeof(char *)], fnb);
+				  }
+
 				  if (Sinc::ask_type == 0)
 				  {
 /*			    strcpy(&b[0], "Search at (N)");
@@ -1093,7 +1099,7 @@ int Sinc::srchdeffile(int depth, const char * fname)
           loglog3("SRCHDEFFILE %d %d %s", g_paren.nest, rcc, fnb);
 					(void)Sinc::bufappline(depth * 3, fnb);
         /*--srchdpth;*/
-        }
+        }}
       }
       continue;
     }
@@ -1458,7 +1464,7 @@ int Pascal searchIncls(int f, int n)
  #else
     {
 #if S_WIN32 == 0
-    	pd_sgarbf = TRUE
+    	pd_sgarbf = TRUE;
 #endif
     	mlwrite(TEXT64, cc);
 						/* "Found typ %d" */

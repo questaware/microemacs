@@ -92,9 +92,9 @@
 
    The modes of operation can be added/deleted by add-mode/delete-mode
    and are:
-     Ms       file contain(ed) ^M
-     AbC      distinguish upper and lower case.
-     RE       treat ^$.<asterix>[ in pattern as parts of regular expressions.
+     Ms       File contain(ed) ^M
+     Aa       Do not distinguish upper and lower case.
+     RE       Treat ^$.<asterix>[ in pattern as parts of regular expressions.
 						  The regular expressions are POSIX regular expressions.
               (In them \0ab where a and b are hex digits can be used)
      Over     Typing overstrikes existing text.
@@ -433,7 +433,7 @@ execute-macro-18
 execute-macro-19         ^O Display command for editting the pipe-command it
 														See above for what Home key does.
 execute-macro-20         ^P search for pw: from eol, copy text to clipboard
-execute-macro-21         
+execute-macro-21         ^XV Compare buffer with file
 execute-macro-22         
 execute-macro-23         
 execute-macro-24         
@@ -457,7 +457,7 @@ execute-macro-40
 Note that many macros are overloaded and use the keycode which invoked them.
 
 For example macro-18 is bound to both A-FNB and A-FNF. (Alt the arrow keys).
-These bindings search for a word to the right of the cursor backwards resp. forwards.
+These bindings search for a word to the left respectively right.
 
   The Variables
   -------------
@@ -560,6 +560,7 @@ $usesofttab    != 0: Expand tabs to to spaces
 $version       This program version
 $wintitle			 Write only; Change the window title
 $wline         Number of lines in the current window
+$work					 # of buffers modified or not yet read
 $wraphook      
 $writehook     
 $xpos          X position on the screen

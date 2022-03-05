@@ -6,14 +6,14 @@
                         	Steve Wilhite and George Jones
 */
 
-#define CTRL	0x0100		/* Control flag, or'ed in		*/
-#define META	0x0200		/* Meta flag, or'ed in			*/
-#define CTLX	0x0400		/* ^X flag, or'ed in			*/
-#define SPEC	0x0800		/* special key (function keys)		*/
-#define MOUS	0x1000		/* alternative input device (mouse)	*/
-#define	SHFT	0x2000		/* shifted (for function keys)		*/
-#define	ALTD	0x4000		/* ALT key...				*/
-#define NOTKEY  0x8000
+#define CTRL	 0x0100		/* Control flag, or'ed in		*/
+#define META	 0x0200		/* Meta flag, or'ed in			*/
+#define CTLX	 0x0400		/* ^X flag, or'ed in			*/
+#define SPEC	 0x0800		/* special key (function keys)		*/
+#define MOUS	 0x1000		/* alternative input device (mouse)	*/
+#define	SHFT	 0x2000		/* shifted (for function keys)		*/
+#define	ALTD	 0x4000		/* ALT key...				*/
+#define NOTKEY 0x8000
 
 #define	BINDFNC	0		/* key bound to a function		*/
 #define	BINDBUF	1		/* key bound to a buffer		*/
@@ -117,7 +117,7 @@ extern char nulls[];
 #define MDWRAP	 0x0010		/* word wrap			*/
 #define	MDCMOD	 0x0020		/* C indentation and fence match*/
 #define	MDMS		 0x0040		/* File to have CRLF		*/
-#define	MDEXACT	 0x0080		/* Exact matching for searches	*/
+#define	MDIGCASE 0x0080		/* Exact matching for searches	*/
 #define	MDVIEW	 0x0100		/* read-only buffer		*/
 #define MDOVER	 0x0200		/* overwrite mode		*/
 #define MDMAGIC	 0x0400		/* regular expresions in search */
@@ -409,7 +409,6 @@ NOSHARE extern int g_numcmd;			/* number of bindable functions */
 NOSHARE extern int g_nosharebuffs;/* disallow different files in same buffer*/
 
 NOSHARE extern int   g_macargs;		/* take values from command arguments */
-NOSHARE extern char *g_execstr;		/* pointer to string to execute */
 NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
 NOSHARE extern char golabel[];		/* current line to go to	*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/

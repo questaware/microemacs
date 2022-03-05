@@ -66,18 +66,19 @@ extern PD_VAR predefvars[];
 #define pd_gacount  predefvars[EVACOUNT].i
 #define pd_gasave   predefvars[EVASAVE].i
 #define pd_cliplife predefvars[EVCLIPLIFE].i
+#define pd_prenum		predefvars[EVCURCHAR].i	/* stolen */
 #define pd_fillcol  predefvars[EVFILLCOL].i
 #define pd_lastdir	predefvars[EVLASTDIR].i
 #define pd_col1ch   predefvars[EVCOL1CH].i
 #define pd_col2ch   predefvars[EVCOL2CH].i
 #define pd_lastkey  predefvars[EVLASTKEY].i
-#define seed      predefvars[EVSEED].i
-#define g_gmode	  predefvars[EVGMODE].i
-#define g_univct  predefvars[EVUARG].i
-#define pd_gflags predefvars[EVGFLAGS].i
-#define xpos	    predefvars[EVXPOS].i
-#define ypos	    predefvars[EVYPOS].i
-#define keyct     predefvars[EVKEYCT].i
+#define seed       predefvars[EVSEED].i
+#define g_gmode	   predefvars[EVGMODE].i
+#define g_univct   predefvars[EVUARG].i
+#define pd_gflags  predefvars[EVGFLAGS].i
+#define pd_xpos	   predefvars[EVXPOS].i		// For mouse
+#define pd_ypos	   predefvars[EVYPOS].i
+#define keyct      predefvars[EVKEYCT].i
 #define pd_tabsize predefvars[EVHARDTAB].i
 #define pd_hjump	 predefvars[EVHJUMP].i
 #define cmt_colour predefvars[EVCMTCOL].i
@@ -91,7 +92,7 @@ extern PD_VAR predefvars[];
 #define ssave      predefvars[EVSSAVE].i
 #define pd_incldirs predefvars[EVINCLD].p
 #define mouseflag  predefvars[EVMSFLAG].i
-#define predef     predefvars[EVLINE].i /* stolen */
+#define pd_predef  predefvars[EVLINE].i /* stolen */
 #define quotec     predefvars[EVPOPUP].i
 #define pd_sterm	 predefvars[EVSTERM].i
 #define pd_sgarbf  predefvars[EVBUFHOOK].i

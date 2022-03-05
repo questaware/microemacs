@@ -8,7 +8,6 @@ set $highlight 4hello
 set $sterm ~n
 
 add-global-mode re
-add-global-mode AbC
 add-global-mode GREY
 add-global-mode black
 add-mode GREY
@@ -46,6 +45,9 @@ btk execute-macro-1 
   	  !force exit-emacs
 	  !endif
   !endif
+	!if &equ $work 1
+		!force delete-window
+	!endif
 !endm
 
 btk execute-macro-2 M-\

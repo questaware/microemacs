@@ -140,6 +140,7 @@ int Pascal set_var(char *, char *);
 int USE_FAST_CALL stol(char * s);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
+void tcapsetfgbg(int chrom);
 void Pascal tcapsetsize(int wid, int dpth, int clamp);
 int Pascal tgetc();
 int Pascal topluct();
@@ -209,7 +210,7 @@ short execprog();
 int Pascal ffisdiry();
 FILE * ffwopen(int mode, char * fn);
 int Pascal ffclose();
-int Pascal ffgetline(int *);
+Cc  Pascal ffgetline(int *);
 int Pascal ffputline(FILE*, char *, int);
 int Pascal ffropen(const char *);
 int Pascal filefind(int, int);
@@ -370,7 +371,7 @@ int Pascal splitwind(int, int);
 int Pascal searchIncls(int, int);
 char * searchfile(char * result, char * pipefile, FILE ** ip_ref);
 int Pascal sreplace(int, int);
-int Pascal startup(const char *);
+Cc Pascal startup(const char *);
 #if S_LINUX
 void stdin_close();
 #endif

@@ -297,24 +297,23 @@ static
 char * Pascal reform(char * para)	/* reformat a paragraph */
 						/* string buffer containing paragraph */
 {
-	int sp = -1;		  				/* string scan pointer */
 	int lastbreak = -0x3fff;  /* ix of last word break */
-	int col = 0;		  /* current column position */
-	int ch;
+	int sp = -1;		  				/* string scan pointer */
+	int col = -1;
 	int fillcol = pd_fillcol != 0 ? pd_fillcol : term.t_ncol;
-
-											/* scan string, replacing some whitespace with newlines */
-	for (; (ch = para[++sp]) != 0; ++col)
-	{ 
-	  if (is_space(ch))			  /* white space.... */
+	int ch;
+												/* scan string replacing some whitespace with newlines */
+	for (; (ch = para[++sp]) != 0; )
+	{ ++col;
+	  if (is_space(ch))
 	  { if (ch == '\t')
-	      col = (col + 7) & ~7;
-						  /* break on whitespace? */
+	      col = (col + 7) & ~7;		/* assume tabstop 8 */
+						  									/* break on whitespace? */
 	    lastbreak = sp;
 	  }
 
 	  if (col >= fillcol)
-	  {				 /* line break here! */
+	  {				 										/* line break here! */
 	    if (sp - lastbreak < fillcol) 
 	    { sp = lastbreak;
 	      para[lastbreak] = '\n';
@@ -326,58 +325,79 @@ char * Pascal reform(char * para)	/* reformat a paragraph */
 }
 
 
-Pascal fillpara(int notused, int n)/* Fill the current paragraph according to the
-															  			current fill column */
-{
-	LINE *ptline = curwp->w_dotp; /* line the point started on */
-	int  ptoff = curwp->w_doto;    /* offset of original point */
-
-	if (rdonly())
+Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
+															   	current fill column */
+{	if (rdonly())
 	  return FALSE;
-													/* record the pointer to the line just past the EOP */
-	gotoeop(FALSE, 1);
-	
-			/* make sure the display is not horizontally scrolled */
-	curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
 
-{	LINE * eop = lforw(curwp->w_dotp);
-		        
-	gotobop(FALSE, 1);    	/* and back top the beginning of the paragraph */
+{	if (f == FALSE)
+		n = reglines(TRUE);
 
-{	LINE * bop = curwp->w_dotp;
-											  	/* ok, how big is this paragraph? */
+{	int inc = n;
+	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;						/* original line pointer */
+	LINE * bop = s.curline;
 	int	psize = 100;
-	LINE * lp;
-	for (lp = bop; lp != eop; lp = lforw(lp))
-	  psize += lp->l_used + 1;
-																/* now, grab all the text into a string */
-{	int	back = 0;									/* counting the distance to backup when done */
-	char * para = (char*)malloc(psize);	/***** THIS IS TEMP *****/
-	char * pp = para;
+	LINE * eop = bop;
+
+	while (1)
+	{	eop = curwp->w_dotp;
+		if (eop->l_props & L_IS_HD)
+			break;
+		if (inc > 0)
+		{ if ((n -= 1) < 0)
+				break;
+		}
+		else
+			if (eop->l_used == 0 || eop->l_text[0] <= ' ')
+				if ((n += 1) > 0)
+					break;
+
+	  psize += eop->l_used + 1;
+		forwbyline(1);
+	}
+
+	rest_l_offs(&s);
+
+{	char * para = (char*)mallocz(psize);			/* grab all text into a temporary */
+	char * pp = para+1;
 	if (pp == NULL)
 	  return FALSE;
-	
+
 	while (bop != eop)
 	{ int lsize = bop->l_used + 1;
-	  if	    (back != 0)
-	    back -= lsize;
-	  else if (bop == ptline)
-	    back = ptoff - lsize;
-	  
-	{	char * txtptr = bop->l_text-1;
+		char sep = 0;
+		char * txtptr = bop->l_text-1;
+		if (txtptr[1] <= ' ' && pp[-1] != '\n')
+			*++pp = '\n';
+		
 	  while (--lsize > 0)					/* copy a line */
-	    *++pp = *++txtptr;
-	  *++pp = ' ';						/* turn the NL to a space */
+	  { char ch = *++txtptr;
+			if (ch == ' ' && *pp == ' ')
+				continue;
+	    *++pp = ch;
+	  	if (ch > ' ')
+	  		sep = ' ';
+	  }
+
+		if (sep)
+			*++pp = sep;
+		else
+		{ *pp = '\n';
+			if (pp[-1] != '\n')
+				*++pp = '\n';
+		}
 	  bop = lfree(0,bop);				/* free the old line */
-	}}
+	}
 	*pp = 0;									/* truncate the last space */
 
 					    /* insert the reformatted paragraph back into the current buffer */
-{	int cc = linstr(reform(para+1));
+{	int back = pp - (para + 2);
+  int cc = linstr(reform(para+2));
 	free(para);
 	lnewline();											/* add the last newline to our paragraph */
 																				/* reposition us to the same place */
-	return cc <= FALSE ? cc : forwbychar(back);
+	forwbychar(-back);
+	return cc; 
 }}}}}
 
 

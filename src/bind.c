@@ -297,7 +297,7 @@ bind-to-key filter-buffer ^X|
 	{META|',',	BINDFNC, indentsearch},
 	{SPEC|'<',	BINDFNC, gotobob},
 	{SPEC|'P',	BINDFNC, backline},
-	{META|SPEC|'P',BINDFNC, searchIncls},
+	{META|SPEC|'<',BINDFNC, searchIncls},
 	{META|SPEC|'N',BINDFNC, nextwind},
 	{SPEC|'Z',	BINDFNC, backpage},
 	{SPEC|'B',	BINDFNC, backchar},
@@ -950,7 +950,9 @@ const char * Pascal flook(char wh, const char * fname)
   const char * res;
 //char buf[100];
 			                  /* if we have an absolute path check only there! */
-	if (*fname == '\\' || *fname == '/'
+	if (*fname == '\\' || *fname == '/' || 
+	   (*fname == '.' &&   (fname[1] == '/' ||
+	   										  fname[1] == '.' && fname[2] == '/'))
 #if S_MSDOS
 	 || *fname != 0 && fname[1] == ':'
 #endif

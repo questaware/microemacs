@@ -379,7 +379,7 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 						&& --n > 0)
 		  again |= true;
 
-		if (cc == 0)
+		if (cc <= 0)
 		  mlwrite(TEXT79);
 					/* "Not found " */
 	}
@@ -484,7 +484,7 @@ int USE_FAST_CALL myeq(int a, int b)
 
 {
   return a==b ||
-        (curbp->b_flag & MDEXACT) == 0 && isletter(a)
+        (curbp->b_flag & MDIGCASE) && isletter(a)
      && ((a ^ b) & ~0x20) == 0;         
 }
  
@@ -514,7 +514,7 @@ static int mceq(int bc, int mctype, int lchar)
 #endif
 	  {	BITMAP * pbm = g_cclarray[lchar];
 			result = pbm[bc >> 4];
-			if ((curbp->b_flag & MDEXACT) == 0 && isletter(bc))
+			if ((curbp->b_flag & MDIGCASE) && isletter(bc))
 				result |= pbm[(bc >> 4) ^ 2];
 			result = (result >> (bc & 15)) & 1;
 		}

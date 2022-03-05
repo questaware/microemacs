@@ -93,23 +93,6 @@ extern char * getcwd();
  #define DOS_NFILE 1
 #endif
 
-#if S_MSDOS && S_WIN32 == 0
-
-union REGS rg;
-
-Cc ms_intdosx(Char * str, Short code)
-
-{ struct SREGS segreg;
-
-  rg.x.ax = code;
-  segreg.ds = ((unsigned long)str) >> 16;
-  rg.x.dx = (unsigned int)str;
-  intdosx(&rg, &rg, &segreg);
-  return rg.x.cflag == 0 ? OK : -rg.x.ax;
-}
-
-#endif
-
 #if S_WIN32 == 0
 
 void printf2(const char * msg, const char * val)
@@ -127,51 +110,14 @@ void printf2(const char * msg, const char * val)
 
 #endif
 
-#if 0
-X
-XChar * match_fn_re(tlt_, pat)
-X	Char *   tlt_;
-X	Char *   pat;
-X{ register Char * tlt = tlt_;
-X  register Char ch;
-X
-X  while (*tlt != 0)
-X  { if (*pat == '*')
-X    { ++pat;
-X      while ((ch = *tlt) != 0 && ch != *pat)
-X        ++tlt;
-X      if (ch == 0)
-X        break;
-X    { char * tlt__ = tlt;
-X      tlt = match_fn_re(tlt, pat);
-X      --pat;
-X      if (tlt__ == tlt)
-X        continue;
-X      pat = "";
-X      break;
-X    }}
-X    ch = *tlt;
-X    if (ch == 0 || ch != *pat && *pat != '?')
-X      break;
-X    ++tlt;
-X    ++pat;
-X  }
-X
-X  return *pat == 0 ? tlt : tlt_;
-X}
-
-#endif
-
-
-#if S_WIN32
-#define fn_ic 1
-#endif
 
 static
 Bool match_fn_re_ic(Char * tlt,
 										Char * pat
 #if S_WIN32 == 0
 									 ,int /*Bool*/ fn_ic
+#else
+#define fn_ic 1
 #endif
 									 )
 {	Char ch,pch;
@@ -258,14 +204,14 @@ staticc Char  rbuf[FILENAMESZ+2];
 #define rbuf msd_path
 #endif
 
-        Vint    msd_iter;		/* FIRST then NEXT */
+staticc Vint    msd_iter;		/* FIRST then NEXT */
 staticc Set16   msd_props;		/* which files to use */
+static  Set16   msd_attrs;		/* attributes of result: MSD_xxx */
 #if S_MSDOS			
 #define msd_ic 1
 #else
         Bool    msd_ic;				/* Ignore case in file names */
 #endif
-static  Set16   msd_attrs;		/* attributes of result: MSD_xxx */
 
 struct stat msd_stat;
 
@@ -880,9 +826,11 @@ static Bool extract_fn(int * fnoffs)
   /*eprintf(null, "//KNOWNFILE %s %x\n", s, msd_a);*/
 #if S_LINUX+S_VMS == 0
     /*msd_a = 0;*/
-    msd_stat.st_ino = 0;
+    //msd_stat.st_ino = 0;
 #endif
+#if NOPUSHPOP == 0
     msd_stat.st_nlink = NOLK;
+#endif
   }
 #if S_WIN32 == 0
   else

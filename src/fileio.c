@@ -42,6 +42,7 @@
 
 /*int confd = 0;*/
 
+
 char * g_fline = NULL;			/* dynamic return line */
 
 FILE *g_ffp;		/* File pointer, all functions. */
@@ -200,13 +201,13 @@ int Pascal ffputline(FILE * op, char buf[], int nbuf)
  * at the end of the file that don't have a newline present. Check for I/O
  * errors too. Return status.
  */
-int Pascal ffgetline(int * len_ref)
+Cc Pascal ffgetline(int * len_ref)
 	
 {	int c; 							/* current character read */
 	int i = -1; 				/* current index into g_fline */
-	static 
-		 int g_flen;			/* space available for chars */
 											
+  static 
+  int g_flen;
   if (g_flen > NSTRING)		/* dump g_fline if it ended up too big */
 	  g_flen = 0;
 											/* read the line in */
@@ -224,7 +225,7 @@ int Pascal ffgetline(int * len_ref)
 //  }
 	  if (++i >= g_flen)
 	  {
-	    if (g_flen >= 0xfffe - NSTRING)
+	    if (g_flen+NSTRING+1 > 0xfffe)
 	      return FIOMEM;
 
 	  { char * tmpline = (char*)malloc(g_flen+NSTRING+1);

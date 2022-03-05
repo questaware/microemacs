@@ -160,7 +160,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define NBINDS	220			/* max # of bound keys		*/
 #define NFILEN  256			/* Maximum file name (inc dirs) */
 #define NBUFN		 32			/* # of bytes, buffer name */
-#define NLINE		160			/* # of bytes, input line	*/
+#define NLINE		256			/* # of bytes, input line	*/
 #define NKBDM		256			/* # of strokes, keyboard macro */
 #define NPAT		128			/* # of bytes, pattern		*/
 #define	NLOCKS	100			/* max # of file locks active	*/
