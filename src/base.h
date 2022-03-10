@@ -65,5 +65,6 @@ typedef unsigned short Squot;
 #define EDENIED   (-8)
 
 extern char bad_strmatch;
+
 #endif
 

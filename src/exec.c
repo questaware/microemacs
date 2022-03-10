@@ -215,6 +215,46 @@ char *Pascal token(char * tok, int size)
 				/* source string, destination token string */
 				/* maximum size of token */
 {
+#if 1
+	const char * src = g_execstr;
+	char quotef = 0;	/* is the current string quoted? */
+	char c;
+	int leading = 1;
+
+	for (; (c = *src) != 0; ++src)
+	{														/* process special characters */
+		if 			(leading < 0)		
+	    switch (c)
+	    { case 'r': c = 'J' - '@';
+	      when 'n': c = 'M' - '@'; 
+	      when 'l': c = 'L' - '@'; 
+	      when 't': c = 'I' - '@';  
+	      when 'b': c = 'H' - '@';  
+	    }
+	  else if (c == '~')
+	  	leading = 0;
+	  else if (c == quotef)									/* check for the end of the token */
+	  	break;
+	  else if (c == ' ' || c == '\t')
+	  { if (leading)
+	      continue;
+	    if (quotef == 0)										/* terminates unless in quotes */
+	      break;
+	  }
+	  else if ((c == '"' || c == '\'') && quotef == 0 && leading)
+	  { quotef = c;													/* set quote mode if quote found */
+	    leading = 0;
+	    continue;
+	  }
+	  if (--size <= 0)
+	  	break;
+	  *tok++ = c;
+	  leading = 0;
+	}
+
+	*tok = 0;
+	return g_execstr = (char*)(*src == 0 ? src : src+1);
+#else
 	const char * src = g_execstr - 1;
 	char quotef = 0;	/* is the current string quoted? */
 	char c;
@@ -250,6 +290,7 @@ char *Pascal token(char * tok, int size)
 
 	*tok = 0;
 	return g_execstr = (char*)(c == 0 ? src : src+1);
+#endif
 }
 
 

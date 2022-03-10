@@ -5,8 +5,6 @@ set $palette 1234560
 set $highlight 4hello
 ;set $pagelen 74
 
-set $sterm ~n
-
 add-global-mode re
 add-global-mode GREY
 add-global-mode black
@@ -330,7 +328,7 @@ btk previous-window M-FNP
 btk find-tag M-FN>
 
 btk help A-1               ; SNA like
-btk split-current-window A-2
+;btk split-current-window A-2
 btk exit-emacs A-3
 ;A-4 A-5 not known
 btk shell-command A-6

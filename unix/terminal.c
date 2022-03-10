@@ -452,7 +452,8 @@ void Pascal tcap_init()
 		if (g_rsmcup[0] == 0)
 			g_rsmcup[1] = 0;
 		if (g_rsmcup[1])
-		{ tcapmove(term.t_nrowm1, 0);
+		{ ttrow = 1;
+		  tcapmove(term.t_nrowm1, 0);
 			putpad(g_rsmcup[1]);
 //		putpad("\033[6n");
 //		<ESC>[{ROW};{COLUMN}R
@@ -511,8 +512,8 @@ int tcapclose(int lvl)
 	if (lvl == 0 && g_rsmcup[0])
 	{	putpad("\033[r");
 		putpad(g_rsmcup[0]);
-		usleep(1000);
-//  ttcol = 1;
+//	usleep(1000);
+    ttrow = 1;
 		tcapmove(term.t_nrowm1, 0);
 		tcapeeol();
 	}
@@ -642,7 +643,8 @@ int getukey(void)
 			if (c != 'x')
 			{	if (in_range(c, 'a', 'z'))
 					c -= 0x20;
-				return ecco(c == key_bspace ? META | ('H'-'@') : META | c);
+				return ecco(c == key_bspace 		  ? META | ('H'-'@') :
+										in_range(c, '0', '9') ? ALTD | c 				 : META | c);
 			}
 			else
 		  { bpushk('x')
@@ -782,6 +784,9 @@ static char * mytgoto(cmd, p1, p2)
 
 void tcapmove(int row, int col)
 {
+	if (row > term.t_nrowm1)
+    row = term.t_nrowm1;
+
 #if 1
   if (col == 0 && row == ttrow + 1 && row <= scbot) 
     putpad("\r\n");

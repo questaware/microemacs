@@ -57,7 +57,6 @@ NOSHARE const char * g_envars[] = {
 	"seed", 			/* current random number seed */
 	"ssave",			/* safe save flag */
 	"status",			/* returns the status of the last command */
-	"sterm",			/* search terminator character */
 	"uarg",				/* last universal arg */
 	"version",		/* current version number */
 	"wintitle",		/* the title on the window */

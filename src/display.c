@@ -617,7 +617,7 @@ void Pascal modeline(WINDOW * wp)
 		tline.lc.l_text[strlen(tline.lc.l_text)] = ' ';
 	}
 
-{	int numbuf = lastbuffer(-1,-1);
+{	int numbuf = lastbuffer(0,0);
 	if (numbuf > 9)
 		tline.lc.l_text[tline.lc.l_used-3] = '0' + numbuf / 10;
 	tline.lc.l_text[tline.lc.l_used-2] = '0' + numbuf % 10;
@@ -1319,7 +1319,7 @@ int mlwrite(const char * fmt, ...)
 #if COLOR && 0
 		tcapbfcol(V_BLANK); /* set up the proper colors for the command line */
 #endif
-		tcapmove(term.t_nrowm1, 0);
+		tcapmove(255, 0);
 		tcapeeol();
 	}
 

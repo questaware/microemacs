@@ -240,7 +240,7 @@ REGION * Pascal getregion();
 int Pascal getstring(char * buf, int nbuf, const char * prompt);
 short * Pascal get_vscr_line(int row);
 char    Pascal get_vscr_colors(int row);
-BUFFER * Pascal gotfile(const char * fname);
+BUFFER * Pascal gotfile(void);
 int Pascal gotobob(int, int);
 int Pascal gotobol(int, int);
 int Pascal gotobop(int, int);
@@ -302,7 +302,7 @@ int Pascal movemd();
 int Pascal movemu();
 int Pascal mregdown();
 int Pascal mregup();
-char * Pascal msd_nfile(int * fnoffs);
+char * Pascal msd_nfile(void);
 int Pascal mvdnwind(int, int);
 int Pascal mvupwind(int, int);
 int Pascal namebuffer();
@@ -398,7 +398,7 @@ void Pascal ttputc(unsigned char);
 void Pascal ttscupdn(int);
 void Pascal tcapscreg(int, int);
 
-void Pascal tcapmove(int, int);
+void Pascal USE_FAST_CALL tcapmove(int, int);
 void Pascal tcapeeol();
 void Pascal tcapepage();
 #ifndef tcaprev

@@ -83,6 +83,29 @@ void scan_buf_lu()
 
 #endif
 
+#if 0
+
+void check_buffers()
+
+{ BUFFER *bp;
+	for (bp = bheadp; bp != NULL; bp = bp->b_next)
+	{ int sl = strlen(bp->b_bname);
+	  char * stt = &  bp->b_bname[sl];
+	  int i = 4;
+	  int j = -1;
+	  while (--i >= 0)
+	  { if (stt[i] != 0)
+	  		j = i;
+	  }
+	  
+	  if (j >= 0)
+	  { mbwrite("Corruption");
+	  	mbwrite(stt+j);
+	  }
+	}
+}
+
+#endif
 
 
 int g_top_luct;
@@ -90,7 +113,7 @@ int g_top_luct;
 int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 
 { BUFFER *bp;
-	BUFFER *bestbp= NULL;
+	BUFFER *bestbp = NULL;
   BUFFER * maxbp = NULL;
   short tgtlu = curbp->b_luct - 1;
 	short bestlu = -1;
@@ -103,7 +126,12 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 		if ((bp->b_flag & BFINVS) == 0)
-		{ ++count;
+		{ if (f >= 0)											// for lastbuffer(-1, -1);
+				++count;
+			else
+			{	if (bp->b_flag & BFCHG)
+					return 1;
+			}
 		{ int lu = bp->b_luct;
 			if (lu == 0)
 				continue;
@@ -115,12 +143,12 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
       if (lu <= tgtlu && lu > bestlu)
 	  	{	bestbp = bp;
 		  	bestlu = lu;
-        if (lu == tgtlu && n >= 0)
+        if (lu == tgtlu && n > 0)
           break;
 			}
     }}
 
-	if (n < 0)
+	if (n == 0)
 		return count;
 
   if (bestbp == NULL)
@@ -550,7 +578,7 @@ BUFFER *Pascal bfind(char * bname,
 	if (!(cflag & 1))
 		return null;
 
-{	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+4); // was 2
+{	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+4); //can grow by 2
 	if (bp != NULL)
 	{	init_buf(bp);
 																				/* and set up the other buffer fields */

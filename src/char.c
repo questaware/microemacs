@@ -52,6 +52,8 @@ char * concat(char * tgt, ...)
 }}
 					/* at most n chars including the 0 */
 
+#if	S_VMS
+
 char * Pascal strpcpypfx(char * t_, const char * s_, int n_, char term)
 
 { short n;
@@ -68,9 +70,10 @@ char * Pascal strpcpypfx(char * t_, const char * s_, int n_, char term)
   return t_;
 }
 
+#endif
 					/* at most n chars including the 0 */
 char * Pascal strpcpy(char * t_, const char * s_, int n_)
-#if 0
+#if S_VMS == 0
 { register short n = n_;
   register char * s = s_;
   register char * t = t_;

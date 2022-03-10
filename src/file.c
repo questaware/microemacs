@@ -99,13 +99,21 @@ void Pascal customise_buf(BUFFER * bp)
 		const char * pat = strlast(bp->b_bname,'.');
 #else
 	  const char * pat = NULL;
-		const char * fn = bp->b_bname - 1;
-    while (*++fn != 0)
-      if (*fn == '.')
-        pat = fn;
+		const char *fn = bp->b_bname;
+		int iter = 2;
+		while (--iter >= 0)
+		{ for ( --fn; *++fn != 0; )
+      	if (*fn == '.')
+        	pat = fn;
+			if (pat != NULL)
+				break;
+      fn = bp->b_fname;
+      if (fn == NULL)
+      	break;
+		}
 #endif
     if (pat != NULL)
-    {  if (strcmp(".e2", pat) == 0)
+    { if (strcmp(".e2", pat) == 0)
       	bp->b_mode |= BCRYPT2;
 
 			if (pd_file_prof != NULL)
@@ -169,20 +177,19 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 #if NFILEN < 2 * NBUFN + 30
   error error
 #endif
-{ int fno;
-	FILE * ip = 0;
+{ FILE * ip = 0;
 	char pipefn[NFILEN] = "";
   char bname[NFILEN];
 #define text (&bname[NBUFN+1])
 	int cr = create & ~(16+32+64);
   int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
 
-  if 		  (srch > 0)
-  { msd_init(fname, NULL, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC);
+  if (srch > 0)
+  { msd_init(fname, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC|MSD_USEPATH);
     if (is_opt('Z'))
     { unsigned int newdate = 0;
 
-      while ((fn = msd_nfile(&fno)) != NULL)
+      while ((fn = msd_nfile()) != NULL)
       { if (newdate < (unsigned)msd_stat.st_mtime)
         { newdate = (unsigned)msd_stat.st_mtime;
           strpcpy(fname,fn,NFILEN);
@@ -194,7 +201,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 
   while ((fn = srch == 0 ? fname : 
   						 srch < 0  ? searchfile(fname, pipefn, &ip) :
-													 msd_nfile(&fno)) != NULL)
+													 msd_nfile()) != NULL)
   { BUFFER * bp;
     for (bp = bheadp; bp != NULL; bp = bp->b_next)
       if ((bp->b_flag & BFINVS)==0 &&
@@ -206,21 +213,18 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 
       while (TRUE)
       { bp = bfind(bname, cr, 0);
-      	cr |= 2;
 				if (bp == NULL)
 				{ if (cr & 1)
 				  { mlwrite(TEXT137);
                   /* "Cannot create buffer" */
 				    return null;
 				  }
-	  			cr |= 1;
-	  			continue;
+	  			cr |= 3;
 				} 
 				else
-				{ // if (cr)
-				  { if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
-	            break;
-	        }
+      	{	cr |= 2;
+				  if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
+	          break;
 #if 0
 				  else				/* old buffer name conflict code */
 				  { int cc = mlreply(concat(&text[0], TEXT136, bname, "):", null),
@@ -287,7 +291,6 @@ BUFFER * Pascal bufflkup(const char * filename, int create)
     }
 
 		filename = (const char *)fname;
-
 	}}}
 
   return bufflink(filename,create);
@@ -348,37 +351,6 @@ int Pascal viewfile(int f, int n)	/* visit a file in VIEW mode */
 #if CRYPT == 0
 # define resetkey(x)
 #endif
-
-
-BUFFER * Pascal gotfile(const char * fname)
-					/* file name to find */
-{ BUFFER *bp;
-	for (bp = bheadp; bp != NULL; bp = bp->b_next)
-	{ if (bp->b_flag & BFINVS)
-			continue;
-
-		if      (fname == NULL)
-		{	if (bp->b_flag & BFCHG)
-				return bp;
-		}
-		else if (bp->b_fname != null)
-	  { 
-#if S_MSDOS | S_OS2
-																							/* msdos isn't case sensitive */
-			const char * t = strmatch(fname, bp->b_fname);
-	  	if (*t == 0 && bad_strmatch == 0)
-#else
-			if (strcmp(fname, bp->b_fname) == 0)
-#endif
-		  {//mlwrite(TEXT135);
-            /* "[Old buffer]" */
-				return bp;
-			}
-	  }
-	}
-	  
-	return 0;
-}
 
 
 const char * gettmpfn()
@@ -470,7 +442,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 extern
 void io_message(const char * txt, int cc, int nline)
 
-{ if (cc > FIOEOF)
+{ if (cc >= FIOMEM)
   { txt = cc == FIOMEM ? TEXT99 : TEXT141;
 			/* "OUT OF MEMORY, " */
 			/* "I/O ERROR, " */
@@ -610,7 +582,6 @@ int Pascal readin(char const * fname, int props)
 	  curwp->mrks.c[0].marko = 0;*/
   }
 {	int   len;
-	int   fno;
  	int   nline = 0;
  	char * sfline = NULL;
   LINE * nextline = ins == 0 ? &bp->b_baseline : lforw(curwp->w_dotp);
@@ -620,7 +591,7 @@ int Pascal readin(char const * fname, int props)
   char spareline[257];
 #endif
 	if (diry)
-	{ msd_init(fname, "", MSD_DIRY | MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
+	{ msd_init(fname, MSD_DIRY | MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
 	  bp->b_flag |= MDDIR;
 	}
 
@@ -630,7 +601,7 @@ int Pascal readin(char const * fname, int props)
   { char * ln;
   	LINE *lp1;
 	  if (diry)
-	  { ln = msd_nfile(&fno);
+	  { ln = msd_nfile();
 	    if (ln == NULL)
 	      break;
 	     
@@ -647,20 +618,13 @@ int Pascal readin(char const * fname, int props)
 	  	if (cc != FIOSUC && len == 0)
 	  		break;
 	  	ln = g_fline;
-#if 0
-      if ((g_paren.in_mode & 0x3f) && len > 2)
-        ln[0] = 'A' + (g_paren.in_mode & 0x3f);
-#endif
 	  }
 	  
 	  lp1 = mk_line(ln,len,len);
-	  if (lp1 == NULL
-#if 0
-	       || (nline & 0x3ff) == 0 && typahead() && (getkey() & CTRL)
-#endif
-	     )
-	  { cc = FIOMEM;
-	    (void)repl_bfname(bp, "SHORT");
+	  if (lp1 == NULL)
+	  	cc = FIOMEM;
+	  if (cc == FIOMEM)
+	  {	(void)repl_bfname(bp, "SHORT");
 	    break;
 	  }
 
@@ -671,14 +635,14 @@ int Pascal readin(char const * fname, int props)
     scan_par_line(lp1);
 	}
 //curwp->w_dotp = topline;
-	if (g_crlfflag)
-	  bp->b_flag |= MDMS;
 #if 0
 	if (!g_fline)
 	{ free(g_fline);
   	g_fline = NULL;
 	}
 #endif
+
+	bp->b_flag |= g_crlfflag;
 
 {	extern FILE *g_ffp;		/* File pointer, all functions. */
 	if (g_ffp)
@@ -737,9 +701,9 @@ out:
 	}
 #endif
 
-	for (lp = &bp->b_baseline;
-			 ((lp=lforw(lp))->l_props & L_IS_HD) == 0 && --clamp != 0; )
+	for (lp = &bp->b_baseline; --clamp != 0; )
 	{
+		lp=lforw(lp);
 #if	CRYPT
 		if (clamp < 0)
 		{	int len = lp->l_used;
@@ -760,7 +724,7 @@ out:
 	  }
 	}
 
-	return cc <= FIOEOF;	/* False if error.	*/
+	return cc < 0;	/* FIOEOF */ /* False if error.	*/
 }}}}
 
 
@@ -833,7 +797,7 @@ int Pascal filesave(int f, int n)
 	  { mlwrite(TEXT102);
 	  	return FALSE;
 	  }
-//		cryptremote(fn);									// read it
+//	cryptremote(fn);									// read it
 
 #if _DEBUG
     mbwrite(fn);
@@ -947,7 +911,7 @@ int Pascal writeout(const char * fn)
 	for (nline = 4; --nline >= 0; )/* mk unique name using random numbers */
 	{ if (caution)
 			strcpy(&tname[sp+1], int_asc(ernd()));
-		op = ffwopen(caution, tname);
+		op = fopen(fn, caution == 0 ? "wb" : "wbx");
 		if (op != NULL)
 			break;
 	}
@@ -955,8 +919,8 @@ int Pascal writeout(const char * fn)
 	if (op == NULL)									/* if the open failed.. clean up and abort */
 		mlwrite(TEXT155);		/*	"Cannot open file for writing" */
 	else
-	{	mlwrite(TEXT148);
-					/* "[Writing...]" */
+	{	mlwrite(TEXT103,fn);
+							/* "[Saving %s]\n" */
 
 		g_crlfflag = bp->b_flag & MDMS;
 												/* write the current buffer's lines to the disk file */
@@ -969,10 +933,6 @@ int Pascal writeout(const char * fn)
 			++nline;
 		}
 			
-#if S_MSDOS & CTRLZ
-		putc('Z'-'@', ffp);		/* add a ^Z at the end of the file */
-#endif
-
 		fclose(op);
 		
 	{ extern char deltaf[];
@@ -981,8 +941,8 @@ int Pascal writeout(const char * fn)
  
 #if S_VMS == 0
 		if (caution)					/* erase original file */
-		{ int cc = unlink(fn);
-			if (cc == 0 && rename(tname, fn) == 0)
+		{ int rc = unlink(fn);
+			if (rc == 0 && (rc = rename(tname, fn)) == 0)
 			{ if (! S_MSDOS && stat_.st_mode != MYUMASK)
 					chmod(fn, stat_.st_mode & 07777);
 			}
@@ -1016,10 +976,12 @@ int Pascal filename(int f, int n)
 { int rc = mlreply(TEXT151, fname, NFILEN);				/* "Name: " */
 	if (rc < 0)
 		return rc;
+	if (rc == FALSE)
+		fname[0] = 0;
 
 	curbp->b_flag &= ~MDVIEW; 		 /* no longer read only mode */
 
-	repl_bfname(curbp, rc == FALSE ? "" : fname);
+	repl_bfname(curbp, fname);
 
 	upmode();       /* Update mode lines. */
 	return TRUE;

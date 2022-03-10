@@ -51,17 +51,16 @@ extern PD_VAR predefvars[];
 #define EVSEED     47
 #define EVSSAVE    48
 #define EVSTATUS	 49
-#define EVSTERM 	 50
-#define EVUARG		 51
-#define EVVERSION	 52
-#define EVWINTITLE 53
-#define EVWLINE 	 54
-#define EVWORK		 55
-#define EVWRAPHK	 56
-#define	EVWRITEHK	 57
-#define EVXPOS		 58
-#define EVYPOS		 59
-#define EVZCMD		 60
+#define EVUARG		 50
+#define EVVERSION	 51
+#define EVWINTITLE 52
+#define EVWLINE 	 53
+#define EVWORK		 54
+#define EVWRAPHK	 55
+#define	EVWRITEHK	 56
+#define EVXPOS		 57
+#define EVYPOS		 58
+#define EVZCMD		 59
 
 #define pd_gacount  predefvars[EVACOUNT].i
 #define pd_gasave   predefvars[EVASAVE].i
@@ -94,7 +93,6 @@ extern PD_VAR predefvars[];
 #define mouseflag  predefvars[EVMSFLAG].i
 #define pd_predef  predefvars[EVLINE].i /* stolen */
 #define quotec     predefvars[EVPOPUP].i
-#define pd_sterm	 predefvars[EVSTERM].i
 #define pd_sgarbf  predefvars[EVBUFHOOK].i
 #define pd_palstr  predefvars[EVPALETTE].p
 #define pd_pat		 predefvars[EVSEARCH].p

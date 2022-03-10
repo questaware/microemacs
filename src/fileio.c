@@ -70,7 +70,7 @@ struct termios  g_savetty;
 int Pascal ffropen(const char * fn)
 
 { 		      					/* g_fline private to ffropen, ffclose, ffgetline */
-  g_crlfflag = FALSE;
+  g_crlfflag = 0;
 
   if (fn != NULL && !(fn[0] == '-' && fn[1] == 0))
 		g_ffp = fopen(fn, "rb");
@@ -141,6 +141,8 @@ void stdin_close()
     
 #endif
 
+#if 0
+
 #define NEW_FILE_MODE 0644
 
 /* Open a file for writing. Return 1 if all is well,
@@ -149,6 +151,10 @@ void stdin_close()
  */
 FILE * ffwopen(int mode, char * fn)
 	
+#if S_WIN32
+{ return 
+}
+#else
 { int fd = open(fn, O_RDWR+O_CREAT+BINM+(mode==0 ? 0 : O_EXCL), NEW_FILE_MODE);
   if (fd < 0)
     return NULL;
@@ -159,6 +165,8 @@ FILE * ffwopen(int mode, char * fn)
 
   return ffp;
 }}
+#endif
+#endif
 
 
 /* Write a line to the already opened file. The "buf" points to the buffer,
@@ -167,27 +175,30 @@ FILE * ffwopen(int mode, char * fn)
  */
 int Pascal ffputline(FILE * op, char buf[], int nbuf)
 	
-{	int i = -1;
-	int cc = 0;
-
-#if S_MSDOS
-  while (++i < nbuf)
-  { char c = buf[i];
-#if	CRYPT
-		if (curbp->b_flag & MDCRYPT)
-		  ucrypt(&c, 1);
-#endif
-  
-    cc |= fputc(c, op);
-  }
+{	int cc;
+#if S_WIN32
+#define crypt (curbp->b_flag & MDCRYPT)
 #else
-  fwrite (&buf[0], 1, nbuf, op);
+	int crypt = CRYPT == 0 ? 0 : (curbp->b_flag & MDCRYPT);
+	if (crypt == 0)
+  	cc = fwrite(&buf[0], 1, nbuf, op);
+	else
 #endif
+	{ int i;
+		cc = 0;
+  	for (i = -1; ++i < nbuf; )
+	  { char c = buf[i];
+	  	if (crypt)
+				ucrypt(&c, 1);
+  
+    	cc |= fputc(c, op);
+  	}
+  }
 
 	cc |= fputs(g_crlfflag ? "\r\n" : "\n", op);
 
 	if (cc < 0)
-	{ mlwrite(TEXT157);
+	{ mlwrite(TEXT157 "%x", cc);
 					/* "Write I/O error" */
 	  return FIOERR;
 	}
@@ -203,57 +214,58 @@ int Pascal ffputline(FILE * op, char buf[], int nbuf)
  */
 Cc Pascal ffgetline(int * len_ref)
 	
+{ static 
+   int g_flen;
+  int flen = g_flen;
+  if (flen > NSTRING)		/* dump g_fline if it ended up too big */
+	  flen = 0;
+
 {	int c; 							/* current character read */
 	int i = -1; 				/* current index into g_fline */
 											
-  static 
-  int g_flen;
-  if (g_flen > NSTRING)		/* dump g_fline if it ended up too big */
-	  g_flen = 0;
-											/* read the line in */
-	*len_ref = 0;
 	do
 	{ c = getc(g_ffp);		    /* if it's longer, get more room */
 //  if (c <= 'Z'- '@')
 //  { if (c == 'Z'- '@')
 //		  continue;
 	    if (c == '\r')
-	    { g_crlfflag = TRUE;
+	    { g_crlfflag = MDMS;
 	      if (!is_opt('X'))
 	        continue;
 	    } 
 //  }
-	  if (++i >= g_flen)
-	  {
-	    if (g_flen+NSTRING+1 > 0xfffe)
+	  if (++i >= flen)
+	  { if (flen+NSTRING+1 > 0xfffe)
 	      return FIOMEM;
 
-	  { char * tmpline = (char*)malloc(g_flen+NSTRING+1);
+	  { char * tmpline = (char*)malloc(flen+NSTRING+1);
 	    if (tmpline == NULL)
 	      return FIOMEM;
 	    if (g_fline != null)
-	    { memcpy(tmpline, g_fline, g_flen);
+	    { memcpy(tmpline, g_fline, flen);
 	      free(g_fline);
 	    }
 	    g_fline = tmpline;
-	    g_flen += NSTRING;
+	    flen += NSTRING;
+			g_flen = flen;
 	  }}
 	  g_fline[i] = c;
-	} while (c != EOF && c != '\n');
+	} while (c >= 0 && c != '\n');
 
 	*len_ref = i;
 	g_fline[i] = 0;
-				/* test for any errors that may have occured */
-	if (c == EOF)
+											/* test for any errors that may have occured */
+	if (c < 0)
 	{ if (ferror(g_ffp))
 	  { mlwrite(TEXT158);
-/*				"File read error" */
+						/* "File read error" */
 	    return FIOERR;
 	  }
+	  return FIOEOF;
 	}
 
-	return c == EOF ? FIOEOF : FIOSUC;
-}
+	return FIOSUC;
+}}
 
 #endif
 

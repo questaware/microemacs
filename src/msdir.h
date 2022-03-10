@@ -6,8 +6,8 @@
 
 extern Cc     msimp_fn_re_ic(Char*, Char*, int /*bool */);
 
-extern Cc   msd_init (const Char *, const Char *, int);
-extern Char * msd_nfile(int * fnoffs);
+extern Cc   msd_init (const Char *, int);
+extern Char * msd_nfile(void);
 extern Cc msd_push (void);
 extern Char * msd_pop (void);
 extern int  msd_getprops (Char * fn);
@@ -18,7 +18,7 @@ extern struct stat msd_stat;
 #define MSD_ROFILE    1
 #define MSD_HIDFILE   2
 #define MSD_SYSFILE   4
-#define MSD_VOLNAME   8
+#define MSD_USEPATH   8
 #define MSD_DIRY     16
 #define MSD_CHGD     32
 #define MSD_NOPERM   64

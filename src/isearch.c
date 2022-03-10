@@ -53,7 +53,7 @@ int Pascal USE_FAST_CALL echochar(int c, int col)
 					/* character to be echoed */
 					/* column to be echoed in */
 {
-	tcapmove(term.t_nrowm1,col);
+	tcapmove(255,col);
 
 	switch (c)
 	{
@@ -165,7 +165,7 @@ int Pascal isearch(int n)
 	 */
 	for (;;)			/* ISearch per character loop */
 	{ int raw = get_char();
-		if (raw == pd_sterm)
+		if (raw == G_STERM)
 			 return TRUE;
 	{ int c = ectoc(raw);
 													/* Check for special characters first: */

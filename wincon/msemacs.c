@@ -223,22 +223,22 @@ Bool Pascal cursor_on_off(Bool on)
 }*/
 
 
-void Pascal tcapmove(int row, int col)
+void Pascal USE_FAST_CALL tcapmove(int row, int col)
 
 {/* if (row == ttrow && col == ttcol)
       return; */
   DWORD  Dummy;
   COORD  Coords;
 
-	ttcol = col;
-	Coords.X = ttcol;
+	if (row > term.t_nrowm1)
+  { // tcapbeep();
+    row = term.t_nrowm1;
+  }
 	ttrow = row;
 	Coords.Y = row;
 
-	if (row > term.t_nrowm1)
-  { tcapbeep();
-    row = 0;
-  }
+	ttcol = col;
+	Coords.X = ttcol;
 
 	if (row < term.t_nrowm1 && g_cursor_on >= 0)
 	{ WORD MyAttr = row == term.t_nrowm1 ? BG_GREY

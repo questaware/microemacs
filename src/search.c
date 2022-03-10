@@ -154,9 +154,9 @@ static
 int Pascal get_hex2(int * res_ref, const char * s)
 	
 { char res = 0;
-  int adv = 2;
+  int adv = -2;
   
-  while (--adv >= 0)
+  while (++adv <= 0)
   { char chr = *s++ -'0';
     if      (in_range(chr, 0, 9))
       ;
@@ -168,8 +168,10 @@ int Pascal get_hex2(int * res_ref, const char * s)
       break;
     res = (res << 4) + chr;
   }
+	if (*res_ref == '0')
+		return 0;
   *res_ref = res;
-  return 1 - adv;
+  return adv + 1;
 }
 
 
@@ -230,9 +232,7 @@ int Pascal mk_magic()
 			  when MC_ESC:		/* \ */
 					if (pat[patix+1] != 0)
 					{ pchr = pat[patix+1];
-					  ++patix;
-						if (pchr == '0') 
-							patix += get_hex2(&pchr, &pat[patix+1]);
+						patix += get_hex2(&pchr, &pat[patix+2])+1;
 					}
 			}
 
@@ -927,8 +927,7 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 	  for ( ; ; ++instr)
 	  { if (instr[0] == MC_ESC && instr[1] != 0 && use_meta)
 	    { int chr = *++instr;
-        if (chr == '0')
-	      	instr += get_hex2(&chr, instr+1);
+	      instr += get_hex2(&chr, instr+1);
 
 	      buf[++ix] = chr;
 	      continue;

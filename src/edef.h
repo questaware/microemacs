@@ -80,13 +80,13 @@ extern char nulls[];
 #define	FORWARD	0			/* forward direction		*/
 #define REVERSE	1			/* backwards direction		*/
 
+#define FIOEOF -1		/* File I/O, end of file.	*/
 #define FIOSUC	0		/* File I/O, success.		*/
-#define FIOFNF	1		/* File I/O, file not found.	*/
-#define FIOEOF	2		/* File I/O, end of file.	*/
+#define	FIOMEM	1		/* File I/O, out of memory	*/
+#define FIOFNF	2		/* File I/O, file not found.	*/
 #define FIOERR	3		/* File I/O, error.		*/
-#define	FIOMEM	4		/* File I/O, out of memory	*/
-#define	FIOFUN	5		/* File I/O, eod of file/bad line*/
-#define	FIODEL	6		/* Can't delete/rename file	*/
+#define	FIOFUN	4		/* File I/O, eod of file/bad line*/
+#define	FIODEL	5		/* Can't delete/rename file	*/
 
 #define CFKILL  0x0001
 #define CFCPCN	0x0002			/* Last command was C-P, C-N	*/
@@ -146,6 +146,7 @@ extern char nulls[];
 #define MD_KEEP_CR     2	/* keep CR in files */
 #define MD_NO_MMI      4	/* no man machine interface */
 
+#define G_STERM (CTRL |'M')
 
 /*
  * Incremental search defines.

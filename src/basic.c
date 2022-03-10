@@ -81,8 +81,8 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 
   if (ct > 0)
   { while (--ct >= 0)
-  	{	if (off != llength(lp)) 	    	/* if at EOL */
-	      c = lgetc(lp, off++);					/* get the char */
+  	{	if (off < llength(lp)) 	    	/* if at EOL */
+	      c = lgetc(lp, off++);				/* get the char */
 	    else
 	    { lp = lforw(lp);	/* skip to next line */
 	      adj += 1;
@@ -92,7 +92,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
   }
   else		       								/* Reverse.*/
   { while (++ct <= 0)
-	  { if (off != 0)
+	  { if (off > 0)
 				c = lgetc(lp, --off);
 	    else
 			{	adj -= 1;

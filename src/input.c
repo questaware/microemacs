@@ -128,8 +128,8 @@ int  ctlxrp(int f, int n)
 //g_kbdm[g_macro_last_pos] = 0;					// exclude the sequence for this cmd!
 //g_macro_last_pos = NKBDM-1;
 	pd_lastdir = g_slast_dir;
-
 	strcpy(pat,g_savepat);
+
 //#if _DEBUG
 //if (g_exec_level)
 //	mbwrite("g_exec_level not 0");
@@ -181,11 +181,7 @@ int  ctlxe(int f, int n)
  */
 int  ctrlg(int f, int n)
 
-{ 	 /* TTbeep();*/
-	if (f >= 0)
-	{	g_kbdwr = 0;
-		pd_kbdrd = 0;
-	}
+{ /*TTbeep();*/
 	mlwrite(TEXT8);
 				/* "[Aborted]" */
 	return ABORT;
@@ -361,10 +357,8 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 													/* command containing the current name to complete */
 													/* ptr to position of next character to insert */
 {
-	int trash;
 	int iter = -1;   							/* was there a completion at all? */
-
-            /* start attempting completions, one character at a time */
+					            	/* start attempting completions one character at a time */
   for ( ; cpos < NSTRING; ++cpos)
   { if (wh == CMP_FILENAME)
     {   
@@ -372,13 +366,13 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 			name[cpos] = '*';
 			name[cpos+1] = 0;
    /* mbwrite2("MSD_INIT:",name); */
-      msd_init(name, NULL, 
-                  MSD_DIRY| MSD_REPEAT| MSD_STAY| MSD_HIDFILE| MSD_SYSFILE);
+      msd_init(name,
+               MSD_DIRY|MSD_REPEAT|MSD_STAY|MSD_HIDFILE|MSD_SYSFILE|MSD_USEPATH);
 
     }
   {	int match = 1;
-    BUFFER *bp = bheadp;                		/* trial buffer to complete */
     int curbind = 0;
+    BUFFER *bp = bheadp;                		/* trial buffer to complete */
                                                   /* Then the iterators */
     while (bp != NULL)
 		{	int i;																	/* index into strings */
@@ -395,18 +389,19 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
       
       	else /* if (wh == CMP_FILENAME) */
       
-      	  eny = msd_nfile(&trash);
+      	  eny = msd_nfile();
 	      if (eny == NULL)
         	break;
       }
    /* mbwrite(eny); */
 
       for (i = -1; ++i < cpos; )
-			{	if (name[i] == '\\' && eny[i] == '/')
-					continue;	
+      {
 #if S_MSDOS == 0
         if (name[i] != eny[i])
 #else
+				if (name[i] == '\\' && eny[i] == '/')
+					continue;	
         if (((name[i] ^ eny[i]) & ~0x20) != 0)
 #endif
           break;
@@ -416,7 +411,7 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
       {               				/* if this is the first match, simply record it */
         if (--match >= 0)
         { name[i] = eny[i];// lwr(eny[i]);
-      	  if (wh == CMP_FILENAME)
+//     	  if (wh == CMP_FILENAME)
           	name[i+1] = 0;
         }
                                         /* if there's a difference, stop here */
@@ -445,8 +440,10 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
   return cpos;
 }
 
-static int  redrawln(char buf[], int clamp)
+static int USE_FAST_CALL redrawln(int clamp, char buf[])
 
+{ if (clamp)
+		clamp = term.t_ncol-ttcol;
 { int len = clamp;
   char * s;
   char c;
@@ -474,7 +471,7 @@ static int  redrawln(char buf[], int clamp)
     ttcol -= 1;
   }*/
   return clamp - len;
-}
+}}
 
 int g_chars_since_ctrl;
 
@@ -482,9 +479,8 @@ int gs_keyct;
 
 static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
-{ int llix = -1;
-  int llcol = -1;
-	int cc = TRUE;
+{	int cc = TRUE;
+	int llix = -1;
 	int key_ct = 0;
   int fulllen = 0;    /* maximum buffer position */
   int cpos = 0;
@@ -504,11 +500,11 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
   for (;;)
   {	int c;             													/* current input character */
   	if (redo & 1)
-    { c = buf[cpos];			/* reseek */
+    { redo -= 1;
+      c = buf[cpos];			/* reseek */
       buf[cpos] = 0;
-      tcapmove(term.t_nrowm1, promptlen + redrawln(buf, 0));
+      tcapmove(255, promptlen + redrawln(0, buf));	// just calculate length
       buf[cpos] = c;
-      redo &= ~1;
     }
   { int ch = *autostr;
     if (ch != 0)
@@ -519,9 +515,9 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     if (redo)
     { redo = 0;
       tcapeeol();				/* redraw */
-			c = ttcol;
-      (void)redrawln(&buf[cpos], term.t_ncol-c);
-      tcapmove(term.t_nrowm1, c);
+	    c = ttcol;
+      (void)redrawln(1, &buf[cpos]);
+      tcapmove(255, c);
     }
     TTflush();
     ch = getkey();
@@ -540,10 +536,8 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     		val = 1
     }
 #endif
-    if (ch != (SPEC | 'P') && ch != (SPEC | 'N'))
-      llcol = -1;
                               /* if they hit the line terminate, wrap it up */
-    if (ch == pd_sterm)
+    if (ch == G_STERM)
     { mlerase();                  /* clear the message line */
       cc = buf[0] != 0;						/* if we default the buffer, return FALSE */
       break;
@@ -555,6 +549,65 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
 
     key_ct += 1;
+
+		if (ch >= (ALTD | '1') && ch <= (ALTD | '3'))
+    { ch = (ch & 0x7f) - '2';
+			redo = 3;
+		{ int cix = strlen(
+        							strpcpy(combuf, g_ll.lastline[0], HICHAR-2));
+      combuf[cix+1] = 0;
+      combuf[cix+2] = 0;
+      for (; --cix > 0;)
+      	if (combuf[cix] <= ' ')
+       	  combuf[cix] = 0;
+      autostr = combuf;
+      if (ch >= 0)
+      	autostr += strlen(autostr)+1;
+      if (ch > 0)
+       	autostr += strlen(autostr)+1;
+			continue;
+    }}
+
+    if (ch & SPEC)
+    { int tpos = cpos;
+      switch (ch)
+      { case (SPEC | 'F'): tpos += 1;
+        when (SPEC | 'B'): tpos -= 1;
+        when (SPEC | '<'): 
+								         { if 			(tpos != 0 || promptlen == 0)
+								        		 tpos = 0;
+								        	 else if (gs_type < 0)
+								        	 { fulllen += promptlen;
+								        		 promptlen = 0;
+								        		 cpos = 0;
+												     tcapmove(255, 0);
+												     strpcpy(buf, lastmesg, nbuf);
+								        		 continue;
+								        	 }
+								         }
+        	
+        when (SPEC | 'P'):
+        case (SPEC | 'N'):	/* up or down arrows */
+								        	llix += ch - (SPEC | 'O');
+								        	autostr = &g_ll.lastline[(g_ll.ll_ix-llix) & MLIX][0];
+
+								        	cpos = 0;
+								        	fulllen = cpos;
+								        	buf[cpos] = 0;
+								        	redo = 3;
+								        	continue;
+				when (SPEC | '>'):tpos = fulllen;
+      }
+      
+//    if (((unsigned int)(tpos - fulllen)) > 0)
+	    if (tpos < 0 || tpos > fulllen)
+        /* tcapbeep() */ ;
+      else
+      { cpos = tpos;
+        redo = 1;
+      }
+      continue;
+    }
                      /* change from command form back to character form */
     c = ectoc(ch);
 #if S_MSDOS == 0
@@ -613,48 +666,6 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       fulllen = cpos;
       buf[cpos] = 0;
     }
-    else if (ch & SPEC)
-    { int tpos = cpos;
-      switch (ch)
-      { case (SPEC | 'F'): tpos += 1;
-        when (SPEC | 'B'): tpos -= 1;
-        when (SPEC | '<'): 
-								         { if 			(tpos != 0 || promptlen == 0)
-								        		 tpos = 0;
-								        	 else if (gs_type < 0)
-								        	 { fulllen += promptlen;
-								        		 promptlen = 0;
-								        		 cpos = 0;
-												     tcapmove(term.t_nrowm1, 0);
-												     strpcpy(buf, lastmesg, nbuf);
-								        		 continue;
-								        	 }
-								         }
-        	
-				when (SPEC | '>'): tpos = fulllen;
-        when (SPEC | 'P'):
-        case (SPEC | 'N'):	/* up or down arrows */
-								         { if (llcol >= 0)		/* remove the old */
-								           { cpos = llcol;
-								             fulllen = cpos;
-								             buf[cpos] = 0;
-								           }
-								           llcol = cpos;
-								           llix += ch - (SPEC | 'O');
-								           autostr = &g_ll.lastline[(g_ll.ll_ix-llix) & MLIX][0];
-								           redo = 3;
-								           continue;
-								         }
-      }
-      
-//    if (((unsigned int)(tpos - fulllen)) > 0)
-	    if (tpos < 0 || tpos > fulllen)
-        /* tcapbeep() */ ;
-      else
-      { cpos = tpos;
-        redo = 1;
-      }
-    }
     else if ((c <= 'Z'-'@' || c == (ALTD | 'S')) && ch != quotec)
     { switch(c)
       {	case 'B'-'@':
@@ -699,10 +710,11 @@ getliteral:
       
       if (g_disinp <= 0)
 				c = '*';
+
 #if S_MSDOS
-      mybuf[0] = c;
-      mybuf[1] = 0;
-      (void)redrawln(mybuf, term.t_ncol-ttcol);
+    { short bb = c & 255;
+      (void)redrawln(1, (char*)&bb);
+    }
 #else
 			mlout(c);
 #endif

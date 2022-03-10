@@ -695,8 +695,8 @@ Pascal quickexit(int f, int n)
 		if ((bp->b_flag & (BFCHG+BFINVS)) == BFCHG &&
 				bp->b_fname != null)
 		{ curbp = bp; 	/* make that buffer cur */
-			mlwrite(TEXT103,bp->b_fname);
-/*				"[Saving %s]\n" */
+//		mlwrite(TEXT103,bp->b_fname);
+						/* "[Saving %s]\n" */
 			status = filesave(f, n);
 			if (status <= FALSE)
 			{ curbp = oldcb;	/* restore curbp */
@@ -717,10 +717,14 @@ Pascal quit(int f, int n)
 
 { int status = TRUE;
 																/* Argument forces it.	*/
-	if (! f && gotfile(NULL) != NULL)
-														/* All buffers clean or user says it's OK. */
-		status = mlyesno(TEXT104);
-								/* "Modified buffers exist. Leave anyway" */
+	if (! f )
+	{ int got = lastbuffer(-1, 0);
+
+		if (got != 0)
+			status = mlyesno(TEXT104);
+										/* "Modified buffers exist. Leave anyway" */
+	}
+
 	if (status > 0)
 	{
 #if FILOCK
@@ -733,7 +737,7 @@ Pascal quit(int f, int n)
 		eexitflag = TRUE; /* flag a program exit */
 #if S_MSDOS
 //	ttrow = 0;
-		tcapmove(term.t_nrowm1, 0);
+		tcapmove(255, 0);
 #endif
 	}
 

@@ -906,7 +906,7 @@ static
 const char * fex_file(int app, const char ** ref_dir, const char * file)
 												// next_dir == NULL => do not append file	
 { char ch;
-	char * dir = *ref_dir;
+	const char * dir = *ref_dir;
   if (dir != NULL)
 	{	int ix = -1;
 		if (// dir[0] == '-' && dir[1] == 'I' ||
@@ -946,7 +946,7 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 */
 const char * Pascal flook(char wh, const char * fname)
 
-{ char *path;	/* environmental PATH variable */
+{ const char * path;	/* environmental PATH variable */
   const char * res;
 //char buf[100];
 			                  /* if we have an absolute path check only there! */
@@ -1008,12 +1008,13 @@ const char * Pascal flook(char wh, const char * fname)
 
 char * Pascal flookdown(char * dir, char * fname)
 
-{ int trash
-  Char * fn;
-  Char buf[11];
-  msd_init(dir, fname, MSD_DIRY | MSD_REPEAT | MSD_HIDFILE | MSD_SYSFILE);
+{ Char * fn;
+  Char buf[NFILEN+1];
+  
+  msd_init(strcat(strcat(strcpy(buf,dir), "/"), fname);
+  				 MSD_DIRY | MSD_REPEAT | MSD_HIDFILE | MSD_SYSFILE | USE_PATH);
 
-  while ((fn = msd_nfile(&trash)) != NULL)
+  while ((fn = msd_nfile()) != NULL)
   { mlreply(fn, buf, 10);
   }
   

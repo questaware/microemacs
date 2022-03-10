@@ -78,7 +78,6 @@ UNDEF, /* EVSEARCH */
 0,     /* EVSEED */       /* random number seed */
 1,     /* EVSSAVE */      /* safe save flag */
 1,     /* EVSTATUS */			/* last command status */
-CTRL |'M' /* EVSTERM */ 	/* search terminating character */
 #if 0
 0,     /* EVUARG */				/* universal argument */
 UNDEF, /* EVVERSION */	
@@ -585,7 +584,7 @@ const char *Pascal USE_FAST_CALL gtenv(const char * vname)
 #if S_WIN32
 	  when EVWINTITLE: return null;	// getconsoletitle();
 #endif
-		when EVWORK:		 res = lastbuffer(-1,-1);
+		when EVWORK:		 res = lastbuffer(0,0);
 	  when EVPENDING:
 #if	GOTTYPAH
 									   res = typahead();
@@ -775,8 +774,6 @@ int Pascal svar(int var, char * value)	/* set a variable */
 #if S_WIN32
 		when EVWINTITLE:setconsoletitle(value);
 #endif
-	  when EVSTERM:	  val = stock(value);
-										goto storeint;
 	  when EVDEBUG:	
 	  case EVSTATUS:	
 	  case EVDISCMD:	
@@ -872,7 +869,6 @@ char *Pascal getval(char * tgt, char * tok)
 						return cc < 0 ? getvalnull : tgt;
 		      }
 	  case TOKBUF:															/* buffer contents fetch */
-																						/* grab the right buffer */
 					{ BUFFER * bp = bfind(getval(tgt, tokp1), FALSE, 0);
 						if (bp == NULL)
 						  return getvalnull;

@@ -554,7 +554,6 @@ $sres          display type
 $ssave         Save files to an intermediate temporary
 $sscroll       Smooth scroll
 $status        Status of the last editor command
-$sterm         Terminator of command input, usually ^M
 $uarg          ESC arg to command
 $usesofttab    != 0: Expand tabs to to spaces
 $version       This program version

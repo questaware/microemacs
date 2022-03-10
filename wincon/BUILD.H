@@ -73,7 +73,6 @@
 #define DEBUGM	0	/* $debug triggers macro debugging		*/
 #define	LOGFLG	0	/* send all executed commands to EMACS.LOG	*/
 #define	VISMAC	0	/* update display during keyboard macros	*/
-#define	CTRLZ	0	/* add a ^Z at end of files under MSDOS only	*/
 #define	NBRACE	1	/* new style brace matching command		*/
 #define	CLEAN	0	/* de-alloc memory on exit			*/
 #define	CALLED	0	/* is emacs a called subroutine? or stand alone */

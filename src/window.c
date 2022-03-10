@@ -199,7 +199,7 @@ int Pascal mvupwind(int notused, int n)
                                       // W V : n == -1  goto top, 1 up
     if (n == 1 || n == -1)
     { Lpos_t lpos = *(Lpos_t*)&curwp->w_dotp;
-      int lineno = curwp->w_line_no;
+      int offs = lpos.curoff;
       int mv = n > 0 ? -wpos : curwp->w_ntrows - wpos - 1;
       (void)forwbyline(mv);
       update(FALSE);
@@ -216,6 +216,9 @@ int Pascal mvupwind(int notused, int n)
         lpos.line_no -= 1;
       }
       rest_l_offs(&lpos);
+      (void)forwbyline(1);			// strange
+      if (offs)
+      	forwbychar(offs);
     }
 		else
 #endif
