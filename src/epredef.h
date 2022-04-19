@@ -53,14 +53,15 @@ extern PD_VAR predefvars[];
 #define EVSTATUS	 49
 #define EVUARG		 50
 #define EVVERSION	 51
-#define EVWINTITLE 52
-#define EVWLINE 	 53
-#define EVWORK		 54
-#define EVWRAPHK	 55
-#define	EVWRITEHK	 56
-#define EVXPOS		 57
-#define EVYPOS		 58
-#define EVZCMD		 59
+#define EVWINNEW	 52
+#define EVWINTITLE 53
+#define EVWLINE 	 54
+#define EVWORK		 55
+#define EVWRAPHK	 56
+#define	EVWRITEHK	 57
+#define EVXPOS		 58
+#define EVYPOS		 59
+#define EVZCMD		 60
 
 #define pd_gacount  predefvars[EVACOUNT].i
 #define pd_gasave   predefvars[EVASAVE].i
@@ -99,6 +100,7 @@ extern PD_VAR predefvars[];
 #define pd_highlight predefvars[EVHIGHLIGHT].p
 #define pd_file_prof predefvars[EVFILEPROF].p
 #define pd_patmatch  predefvars[EVMATCH].p
+#define pd_winnew	 predefvars[EVWINNEW].i
 
 #define pd_kbdrd   predefvars[EVCBUFNAME].i
 #define pd_kbdrep  predefvars[EVCMODE].i

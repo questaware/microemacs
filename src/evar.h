@@ -59,6 +59,7 @@ NOSHARE const char * g_envars[] = {
 	"status",			/* returns the status of the last command */
 	"uarg",				/* last universal arg */
 	"version",		/* current version number */
+	"winnew",	  	/* window is newly created */
 	"wintitle",		/* the title on the window */
 	"wline",			/* # of lines in current window */
 	"work",				/* # of buffers modified or not yet read */

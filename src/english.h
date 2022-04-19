@@ -114,6 +114,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT83	"Query replace"
 #define	TEXT84  "with"
 #define	TEXT85  "[Not Found] %s"
+#define	TEXT86  "Earliest Visited"
 #define	TEXT87	"Replace '"
 #define	TEXT88	"' with '"
 #define	TEXT89	"Aborted!"

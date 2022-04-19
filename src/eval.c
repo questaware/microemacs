@@ -344,7 +344,7 @@ const char * Pascal gtfun(char * fname)/* evaluate a function */
 
 		when UFLOWER:
 		case UFUPPER:	return mkul(fnum == UFUPPER, arg1);
-		when UFLEFT:	if (g_stk.top + iarg2 < g_stk.lim)
+		when UFLEFT:	if (g_stk.lim - g_stk.top > iarg2)
 		            	  arg1[iarg2] = 0;
 		            	return arg1;
 		when UFTRIM:  (void)trimstr(strlen(arg1),arg1);

@@ -49,7 +49,6 @@ void cls(void);
 BUFFER *Pascal bfind(char * bname, int cflag, int bflag);
 int  USE_FAST_CALL ectoc(int c);
 int Pascal getIncls(int f, int n);
-BUFFER *Pascal getdefb(void);
 BUFFER * getcbuf(int createflag, BUFFER * bp, const char *prompt);
 BUFFER *Pascal bufflink(const char *, int);
 char * Pascal repl_bfname(BUFFER*, const char *);
@@ -369,7 +368,7 @@ int Pascal spawn(int, int);
 int Pascal splitip();
 int Pascal splitwind(int, int);
 int Pascal searchIncls(int, int);
-char * searchfile(char * result, char * pipefile, FILE ** ip_ref);
+char * searchfile(char * result, Fdcr fdcr);
 int Pascal sreplace(int, int);
 Cc Pascal startup(const char *);
 #if S_LINUX

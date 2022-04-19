@@ -599,6 +599,7 @@ int pipefilter(wh)
 
 { Cc cc;
   char prompt[2];
+  int s_discmd = pd_discmd;
   prompt[0] = wh;
   wh -= '<';
   if (wh == '#'-'<' && rdonly())
@@ -609,9 +610,17 @@ int pipefilter(wh)
     strpcpy(line, g_ll.lastline[0], sizeof(line)-2*NFILEN);
   else
 #endif
-  { prompt[1] = 0;
-    if (mlreply(prompt, line, NLINE) <= FALSE)
-      return FALSE;
+	{ extern int g_last_cmd;
+    prompt[1] = 0;
+  	strcpy(line,"sort");
+  	if (wh == ' '-'<')
+  		pd_discmd = 0;
+  	else 
+    {	if (mlreply(prompt, line, NLINE) <= FALSE)
+      	return FALSE;
+
+			g_last_cmd = g_ll.ll_ix & MLIX;
+		}
 
     if (line[0] == '%' || line[0] == '\'')
     { char sch;
@@ -641,6 +650,7 @@ int pipefilter(wh)
     mlwrite(TEXT159);         /* "\001Wait ..." */
   }
 
+	pd_discmd = s_discmd;
 //tcapmove(term.t_nrowm1, 0);
 
 { char * fnam2 = strcat(mkTempCommName('o', pipeOutFile), int_asc(++bix));
@@ -720,25 +730,24 @@ int Pascal pipecmd(int f, int n)
    */
 int Pascal filter(int f, int n)
 
-{ return pipefilter('#');
+{ return pipefilter(f < 0 ? ' ' : '#');
 }
 
 
 
-char * searchfile(char * result, char * pipefile, FILE ** ip_ref)
+char * searchfile(char * result, Fdcr fdcr)
 
 { (void)pipefile;
-{ FILE * ip = *ip_ref;
+{ FILE * ip = fdcr->ip;
 	if (ip == NULL)
 	{ char buf[NFILEN+20];
 		char * basename = result+strlen(result)+1;	
 		char * cmd = concat(buf, "ffg -/ ", basename, " ", result, NULL);
 		FILE * ip = popen(cmd, "r");
-
-		*ip_ref = ip;
-		if (ip == NULL)
-			return NULL;
 	}
+	fdcr->ip = ip;
+	if (ip == NULL)
+		return NULL;
 
 { char * fname = fgets(result, NFILEN, ip);
 	if (fname == NULL)
@@ -763,7 +772,7 @@ char *Pascal timeset()
   char buf[16];
 
   time((void*)buf);
-{ register char *sp = ctime((const time_t *)buf);
+{ char *sp = ctime((const time_t *)buf);
   sp[strlen(sp)-1] = 0;
   return sp;
 }}

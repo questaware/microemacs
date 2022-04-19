@@ -51,13 +51,9 @@
 
 extern int ttgetraw(void);
 
-extern char deltaf[HICHAR];
-#define combuf ((char*)deltaf)
-
 extern int   g_cursor_on;
 extern unsigned int g_Dmatchlen;
 
-
 LL g_ll;
 
 static LL g_sll;
@@ -69,7 +65,8 @@ static char g_savepat[NPAT+2];
 static int g_kbdm[NKBDM];		/* Macro */
 
 //static LINE * macro_start_line;
-int    macro_start_col;
+int   macro_start_col;
+int 	g_last_cmd;
 
 static int    g_slast_dir;
 static int		g_kbdwr = 0;								// -ve => play
@@ -153,7 +150,6 @@ int  ctlxrp(int f, int n)
 int  ctlxe(int f, int n)
 
 { int col = getccol();
-#define MLIX 3
 //g_slastkey = lastkey;
 
 	if (col >= macro_start_col)
@@ -479,7 +475,8 @@ int gs_keyct;
 
 static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
-{	int cc = TRUE;
+{ char mybuf[HICHAR];
+	int cc = TRUE;
 	int llix = -1;
 	int key_ct = 0;
   int fulllen = 0;    /* maximum buffer position */
@@ -554,13 +551,13 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     { ch = (ch & 0x7f) - '2';
 			redo = 3;
 		{ int cix = strlen(
-        							strpcpy(combuf, g_ll.lastline[0], HICHAR-2));
-      combuf[cix+1] = 0;
-      combuf[cix+2] = 0;
+        					  strpcpy(mybuf, g_ll.lastline[g_last_cmd], HICHAR-2));
+      mybuf[cix+1] = 0;
+      mybuf[cix+2] = 0;
       for (; --cix > 0;)
-      	if (combuf[cix] <= ' ')
-       	  combuf[cix] = 0;
-      autostr = combuf;
+      	if (mybuf[cix] <= ' ')
+       	  mybuf[cix] = 0;
+      autostr = mybuf;
       if (ch >= 0)
       	autostr += strlen(autostr)+1;
       if (ch > 0)
@@ -568,35 +565,36 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 			continue;
     }}
 
+	{	int tpos = cpos;
     if (ch & SPEC)
-    { int tpos = cpos;
+    {	ch -= SPEC;
       switch (ch)
-      { case (SPEC | 'F'): tpos += 1;
-        when (SPEC | 'B'): tpos -= 1;
-        when (SPEC | '<'): 
-								         { if 			(tpos != 0 || promptlen == 0)
-								        		 tpos = 0;
-								        	 else if (gs_type < 0)
-								        	 { fulllen += promptlen;
-								        		 promptlen = 0;
-								        		 cpos = 0;
-												     tcapmove(255, 0);
-												     strpcpy(buf, lastmesg, nbuf);
-								        		 continue;
-								        	 }
-								         }
+      { case ('F'): tpos += 1;
+        when ('B'): tpos -= 1;
+        when ('<'): 													// beginning of line
+							    { if 			(tpos != 0 || promptlen == 0)
+							   		  tpos = 0;
+							   	  else if (gs_type < 0)			// include the prompt
+								    { fulllen += promptlen;
+								    	promptlen = 0;
+								   		cpos = 0;
+											tcapmove(255, 0);
+											strpcpy(buf, lastmesg, nbuf);
+								      continue;
+								     }
+								   }
         	
-        when (SPEC | 'P'):
-        case (SPEC | 'N'):	/* up or down arrows */
-								        	llix += ch - (SPEC | 'O');
-								        	autostr = &g_ll.lastline[(g_ll.ll_ix-llix) & MLIX][0];
+        when ('P'):
+        case ('N'):														// up or down arrows
+								   	llix += ch - 'O';
+								    autostr = &g_ll.lastline[(g_ll.ll_ix-llix) & MLIX][0];
 
-								        	cpos = 0;
-								        	fulllen = cpos;
-								        	buf[cpos] = 0;
-								        	redo = 3;
-								        	continue;
-				when (SPEC | '>'):tpos = fulllen;
+								    cpos = 0;
+								    fulllen = 0;
+								    buf[0] = 0;
+								    redo = 3;
+								    continue;
+				when ('>'):	tpos = fulllen;
       }
       
 //    if (((unsigned int)(tpos - fulllen)) > 0)
@@ -608,6 +606,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       }
       continue;
     }
+  }
                      /* change from command form back to character form */
     c = ectoc(ch);
 #if S_MSDOS == 0
@@ -615,14 +614,14 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     { char * homedir = getenv("HOME");
       buf[cpos] = 0;
       if (cpos == 1 && homedir != NULL)
-      { strpcpy(&combuf[0], homedir, HICHAR-2);
+      { strpcpy(&mybuf[0], homedir, HICHAR-2);
       }
       else
-      { homeusr(strpcpy(&combuf[0], buf, HICHAR-2));
+      { homeusr(strpcpy(&mybuf[0], buf, HICHAR-2));
       }
       buf[0] = 0;
       cpos = 0;
-      autostr = strcat(combuf,"/");
+      autostr = strcat(mybuf,"/");
       redo = 3;
       twid = FALSE;
       continue;
@@ -632,18 +631,18 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     { if (cpos > 0)
       { int tpos;
 				redo = 3;
-        for (tpos = --cpos; ++tpos <= fulllen; )   /* include the 0 */
-          buf[tpos-1] = buf[tpos];
         --fulllen;
+        for (tpos = --cpos; ++tpos <= fulllen+1; )   /* include the 0 */
+          buf[tpos-1] = buf[tpos];
       }
     }
     else if (c == 'A'-'@')
-    { cc = buildlist(null);			// TRUE
+    { (void)buildlist(null);			// cc = TRUE
     	break;
     }
+#if 0
     else if (c == 'F'-'@')
     { int tpos,ix;
-      char mybuf[256];
       buf[cpos+1] = 0;
       for (tpos = cpos; --tpos >= 0 && !is_space(buf[tpos]); )
         ;
@@ -657,15 +656,19 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
         memcpy(buf+tpos+1,mybuf,ix);
       }
     }
-    else if ((c == ' '|| c == '\t') && gs_type >= 0 && cpos > 0)
-    { 
-    	int tpos = comp_name(cpos, gs_type, buf);    /* attempt a completion */
+#endif
+    else if ((c == ' '|| c == '\t' || c == 'F'-'@') && gs_type >= 0 && cpos > 0)
+    { if (gs_type == CMP_TOSPACE)
+        break;
+
+    { int typ = c == 'F'-'@' ? CMP_FILENAME : gs_type;
+    	int tpos = comp_name(cpos, typ, buf);    /* attempt a completion */
       if (tpos > 0 && buf[tpos - 1] == 0)
         break;
       cpos = tpos;
       fulllen = cpos;
       buf[cpos] = 0;
-    }
+    }}
     else if ((c <= 'Z'-'@' || c == (ALTD | 'S')) && ch != quotec)
     { switch(c)
       {	case 'B'-'@':
@@ -674,18 +677,15 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 					autostr = curbp->b_fname;
 				when 'S'-'@':
 				case ALTD | 'S':
-					autostr = pd_patmatch == NULL ? "" : pd_patmatch;
+					if (pd_patmatch != NULL)
+						autostr = pd_patmatch;
 				otherwise
-		      woffs = getwtxt(c, &combuf[0], HICHAR-3-cpos, woffs);
-					autostr = combuf;
-//   			if (autostr == NULL)
-//   				autostr = "";
+					autostr = mybuf;
+		      woffs = getwtxt(c, &mybuf[0], HICHAR-3-cpos, woffs);
 			}
     }
     else 
     { int tpos;
-    	char mybuf[3];
-
       if (ch == quotec)
       	ch = getkey();     /* get a character from the user */
       
@@ -752,19 +752,20 @@ char * complete(const char * prompt, char * defval, int type)
 					/* default value to display to user */
 				/* type of what we are completing */
 				/* maximum length of input field */
-{ int cc;
+
 						 /* if executing a command line get the next arg and match it */
-  if (g_macargs > 0)
+{ if (g_macargs > 0)
     return macarg(gs_buf) <= FALSE ? NULL : gs_buf;
 
 { int plen = ! prompt ? 0
 											: mlwrite(defval ? "%s[%s]: " :
 																			   "%s: ",   prompt, defval);
-  cc = getstr(gs_buf, NFILEN, plen, type);
+	flush_typah();
+{	int cc = getstr(gs_buf, NFILEN, plen, type);
 
   return cc < 0				          	? NULL   : 
          defval && gs_buf[0] == 0 ? strpcpy(gs_buf,defval,NFILEN) : gs_buf;
-}}
+}}}
 
 	/* get a command name from the command line. Command completion means
 	   that pressing a <SPACE> attempts to complete an unfinished command
@@ -772,8 +773,7 @@ char * complete(const char * prompt, char * defval, int type)
 	*/
 Command getname(const char * prompt)
 				/* string to prompt with */
-{
-  char *sp = complete(prompt, NULL, CMP_COMMAND);
+{ char *sp = complete(prompt, NULL, CMP_COMMAND);
 
   return sp == NULL ? NULL : fncmatch(sp);
 }

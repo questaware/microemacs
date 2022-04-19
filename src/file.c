@@ -177,8 +177,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 #if NFILEN < 2 * NBUFN + 30
   error error
 #endif
-{ FILE * ip = 0;
-	char pipefn[NFILEN] = "";
+{ Fdcr_t fdcr = {NULL};
   char bname[NFILEN];
 #define text (&bname[NBUFN+1])
 	int cr = create & ~(16+32+64);
@@ -200,7 +199,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
   }
 
   while ((fn = srch == 0 ? fname : 
-  						 srch < 0  ? searchfile(fname, pipefn, &ip) :
+  						 srch < 0  ? searchfile(fname, &fdcr) :
 													 msd_nfile()) != NULL)
   { BUFFER * bp;
     for (bp = bheadp; bp != NULL; bp = bp->b_next)
@@ -701,9 +700,9 @@ out:
 	}
 #endif
 
-	for (lp = &bp->b_baseline; --clamp != 0; )
+	for (lp = &bp->b_baseline; 
+			 ((lp=lforw(lp))->l_props & L_IS_HD) == 0 && --clamp != 0; )
 	{
-		lp=lforw(lp);
 #if	CRYPT
 		if (clamp < 0)
 		{	int len = lp->l_used;
@@ -911,7 +910,7 @@ int Pascal writeout(const char * fn)
 	for (nline = 4; --nline >= 0; )/* mk unique name using random numbers */
 	{ if (caution)
 			strcpy(&tname[sp+1], int_asc(ernd()));
-		op = fopen(fn, caution == 0 ? "wb" : "wbx");
+		op = fopen(tname, caution == 0 ? "wb" : "wbx");
 		if (op != NULL)
 			break;
 	}

@@ -46,18 +46,18 @@
 
   *Key Bindings in the Command Line*
   These are described by pressing ^A in the command line.
-	(The bindings can be avoided by prefixing ^Q -- literal next character).
+  (The bindings can be avoided by prefixing ^Q -- literal next character).
   
   ^B  kill Buffer contents
-	^F  The longest match to a file name
+  ^F  The longest match to a file name
   ^G  Abort
   ^K  Chars to eol
   ^N  File Name of buffer
   ^S  Search string
   ^W  Chars to eow
   Arrows    Previous, left, right
-	Home
-	End
+  Home
+  End
   .^$*[\    Magic
 
   Pressing Home at the start of the input moves the cursor to the start of the
@@ -67,7 +67,7 @@
   *Invocation Arguments*
   Flags may be interleaved with file names
       -b**name**  Name the buffer **name**. 
-						  Useful to override file suffix attributes
+              Useful to override file suffix attributes
       -e      Process error.rc after the startup file
       -m      Show failing macros in a visible buffer
       -i{%$}  var value   Set variable with value before startup
@@ -95,7 +95,7 @@
      Ms       File contain(ed) ^M
      Aa       Do not distinguish upper and lower case.
      RE       Treat ^$.<asterix>[ in pattern as parts of regular expressions.
-						  The regular expressions are POSIX regular expressions.
+              The regular expressions are POSIX regular expressions.
               (In them \0ab where a and b are hex digits can be used)
      Over     Typing overstrikes existing text.
      View     Disallow editing.
@@ -115,6 +115,8 @@
 
    The only parameter to a command/macro is the count supplied to it
    as a number in scripts or by the prefix *ESC* **n** where **n** is a number.
+   For execute-named-command this parameter is passed through to the command
+   selected on the command line.
 
   *The Colours*
   Setting the above colour modes colour the current window.
@@ -130,10 +132,10 @@
   The variable $hardtab is stored in each buffer and specifies the distance 
   between tab stops; < 0 => expansion to spaces before inserting in the buffer.
   The variable $fileprof specifies $hardtab for file suffixes (starting .).
-	The syntax is **suffix** = [^][**type**]#
+  The syntax is **suffix** = [^][**type**]#
   The presence of a ^ signifies that the mode of operation is not AbC
-	The **type** is one of cpfqPm signifying C/C++,perl,Fortran,SQL,Pascal,markup.
-	The number # is the tab size.
+  The **type** is one of cpfqPm signifying C/C++,perl,Fortran,SQL,Pascal,markup.
+  The number # is the tab size.
   Example : set $fileprof ".sql=^q4.h=c2.c=c2.cpp=c2.py=-2"
 
   *The File Names*
@@ -159,10 +161,10 @@
   (The commands may be listed by pressing M-A CR.)
   (All commands can be aborted by pressing ^G)
 
-	*Strings in scripts*
-	Arguments to commands are strings delimited by white space.
-	A string can be enclosed in single or double quotes which are stripped off.
-	Within a string ~{rnltb} denote respectively CR,NL,^L,TAB,BS.
+  *Strings in scripts*
+  Arguments to commands are strings delimited by white space.
+  A string can be enclosed in single or double quotes which are stripped off.
+  Within a string ~{rnltb} denote respectively CR,NL,^L,TAB,BS.
 
 abort-command                 abort to the command line
 add-global-mode          M-M  Add colours or modes to the default mode
@@ -212,8 +214,8 @@ delete-window            ^X0
 demote-buffer                 Treat the current buffer as if not yet shown
 detab-region             ^X^D Expand tabs
 display                  ^XG  Display a variable
-drop-buffer            	 ^XK  If the buffer is displayed in two windows drop the window
-                       	      Otherwise drop the buffer (asks if modified).
+drop-buffer              ^XK  If the buffer is displayed in two windows drop the window
+                              Otherwise drop the buffer (asks if modified).
 end-macro                ^X)  End collecting keys to be executed by execute macro.
                          A-FNx (this is alt backslash)
 end-of-file              M->
@@ -247,7 +249,7 @@ fetch-file                    The current line contains args <tab> password <tab
                               The result is in a new buffer.
                               If the command succeeded then save-file saves the file
                               by the command cmd password $(TEMP)/fname args.
-															The remote passord must be typed again.
+                              The remote passord must be typed again.
                               Only one save is allowed and obliterates keys.
 fill-paragraph           M-Q
 filter-buffer            ^X#  Write the buffer to a temp, execute a command
@@ -256,7 +258,7 @@ filter-buffer            ^X#  Write the buffer to a temp, execute a command
                                In Windows for filter-buffer, pipe-command, 
                                shell-command if the command can be found 
                                on %Path% or with suffix .exe added do not 
-															 use cmd.exe otherwise use it.
+                               use cmd.exe otherwise use it.
 find-file                ^X^F Read a file into a buffer, new if unique in name
 find-tag                 M-FN> Searches all files named tags up from the directory
                                of the file in the buffer.
@@ -269,9 +271,9 @@ forward-character        ^L
 goto-line                M-G
 goto-mark                M-^G
 goto-matching-fence      M-^F Goto a matching bracket, parenthesis, etc
-															If arg = 0 and on left brace use a right brace.
-															If arg < 0 same but repeatedly.
-															So ESC - ^T does this.
+                              If arg = 0 and on left brace use a right brace.
+                              If arg < 0 same but repeatedly.
+                              So ESC - ^T does this.
                          ^T
 grow-window              ^X^
                          ^XZ
@@ -290,7 +292,7 @@ kill-region              ^XD  Kill removes text to the n.th kill buffer
 kill-to-end-of-line      ^K
                          FN^;
 last-buffer              M-FNB Show the previous buffer shown
-list-bindings        		 Like apropos
+list-bindings            Like apropos
 list-buffers             ^X^B
 list-key                 ^X?
 list-variables                 List values of variables
@@ -326,10 +328,10 @@ query-replace-string     ^R   An illegal response shows legal choices
 quick-exit               M-Z
 quote-character          ^Q   Take the following keypress as a letter
 read-file                     Clear the current buffer and read in a file
-redraw         					 ^L		Redraw
-															With an arg 0   : current line at centre
-															With an arg +ve : current line on line n	
-															With an arg -ve : current line on line from bottom.
+redraw                   ^L   Redraw
+                              With an arg 0   : current line at centre
+                              With an arg +ve : current line on line n  
+                              With an arg -ve : current line on line from bottom.
 remove-mark
 replace-string           M-R
 resize-window            ^XW
@@ -351,23 +353,23 @@ search-incls             M-FNP  Search for a define,variable through C++ include
         searched for using path $incldirs 
         (; (or : in Unix) separates directories.)
 
-				When asking and an include file is not found then an opportunity is
-				offered to append new directories to $incldirs.
+        When asking and an include file is not found then an opportunity is
+        offered to append new directories to $incldirs.
 
 search-reverse           M-S
 select-buffer            ^XB  Show the buffer in the current window
 set                      ^XA  Set a variable
-set-encryption-key       M-E	Per buffer; 
+set-encryption-key       M-E  Per buffer; 
                               For all encryption keys pressing and releasing the
                               control key at a specific point affects the key.
                               Assists in keeping the key secret. (Windows only)
 set-fill-column          ^XF  For use in word processing
-set-mark                 M- 	Sets a mark at the current point in the buffer.
-                         M-.	The **ESC** prefix selects which of the 8 markers
-															(modulo 8 so -1 is the last one).
-															All the search commands set mark 7 so
-															-1 goto-mark returns to the search point. **ESC**-^G
-															goto-line also sets mark 7.
+set-mark                 M-   Sets a mark at the current point in the buffer.
+                         M-.  The **ESC** prefix selects which of the 8 markers
+                              (modulo 8 so -1 is the last one).
+                              All the search commands set mark 7 so
+                              -1 goto-mark returns to the search point. **ESC**-^G
+                              goto-line also sets mark 7.
 
 shell-command            ^X!  Execute an OS command in a new task
                          A-6
@@ -427,11 +429,11 @@ execute-macro-12
 execute-macro-14         FNC  Insert contents of the kill buffer, clear it.
 execute-macro-15         A-Q  Customise a user variable
 execute-macro-16         M-FND Delete region
-execute-macro-17         FN^P	search backwards for word right of cursor
-                         FN^N	search forwards for word right of cursor
+execute-macro-17         FN^P search backwards for word right of cursor
+                         FN^N search forwards for word right of cursor
 execute-macro-18
 execute-macro-19         ^O Display command for editting the pipe-command it
-														See above for what Home key does.
+                            See above for what Home key does.
 execute-macro-20         ^P search for pw: from eol, copy text to clipboard
 execute-macro-21         ^XV Compare buffer with file
 execute-macro-22         
@@ -481,8 +483,8 @@ These bindings search for a word to the left respectively right.
  MDCRYPT  0x0800    /* encrytion mode active  */
  MDASAVE  0x1000    /* auto-save mode   */
  MDSRCHC  0x2000    /* search comments also */
- MDDIR    0x4000		/* this file is a directory	*/
- BFACTIVE 0x8000		/* this buffer is active (read in) */
+ MDDIR    0x4000    /* this file is a directory */
+ BFACTIVE 0x8000    /* this buffer is active (read in) */
 
  The System variables:
  --------------------
@@ -504,7 +506,7 @@ $col2ch        Highest palette selector character
                If a character is within the range of the two characters
                above then a colour is selected from $palette
 $curchar       The current character code. &chr $curchar is the current char.
-							 The usage is set $curchar &asc "A".
+               The usage is set $curchar &asc "A".
 $curcol        The current column
 $curline       The Current line number
 $curwidth      The width of the screen
@@ -537,12 +539,12 @@ $line          The line of the current buffer (read only)
 $match         The last string matched 
 $msflag        1: file had ^M on input
 $pagelen       Lines on the screen. Changing this changes the physical length
-$pagewidth		 Width of the screen. Changing this changes the physical width
+$pagewidth     Width of the screen. Changing this changes the physical width
 $palette       A dot separated list of strings str giving colours ESC [ <str> m 
                On msdos it is not this but a sequence of hex digit pairs
                describing colours on the MSDOS screen
 $pending       Read only; typahead text 
-$popup				 Write only; Raise a pop-up with this text.
+$popup         Write only; Raise a pop-up with this text.
 $ram           Not implemented
 $readhook      
 $region        A prefix of the text in the marked region
@@ -555,11 +557,11 @@ $ssave         Save files to an intermediate temporary
 $sscroll       Smooth scroll
 $status        Status of the last editor command
 $uarg          ESC arg to command
-$usesofttab    != 0: Expand tabs to to spaces
 $version       This program version
-$wintitle			 Write only; Change the window title
+$winnew        A window is newly created
+$wintitle      Write only; Change the window title
 $wline         Number of lines in the current window
-$work					 # of buffers modified or not yet read
+$work          # of buffers modified or not yet read
 $wraphook      
 $writehook     
 $xpos          X position on the screen
@@ -568,10 +570,10 @@ $zcmd          The last command
 
  The User variables:
  --------------------
-%NOPASTE	Do not use the Windows cut-paste buffer
+%NOPASTE  Do not use the Windows cut-paste buffer
   (Only used by Emacs macros: )
-%goon  		When dropping a buffer, go (0: back to last, 1: on to next)
-%nn   		The previous number replacing NN when generating number sequences.
+%goon     When dropping a buffer, go (0: back to last, 1: on to next)
+%nn       The previous number replacing NN when generating number sequences.
 
  The Terminal Control Variables
  ------------------------------
@@ -601,7 +603,7 @@ In Unix EMACS uses the command infocmp to read the keyboard codes.
  -----------------
   (The following functions can be used in .rc files.)
 
-	MONAMIC, RSTR, "@",			/* Prompts for a value using value */
+  MONAMIC, RSTR, "@",     /* Prompts for a value using value */
   MONAMIC, RINT, "abs",   /* absolute value of a number */
   DYNAMIC, RINT, "add",   /* add two numbers together */
   DYNAMIC, RSTR, "and",   /* logical and */
@@ -613,7 +615,7 @@ In Unix EMACS uses the command infocmp to read the keyboard codes.
   DYNAMIC, RINT, "bxo",   /* bitwise xor   9-10-87  jwm */
   DYNAMIC, RINT, "cat",   /* concatinate string */
   MONAMIC, RINT, "chr",   /* integer to char conversion */
-  DYNAMIC, RINT, "dir",		/* replace tail of filename with filename */
+  DYNAMIC, RINT, "dir",   /* replace tail of filename with filename */
   NILNAMIC,RINT, "dit",   /* the character in the line above */
   DYNAMIC, RINT, "div",   /* division */
   MONAMIC, RINT, "env",   /* retrieve a system environment var */
@@ -632,18 +634,18 @@ In Unix EMACS uses the command infocmp to read the keyboard codes.
   DYNAMIC, RINT, "mod",   /* mod */
   MONAMIC, RINT, "neg",   /* negate */
   MONAMIC, RSTR, "not",   /* logical not */
-  DYNAMIC, RSTR, "or",  	/* logical or */
+  DYNAMIC, RSTR, "or",    /* logical or */
   DYNAMIC, RINT, "rig",   /* right string(string, pos) */
   MONAMIC, RINT, "rnd",   /* get a random number */
   DYNAMIC, RSTR, "seq",   /* string logical equality check */
   DYNAMIC, RSTR, "sgr",   /* string logical greater than */
   DYNAMIC, RINT, "sin",   /* find the index of one string in another */
   DYNAMIC, RSTR, "sle",   /* string logical less than */
-  DYNAMIC, RINT, "slo", 	/* set lower to upper char translation */
+  DYNAMIC, RINT, "slo",   /* set lower to upper char translation */
   DYNAMIC, RINT, "sub",   /* subtraction */
-  DYNAMIC, RINT, "sup", 	/* set upper to lower char translation */
+  DYNAMIC, RINT, "sup",   /* set upper to lower char translation */
   DYNAMIC, RINT, "tim",   /* multiplication */
-  MONAMIC, RINT, "tri", 	/* trim whitespace off the end of a string */
+  MONAMIC, RINT, "tri",   /* trim whitespace off the end of a string */
   MONAMIC, RINT, "upp",   /* uppercase string */
-  TRINAMIC,RINT, "xla", 	/* XLATE character string translation */
+  TRINAMIC,RINT, "xla",   /* XLATE character string translation */
 

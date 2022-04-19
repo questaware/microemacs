@@ -426,6 +426,7 @@ int
 findTag(int f, int n)
 {
     char  tag[1024+1];
+    Bool middle = false;
 					    	/* If we are not in a word get a word from the user.*/
     if ((n & 0x02) || !inword())
     {											/*---	Get user word. */
@@ -437,6 +438,7 @@ findTag(int f, int n)
     {	char * ss = curwp->w_dotp->l_text;
 		int  ll   = curwp->w_dotp->l_used;
         int  offs = curwp->w_doto;
+        middle = offs > 0 & ss[offs - 1] == ':';
 												/* Go to the start of the word.*/
         while (--offs >= 0 && (ss[offs] == ':' || isword(ss[offs])))
             ;
@@ -464,7 +466,10 @@ findTag(int f, int n)
 			;
 		if (ch != 0)
 		{	*s = 0;
-			res = Tag::findTagExec(tag);
+			if (s[1] == ':' && middle)
+				res = Tag::findTagExec(s+2);
+			if (res != true) 
+				res = Tag::findTagExec(tag);
 		}
 	}
 	if (res == true)

@@ -411,6 +411,7 @@ int Pascal splitwind(int f, int n)
 	modeline(curwp);
 	// g_lastlp = NULL;
 	modeline(wp);
+	pd_winnew = 1;
 	return TRUE;
 }}}}}
 

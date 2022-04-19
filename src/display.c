@@ -369,7 +369,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	{	int chrom = chrom_nxt;
 		chrom_nxt = CHR_0;
 		if (vtc >= term.t_ncol)
-		{ tgt[term.t_ncol] = (short)(chrom + '$');
+		{ tgt[term.t_ncol - 1] = (short)(chrom + '$');
 			break;
 		}
 		
@@ -1068,7 +1068,7 @@ int /*Pascal*/ update(int force)
 														 				/* check the framing */
 				if			(set & (WFTXTU+WFTXTD))
 					scrollupdn(set, wp);	
-				else if (set == WFEDIT)
+				else if (set & WFEDIT)
 					updall(0, wp);			/* update EDITed line */
 				else
 				{ if (set)
@@ -1131,7 +1131,7 @@ void Pascal updateline(int row)
 
 	if (!caution) 								 /* skip common chars at the left */
 	{ while (cp1 < cp9 && cp1[0] == ph1[0])
-		{ if (*cp1 & 0xf000)
+		{ if (*cp1 & 0xff00)
 			{ int wh = (*cp1) >> 8;
 				if      (wh & 0x40)
 					prechrom = prechrom & 0xf0 | (wh & 0xf);
@@ -1141,6 +1141,8 @@ void Pascal updateline(int row)
 					prechrom |= 0x8;																
 				else if (wh & 0x20)
 					prechrom |= 0x8;				// cannot do bold
+				else
+					prechrom = wh & 7;
 			}
 			++cp1;
 			++ph1;
@@ -1168,21 +1170,18 @@ void Pascal updateline(int row)
   short *phz = &ph->v_text[term.t_ncol];
   short *ph9 = phz;
 														/* terminals cannot do this */
-#if 0
+#if 1
 	while (cp9 > cp1)
-	{	if (*--cp9 != *--ph9)		/* find out if there is a match on the right */
-		{	if (cp9[0] == ' ' && same_ct == 0)
-				continue;
+	{	if (*--cp9 != ' ' || *--ph9 != ' ')	/* find out if theres a match on the right */
 			break;
-		}
-		if (*cp9 != ' ')
-			++same_ct;
 	}
+	++cp9;
+	++ph9;
 #endif
  	--cp1;
 	while (++cp1 <= cp9 /* cpend */)		/* Ordinary. */
 	{	*ph1++ = *cp1;
-		if (*cp1 & 0xf000)
+		if (*cp1 & 0xff00)
 		{ int wh = (*cp1) >> 8;
 			do
 			{	if      (wh & 0x40)
@@ -1193,6 +1192,8 @@ void Pascal updateline(int row)
 					prechrom |= 0x8;			// bold
 				else if (wh & 0x20)
 					prechrom |= 0x8;			// cannot do bold
+				else
+					prechrom = wh & 7;
 				tcapchrom(prechrom | bg );
 			}
 			while (0);		// only one of at present

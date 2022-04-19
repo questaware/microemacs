@@ -257,12 +257,11 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 
   loglog2("PATH %s PAT  %s", msd_path, msd_pat);
 
-{	char * dir;
-  
+{	  
 #if   S_WIN32
 	const char * const stars = "./*.*";
-  dir = pe == 0 ? stars : msd_relpath;
-  strpcpy(&msd_path[pe], stars+1, 4);
+  const char * dir = pe == 0 ? stars : msd_relpath;
+  strpcpy(&msd_path[pe], stars+1, 5);
 /*eprintf(null, "FF %s\n", dir);*/
 
 #if VS_CHAR8
@@ -280,7 +279,9 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
     return EDENIED;
 
 #else
-  dir = pe == 0 ? "." : msd_relpath;
+  const char * dir = pe == 0 ? "." : msd_relpath;
+  if ((props & MSD_USEPATH) && pe_last_sl > 0)
+  	msd_relpath[pe_last_sl] = 0;
   msd_curr = opendir(dir);
 /*eprintf(null, "%d %d OPen %s\n", msd_ix, msd_chd, dir);*/
   if (msd_curr == NULL)
@@ -289,6 +290,9 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 //  msd_empty_dir = true;
     return EDENIED;
   }
+  
+  if (pe_last_sl > 0)
+  	msd_relpath[pe_last_sl] = '/';
 #endif
 
   return OK;

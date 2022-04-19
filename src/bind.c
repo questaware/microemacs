@@ -722,8 +722,8 @@ int Pascal buildlist(const char * mstring)
 { const NBIND *nptr;	/* pointer into the name binding table */
   int cc = TRUE;
 
-#define bltbl "^B	kill Buffer contents\n" \
-              "^F	Complete filename\n" \
+#define bltbl "^B	kill_buffer contents\n" \
+              "^F	Complete a filename\n" \
 				      "^G	Abort\n"\
 				      "^K	Chars to eol\n"\
 				      "^N	Filename of buffer\n"\

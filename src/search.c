@@ -411,7 +411,6 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		}
 #endif
 	{	char color = '2'; // pd_highlight == NULL ? '2' : pd_highlight[0];
-		pd_sgarbf = TRUE;
 		pd_highlight = remallocstr(&pd_highlight, NULL, pmlen);
 		strcpy(pd_highlight+1, pd_patmatch)[-1] = color;
 	  update(TRUE);

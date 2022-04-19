@@ -32,18 +32,17 @@ btk execute-macro-1 
 	  save-file
   !endif
 
+	set %wd $winnew
 	set %wk $work
-;	set %oo @&cat "W " %wk
   set %mybuf $cbufname
   set $status 0
 	!force drop-buffer %mybuf
 	!if $status
-;		set %oo @&cat "WW " $work
 	  !if &equ $work %wk
   	  !force exit-emacs
 	  !endif
   !endif
-	!if &equ $work 1
+	!if &or &equ $work 1 &equ %wd 1
 		!force delete-window
 	!endif
 !endm

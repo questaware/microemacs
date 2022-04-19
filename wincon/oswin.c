@@ -977,10 +977,12 @@ int pipefilter(wh)
 		strpcpy(line, g_ll.lastline[0], sizeof(line)-2*NFILEN);
 	else
 #endif
-	{ prompt[1] = 0;
+	{ extern int g_last_cmd;
+	  prompt[1] = 0;
 		if (mlreply(prompt, line, NLINE) <= FALSE)
 			return FALSE;
 			
+		g_last_cmd = g_ll.ll_ix & MLIX;
 		if (line[0] == '%' || line[0] == '\'')
 		{ char sch;
       int ix;
@@ -1120,22 +1122,22 @@ int Pascal spawn(int f, int n)
 }
 
 
-char * searchfile(char * result, char * pipefile, FILE ** ip_ref)
+char * searchfile(char * result, Fdcr fdcr)
 
-{ FILE * ip = *ip_ref;
+{ FILE * ip = fdcr->ip;
 	if (ip == NULL)
 	{ char buf[NFILEN+20];
 		char * basename = result+strlen(result)+1;
 		
 		char * cmd = concat(buf, "ffg -/ ", basename, " ", result, NULL);
 
-		char * fnam2 = mkTempCommName('o', pipefile);
+		char * fnam2 = mkTempCommName('o', fdcr->name);
 		Cc cc = WinLaunch(WL_IHAND+WL_HOLD+WL_SHELL,
-											cmd, NULL, NULL, fnam2);
+												cmd, NULL, NULL, fnam2);
 		if (cc != OK)
 			return NULL;
 		ip = fopen(fnam2, "rb");
-		*ip_ref = ip;
+		fdcr->ip = ip;
 		if (ip == NULL)
 			return NULL;
 	}
@@ -1143,7 +1145,7 @@ char * searchfile(char * result, char * pipefile, FILE ** ip_ref)
 { char * fname = fgets(result, NFILEN, ip);
 	if (fname == NULL)
 	{	fclose(ip);
-		unlink(pipefile);
+		unlink(fdcr->name);
 	}
 	else
 	{ int sl = strlen(fname)-2;

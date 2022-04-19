@@ -143,14 +143,17 @@ static void Pascal editloop(int c_); /* forward */
 static
 void Pascal dcline(int argc, char * argv[])
 
-{	int nopipe = iskboard();
-  char * startfile = EMACSRC;	/* startup file */
+{ char * startfile = EMACSRC;	/* startup file */
 	BUFFER *bp;
 	BUFFER * firstbp = NULL;	/* ptr to first buffer in cmd line */
 	int gline = 0; 	 				/* line to goto at start or 0 */
 	int genflag = 0;
 	const char * def_bname = "main";
 	int	carg;
+	int nopipe = iskboard();
+#if S_WIN32 == 0
+  g_nopipe = nopipe;
+#endif
 
   g_ll.ll_ix = -1;
 #if S_MSDOS && 0
@@ -291,10 +294,6 @@ void Pascal dcline(int argc, char * argv[])
 			}
 		}
 	} // loop
-
-#if S_WIN32 == 0
-  g_nopipe = nopipe;
-#endif
 
 	if (firstbp == null)
 	{	firstbp = bfind(def_bname, TRUE, 0);
@@ -450,6 +449,7 @@ int main(int argc, char * argv[])
 #if S_WIN32
 	ClipSet(NULL);
 //tcapbeeol(-1,0);
+	tcapmove(255, 0);
 #else
 	tcapclose(0);
 #endif
@@ -737,7 +737,6 @@ Pascal quit(int f, int n)
 		eexitflag = TRUE; /* flag a program exit */
 #if S_MSDOS
 //	ttrow = 0;
-		tcapmove(255, 0);
 #endif
 	}
 

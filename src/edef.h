@@ -59,6 +59,7 @@ extern char nulls[];
 #define	CMP_BUFFER	 0
 #define	CMP_COMMAND	 1
 #define	CMP_FILENAME 2
+#define	CMP_TOSPACE  3
 				/* Directive definitions */
 #define DIF		0
 #define DELSE		1
@@ -374,6 +375,11 @@ typedef struct Paren_s
 
 extern Paren_t g_paren;
 
+typedef struct Fdcr_s
+{ FILE * ip;
+  char   name[NFILEN+1];
+} Fdcr_t, *Fdcr;
+
 #include "epredef.h"
 
 					   /*  Internal defined functions */
@@ -403,6 +409,7 @@ extern int kinsert_n;
 extern int g_got_uarg;
 extern int g_got_search;
 
+
 /* initialized global external declarations */
 NOSHARE extern short g_colours;		/* backgrnd (black*16) + foreground (white) */
 
@@ -421,8 +428,6 @@ NOSHARE extern int g_lbound;		/* leftmost col of current line being displayed*/
 #endif
 NOSHARE extern int abortc;			/* current abort command char	*/
 NOSHARE extern int sterm;				/* search terminating character */
-
-NOSHARE extern int prenum;			/*     "       "     numeric arg */
 
 //NOSHARE extern char highlight[64];	/* the highlight string */
 
@@ -449,7 +454,7 @@ NOSHARE extern BUFFER *curbp; 		/* Current buffer		*/
 NOSHARE extern WINDOW *wheadp;		/* Head of list of windows	*/
 NOSHARE extern BUFFER *bheadp;		/* Head of list of buffers	*/
 NOSHARE extern BUFFER *blistp;		/* Buffer for C-X C-B		*/
-NOSHARE extern LL	g_ll;
+				extern LL	g_ll;
 
 #if	DIACRIT
 NOSHARE	extern char lowcase[HICHAR];	/* lower casing map		*/
