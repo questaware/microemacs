@@ -33,7 +33,7 @@ int Pascal orwindmode(int mode)
   int ct = 0;
 				   /* force all windows to redraw */
   for (wp = wheadp; wp != NULL; wp = wp->w_next)
-  { wp->w_flag |= (mode & (WFONLY-1));
+  { wp->w_flag |= (mode /*& (WFONLY-1)*/);
     ++ct;
   }
 
@@ -582,8 +582,10 @@ int Pascal newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 	if (term.t_nrowm1 != dpth - 1 ||
 	    term.t_ncol != wid)
 	{ term.t_ncol = wid;
+#if MEMMAP == 0
 	  term.t_margin = wid / 10;
 	  term.t_scrsiz = wid - (term.t_margin * 2);
+#endif
 		term.t_nrowm1 = dpth - 1;			
 	  vtinit(wid,dpth-1);
 //#if S_WIN32 == 0

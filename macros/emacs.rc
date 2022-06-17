@@ -37,13 +37,17 @@ btk execute-macro-1 
   set %mybuf $cbufname
   set $status 0
 	!force drop-buffer %mybuf
-	!if $status
-	  !if &equ $work %wk
-  	  !force exit-emacs
+	!if &not &seq $status "TRUE"
+		select-buffer %mybuf
+	!else
+		!if &equ $work %wk
+  		!force exit-emacs
 	  !endif
-  !endif
+	!endif
 	!if &or &equ $work 1 &equ %wd 1
+		set $discmd &sub $discmd 1
 		!force delete-window
+		set $discmd &add $discmd 1
 	!endif
 !endm
 

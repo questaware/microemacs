@@ -228,7 +228,7 @@ staticc int   msd_nlink[MAX_TREE+1];		/* stack of number of dirs */
 Cc msd_init(Char const *  diry,	/* must not be "" */
 						int     props)	/* msdos props + top bits set => repeat first file */
 { msd_props = props;
-  msd_attrs = 0;
+//msd_attrs = 0;
   msd_iter = DOS_FFILE;
 
 { Char ch;
@@ -251,7 +251,9 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
   }
 
   if (pe > 0 && msd_path[pe-1] != '/')
-    msd_path[pe++] = '/';
+  { msd_path[pe] = '/';
+  	msd_path[++pe] = 0;
+  }
 
   g_pathend = pe;
 
@@ -384,8 +386,14 @@ static Bool extract_fn()
     return false;
 
 #if S_WIN32
+  msd_attrs = msd_sct.dwFileAttributes;
+  if (msd_attrs & MSD_DIRY)
+  { 
+    tl[-1] = '/';
+    tl[0] = 0;
+  }
   msd_stat.st_size = msd_sct.nFileSizeLow;
-  msd_a = msd_sct.dwFileAttributes;
+//msd_a = msd_sct.dwFileAttributes;
 
 /*eprintf(null, "doFatDate\n");*/
 
@@ -470,12 +478,15 @@ static Bool extract_fn()
   }
 #endif
 
+#if S_WIN32 == 0
   msd_attrs = msd_a;
-  if (msd_a & MSD_DIRY)
+
+  if (msd_attrs & MSD_DIRY)
   { 
     tl[-1] = '/';
     tl[0] = 0;
   }
+#endif
 
   loglog2("Match %s %s", msd_pat, s);
 

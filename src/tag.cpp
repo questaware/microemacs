@@ -197,22 +197,21 @@ int Tag::get_to_newline(void)
  * Search for a tag in the give tag filename
  * 
  * returns
+ *   -1 - Found nothing
  *    0 - Found tag
  *    1 - Found tag file but not tag
- *    2 - Found nothing
  */
 int Tag::findTagInFile(const char *key, const char * tagfile)
 
 { FILE * fp = g_fp = fopen(tagfile, "rb");
   if (fp == NULL)
-    return 2 ;
+    return -1;
 
 { char * tagline = Tag::g_tagline;
   int fd_cc = 1;
-  int start = Tag::g_LastStart;			/* points after newline */
-  int end = start;
-  int pos = start;
-  int seq = start;				/* < 0 : chop, 0 : never, > 0 fseek to here */
+  int last_pos = 1;
+  int pos = Tag::g_LastStart;			/* points after newline */
+  int seq = pos;				/* < 0 : chop, 0 : never, > 0 fseek to here */
   if (seq >= 0)
   { if (seq > 0)
 	  fseek(fp, seq, 0);
@@ -226,61 +225,58 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
   }}
   else
   {	int got = get_to_newline();
+	free(Tag::g_alt_root);
+	Tag::g_alt_root = NULL;
 	if (tagline[0] == ' ')
-	  Tag::g_alt_root = strdup(Tag::g_tagline+1);
-	else
-	{ free(Tag::g_alt_root);
-	  Tag::g_alt_root = NULL;
-  	}
+	  Tag::g_alt_root = strdup(tagline+1);
 
-  {	int last_pos = -1;
-	start = 0;
+  {	int start = 0;
 	fseek(fp, 0L, 2);
-    end = ftell(fp);						/* points after newline */
+  {	int end = ftell(fp);				/* points after newline */
   
-    while (end > 0)
+    while (1)
   	{ if (seq < 0)
 	  { pos = (start+end) >> 1;
 	    fseek(fp, pos, 0);
 	  { int got = get_to_newline();
 		pos += got;
 	  }}
-	  											/* Get line of info */
+	  									/* Get line of info */
     { int got = get_to_newline();
 	  pos += got;
-      fd_cc = got == 0 					 ? 0 : 
-			  last_pos == pos && seq < 0 ? 0 : strcmp(key, tagline);
-	  if 		(fd_cc > 0)					/* forward */
-	    start = pos;
-	  else if (fd_cc < 0)					/* backward */
-	  { last_pos = pos;
-		end = pos - got;
-	    if (seq >= 0)
-	  	  break;
+	  if (got == 0)
+	  	break;
+	  fd_cc = strcmp(key, tagline);
+	  if 	  (fd_cc > 0)				/* forward */
+	  { start = pos;
+		continue;
 	  }
-	  else
-	  { // Tag::g_LastStart = pos;				/* point after newline */
-	    if (seq >= 0)
+	  if (fd_cc < 0)					/* backward */
+	  {	if (seq >= 0)
 	  	  break;
-
-		while (1)
-		{ pos -= LOOK_BACK;
-		  if (pos < 0)
-		    pos = 0;
-	  	  fseek(fp, pos, 0);
-		  if (pos > 0)
-		  { pos += get_to_newline();
-		  { int g = get_to_newline();
-			if (g > 0 && strcmp(key, tagline) == 0)
-			  continue;
-		  }}
-		  break;									/* at 0 or before target */
+	 	if (last_pos != pos)
+		{ last_pos = pos;
+		  end = pos - got;
+		  continue;
 		}
-
-	    seq = 0;									/* No more seeking */
 	  }
+	  if (seq < 0)
+	  { pos -= LOOK_BACK;
+		if (pos < 0)
+		  pos = 0;
+		while (1)
+		{ fseek(fp, pos, 0);
+		  if (pos > 0)
+			pos += get_to_newline();
+	  	{ int g = get_to_newline();
+	  	  fd_cc = strcmp(key, tagline);
+	  	  if (g == 0 || fd_cc <= 0)
+	  	  	break;
+		}}
+	  }
+	  break;							/* at 0 or before target */
     }}
-  }}
+  }}}
 
   Tag::g_LastStart = pos;					/* point after newline */
 
@@ -382,7 +378,7 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 			strcpy(tagfile,pat);			/* save for restore */
 #endif
 			if (typ == 0)	
-	    		strcat(strpcpy(dd+1, key, sizeof(pat)-20), "[^A-Za-z0-9_]");
+	    		strcat(strcpy(dd+1, key), "[^A-z0-9_]");
 	
 			else	/* look for end '/' or '?' - start at end and look backwards*/
 			{	char ch;
@@ -406,9 +402,10 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 
 			int rc = hunt(typ != '?' ? 1 : -1, 0);
 			bp->b_flag = smode;
-#if 0
-	    	strcpy(pat,tagfile);
-#endif
+
+			if (rc == FALSE)
+	    		strcpy(pat,tagfile);
+
 		    return rc;
 		}
 	}
@@ -426,6 +423,9 @@ int
 findTag(int f, int n)
 {
     char  tag[1024+1];
+#if NPAT+22 > 1024
+ error error
+#endif
     Bool middle = false;
 					    	/* If we are not in a word get a word from the user.*/
     if ((n & 0x02) || !inword())

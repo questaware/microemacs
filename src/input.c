@@ -471,7 +471,7 @@ static int USE_FAST_CALL redrawln(int clamp, char buf[])
 
 int g_chars_since_ctrl;
 
-int gs_keyct;
+int g_gs_keyct;
 
 static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
@@ -721,7 +721,7 @@ getliteral:
     }
   }}
 
-  gs_keyct = key_ct;
+  g_gs_keyct = key_ct;
   ++g_cursor_on;
 
 	if (cc > FALSE)

@@ -51,16 +51,14 @@ BUFFER *Pascal getdefb()	/* get the default buffer for a use or kill */
 }
 
 static 
-BUFFER * nextbuf(int f, int n) /*switch to next buffer in buffer list*/
+BUFFER * nextbuf(int n) /*switch to next buffer in buffer list*/
 
-{ int cc = lastbuffer(f, -n);
+{ int cc = lastbuffer(0, -n);
 	if (cc > 0)
 		return curbp;
 
 {	BUFFER * bp = getdefb();
-		
-	if (bp != NULL)
-		swbuffer(bp);
+	swbuffer(bp);
 
 	return bp;
 }}
@@ -68,7 +66,7 @@ BUFFER * nextbuf(int f, int n) /*switch to next buffer in buffer list*/
 
 int Pascal nextbuffer(int f, int n)
 
-{ return nextbuf(f,n) != NULL;
+{ return nextbuf(n) != NULL;
 }
 
 
@@ -116,50 +114,65 @@ int g_top_luct;
 
 int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 
-{ BUFFER *bp;
-  BUFFER * bestbp = NULL;
-  short thislu = curbp->b_luct;
-	short toplu = n > 0 ? -1 : 32000;
+{	short sign = n <= 0 ? -1 : 1;
+  short thislu = curbp->b_luct * sign;
 	int count = 0;
+//int remain = -1;
 
 #if _DEBUG
   scan_buf_lu();
 #endif
 
-	for (bp = bheadp; bp != NULL; bp = bp->b_next)
-		if ((bp->b_flag & BFINVS) == 0)
-		{ if (f >= 0)											// for lastbuffer(-1, -1);
-				++count;
-			else
-			{	if (bp->b_flag & BFCHG)
-					return 1;
-			}
-		{ int lu = bp->b_luct;
-			if (lu == 0)
-				continue;
+	while (1)
+	{	BUFFER *bp;
+		short toplu = 0;
+  	BUFFER * bestbp = NULL;
+		for (bp = bheadp; bp != NULL; bp = bp->b_next)
+			if ((bp->b_flag & BFINVS) == 0)
+			{	if (f >= 0)
+					++count;
+				else
+				{	if (bp->b_flag & BFCHG)
+						return 1;
+				}
+	
+			{ int lu = bp->b_luct * sign;
+				if (lu == 0)
+					continue;
+	
+	      if (lu < thislu)
+				{	//++remain;
+					if (lu > toplu)
+	      	{	toplu = lu;
+	        	bestbp = bp;
+					}
+	      }
+	    }}
+	
+		if (n == 0)
+			return count;
+	
+		if (sign > 0 && toplu == 0 && count > 1 && thislu != 32000)
+		{	thislu = 32000;
+			continue;
+		}
+	
+		pd_winnew = 0;
+	
+	  if  (bestbp == NULL)
+		  return 0;
 
-      if (n > 0 ? lu > toplu && lu < thislu	// previous
-      				  : lu < toplu && lu > thislu)// next
-      { toplu = lu;
-        bestbp = bp;
-      }
-    }}
+	  if (bestbp != curbp)
+	  {	int lu = bestbp->b_luct;
+			swbuffer(bestbp);
+		 	bestbp->b_luct = lu;
+	  }
+	
+//  if (n > 0 && remain == 0)
+//		mbwrite(TEXT86);
 
-	if (n == 0)
-		return count;
-
-	pd_winnew = 0;
-
-  if (bestbp != curbp && bestbp != NULL)
-  {	int lu = bestbp->b_luct;
-		swbuffer(bestbp);
-	 	bestbp->b_luct = lu;
-  	return true;
-  }
-  else if (n > 0)
-  	mlwrite(TEXT86);
-
-	return false;
+		return 1;
+	}
 }
 
 #if 0
@@ -180,70 +193,48 @@ int Pascal topluct()	/* calculate top luct */
 
 void Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 	
-{			 /* let a user macro get hold of things...if he wants */
-	execkey(&exbhook, FALSE, 1);
+{	
+	if (bp != NULL)
+		 /* let a user macro get hold of things...if he wants */
+	{	execkey(&exbhook, FALSE, 1);
 
-	bp->b_luct = ++g_top_luct;
+		curbp = bp; 			/* Switch. */
+		bp->b_luct = ++g_top_luct;
 
-	curbp = bp; 			/* Switch. */
- 	leavewind(0, NULL);
+	{	int flag = bp->b_flag;
+	  bp->b_flag |= BFACTIVE;			/* code added */
 
-{ char * fn = bp->b_fname;
-	int flag = bp->b_flag;
-  bp->b_flag |= BFACTIVE;			/* code added */
-
-	if (fn != null)
-	{
+	{ char * fn = bp->b_fname;
+		if (fn != null)
+		{
 #if S_WIN32
-		setconsoletitle(fn);
+			setconsoletitle(fn);
 #endif
-		if (!(flag & BFACTIVE))		/* not active yet*/
-		{ 
-			readin(fn, FILE_LOCK);
-			curwp->w_flag |= WFFORCE;
+			if (!(flag & BFACTIVE))		/* not active yet*/
+			{ 
+				readin(fn, FILE_LOCK);
+			}
 		}
-	}
 
-	upwind(TRUE);
-{	WINDOW *wp = curwp;
-	wp->w_flag |= WFMODE|WFHARD;			 /* Quite nasty.			 */
-	wp->w_bufp	= bp;
-	*(WUFFER*)wp = *(WUFFER*)bp;
-	setcline();
-										/* let a user macro get hold of things...if he wants */
-	g_clring = (bp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS+BCML));
-	
-	if (g_clring & BCCOMT)
-		addnewbind(CTRL | 'M', indent);
-
-	execkey(&bufhook, FALSE, 1);
-}}}
-
-
-#if 0
-
-int count_work(void)
-
-{ BUFFER * bp;
-	int ct = 0;
-
-	for (bp = bheadp; bp != NULL; bp = bp->b_next)
-	{ if      ((bp->b_flag & (BFACTIVE+BFINVS)) == 0)
-			++ct;
-		else if (bp->b_flag & BFCHG)
-			++ct;
-	}
-	
-	return ct;
+ 		leavewind(0, NULL);
+		upwind(TRUE);
+	{	WINDOW *wp = curwp;
+		wp->w_flag |= WFMODE|WFHARD|WFFORCE;			 /* Quite nasty.			 */
+		wp->w_bufp	= bp;
+		*(WUFFER*)wp = *(WUFFER*)bp;
+											/* let a user macro get hold of things...if he wants */
+		g_clring = (bp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS+BCML));
+		
+		setcline();
+		execkey(&bufhook, FALSE, 1);
+	}}}}
 }
-
-#endif
 
 /* Attach a buffer to a window. 
  */
 int Pascal usebuffer(int f, int n)
-{
-	BUFFER * bp = getcbuf(TRUE, getdefb(), TEXT24);
+
+{	BUFFER * bp = getcbuf(TRUE, getdefb(), TEXT24);
 							/* "Use buffer" */
 	if (!bp)
 		return ABORT;
@@ -262,9 +253,8 @@ static void init_buf(BUFFER * bp)
 	bp->b_baseline.l_fp = (Lineptr)lp;
 	bp->b_baseline.l_bp = (Lineptr)lp;
   bp->b_baseline.l_props = L_IS_HD;
-  bp->b_doto = 0;
 	bp->b_flag &= ~BFCHG; 		/* Not changed		*/
-	memset((char *)&bp->mrks, 0, sizeof(MARKS));
+	memset(&bp->b_doto, 0, sizeof(int)*2 + sizeof(bp->mrks));	
 //bp->b_remote = NULL;
 /*bp->b_fcol = 0;*/
 }
@@ -277,11 +267,10 @@ static void init_buf(BUFFER * bp)
  * the caller must arrange for the updates that are required. 
  * Return TRUE if everything looks good.
  */
-int Pascal bclear(BUFFER * bp_)
+int Pascal bclear(BUFFER * bp)
 	
 { LINE * 	lp;
 	LINE * 	nlp;
-	BUFFER * bp = bp_;
 	int 	 s;
 
 	if ((bp->b_flag & (BFINVS+BFCHG)) == BFCHG /* Not scratch buffer.  */
@@ -303,9 +292,8 @@ int Pascal bclear(BUFFER * bp_)
 { WINDOW * wp;
 	for (wp = wheadp; wp != NULL; wp = wp->w_next)
 		if (wp->w_bufp == bp)
-		{	wp->mrks = bp->mrks;
-			wp->w_dotp = &bp->b_baseline;
-			wp->w_doto = 0;
+		{	wp->w_dotp = &bp->b_baseline;
+			memset(&wp->w_doto, 0, sizeof(int)*2 + sizeof(wp->mrks));	
 		}
 
 	return TRUE;
@@ -367,7 +355,7 @@ int Pascal dropbuffer(int f, int n)
 	(void)lastbuffer(0,1);
 { BUFFER * nb = curbp;
 	if (nb == bp)
-		nb = nextbuf(0,1);
+		nb = nextbuf(1);
 	
 	if (nb == NULL || nb == bp)			/* fake deletion of last buffer */
 		return TRUE;
@@ -438,11 +426,11 @@ int Pascal listbuffers(int iflag, int n)
 	Int avail = curwp->w_ntrows - 2;
 																					/* output the list of buffers */
 	for (bp = bheadp; bp != NULL; bp = bp->b_next) 
-	{ if ((bp->b_flag & BFINVS) && iflag == FALSE)
+	{ if ((bp->b_flag & BFINVS) && (iflag == 0))
 			continue;
 
-		fmt_modecodes(line, bp->b_flag);
 		line[NUMMODES-2] = 0;
+		fmt_modecodes(line, bp->b_flag);
 
 		--avail;
 	{ Int	nbytes = 0L;													/* Count bytes in buf.	*/
@@ -469,33 +457,6 @@ int Pascal listbuffers(int iflag, int n)
 }}}
 
 
-#if 0
-
-static
-void Pascal unqname(char * name)			/* make sure a buffer name is unique */
-									/* name to check on */
-{																			/* check to see if its in the buffer list */
-	while (bfind(name, 0, FALSE) != NULL)
-	{	char *sp, *sp_;
-	  for (sp = name; *sp; ++sp)	/* go to the end of the name */
-		  ;
-		sp_ = sp;
-	 	for (; --sp > name && *sp != '.';)/* go to the last dot */
-		  ;
-		--sp;
-		
-		if (sp >= name && (in_range(*sp, '0','8') || 
-		                   in_range(*sp, 'a','y') ||
-		                   in_range(*sp, 'A','Z')))
-		  *sp += 1;
-		else
-		{ *sp_++ = 'Z';
-		  *sp_ = 0;
-		}
-	}
-}
-
-#endif
 
 int g_bfindmade;
 

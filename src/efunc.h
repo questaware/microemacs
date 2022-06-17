@@ -32,7 +32,7 @@ const NBIND names[] =
 	{"bind-to-key",					bindtokey},
 	{"btk",									bindtokey},
 	{"buffer-mode",					togmod},
-	{"buffer-position",			showcpos},
+	{"buffer-position",			bufferposition},
 	{"case-region-lower",		lowerregion},
 	{"case-region-upper",		upperregion},
 	{"case-word-capitalize",capword},
@@ -182,7 +182,6 @@ const NBIND names[] =
 #endif
 	{"narrow-to-region",		narrow},
 	{"newline",							ins_newline},
-	{"newline-and-indent",	indent},
 	{"next-buffer",					nextbuffer},
 	{"next-line",						forwline},
 	{"next-page",						forwpage},

@@ -78,7 +78,7 @@ extern PD_VAR predefvars[];
 #define pd_gflags  predefvars[EVGFLAGS].i
 #define pd_xpos	   predefvars[EVXPOS].i		// For mouse
 #define pd_ypos	   predefvars[EVYPOS].i
-#define keyct      predefvars[EVKEYCT].i
+#define pd_keyct   predefvars[EVKEYCT].i
 #define pd_tabsize predefvars[EVHARDTAB].i
 #define pd_hjump	 predefvars[EVHJUMP].i
 #define cmt_colour predefvars[EVCMTCOL].i
@@ -88,12 +88,11 @@ extern PD_VAR predefvars[];
 #define diagflag   predefvars[EVDIAGFLAG].i
 #define pd_discmd	 predefvars[EVDISCMD].i /* 0 : nowt, -1 record only */
 #define g_disinp	 predefvars[EVDISINP].i
-#define minfcol    predefvars[EVFCOL].i
+#define pd_fcol		 predefvars[EVFCOL].i
 #define ssave      predefvars[EVSSAVE].i
 #define pd_incldirs predefvars[EVINCLD].p
 #define mouseflag  predefvars[EVMSFLAG].i
 #define pd_predef  predefvars[EVLINE].i /* stolen */
-#define quotec     predefvars[EVPOPUP].i
 #define pd_sgarbf  predefvars[EVBUFHOOK].i
 #define pd_palstr  predefvars[EVPALETTE].p
 #define pd_pat		 predefvars[EVSEARCH].p
@@ -112,7 +111,6 @@ extern PD_VAR predefvars[];
 X#define xxx	  predefvars[EVREADHK]
 X#define g_execlevel predefvars[EVCMDHK]
 X#define abortc    predefvars[EVKILL]
-X#define sterm     predefvars[EVLANG]
 X#define g_prefix    predefvars[EVLASTDIR]
 X#define prenum    predefvars[EVLASTMESG]
 X#define cryptflag predefvars[EVVERSION]

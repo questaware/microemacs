@@ -228,15 +228,11 @@ int Pascal gotoeob(int notused, int n)
 }
 
 
-extern KEYTAB * prevbind;
-
 int Pascal forwline(int notused, int n_)
 							/* if we are on the last line as we start....fail the command */
 { int n = n_;
   LINE * lim = &curbp->b_baseline;
 //int inc = 0;
-
-	static int g_curgoal;
 
 //thisflag |= CFCPCN;			/* flag this command as a line move */
 
@@ -245,7 +241,9 @@ int Pascal forwline(int notused, int n_)
 //	inc = 1;
   }
 
-{ LINE * dlp = curwp->w_dotp;
+{	static int g_curgoal;
+
+  LINE * dlp = curwp->w_dotp;
   if (dlp == lim)
     return FALSE;
 																/* move the point down */
@@ -258,10 +256,12 @@ int Pascal forwline(int notused, int n_)
 		{	--n;
     	dlp = lforw(dlp);
     }
-																		/* if the last command was not a line move,
-																			 reset the goal column */
-  if (keyct == 1 && prevbind != NULL && prevbind->k_ptr.fp != backline)
+																/* if the last command was not a line move,
+																	 reset the goal column */
+	if (pd_keyct == 1 || 1)
+	{
     g_curgoal = getccol();
+	}
 
   curwp->w_dotp  = dlp;							/* Can be b_baseline meaning at end */
   curwp->w_doto  = getgoal(g_curgoal, dlp);
@@ -312,10 +312,10 @@ int Pascal gotoeop(int notused, int n)  /* go forword to end of current paragrap
     { if (llength(ln) == 0 ||
 				  (suc = lgetc(ln, 0)) == '\t' || suc == ' ')
 				break;
-      if (dir > 0)
-        ln = lforw(ln);
-      else
-        ln = lback(ln);
+			if (dir > 0)
+				ln = lforw(ln);
+			else
+				ln = lback(ln);
     }
 
     wp->w_dotp = ln;

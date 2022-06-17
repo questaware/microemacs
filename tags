@@ -3,7 +3,6 @@ ADDCR	./mtgdi/BUILD.H
 ADDCR	./wincon/BUILD.H
 AEDIT	./mtgdi/BUILD.H
 AEDIT	./wincon/BUILD.H
-ALCYON	./mtgdi/BUILD.H
 ALCYON	./wincon/BUILD.H
 ALTD	./src/edef.h
 AM_ME	./src/sinc.cpp
@@ -18,9 +17,7 @@ ASCII	./unix/build.h
 ASCII	./wincon/estruct.h
 ASLEEP	./mtgdi/base.h
 ASLEEP	./src/base.h
-ATARI	./mtgdi/BUILD.H
 ATARI	./wincon/BUILD.H
-AZTEC	./mtgdi/BUILD.H
 AZTEC	./wincon/BUILD.H
 A_BEL	./mtgdi/base.h
 A_BS	./mtgdi/base.h
@@ -164,7 +161,6 @@ DOS_FFILE	./src/msdir.c
 DOS_NFILE	./src/msdir.c
 DO_SRIAL	./src/map.c
 DRETURN	./src/edef.h
-DTL	./mtgdi/BUILD.H
 DTL	./wincon/BUILD.H
 DT_TABLE	./src/msdir.c
 DUMMY_STDIN_FILE	./wincon/oswin.c
@@ -964,6 +960,7 @@ bltbl	./src/bind.c
 bmfind	./src/exec.c
 bpushk	./unix/terminal.c
 bufappline	./src/line.c
+bufferposition	./src/random.c
 bufflink	./src/file.c
 bufflkup	./src/file.c
 bufhook	./src/edef.h
@@ -1094,6 +1091,7 @@ dolhello	./src/dolock.c
 dolock	./src/dolock.c
 doregion	./src/region.c
 double_crypt	./src/crypt.c
+dropbuffer	./src/buffer.c
 dspram	./src/malloc.c
 dup	./wincon/estruct.h
 ecco	./unix/terminal.c
@@ -1595,7 +1593,6 @@ setuekey	./src/crypt.c
 setupper	./src/char.c
 setvar	./src/eval.c
 sgarbf	./src/epredef.h
-showcpos	./src/random.c
 shrinkwind	./src/window.c
 sindex	./src/eval.c
 skipleadsp	./src/exec.c
@@ -1772,4 +1769,3 @@ yank	./src/line.c
 ypos	./src/epredef.h
 zotbuf	./src/buffer.c
 zzz
-

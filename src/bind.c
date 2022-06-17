@@ -132,7 +132,7 @@ static KEYTAB keytab[NBINDS+1] =
 	{CTLX|'!',	BINDFNC, spawn},
 //{CTLX|'$',	BINDFNC, spawn},
 	{CTLX|'#',	BINDFNC, filter},
-	{CTLX|'=',	BINDFNC, showcpos},
+	{CTLX|'=',	BINDFNC, bufferposition},
 	{CTLX|'(',	BINDFNC, ctlxlp},
 	{CTLX|')',	BINDFNC, ctlxrp},
 	{CTLX|'<',	BINDFNC, narrow},
@@ -764,6 +764,10 @@ int Pascal buildlist(const char * mstring)
   return cc;
 }
 
+static char * g_fspec;
+static int   g_fspec_len;
+
+
 void Pascal flook_init(char * cmd)
 
 { 
@@ -790,6 +794,9 @@ void Pascal flook_init(char * cmd)
     if (*c == '\\')
       *c = '/';
 #endif
+
+//g_fspec_len = NFILEN;
+//g_fspec = malloc(g_fspec_len+1);
 }
 
 
@@ -878,30 +885,6 @@ char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 
 
 
-static char g_fspec[256+2];	/* full path spec to search */
-
-#if 0
-					/* the text in dir following the last / is ignored*/
-char * fex_up_dirs(const char * dir, const char * file)
-
-{ if (dir != NULL)
-  { int clamp;
-//	strpcpy(g_fspec, dir, sizeof(g_fspec)-2);
- 		
-    for (clamp = 8; --clamp >= 0; )
-    { char * pc = pathcat(g_fspec, sizeof(g_fspec), dir, file);
-      if (fexist(pc))
-        return g_fspec;
-      dir = pathcat(g_fspec, sizeof(g_fspec), g_fspec, "../a");
-    }
-  }
-  
-  return NULL;  
-}
-
-#endif
-
-
 static
 const char * fex_file(int app, const char ** ref_dir, const char * file)
 												// next_dir == NULL => do not append file	
@@ -913,6 +896,12 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 		 		   dir[0] == '.' && dir[1] == '/')
 			dir += 2;
   
+	{ int sl = strlen(dir) + strlen(file) + 127;
+		if (sl > g_fspec_len)
+		{	g_fspec_len = sl;
+			(void)remallocstr(&g_fspec, NULL, sl);
+		}
+
 // 	mlwrite("Fex_file %s %s%p\n", file, dir);
 
 		while ((ch = dir[++ix]) != 0 && ch != PATHCHR)
@@ -923,12 +912,11 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 		if (app)
 			strcat(diry,"/");
 // 	mbwrite(diry);
-	{	const int sz = sizeof(g_fspec);
-  	char * pc = pathcat(g_fspec, sz, diry, file);
+  {	char * pc = pathcat(g_fspec, sl-1, diry, file);
 // 	mlwrite("After %s%p", pc);
     if (fexist(pc))
     	return (const char*)pc;
-  }}}
+  }}}}
   
   return NULL;
 }
@@ -984,21 +972,8 @@ const char * Pascal flook(char wh, const char * fname)
 	    if ((res = fex_file(1, &path, fname)))
 	      return res;
 
-#if S_VMS
-		  if (g_invokenm && strlen(g_invokenm)+strlen(fname) < sizeof(g_fspec))
-		  { strcpy(g_fspec, g_invokenm);
-		    for (path = g_fspec-1; *++path != 0 && *path != ']'; )
-		      ;
-		    if (*path != 0)
-		    { strcpy(path+1, fname);
-		      if (fexist(g_fspec))
-		        return g_fspec;
-		    }
-		  }
-#else
 			path = flook('P', g_invokenm);
 		 	return fex_file(0, &path, fname);
-#endif
 	}
 
 	return NULL;	/* no such luck */
@@ -1027,7 +1002,7 @@ char *Pascal flooknear(knfname, name)
 	char *knfname;		/* known file name */
 	char *name;				/* file to look for */
 { 
-	strpcpy(&g_fspec[0], knfname, sizeof(g_fspec));
+	strpcpy(&g_fspec[0], knfname, g_fspec_len);
 { Char * t = &g_fspec[strlen(g_fspec)]
   while (t > g_fspec && * t != DIRSEPCHR && *t != '/')
     --t;
@@ -1065,9 +1040,8 @@ const char *Pascal getfname(int keycode)
   return "";
 }
 
+static
 Map_t namemap = mk_const_map(T_DOMSTR, 0, names, 1);	//-1: last entry not wanted
-int g_funcnum = 0;
-
 
 						/* fncmatch:	match fname to a function in the names table and return
 													any match or NULL if none

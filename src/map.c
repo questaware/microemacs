@@ -6,20 +6,10 @@
 
 #define LENINC 4096
 
-#if USE_MAPSTREAM
-#define update_map(map)  (map)->update_ct += 1
-#else
-#define update_map(map) 
-#endif
-
-#ifdef MINIMAP
-
-#define DO_SRIAL 0
-#else
-#define DO_SRIAL 1
-																	  // len in bytes
+#if 0
+																	  
 Map mk_map(Map c, Format_t format, Vint len)
-
+														// len in bytes
 {
   if (FOFFS_MAP != fieldoffs(Map, c))
     return null;
@@ -73,7 +63,11 @@ static Vint compare(Map map, Key tgt)
 
 
 
+#ifndef MINIMAP
+
 Vint bin_unit_len;		/* secondary result */
+
+#endif
 
 				/* +ve => found */
 				/* -ve => before index (minus one based!) */
@@ -81,10 +75,13 @@ Vint binary(Map map, Byte * table)
 
 { Byte * keyfld = &table[map->format.key_offs];
   Vint low = 0;		/* search limit is entire list */
-  Vint uppp1 = map->curr_mult;
+	Vint uppp1 = map->curr_mult;
 #if DO_SRIAL
   if (map->format.key_type == T_DOMCHAR0)		/* not binary */
-  { bin_unit_len = 1;
+  {
+#ifndef MINIMAP
+  	bin_unit_len = 1;
+#endif
     if (uppp1 <= 0)
       return -1;
     while (true)
@@ -108,7 +105,10 @@ Vint binary(Map map, Byte * table)
   }
   else
 #endif
-  { bin_unit_len = map->format.eny_len;
+	{
+#ifndef MINIMAP
+  	bin_unit_len = map->format.eny_len;
+#endif
     while (uppp1 > low)
     { Vint i = (low + uppp1) >> 1;			/* get the midpoint! */
 
@@ -127,9 +127,8 @@ Vint binary(Map map, Byte * table)
 
 
 #ifndef MINIMAP
-
-	    /* need be called only if */
-	    /* key points at the same location, but *key changes */
+											    /* need be called only if key points */
+											    /* at the same location, but *key changes */
 void map_cache_clear(Map map)	
 
 { map->last_ix = -1;
@@ -174,7 +173,9 @@ Cc map_add_(Map * map_ref, Byte * rec)
     memmove(&map->c[ix+map->format.eny_len], &(*map_ref)->c[ix], len);
 
   map->curr_len += map->format.eny_len;
+#if DO_SRIAL
   map->curr_mult += 1;
+#endif
   update_map(map);
   memcpy(&map->c[ix], rec, map->format.eny_len);
   if (map != *map_ref && (*map_ref)->is_mallocd)
@@ -217,7 +218,9 @@ void map_remove_last_(Map * map_ref, Byte * table)
   	        &table[map->last_ix+map->format.eny_len], 
     	      map->curr_len-map->last_ix);
   map->curr_len -= map->format.eny_len;
+#if DO_SRIAL
   map->curr_mult -= 1;
+#endif
   update_map(map);
 }
 

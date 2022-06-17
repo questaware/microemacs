@@ -1468,8 +1468,7 @@ int Pascal searchIncls(int f, int n)
 #endif
     	mlwrite(TEXT64, cc);
 						/* "Found typ %d" */
-	    if (Sinc::best_bp != NULL)
-        swbuffer(Sinc::best_bp);
+      swbuffer(Sinc::best_bp);
     }
     else
     {

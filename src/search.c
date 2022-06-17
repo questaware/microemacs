@@ -168,10 +168,13 @@ int Pascal get_hex2(int * res_ref, const char * s)
       break;
     res = (res << 4) + chr;
   }
-	if (*res_ref == '0')
-		return 0;
   *res_ref = res;
-  return adv + 1;
+	if (adv < 0)
+	{ *res_ref = s[-1];
+		return 1;
+	}
+
+  return adv + 2;
 }
 
 
@@ -230,10 +233,7 @@ int Pascal mk_magic()
 					}
 	
 			  when MC_ESC:		/* \ */
-					if (pat[patix+1] != 0)
-					{ pchr = pat[patix+1];
-						patix += get_hex2(&pchr, &pat[patix+2])+1;
-					}
+					patix += get_hex2(&pchr, &pat[patix+1]);
 			}
 
 		mcptr->mc_type = LITCHAR;
@@ -330,7 +330,7 @@ just_c:
 static
 int Pascal readpattern(const char * prompt, char apat[])
 
-{		extern int gs_keyct;		 /* from getstring */
+{		extern int g_gs_keyct;		 /* from getstring */
 		char tpat[NPAT+10];
     																				/* add old pattern */
 		char * t = expandp(sizeof(tpat)-1, strlen(apat) < 30 ? apat : "\"", "] ",
@@ -340,7 +340,7 @@ int Pascal readpattern(const char * prompt, char apat[])
 			    									 * get the META charater and use the previous pat */ 
 {		Cc cc = mltreply(t, t, NPAT);
     if (cc >= FALSE)
-    { if (cc > FALSE || gs_keyct > 0)
+    { if (cc > FALSE || g_gs_keyct > 0)
         strcpy(apat, tpat);
 
       cc = TRUE;
@@ -925,7 +925,7 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 
 	  for ( ; ; ++instr)
 	  { if (instr[0] == MC_ESC && instr[1] != 0 && use_meta)
-	    { int chr = *++instr;
+	    { int chr;
 	      instr += get_hex2(&chr, instr+1);
 
 	      buf[++ix] = chr;

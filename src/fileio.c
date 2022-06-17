@@ -288,6 +288,8 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 
   t = tgt-1;
 
+	tgt[NFILEN-2] = 0;
+
   while (t < &tgt[NFILEN-2])
   { ch = *s++;
     *++t = ch;
@@ -321,8 +323,6 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 			}
     }}
   }
-
-  t[1] = 0;
 
 { const char * cwd_ = getcwd(tmp, NFILEN);
   if (cwd_ == null)

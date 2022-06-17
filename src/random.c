@@ -146,9 +146,7 @@ int Pascal setcline(void) 			/* get the current line number */
  */
 int Pascal USE_FAST_CALL getgoal(int offs, LINE * dlp)
 
-{ int col = 0;
-	int dbo;
-	int lim = offs;
+{	int lim = offs;
 	if (lim >= 0)											// if getccol then result will be 0
 		lim = llength(dlp);
 	else															// getccol
@@ -156,7 +154,9 @@ int Pascal USE_FAST_CALL getgoal(int offs, LINE * dlp)
 		offs = 0x7fffffff;
 	}
 
-{	int tabsize = curbp->b_tabsize;
+{ int col = 0;
+	int dbo;
+	int tabsize = curbp->b_tabsize;
 	if (tabsize < 0)
 		tabsize = - tabsize;
 
@@ -182,11 +182,11 @@ int Pascal USE_FAST_CALL getgoal(int offs, LINE * dlp)
 }}
 
 
-/* Return current column.  Stop at first non-blank given TRUE argument.
+/* Return current column without using w_fcol.
  */
 int Pascal getccol()
 
-{ return getgoal(- curwp->w_doto, curwp->w_dotp);
+{ return getgoal(- curwp->w_doto, curwp->w_dotp); // only -ve from here
 }
 
 /* Display the current position of the cursor, in origin 1 X-Y coordinates,
@@ -196,13 +196,14 @@ int Pascal getccol()
  * Normally this is bound to "C-X =".
  */
 
-int Pascal showcpos(int notused, int n)
+int Pascal bufferposition(int notused, int n)
 
 {	int		numchars = 0; 	/* # of chars in file */
 	int		numlines = 0; 	/* # of lines in file */
 	int		predchars;			/* # chars preceding point */
-	int		predlines = -1;			/* # lines preceding point */
+	int		predlines = 0;	/* # lines preceding point */
 	int   savepos = curwp->w_doto;
+	int		fcol = curwp->w_fcol;
 	LINE * tgt = curwp->w_dotp;
   LINE * lp;						/* current line */
 															/* starting at the beginning of the buffer */
@@ -223,13 +224,13 @@ int Pascal showcpos(int notused, int n)
 	}
 															/* Get real column and end-of-line column. */
 {	int len = llength(tgt);
-	int ecol = getgoal(- len, tgt);
+	int ecol = getgoal(- len, tgt) + fcol;
 
 	mlwrite(TEXT60,
 					/* "Line %d/%d Col %d/%d Char %D/%D (%d%%) char = 0x%x" */
-						predlines, numlines, getccol(), ecol,
-						predchars, numchars, (int)((100L*predchars) / (numchars + 1)), 
-						len == savepos ? '\r' : lgetc(tgt, savepos));
+					predlines, numlines, getccol(), ecol, predchars, numchars, 
+					(int)((100L*predchars) / (numchars + 1)), 
+					len == savepos ? '\r' : lgetc(tgt, savepos));
 
 	return (int)numchars;
 }}
@@ -309,7 +310,10 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 {	int tabsz = curbp->b_tabsize;
 
 	if ((f & 0x7fff) == FALSE)
-		n = reglines(TRUE);
+	{	n = reglines(TRUE);
+		if (n < 0)
+			return n;
+	}
 
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sign(n)] */
 
@@ -409,6 +413,8 @@ char * Pascal skipspaces(char * s, char * limstr)
 }
 
 
+#if 0
+
 /* Insert a newline, then enough tabs and spaces to duplicate the indentation
  * of the previous line. Tabs are every tabsize characters. Quite simple.
  * Figure out the indentation of the current line. Insert a newline by calling
@@ -434,6 +440,8 @@ int Pascal indent(int notused, int n)
 
 	return TRUE;
 }}}
+
+#endif
 
 #if FLUFF
 
@@ -502,18 +510,7 @@ int Pascal openline(int notused, int n)
  */
 int Pascal ins_newline(int notused, int n)
 
-{	if (rdonly())
-		return FALSE;
-
-	if (n < 0)
-		return FALSE;
-#if FLUFF
-													/* if we are in C mode and this is a default <NL> */
-	if (n == 1 && (curbp->b_flag & MDCMOD) &&
-			(curwp->w_dotp->l_props & L_IS_HD) == 0)
-		return cinsert();
-#endif
-				/* If a newline was typed, fill column is defined, the argument is non-
+{				/* If a newline was typed, fill column is defined, the argument is non-
 				 * negative, wrap mode is enabled, and we are now past fill column,
 				 * and we are not read-only, perform word wrap.
 				 */
@@ -524,8 +521,22 @@ int Pascal ins_newline(int notused, int n)
 {	int s;
 																						/* insert some lines */
 	while (--n >= 0)
+	{ char * src = NULL;
+		char * eptr;
+		if (curbp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS))
+		{ src = &curwp->w_dotp->l_text[0];
+			eptr = skipspaces(src, &src[curwp->w_doto]);
+		}
+
 		if ((s = lnewline()) <= FALSE)
 			return s;
+		if (eptr != NULL)
+		{ char schar = eptr[0];
+		  eptr[0] = 0;
+			linstr(src);
+			eptr[0] = schar;
+		}
+	}
 
 	return TRUE;
 }}

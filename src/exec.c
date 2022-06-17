@@ -308,8 +308,8 @@ int Pascal nextarg(const char * prompt, char * buffer, int size)
 				/* prompt to use if we must be interactive */
 				/* buffer to put token into */
 				/* size of the buffer */
-{	extern int gs_keyct;
-	gs_keyct = 0;
+{	extern int g_gs_keyct;
+	g_gs_keyct = 0;
 
 	if (g_macargs <= 0 || g_execstr == NULL)		/* we are interactive */
 	  return getstring(buffer, size, prompt);

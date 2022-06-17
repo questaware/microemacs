@@ -58,7 +58,13 @@
   Arrows    Previous, left, right
   Home
   End
-  .^$*[\    Magic
+  .^$*[\    Magic.
+						^ beginning of line
+						$ end of line
+						* preceding letter or magic occurs zero or more times
+						[a-z_] is a lower case letter or _
+						[^a-z_] is not a lower case letter or _
+						\ab is a if a is not a hexadecimal digit otherwise char(0Xab)
 
   Pressing Home at the start of the input moves the cursor to the start of the
   command line and thus includes the prompt in the string returned.

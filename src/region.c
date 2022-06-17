@@ -245,14 +245,17 @@ int Pascal reglines(Bool ask)
 
 {	REGION * r = getregion();	   							/* check for a valid region first */
 	if (r == NULL)
-	{ if (!ask || g_macargs > 0 || !mlyesno(TEXT180))
-			return 0;													/* Use Whole file? */
+	{ if (!ask || g_macargs > 0)
+			return 0;								
+	{ int rc = mlyesno(TEXT180);
+		if (rc <= 0)		/* Use Whole file? */
+			return 0;
 		
 	  curwp->w_dotp = curwp->w_bufp->b_baseline.l_fp;
   	curwp->w_doto = 0;
 
 		return 10000000;
-	}
+	}}
 											  						/* place us at the beginning of the region */
   curwp->w_dotp = r->r_linep;
   curwp->w_doto = r->r_offset;

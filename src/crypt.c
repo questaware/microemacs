@@ -135,9 +135,9 @@ int Pascal ucrypt(char * cptr, int len)
 	--cptr;
 
 	while (--len >= 0)										/* for every character in the buffer */
-	{ int cc = *++cptr;		
+	{ int cc = *++cptr - ' ';
 																			/* only encipher printable characters */
-	  if (cc >= ' ' && cc <= '~')
+	  if ((unsigned)cc <= '~' - ' ')
 	  {
 	      /* Feed the upper few bits of the key back into itself.
       		 This ensures that the starting key affects the entire message.
@@ -154,7 +154,7 @@ int Pascal ucrypt(char * cptr, int len)
 #if 0
 	    cc = mod95((int)(key % 95) - (cc - ' ')) + ' ';
 #else
-	    cc = (int)(key % 95) - (cc - ' ');
+	    cc = (int)(key % 95) - cc;
 
  	    while (cc >= 9500)
 	      cc -= 9500;

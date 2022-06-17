@@ -1,3 +1,15 @@
+#if USE_MAPSTREAM
+#define update_map(map)  (map)->update_ct += 1
+#else
+#define update_map(map) 
+#endif
+
+#ifdef MINIMAP
+
+#define DO_SRIAL 0
+#else
+#define DO_SRIAL 1
+#endif
 			/* all these enumeration values cannot change */
 #define T_DOMINT1     1
 #define T_DOMINT2     2
@@ -33,22 +45,40 @@ typedef struct Format_s
   Short    eny_len;
 } Format_t, *Format;
 
-
-
 typedef struct Map_s
 { Format_t     format;
   const Char * srch_key;	/* These 2 form a pair.   See Note 1. */
-  Short        last_ix;
-
+#ifndef MINIMAP
+  Short    last_ix;
   Short    max_len;	/* in bytes */
   Short    curr_len;	/* in bytes */
+#endif
   Short    curr_mult;   /* in entries */
+#if USE_MAPSTREAM
   Int	   	 update_ct;
   Byte	   is_mallocd;
   Byte     filler[3];   /* must be long aligned for 64 bit machines */
+#endif
+#ifndef MINIMAP
   Byte     c[1];    /* actually Mapeny_t *//* must be aligned to SIZEOF_PTR */
+#endif
 } Map_t, *Map;
 
+#ifndef MINIMAP
+
+#define mk_const_map(typ,keyoffs, tbl, deduct) \
+		     			{{typ, keyoffs, sizeof(tbl[0])}, \
+	/*srch_key*/  null, -1 \
+	/*max_len*/		sizeof(tbl), sizeof(tbl)-(deduct)*sizeof(tbl[0]), \
+	/*cur_mult*/  sizeof(tbl)/sizeof(tbl[0])-(deduct) \
+              }
+#else
+#define mk_const_map(typ,keyoffs, tbl, deduct) \
+		     			{{typ, keyoffs, sizeof(tbl[0])}, \
+	/*srch_key*/  null, \
+	/*cur_mult*/  sizeof(tbl)/sizeof(tbl[0])-(deduct), \
+              }
+#endif
 
 typedef union
 { Char   domint1;
@@ -57,29 +87,15 @@ typedef union
   Char * domstr;
   Char   domchararr[4];
 } Key_t, *Key;
-
-
-/*		Note 1. The user must maintain the contents of the location 
-			pointed at constant when streaming for type T_DOMSTR
-*/
+											/* Note 1. The user must maintain the contents of the location 
+												 pointed at constant when streaming for type T_DOMSTR */
 typedef struct Mapstrm_s
 { Map	    map;
   Int       update_ct;
   Key_t     key;		/* the key last seen */
 } Mapstrm_t, * Mapstrm;
 
-
-#define map_alloc(reclen, len)\
-  (Map)aalloc(FOFFS_MAP + (reclen) * (len));
-
-
-#define mk_const_map(typ,keyoffs, tbl, deduct) \
-		     			{{typ, keyoffs, sizeof(tbl[0])}, \
-	/*srch_key*/  null, -1, \
-	/*max_len*/		sizeof(tbl), sizeof(tbl)-(deduct)*sizeof(tbl[0]), \
-	/*cur_mult*/  sizeof(tbl)/sizeof(tbl[0])-(deduct), 0, 0, {0}, \
-              }
-
+#define map_alloc(reclen, len)  (Map)aalloc(FOFFS_MAP + (reclen) * (len));
 
 Map mk_map(Map c, Format_t format, Vint len);
 void map_cache_clear(Map map)	;
@@ -101,5 +117,3 @@ Byte * map_next_(Mapstrm strm, Byte * table);
 #define binary_const(map,tbl)       binary(map,(Byte*)(tbl))
 #define map_find_const(map,tbl,key) map_find_((map), (Byte*)(tbl), (void*)(key))
 #define map_next_const(strm,tbl)    map_next_((strm), (Byte*)(tbl))
-
-

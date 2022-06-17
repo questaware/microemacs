@@ -60,9 +60,7 @@ typedef struct	VIDEO
 #define VFML	0x0040	/* is a modeline		*/
 
 
-#if S_WIN32
-#define V_BLANK 0x7
-#elif S_MSDOS
+#if S_MSDOS
 #define V_BLANK 0x7
 #else
 #define V_BLANK 0
@@ -94,7 +92,7 @@ const char mdname[NUMMODES][8] = {		/* name of modes		*/
 
 static void Pascal updateline(int);
 
-#if S_WIN32
+#if MEMMAP
 
 /* 0 : No special effect
  * 1 : underline
@@ -159,7 +157,7 @@ void Pascal scroll_vscr()
 #endif
 #endif
 
-#if S_WIN32 == 0
+#if MEMMAP == 0
 
 static
 char * use_cmd(char * buf, int bufsz, const char * cmd)
@@ -187,7 +185,7 @@ void Pascal vtinit(int cols, int dpthm1)
 /*	if (pd_gflags & MD_NO_MMI)
 			return; */
 //  millisleep(16000);
-#if S_WIN32 == 0
+#if MEMMAP == 0
 {   char buf[40];
   	int lines = 0;
 		char * v = getenv("COLUMNS");
@@ -283,7 +281,7 @@ int find_match(const char * src, int len)
 }
 
 
-#if S_MSDOS
+#if MEMMAP
 static
 const short ctrans_[] = 	/* ansi to ibm color translation table */
 	{0, 4, 2, 6, 1, 5, 3, 7,
@@ -294,7 +292,7 @@ const short ctrans_[] = 	/* ansi to ibm color translation table */
 # define trans(x) (x)
 #endif
 
-#if S_MSDOS
+#if MEMMAP
 
 static int palcol(int ix)
 
@@ -369,7 +367,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	{	int chrom = chrom_nxt;
 		chrom_nxt = CHR_0;
 		if (vtc >= term.t_ncol)
-		{ tgt[term.t_ncol - 1] = (short)(chrom + '$');
+		{ tgt[term.t_ncol] = (short)(chrom + '$');
 			break;
 		}
 		
@@ -475,7 +473,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 	if (vtc > 1 && 0 /* && chrom_on != 0 */)
 	{
-#if S_MSDOS
+#if MEMMAP
 		if ((tgt[vtc] & 0xff00) && ct > 0)
 #else
 		if (ct >= 0)
@@ -497,7 +495,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 /************************** Modeline stuff *************************/
 
-#if S_MSDOS == 0
+#if MEMMAP == 0
 
 LINE *  g_lastlp;								// NULL => reset
 static int     g_lastfcol;
@@ -511,7 +509,7 @@ static int     g_lastfcol;
 void Pascal modeline(WINDOW * wp)
 	
 {
-#if S_MSDOS == 0
+#if MEMMAP == 0
 	if (wp->w_dotp == g_lastlp /* and wp->w_next == NULL */)
 	{ if (wp->w_fcol == g_lastfcol && (wp->w_flag & WFMODE == 0))
 			return;
@@ -529,7 +527,7 @@ void Pascal modeline(WINDOW * wp)
 
 	tline.lc.l_used = term.t_ncol;
 
-#if S_MSDOS && S_WIN32 == 0
+#if S_MSDOS
 	n = wp == curwp ? 0xcd : /* 173 :  */
 #else
 	n = wp == curwp ? '='  :
@@ -546,7 +544,7 @@ void Pascal modeline(WINDOW * wp)
 	}
 #endif
 	vscreen[row]->v_flag &= ~VFCMT;
-#if S_MSDOS || OWN_MODECOLOUR
+#if MEMMAP || OWN_MODECOLOUR
 	vscreen[row]->v_color = 0x25; 		/* magenta on green */
 	vscreen[row]->v_flag |= VFCHG | VFCOL | VFML;/* Redraw next time*/
 #else
@@ -647,7 +645,7 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 	int color = window_bgfg(wp);
 	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
 
-#if S_MSDOS == 0
+#if MEMMAP == 0
 	if (color == 0x70)
 		color = V_BLANK;
 #endif
@@ -757,7 +755,7 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
 
 	if (set & WFTXTD)
 	{ 
-#if S_MSDOS == 0
+#if MEMMAP == 0
 		ttrow -= 2;								/* a trick */
 #endif
 		n = 0;
@@ -772,7 +770,7 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
 	memmove(&vscreen[tgt], &vscreen[src], lenm1 * sizeof(VIDEO*));
 	vscreen[stt + (n ^ 1) * lenm1] = vp;
 
-#if S_MSDOS == 0
+#if MEMMAP == 0
 	n = n * 2 - 1;
 	tcapmove(ttrow - n + 1, ttcol);
 	tcapscreg(stt, stt+lenm1);
@@ -801,55 +799,53 @@ void Pascal updline()
 /*	updpos: update the position of the hardware cursor and handle extended
 		lines. This is the only update for simple moves.
 */
-{
+{	WINDOW * wp = curwp;
  static LINE * g_up_lp = NULL;
-				int flag = 0;
-		    WINDOW * wp = curwp;
-				int fcol = wp->w_fcol;
-				int col = getccol() - fcol; 	/* ensure not off the left of the screen */
-				int j = (col + 1 - pd_hjump);
-				
-	if (j < 0 && pd_hjump > 0)
-	{	j = (j  / pd_hjump) * pd_hjump;
-		fcol += j;
-		col -= j;
-		flag = WFHARD | WFMODE | WFMOVE;
-	}
-
-	j = minfcol - fcol;
-	if      (j > 0)
-	{	fcol += j;
-	  col -= j;
-		if (col < 0)
-			col = 0;
-	}
-	else if (g_up_lp != wp->w_dotp && 
-			     col + fcol < term.t_ncol)
-	{ col += fcol;
-		fcol = 0;
-		flag = WFHARD | WFMODE | WFMOVE;
-	}
-
-{	LINE * lp;
-	int row = wp->w_toprow;
-//g_currow = row;
-
+				int flag = 
+#if MEMMAP
+				   g_up_lp != wp->w_dotp ? WFHARD /*| WFTXTU|WFTXTD*/ | WFMODE | WFMOVE :
+#endif
+										0;
 	g_up_lp = wp->w_dotp;
+{	int row = wp->w_toprow;
+ 	LINE * lp;
 
 	for (lp = wp->w_linep; 
-			 lp != g_up_lp && row < term.t_ncol - 1;
+			 lp != g_up_lp && row < term.t_nrowm1 - 1;
 			 lp = lforw(lp))
 		++row;
 
-{ int i;
-	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
+{	int fcol = wp->w_fcol; // < pd_fcol ? pd_fcol : wp->w_fcol;
+	int col = getccol() - fcol;
+	int diff = (col + 1 - pd_hjump);
+				
+	if (diff < 0 && pd_hjump > 0)
+	{	diff = (diff / pd_hjump) * pd_hjump;						// always -ve
+		fcol += diff;
+//	if (fcol < pd_fcol)
+//		fcol = pd_fcol;
+		col -= diff;
+		flag = WFHARD | WFMODE | WFMOVE;
+	}
+	
+	diff = pd_fcol - fcol;
+	if (diff > 0)
+	{ fcol += diff;
+		col -= diff;
+		if (col < 0)
+			col = 0;
+	}
+
+//g_currow = row;
+
+{	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
 #if MOUSE == 0
 	int g_lbound = 0;		/* leftmost column of line being displayed */
 #endif							
 	int rhs = col - term.t_ncol + 1;
   if (rhs >= 0)
 	{	if (pd_hjump)				/* if horizontal scrolling is enabled, shift if needed */
-		{ int mv = ((rhs + pd_hjump - 1) / pd_hjump) * pd_hjump;
+		{ int mv = rhs + pd_hjump;
 			fcol += mv;
 			col -= mv;
 			rhs -= mv;
@@ -878,6 +874,8 @@ void Pascal updline()
 
 	wp->w_fcol = fcol;
 	wp->w_flag |= flag;
+	if (rhs < 0)			// allow deextension on this line
+		wp->w_dotp = NULL;
 
 					 /* update the current window if we have to move it around */
 {	int hard = wp->w_flag & WFHARD;
@@ -885,11 +883,9 @@ void Pascal updline()
 		updall(1, wp);
 
 //g_curcol = col;
-	if (rhs < 0)			// allow deextension on this line
-		wp->w_dotp = NULL;
 																/*	upddex: de-extend any line that deserves it */
-{	WINDOW * p;
-
+{	int i;
+  WINDOW * p;
 	for (p = wheadp; p != NULL; p = p->w_next)
 	{	updall(-1, p);
 		if (p == wp)
@@ -900,7 +896,7 @@ void Pascal updline()
 	}
 
 /*	updupd: update the physical screen from the virtual screen	*/
-{
+
 #if MEMMAP == 0
 	if (pd_sgarbf)
 	{  
@@ -943,7 +939,7 @@ void Pascal updline()
 		mlwrite(g_cmd_line);
 #endif
 	pd_sgarbf = FALSE;
-	tcapmove(row, col - g_lbound);
+	tcapmove(row, col);
 	TTflush();	/* there may be cause to reverse move and flush */
 }}}}}}
 
@@ -1240,13 +1236,13 @@ void Pascal upmode()	/* update all the mode lines */
 }
 
 
-#if S_MSDOS
+#if MEMMAP
 void Pascal upwind_()	/* force hard updates on all windows */
 #else
 void Pascal upwind(int garbage)	/* force hard updates on all windows */
 #endif
 { 
-#if S_MSDOS == 0
+#if MEMMAP == 0
 	pd_sgarbf |= garbage;
 #endif
 	orwindmode(WFMODE | WFHARD | WFMOVE);
@@ -1337,7 +1333,7 @@ int mlwrite(const char * fmt, ...)
 			switch (ch+'0')
 			{  case '>':  pd_discmd = -1;
 				 when 'b':	(void)tcapbeep();
-#if S_WIN32 == 0
+#if MEMMAP == 0
 				 when 'w':  TTflush();
 									  millisleep(4800);
 #endif
@@ -1367,7 +1363,7 @@ int mlwrite(const char * fmt, ...)
 	{ (void)linstr(lastmesg);
 		loglog1("mlw %s", fmtstr);
 	}
-#if S_WIN32
+#if MEMMAP
 	else
 	{ int scol = ttcol;
 		mlputs(term.t_ncol-ttcol,NULL);
@@ -1381,7 +1377,7 @@ int mlwrite(const char * fmt, ...)
 	loglog1("mlw %s", lastmesg);
 
 	if (popup)
-#if S_MSDOS
+#if MEMMAP
 		mbwrite(lastmesg);
 #else
 		(void)ttgetc();
@@ -1420,7 +1416,7 @@ void Pascal mlforce(const char * s)
 void Pascal mlerase()
 
 {	mlwrite("");
-#if S_WIN32 == 0
+#if MEMMAP == 0
 	g_cmd_line[0] = 0;
 #endif
 	pd_got_msg = FALSE;

@@ -95,56 +95,49 @@ const char * suftag  = "cpfqPm";
 void Pascal customise_buf(BUFFER * bp)
 
 {		int tabsize = pd_tabsize;
-#if 0
-		const char * pat = strlast(bp->b_bname,'.');
-#else
 	  const char * pat = NULL;
 		const char *fn = bp->b_bname;
 		int iter = 2;
-		while (--iter >= 0)
+		while (--iter >= 0 && fn != NULL)
 		{ for ( --fn; *++fn != 0; )
       	if (*fn == '.')
         	pat = fn;
-			if (pat != NULL)
-				break;
-      fn = bp->b_fname;
-      if (fn == NULL)
-      	break;
-		}
-#endif
-    if (pat != NULL)
-    { if (strcmp(".e2", pat) == 0)
-      	bp->b_mode |= BCRYPT2;
 
-			if (pd_file_prof != NULL)
-    	{	
-    		char * pr = pd_file_prof - 1;
-        while (*++pr != 0)
-        { if (*pr != '.') continue;
-        
-        { const char * p = pat;
-
-          while (*++p != 0 && *++pr == *p)
-            ;
-
-          if (*p != 0 || pr[1] != '=') continue;
-
-				{	int diff = pr[2] == '^';
-					bp->b_flag &= ~ MDIGCASE;
-					bp->b_flag |= diff * MDIGCASE;
-          pr += diff;
-        { int six;
-          for (six = 6; --six >= 0 && suftag[six] != pr[2]; )
-          	;
-          if (six >= 0)
-          { bp->b_langprops = (1 << six);
-            ++pr;
-				  }
-          
-          tabsize = atoi(pr+2);
-          break;
-        }}}}
-      }
+	    if (pat != NULL)
+	    { if (strcmp(".e2", pat) == 0)
+	      	bp->b_mode |= BCRYPT2;
+	
+				if (pd_file_prof != NULL)
+	    	{	
+	    		char * pr = pd_file_prof - 1;
+	        while (*++pr != 0)
+	        { if (*pr != '.') continue;
+	        
+	        { const char * p = pat;
+	
+	          while (*++p != 0 && *++pr == *p)
+	            ;
+	
+	          if (*p != 0 || pr[1] != '=') continue;
+	
+					{	int diff = pr[2] == '^';
+						bp->b_flag &= ~ MDIGCASE;
+						bp->b_flag |= diff * MDIGCASE;
+	          pr += diff;
+	        { int six;
+	          for (six = 6; --six >= 0 && suftag[six] != pr[2]; )
+	          	;
+	          if (six >= 0)
+	          { bp->b_langprops = (1 << six);
+	            ++pr;
+					  }
+	          
+						iter = 0;
+	          tabsize = atoi(pr+2);
+	          break;
+	        }}}}
+	      }
+	    }
 		}
     bp->b_tabsize = tabsize;
 }
@@ -191,8 +184,8 @@ BUFFER * Pascal bufflink(const char * filename, int create)
       while ((fn = msd_nfile()) != NULL)
       { if (newdate < (unsigned)msd_stat.st_mtime)
         { newdate = (unsigned)msd_stat.st_mtime;
-          strpcpy(fname,fn,NFILEN);
           srch = 0;
+          strpcpy(fname,fn,NFILEN);
         }
       }
     }
@@ -397,18 +390,18 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
   if (cc != 0)
     mlwrite(TEXT139);	/* "Reading file" */
 
-{ char * cmd = fullcmd + strlen(fullcmd) + 1;
-
   --pd_discmd;
   ++g_macargs;
   g_disinp = o_disinp;
   if (cc == 0)
     return NULL;
 
-{	int clen = strlen(concat(cmd, cmdnm, /*pw,*/" ", cmdbody," ",0));
+{ char * cmd = fullcmd + strlen(fullcmd) + 1;
+
+	int clen = strlen(concat(cmd, cmdnm, /*pw,*/" ", cmdbody," ",0));
 	const char * tmp = gettmpfn();
 
-  cc = ttsystem(strcat(strcat(strcat(cmd,tmp),"/"),rnm+1), fullcmd);
+  cc = ttsystem(strcat(strcat(cmd,tmp),rnm), fullcmd);
   if (cc != OK)
 	{	props |= Q_POPUP;
 		concat(cmd, cmdnm," Fetch failed ",int_asc(cc), 0);
@@ -434,7 +427,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 
   memset(fullcmd, 0, sizeof(fullcmd));
 	return bp;
-}}}}}
+}}}}
 
 
 

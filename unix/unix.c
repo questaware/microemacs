@@ -667,7 +667,7 @@ int pipefilter(wh)
   usehost(strcat(line,fnam2), FALSE);
 
   if (wh >= '<'-'<')   /* <  @ */
-  { BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(bix)), TRUE, 0);
+  { BUFFER * bp = bfind(line /*strcat(strcpy(bname,"_cmd"),int_asc(bix))*/, TRUE, 0);
     if (bp == NULL)
       return FALSE;
 /*

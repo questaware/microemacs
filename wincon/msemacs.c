@@ -203,8 +203,10 @@ void Pascal tcapsetsize(int wid, int dpth, int clamp)
 
 																	// set the screen buffer to be big enough
 { int rc = SetConsoleWindowInfo(h, 1, &rect);
+#if _DEBUG
   if (rc == 0)
     flagerr("SCWI %d");
+#endif
 }}
 #endif
 }}
@@ -309,7 +311,7 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 { int col = g_csbi.dwCursorPosition.X + 1;
 
   if (ch != '\n' && ch != '\r')
-  { if (ch != '\b')
+  { // if (ch != '\b')
     { if (col >= g_csbi.dwSize.X)
     	{
 #if _DEBUG
@@ -318,11 +320,17 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 				return;
       }
     }
+#if 0
     else
-    { col -= 2;
+	  {
+#if _DEBUG
+			mbwrite("Got BS");
+#endif
+    	col -= 2;
       if (col < 0)
         col = 0;
     }
+#endif
   }
   else
   { col = 0;
@@ -408,8 +416,10 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 			 
 	WriteConsoleOutputCharacter( g_ConsOut, buf, sclen, Coords, &n_out );
 { int cc = WriteConsoleOutputAttribute( g_ConsOut, cuf, sclen, Coords, &n_out);
+#ifdef _DEBUG
 	if (cc == 0 || n_out != sclen)
 		adb(cc);
+#endif
 	return OK;
 }}
 

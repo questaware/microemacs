@@ -427,7 +427,6 @@ NOSHARE extern int ttcol;		  		/* Column location of HW cursor */
 NOSHARE extern int g_lbound;		/* leftmost col of current line being displayed*/
 #endif
 NOSHARE extern int abortc;			/* current abort command char	*/
-NOSHARE extern int sterm;				/* search terminating character */
 
 //NOSHARE extern char highlight[64];	/* the highlight string */
 
@@ -511,6 +510,8 @@ NOSHARE extern TERM	term;		/* Terminal information.	*/
 #define Q_IN_CMT  32
 #define Q_IN_CMT_ 64
 #define Q_IN_EOL 128
+
+#define quotec ('Q' - '@')
 
 /*
 	This is the message which should be added to any "About MicroEMACS"

@@ -56,7 +56,6 @@ int ttrow = 0; 					/* Row location of HW cursor	*/
 int ttcol = 0; 					/* Column location of HW cursor */
 
 int abortc = CTRL | 'G';	/* current abort command char	*/
-int sterm = CTRL | 'M';	  /* search terminating character */
 
 static
 int g_prefix = 0;	/* currently pending prefix bits */
@@ -64,12 +63,7 @@ int g_prefix = 0;	/* currently pending prefix bits */
 //char highlight[64] = "4hello";
 
 //int g_newest = 0;       /* choose newest file */
-//#define USE_SVN
-#ifdef USE_SVN
- int del_svn = 0;
-#else
- #define del_svn 0
-#endif
+
 #if WRAP_MEM
  Int envram = 0l;		/* # of bytes current in use by malloc */
 #endif
@@ -217,11 +211,6 @@ void Pascal dcline(int argc, char * argv[])
 		else if (filev[0]== '@')
 			startfile = &filev[1];
 		else																	/* Process an input file */
-		{
-#ifdef USE_SVN
-      if (strcmp_right(filev,"https://svn.") == 0)
-				del_svn = 6;
-#endif
 		{ int ignore = 2;
 			char * s;
 			char ch;
@@ -229,47 +218,15 @@ void Pascal dcline(int argc, char * argv[])
   		for ( s = (filev); (ch = *++s) != 0; )
   		{
   			if (ch == '@')
-  			{ ignore = 255;
-#ifdef USE_SVN
-  				del_svn = ct + 1000;
-#endif
-				}
+  				ignore = 255;
+
   		  if (--ignore <= 0 && ch == ':')
-#ifdef USE_SVN
-				  if (ct > del_svn)
-#endif
   		  { *s = 0;
   				gline = atoi(s+1);
   				break;
   		  }
-			}}
+			}
 
-#ifdef USE_SVN
-		  if (del_svn > 0)
-		  { char * spareline = &lastline[0][0];
-				int sl = strlen(filev);
-				while (filev[sl] != '/')
-					--sl;
-				if (del_svn < 1000)
-				{ concat(spareline,"svncone ",filev," tmpdir", null);
-				  ttsystem(spareline, "");
-				  concat(spareline,"tmpdir/",&filev[sl+1], null);
-				  filev = spareline;
-				  concat(lastline[1],"copy ",filev," .", null);
-				  ttsystem(lastline[1], "");
-				  del_svn = 1;
-				  if (is_opt('z'))
-				  	del_svn = 0;
-				}
-				else
-				{ del_svn = del_svn - 1000;
-				  concat(pat,"scp ",filev," tmpdir/", null);
-						
-				  pipefilter('e');
-				}
-		  	lastline[0][0] = 0;
-		  }
-#endif
 		  if (is_opt('P'))									// look along path
 		  { char * s = (char *)flook(0, filev);
 				if (s != null)
@@ -329,8 +286,6 @@ void Pascal dcline(int argc, char * argv[])
 			gline = -cc;
 		}
 	}
-
-	curbp = firstbp;
 																								/* we now have the .rc file */
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 	{ bp->b_flag |= g_gmode;
@@ -346,6 +301,7 @@ void Pascal dcline(int argc, char * argv[])
   tcapkopen();    /* open the keyboard */
   tcaprev(FALSE);
 
+	curbp = firstbp;
 	swbuffer(firstbp);
 
 	if (nopipe == 0)
@@ -454,12 +410,6 @@ int main(int argc, char * argv[])
 	tcapclose(0);
 #endif
 
-#ifdef USE_SVN
-	if (del_svn)
-	{ 
-		ttsystem("rmdir /s/q tmpsvndir", "");
-	}
-#endif
 #if CLEAN
 	clean();
 #endif
@@ -514,19 +464,19 @@ void clean_arg(char * str)
 }
 #endif
 
-
-KEYTAB * lastbind;
-KEYTAB * prevbind;
+static
+KEYTAB * g_lastbind;
 
 /* This is the general command execution routine. It handles the fake binding
  * of all the keys to "self-insert". It also clears out the "thisflag" word,
  * and arranges to move it to the "lastflag", so that the next command can
  * look at it. Return the status of command.
  */
-static int Pascal execute(int c, int f, int n)
+static int execute(int c, int f, int n)
 
 { if (c == (CTRL|'['))
 	{ g_prefix |= META;
+ret:
 	  pd_prenum = n;
 		pd_predef = f;
 		return TRUE;
@@ -534,29 +484,27 @@ static int Pascal execute(int c, int f, int n)
 	
 	if (c == (CTRL|'X'))
 	{ g_prefix |= CTLX;
-  	pd_prenum = n;
-		pd_predef = f;
-		return TRUE;
-	}
-{ int status;
-	KEYTAB *key = getbind(c); /* key entry to execute */
-/*loglog3("L %x T %x c %d", lastbind==NULL ? 0 : lastbind->k_code,key->k_code,keyct);*/
-
-	if (key != lastbind)
-	{ prevbind = lastbind;
-		lastbind = key;
-		keyct = 0;
+		goto ret;
 	}
 
-	keyct += 1;
-					 
 	g_lastflag = g_thisflag;
 	g_thisflag = 0;
 
-	if		 (key->k_code != 0) /* if keystroke is bound to a function..do it*/
+{ int status = FALSE;
+	KEYTAB *key = getbind(c); /* key entry to execute */
+/*loglog3("L %x T %x c %d", lastbind==NULL ? 0 : lastbind->k_code,key->k_code,keyct);*/
 
+	if (key != g_lastbind)
+	{ g_lastbind = key;
+		pd_keyct = 0;
+	}
+
+	pd_keyct += 1;
+					 
+	if		 (key->k_code != 0) /* if keystroke is bound to a function..do it*/
+	{
 		status = execkey(key, f, n);			// f is 0 or any other value
-	
+	}
 	else
 	{ if (c == (CTRL | 'I'))
 			c = '\t';
@@ -566,22 +514,20 @@ static int Pascal execute(int c, int f, int n)
 //    mbwrite(int_asc(c));
 			mlwrite(TEXT19);								/* complain 	*/
 						/* [Key not bound]" */
-			status = FALSE;
 		}
 		else
-		{ /* If a space was typed, fill column is defined, the argument is non-
+		{	if (n <= 0) 		/* Fenceposts.	*/
+			{ g_lastflag = 0;
+				return n == 0;
+			}
+	
+			/* If a space was typed, fill column is defined, the argument is non-
 			 * negative, wrap mode is enabled, and we are now past fill column,
 			 * and we are not read-only, perform word wrap.
 			 */
 			if (c == ' ' && (curbp->b_flag & (MDVIEW | MDWRAP)) == MDWRAP
-									 && pd_fillcol > 0 && getccol() > pd_fillcol
-									 && n >= 0)
+									 && getccol() > pd_fillcol)
 				execkey(&wraphook, FALSE, 1);
-	
-			if (n <= 0) 		/* Fenceposts.	*/
-			{ g_lastflag = 0;
-				return n == 0;
-			}
 	
 			g_overmode = curbp->b_flag & MDOVER;
 			status = linsert(n, (char)c); 	/* do the insertion */
@@ -602,6 +548,12 @@ static int Pascal execute(int c, int f, int n)
 	}
 	return status;
 }}
+
+#if S_WIN32
+#define PFXX META
+#else
+#define PFXX ALTD
+#endif
 
 
 int g_got_uarg = FALSE;
@@ -644,13 +596,13 @@ void Pascal editloop(int c)
 		}
 	}
 																						/* do META-# processing if needed */
-	if ((c & META) && in_range((c & 0xff), '-', '9')
+	if ((c & PFXX) && in_range((c & 0xff), '-', '9')
 								 && getbind(c)->k_code == 0)
 	{ n = 0;		/* start with a zero default */
 		f = 1; 		/* there is a # arg */
 							/* current minus flag */
 #define sign f
-		c &= ~META; 	/* strip the META */
+		c &= ~PFXX; 	/* strip the META/ALTD */
 		while (true)
 		{ c -= '0';
 			if			(c == '-'-'0')

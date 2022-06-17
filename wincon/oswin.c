@@ -952,6 +952,7 @@ int ttsystem(const char * cmd, const char * data)
 
 	/* Pipe a one line command into a window
 	 */
+static
 int pipefilter(wh)
 	 char 	 wh;				/* # ! < @ */
 {
@@ -1017,13 +1018,13 @@ int pipefilter(wh)
 
 {	char * fnam2 = mkTempCommName('o', pipeOutFile);
 
-	cc = WL_IHAND + WL_HOLD;
+	cc = WL_IHAND + WL_HOLD + WL_SHELL;
 
 	if      (wh == '#'-'<')
 //	cc |= WL_SPAWN+WL_CNC;
 		cc |= WL_SHELL+WL_CNC;
-	else if	(wh >= '<'-'<')					// < @ 
-		cc |= WL_SHELL;
+//else if	(wh >= '<'-'<')					// < @
+//	cc |= WL_SHELL;
 #if 0
 	else if (wh == 'E' -'<')
 		cc |= LAUNCH_STDERROUT;

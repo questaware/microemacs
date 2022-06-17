@@ -18,11 +18,189 @@
 #endif
 
 // extern char *getenv();
+#define NILNAMIC	-1
+#define MONAMIC 	0
+#define DYNAMIC 	1
+#define TRINAMIC	2
+
+#define RRET (-1)
+#define RINT  0
+#define RSTR  1
+
+typedef struct UFUNC
+{	signed char f_type;	/* 0 = monamic, 1 = dynamic */
+	char  			f_kind;
+	char  			f_name[4];  /* name of function */
+} UFUNC;
 
 #define	TKVAR	3	/* user variables		*/
 #define	TKENV	4	/* environment variables	*/
 
 #define UNDEF 0
+															/*	list of recognized user functions	*/
+static const UFUNC funcs[] = {
+	MONAMIC, RINT, "abs", 	/* absolute value of a number */
+	DYNAMIC, RINT, "add",   /* add two numbers together */
+	DYNAMIC, RSTR, "and", 	/* logical and */
+	MONAMIC, RINT, "asc", 	/* char to integer conversion */
+	DYNAMIC, RINT, "ban", 	/* bitwise and	 9-10-87  jwm */
+	MONAMIC, RRET, "bin", 	/* loopup what function name is bound to a key */
+	MONAMIC, RINT, "bno", 	/* bitwise not */
+	DYNAMIC, RINT, "bor", 	/* bitwise or	 9-10-87  jwm */
+	DYNAMIC, RINT, "bxo", 	/* bitwise xor	 9-10-87  jwm */
+	DYNAMIC, RRET, "cat", 	/* concatenate string */
+	MONAMIC, RRET, "chr", 	/* integer to char conversion */
+	DYNAMIC, RRET, "dir",		/* replace tail of filename with filename */
+	NILNAMIC,RRET, "dit",		/* the character in the line above */
+	DYNAMIC, RINT, "div", 	/* division */
+	MONAMIC, RRET, "env", 	/* retrieve a system environment var */
+	DYNAMIC, RSTR, "equ", 	/* logical equality check */
+	MONAMIC, RSTR, "exi", 	/* check if a file exists */
+	MONAMIC, RRET, "fin", 	/* look for a file on the path... */
+	DYNAMIC, RSTR, "gre", 	/* logical greater than */
+	NILNAMIC,RRET, "gtc",		/* get 1 emacs command */
+	NILNAMIC,RRET, "gtk",		/* get 1 charater */
+	MONAMIC, RRET, "ind", 	/* evaluate indirect value */
+	DYNAMIC, RRET, "lef", 	/* left string(string, len) */
+	MONAMIC, RINT, "len", 	/* string length */
+	DYNAMIC, RSTR, "les", 	/* logical less than */
+	MONAMIC, RRET, "low", 	/* lower case string */
+	TRINAMIC,RRET, "mid",		/* mid string(string, pos, len) */
+	DYNAMIC, RINT, "mod", 	/* mod */
+	MONAMIC, RINT, "neg", 	/* negate */
+	MONAMIC, RSTR, "not", 	/* logical not */
+	DYNAMIC, RSTR, "or",		/* logical or */
+	DYNAMIC, RRET, "rig", 	/* right string(string, pos) */
+	MONAMIC, RINT, "rnd", 	/* get a random number */
+	DYNAMIC, RSTR, "seq", 	/* string logical equality check */
+	DYNAMIC, RSTR, "sgr", 	/* string logical greater than */
+	DYNAMIC, RINT, "sin", 	/* find the index of one string in another */
+	DYNAMIC, RSTR, "sle", 	/* string logical less than */
+	DYNAMIC, RRET, "slo",		/* set lower to upper char translation */
+	DYNAMIC, RINT, "sub", 	/* subtraction */
+	DYNAMIC, RRET, "sup",		/* set upper to lower char translation */
+	DYNAMIC, RINT, "tim", 	/* multiplication */
+	MONAMIC, RRET, "tri",		/* trim whitespace off the end of a string */
+	MONAMIC, RRET, "upp", 	/* uppercase string */
+	TRINAMIC,RRET, "xla",	/* XLATE character string translation */
+};
+
+#define NFUNCS	sizeof(funcs) / sizeof(UFUNC)
+
+/*	and its preprocesor definitions 	*/
+
+#define UFABS		0
+#define UFADD		1
+#define UFAND		2
+#define UFASCII 3
+#define UFBAND	4
+#define UFBIND	5
+#define UFBNOT	6
+#define UFBOR		7
+#define UFBXOR	8
+#define UFCAT		9
+#define UFCHR		10
+#define UFDIR	  11
+#define UFDIT		12
+#define UFDIV		13
+#define UFENV		14
+#define UFEQUAL 	15
+#define UFEXIST 	16
+#define UFFIND		17
+#define UFGREATER	18
+#define UFGTCMD 	19
+#define UFGTKEY 	20
+#define UFIND		  21
+#define UFLEFT		22
+#define UFLENGTH	23
+#define UFLESS		24
+#define UFLOWER 	25
+#define UFMID		26
+#define UFMOD		27
+#define UFNEG		28
+#define UFNOT		29
+#define UFOR		30
+#define UFRIGHT 31
+#define UFRND		32
+#define UFSEQUAL	33
+#define UFSGREAT	34
+#define UFSINDEX	35
+#define UFSLESS 	36
+#define	UFSLOWER	37
+#define UFSUB		  38
+#define	UFSUPPER	39
+#define UFTIMES 	40
+#define	UFTRIM		41
+#define UFUPPER 	42
+#define UFXLATE 	43
+
+/*	list of recognized environment variables	*/
+static
+const char * const g_envars[] = {
+	"acount",			/* # of chars until next auto-save */
+	"asave",			/* # of chars between auto-saves */
+	"bufhook",		/* enter buffer switch hook */
+	"cbflags",		/* current buffer flags */
+	"cbufname",		/* current buffer name */
+	"cfname",		  /* current file name */
+	"cliplife",		/* life of data in clip board */
+	"cmdhook",		/* command loop hook */
+	"cmode",			/* mode of current buffer */
+	"cmtcolour",	/* Colour used for comments */
+	"col1ch",			/* character selecting first colour */
+	"col2ch",			/* character selecting second colour */
+	"curchar",		/* current character under the cursor */
+	"curcol",			/* current column pos of cursor */
+	"curline",		/* current line in file */
+	"cwline",			/* current screen line in window */
+	"debug",			/* macro debugging */
+	"discmd",			/* display commands on command line */
+	"disinp",			/* display command line input characters */
+	"exbhook",		/* exit buffer switch hook */
+	"fcol",				/* first displayed column in curent window */
+	"fileprof",		/* profiles for file types */
+	"fillcol",		/* current fill column */
+	"gflags",			/* global internal emacs flags */
+	"gmode",			/* global modes */
+	"hardtab",		/* current hard tab size */
+	"highlight",	/* highlighting string */
+	"hjump",			/* horizontal screen jump size */
+	"incldirs",		/* directories to search */
+	"keycount",		/* consecutive times key has been pressed */
+	"kill", 			/* kill buffer (read only) */
+	"language",		/* language of text messages */
+	"lastdir",		/* last direction of search */
+	"lastkey",		/* last keyboard char struck */
+	"lastmesg",		/* last string mlwrite()ed */
+	"line", 			/* text of current line */
+	"match",			/* last matched magic pattern */
+	"msflag",			/* activate mouse? */
+	"pagelen",		/* number of lines used by editor */
+	"pagewidth",	/* current screen width */
+	"palette",		/* current palette string */
+	"pending",		/* type ahead pending flag */
+	"popup",			/* popup message */
+	"readhook",		/* read file execution hook */
+	"region",			/* current region (read only) */
+	"replace",		/* replacement pattern */
+	"search",			/* search pattern */
+	"seed", 			/* current random number seed */
+	"ssave",			/* safe save flag */
+	"status",			/* returns the status of the last command */
+	"uarg",				/* last universal arg */
+	"version",		/* current version number */
+	"winnew",	  	/* window is newly created */
+	"wintitle",		/* the title on the window */
+	"wline",			/* # of lines in current window */
+	"work",				/* # of buffers modified or not yet read */
+	"wraphook",		/* wrap word execution hook */
+	"writehook",	/* write file hook */
+	"xpos", 			/* current mouse X position */
+	"ypos",	 			/* current mouse Y position */
+	"zcmd"				/* last command */
+};
+
+#define NEVARS	(sizeof(g_envars) / sizeof(g_envars[0]))
 
 PD_VAR predefvars[NEVARS+2] =
 
@@ -50,16 +228,16 @@ FALSE, /* EVCWLINE */		  /* */
 0,     /* EVEXBHOOK */    /* actual: swb_luct */
 0,     /* EVFCOL */		    /* The left hand offset on the screen */
 0,     /* EVFILEPROF */	  /* The profiles of file types */
-72,    /* EVFILLCOL */		/* not in use */
+72,    /* EVFILLCOL */		/* longest line for wordwrap */
 0,     /* EVGFLAGS */		  /* global control flag */
 0,     /* EVGMODE */ 		  /* global editor mode */
 8,     /* EVHARDTAB */		/* default tab size */
 0,     /* EVHIGHLIGHT */	/* not in use */
 1,     /* EVHJUMP */		  /* horizontal jump size */
-0,		 /* EVINCLD */		/* not in use */
+0,		 /* EVINCLD */			/* not in use */
 0,     /* EVKEYCT */		  /* consec key ct */
 CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
-CTRL |'M',/* EVLANG */  	/* actual: sterm - search terminating char */
+0,		 /* EVLANG */  			/* */
 0,     /* EVLASTDIR */	  /* actual: prefix- current pending prefix bits*/
 0,     /* EVLASTKEY */    /* last keystoke */
 0,     /* EVLASTMESG */   /* not in use */
@@ -70,7 +248,7 @@ FALSE, /* EVPAGELEN */    /* actual: eexitflag */
 TRUE,  /* EVPAGEWIDTH */	/* */
 0,     /* EVPALETTE */    /* not in use */
 0,     /* EVPENDING */    /* actual: nclicks - clrd on any non-mouse event*/
-CTRL |'Q',/* EVPOPUP */    	/* quotec */
+0,		 /* EVPOPUP */   		/* */
 FALSE, /* EVREADHK */     /* not in use */
 UNDEF, /* EVREGION */	
 UNDEF, /* EVREPLACE */       
@@ -160,18 +338,17 @@ char *Pascal mkul(int wh, char * str)	/* make a string lower or upper case */
 
 static char * Pascal USE_FAST_CALL plinecpy(char line[2])
 	
-{ int here = getccol();
+{//int here = getccol();
   
   line[0] = 0;
 	line[1] = 0;
 
-{ LINE * pline = curwp->w_dotp;
-  
   if (curwp->w_linep != NULL)
-  {
+	{ LINE * pline = curwp->w_dotp;
+
     while (pline != curwp->w_linep)
     { pline = lback(pline);
-    { int offs = getgoal(here, pline);
+    { int offs = getgoal(getccol(), pline);
       if (offs < llength(pline))
       { line[0] = pline-> l_text[offs];
         break;
@@ -179,7 +356,7 @@ static char * Pascal USE_FAST_CALL plinecpy(char line[2])
     }}
   }
   return line;
-}}
+}
 
 //static
 //const char * USE_FAST_CALL fixnull(const char * s)   /* Exclude NULL pointers */
@@ -188,21 +365,6 @@ static char * Pascal USE_FAST_CALL plinecpy(char line[2])
 //  return s == NULL ? "" : s;
 //}
 
-
-static Map_t fnamemap = mk_const_map(T_DOMCHAR0+4, 2, funcs, 0);
-/*
-typedef struct Map_s
-{ Format_t format;
-  Char *   srch_key;	// These 2 form a pair.   See Note 1.
-  Short    last_ix;
-
-  Short    max_len;	// in bytes
-  Short    curr_len;	// in bytes
-  Short    curr_mult;   // in entries
-  Int	   update_ct;
-  Byte     c[1];	// actually Mapeny_t
-} Map_t, *Map;
-*/
 
 static struct
 { char * result;
@@ -297,14 +459,14 @@ int Pascal USE_FAST_CALL sindex(char * src, char * pattern) /*find pattern in sr
 	return 0;
 }
 
+static Map_t fnamemap = mk_const_map(T_DOMCHAR0+4, 2, funcs, 0);
 
 static 
-const char * Pascal gtfun(char * fname)/* evaluate a function */
+const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 
 {											      /* look the function up in the function table */
 	fname[3] = 0;							/* only first 3 chars significant */
-  mkul(0, fname);
-	fnamemap.srch_key = fname;
+	fnamemap.srch_key = mkul(0, fname);
 
 { int fnum = binary_const(&fnamemap, funcs);
 	if (fnum < 0)
@@ -316,7 +478,6 @@ const char * Pascal gtfun(char * fname)/* evaluate a function */
 	char * arg2 = NULL;											/* to suppress warning */
 	char * arg1 = push_arg(0,"");					/* to initialise area */
 
-//*arg1 = 0;
 																		/* if needed, retrieve the first argument */
 	if (funcs[fnum].f_type >= MONAMIC)
 	{ 
@@ -369,14 +530,13 @@ const char * Pascal gtfun(char * fname)/* evaluate a function */
 									 if (fnum == UFXLATE)
 				           	 return xlat(arg1, arg2, arg3);
 									 
-								 { int n = atoi(arg2);
-								 	 if (n < 0)
-								 	 	 n = 0;
-								 { int end = n + atoi(arg3);
+								 	 if (iarg2 < 0)
+								 	 	 iarg2 = 0;
+								 { int end = iarg2 + atoi(arg3);
 								 	 if (end >= 0 && end < g_stk.lim)
 								 	   arg1[end] = 0;
-				           return arg1+n;
-			           }}}
+				           return arg1+iarg2;
+			           }}
 #if DIACRIT
 		when UFSLOWER:setlower(arg1, arg2);
 				          if (0)
@@ -442,6 +602,94 @@ const char * Pascal gtfun(char * fname)/* evaluate a function */
 	 }
 	 return ltos(iarg1);
 	}
+}}}
+
+extern char deltaf[NSTRING];
+
+static Map_t evmap = mk_const_map(T_DOMSTR, 0, g_envars, 0);
+
+static
+const char * USE_FAST_CALL gtenv(const char * vname)
+															 			/* name of environment variable to retrieve */
+{ int ix = 0;
+												  /* scan the list, looking for the referenced name */
+	evmap.srch_key = vname;
+{ int	vnum = binary_const(&evmap, g_envars);
+	if (vnum < 0) 												/* return errorm on a bad reference */
+		return g_logm[2];
+
+	switch (vnum)
+	{ 
+	  case EVINCLD:	 
+	  case EVPALETTE:
+//	case EVSEARCH:
+		case EVHIGHLIGHT:
+	  case EVFILEPROF:
+		case EVMATCH:
+	    return predefvars[vnum].p;
+	}
+
+#define result (&deltaf[NSTRING / 2])   /* leave beginning for extra safety */
+{	int res = predefvars[vnum].i;
+
+	switch (vnum)
+	{ case EVPAGELEN:  res = term.t_nrowm1 + 1;
+	  when EVPAGEWIDTH:res = term.t_ncol;
+	  when EVCURCOL:   res = getccol();
+	  when EVCURLINE:	 res = setcline();
+	  when EVHARDTAB:  res = curbp->b_tabsize;
+//	when EVUSESOFTTAB:res = curbp->b_mode & BSOFTTAB ? 1 : 0;
+	  when EVCBFLAGS:  res = curbp->b_flag;
+	  case EVCMODE:    if (vnum == EVCMODE) res = res >> NUMFLAGS;
+	  when EVCBUFNAME: return curbp->b_bname;
+	  when EVCFNAME:   return curbp->b_fname;
+//  when EVSRES:	   return sres;
+//  when EVPALETTE:  return palstr;
+//  when EVFILEPROF: return g_file_prof;
+	  when EVCURCHAR:  res = llength(curwp->w_dotp) == curwp->w_doto 
+                    								? '\n' : lgetc(curwp->w_dotp, curwp->w_doto);
+	  when EVWLINE:    res = curwp->w_ntrows;
+	  when EVCWLINE:   res = getwpos();
+	  when EVSEARCH:   return pat;
+//  when EVHIGHLIGHT:return highlight;
+	  when EVREPLACE:  return rpat;
+//  when EVMATCH:    return patmatch;
+	  when EVKILL:	   return getkill();
+	  when EVREGION:   return getreg(&result[0]);
+	  
+	  when EVLINE:	   return getctext(&result[0]);
+	  when EVLASTMESG: return strpcpy(result,lastmesg,NPAT);
+//  when EVFCOL:	   res = pd_fcol;
+
+	  when EVBUFHOOK:
+	  case EVEXBHOOK:  ++ix;
+	  case EVWRITEHK:  ++ix;
+	  case EVCMDHK:    ++ix;
+	  case EVWRAPHK:   ++ix;
+	  case EVREADHK:   ++ix;
+						   		   return getfname(-ix);
+	  when EVVERSION:  return VERSION;
+	  when EVLANG:	   return LANGUAGE;
+    when EVZCMD:     return g_ll.lastline[g_ll.ll_ix & MLIX];
+#if S_WIN32
+	  when EVWINTITLE: return null;	// getconsoletitle();
+#endif
+		when EVWORK:		 res = lastbuffer(0,0);
+	  when EVPENDING:
+#if	GOTTYPAH
+									   res = typahead();
+#endif
+	  case EVDEBUG:   
+	  case EVSTATUS:  
+	  case EVDISCMD:  
+	  case EVDISINP:  
+	  case EVSSAVE:   
+	  case EVMSFLAG:   return ltos(res);
+
+	  default:	       loglog2("Var %d = %x", vnum, res);
+	}
+	return int_asc(res);
+#undef result
 }}}
 
 
@@ -511,96 +759,6 @@ Pascal binary(key, tval, tlength)
 }
 
 #endif
-
-
-static Map_t evmap = mk_const_map(T_DOMSTR, 0, g_envars, 0);
-
-static
-const char *Pascal USE_FAST_CALL gtenv(const char * vname)
- 			/* name of environment variable to retrieve */
-{ int ix = 0;
-  extern char deltaf[NSTRING];
-#define result (&deltaf[NSTRING / 2])   /* leave beginning for extra safety */
- /* static char result[NSTRING + 1];	 ** string result */
-
-												  /* scan the list, looking for the referenced name */
-	evmap.srch_key = vname;
-{ int	vnum = binary_const(&evmap, g_envars);
-	if (vnum < 0) 												/* return errorm on a bad reference */
-		return g_logm[2];
-
-	switch (vnum)
-	{ 
-	  case EVINCLD:	 
-	  case EVPALETTE:
-//	case EVSEARCH:
-		case EVHIGHLIGHT:
-	  case EVFILEPROF:
-		case EVMATCH:
-	    return predefvars[vnum].p;
-	}
-
-{	int res = predefvars[vnum].i;
-
-	switch (vnum)
-	{ case EVPAGELEN:  res = term.t_nrowm1 + 1;
-	  when EVPAGEWIDTH:res = term.t_ncol;
-	  when EVCURCOL:   res = getccol();
-	  when EVCURLINE:	 res = setcline();
-	  when EVHARDTAB:  res = curbp->b_tabsize;
-//	when EVUSESOFTTAB:res = curbp->b_mode & BSOFTTAB ? 1 : 0;
-	  when EVCBFLAGS:  res = curbp->b_flag;
-	  case EVCMODE:    if (vnum == EVCMODE) res = res >> NUMFLAGS;
-	  when EVCBUFNAME: return curbp->b_bname;
-	  when EVCFNAME:   return curbp->b_fname;
-//  when EVSRES:	   return sres;
-//  when EVPALETTE:  return palstr;
-//  when EVFILEPROF: return g_file_prof;
-	  when EVCURCHAR:  res = llength(curwp->w_dotp) == curwp->w_doto 
-                    								? '\n' : lgetc(curwp->w_dotp, curwp->w_doto);
-	  when EVWLINE:    res = curwp->w_ntrows;
-	  when EVCWLINE:   res = getwpos();
-	  when EVSEARCH:   return pat;
-//  when EVHIGHLIGHT:return highlight;
-	  when EVREPLACE:  return rpat;
-//  when EVMATCH:    return patmatch;
-	  when EVKILL:	   return getkill();
-	  when EVREGION:   return getreg(&result[0]);
-	  
-	  when EVLINE:	   return getctext(&result[0]);
-	  when EVLASTMESG: return strpcpy(result,lastmesg,NPAT);
-	  when EVFCOL:	   res = curwp->w_fcol;
-
-	  when EVBUFHOOK:
-	  case EVEXBHOOK:  ++ix;
-	  case EVWRITEHK:  ++ix;
-	  case EVCMDHK:    ++ix;
-	  case EVWRAPHK:   ++ix;
-	  case EVREADHK:   ++ix;
-						   		   return getfname(-ix);
-	  when EVVERSION:  return VERSION;
-	  when EVLANG:	   return LANGUAGE;
-    when EVZCMD:     return g_ll.lastline[g_ll.ll_ix & MLIX];
-#if S_WIN32
-	  when EVWINTITLE: return null;	// getconsoletitle();
-#endif
-		when EVWORK:		 res = lastbuffer(0,0);
-	  when EVPENDING:
-#if	GOTTYPAH
-									   res = typahead();
-#endif
-	  case EVDEBUG:   
-	  case EVSTATUS:  
-	  case EVDISCMD:  
-	  case EVDISINP:  
-	  case EVSSAVE:   
-	  case EVMSFLAG:   return ltos(res);
-
-	  default:	       loglog2("Var %d = %x", vnum, res);
-	}
-	return int_asc(res);
-#undef result
-}}}
 
 
 static int Pascal findvar(char * var)      /* find a variables type and name */
@@ -761,7 +919,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  when EVLINE:	   return FALSE;						// read only
 	  when EVFCOL:	   if (val < 0)
 	                     val = curwp->w_doto;
-	                   minfcol = val;
+	                   pd_fcol = val;
 	                   curwp->w_fcol = val;
 			               curwp->w_flag |= WFHARD | WFMODE;
 	  when EVBUFHOOK:
@@ -1009,7 +1167,7 @@ int Pascal desfunc(int f, int n)
 						  							/* build the function list */
 	for (uindex = -1; ++uindex < NFUNCS; )
 											     /* add in the environment variable name */
-	  fmt_desv('&', funcs[uindex].f_name, "");
+	  fmt_desv('&', funcs[uindex].f_name, NULL);
 
   return mkdes();
 }
