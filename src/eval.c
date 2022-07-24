@@ -82,7 +82,7 @@ static const UFUNC funcs[] = {
 	DYNAMIC, RINT, "tim", 	/* multiplication */
 	MONAMIC, RRET, "tri",		/* trim whitespace off the end of a string */
 	MONAMIC, RRET, "upp", 	/* uppercase string */
-	TRINAMIC,RRET, "xla",	/* XLATE character string translation */
+	TRINAMIC,RRET, "xla",		/* XLATE character string translation */
 };
 
 #define NFUNCS	sizeof(funcs) / sizeof(UFUNC)
@@ -195,8 +195,10 @@ const char * const g_envars[] = {
 	"work",				/* # of buffers modified or not yet read */
 	"wraphook",		/* wrap word execution hook */
 	"writehook",	/* write file hook */
+#if MOUSE
 	"xpos", 			/* current mouse X position */
 	"ypos",	 			/* current mouse Y position */
+#endif
 	"zcmd"				/* last command */
 };
 
@@ -468,14 +470,14 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 	fname[3] = 0;							/* only first 3 chars significant */
 	fnamemap.srch_key = mkul(0, fname);
 
-{ int fnum = binary_const(&fnamemap, funcs);
+{	char * arg2 = NULL;											/* to suppress warning */
+	int fnum = binary_const(&fnamemap, funcs);
 	if (fnum < 0)
 	  return null;
 
 {	int iarg1;
 	int iarg2;
 
-	char * arg2 = NULL;											/* to suppress warning */
 	char * arg1 = push_arg(0,"");					/* to initialise area */
 
 																		/* if needed, retrieve the first argument */
@@ -560,8 +562,8 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 		when UFSINDEX:	iarg1 = sindex(arg1, arg2);
 		when UFBAND:		iarg1 &= iarg2;
 		when UFBOR:	  	iarg1 |= iarg2;
-		when UFBXOR:		iarg1 ^= iarg2;
-		when UFBNOT:		iarg1 = ~iarg1;
+		when UFBNOT:		iarg2 = -1;
+		case UFBXOR:		iarg1 ^= iarg2;
 		when UFLENGTH:	iarg1  = strlen(arg1);
 		otherwise		  	return "";
 	 }
@@ -928,7 +930,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  case EVCMDHK:   ++hookix;
 	  case EVWRAPHK:  ++hookix;
     case EVREADHK:  ++hookix;
-  				  		    setktkey(&hooks[hookix], BINDFNC, value);
+										setktkey(BINDFNC, value, &hooks[hookix]);
 #if S_WIN32
 		when EVWINTITLE:setconsoletitle(value);
 #endif

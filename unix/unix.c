@@ -737,7 +737,6 @@ int Pascal filter(int f, int n)
 
 char * searchfile(char * result, Fdcr fdcr)
 
-{ (void)pipefile;
 { FILE * ip = fdcr->ip;
 	if (ip == NULL)
 	{ char buf[NFILEN+20];
@@ -761,7 +760,7 @@ char * searchfile(char * result, Fdcr fdcr)
 	}
 
 	return fname;
-}}}
+}}
 
 
 		   /* return a system dependant string with the current time */

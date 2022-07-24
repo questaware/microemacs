@@ -125,7 +125,7 @@
 #define NFILEN  256			/* Maximum file name (inc dirs) */
 #define NBUFN		 32			/* # of bytes, buffer name */
 #define NLINE		160			/* # of bytes, input line	*/
-#define NKBDM		256			/* # of strokes, keyboard macro */
+#define NKBDM		255			/* # of strokes, keyboard macro */
 #define NPAT		128			/* # of bytes, pattern		*/
 #define	NLOCKS	100			/* max # of file locks active	*/
 #define	KBLOCK	250			/* sizeof kill buffer chunks	*/

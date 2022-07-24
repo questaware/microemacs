@@ -173,22 +173,22 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 { Fdcr_t fdcr = {NULL};
   char bname[NFILEN];
 #define text (&bname[NBUFN+1])
-	int cr = create & ~(16+32+64);
+//int cr = create & ~(16+32+64);
   int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
 
   if (srch > 0)
   { msd_init(fname, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC|MSD_USEPATH);
     if (is_opt('Z'))
+    { srch = 0;
     { unsigned int newdate = 0;
 
       while ((fn = msd_nfile()) != NULL)
       { if (newdate < (unsigned)msd_stat.st_mtime)
         { newdate = (unsigned)msd_stat.st_mtime;
-          srch = 0;
           strpcpy(fname,fn,NFILEN);
         }
       }
-    }
+    }}
   }
 
   while ((fn = srch == 0 ? fname : 
@@ -204,17 +204,17 @@ BUFFER * Pascal bufflink(const char * filename, int create)
     { makename(bname, fn); 		/* New buffer name.	*/
 
       while (TRUE)
-      { bp = bfind(bname, cr, 0);
+      { bp = bfind(bname, create, 0);
 				if (bp == NULL)
-				{ if (cr & 1)
+				{ if (create & 1)
 				  { mlwrite(TEXT137);
                   /* "Cannot create buffer" */
 				    return null;
 				  }
-	  			cr |= 3;
+	  			create |= 3;
 				} 
 				else
-      	{	cr |= 2;
+      	{	create |= 2;
 				  if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
 	          break;
 #if 0
@@ -228,7 +228,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 				      continue;
 
 				    makename(bname, fn);	/* restore it */
-				    cr |= 1;		    			/* It already exists but this causes */
+				    create |= 1;		    			/* It already exists but this causes */
 				  }         				      /* a quit the next time around	     */
 #endif
 				}
@@ -243,7 +243,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 
 	  if (!srch)
 	    break;
-  }
+  } /* while */
 
 	if (create & 64)
 		swbuffer(bp_first);
@@ -480,11 +480,10 @@ int Pascal readin(char const * fname, int props)
 #endif
 { char fnbuff[NFILEN+1];
   int diry = FALSE;
-	Cc cc;
+  int got_at = FALSE;
 
 	const char * s = fname-1;
   const char * rname = NULL;
-  int got_at = FALSE;
   while (*++s != 0)
   { if (*s == '@')
       got_at = TRUE;
@@ -493,7 +492,7 @@ int Pascal readin(char const * fname, int props)
   }
 
 { BUFFER * bp = curbp;
-  cc = FIOSUC;
+  Cc cc = FIOSUC;
   if (!got_at)
   { if (s[-1] == '/')                           /* remove trailing slash */
 	   fname = strpcpy(fnbuff, fname, s - fname);
@@ -525,8 +524,8 @@ int Pascal readin(char const * fname, int props)
 #if S_MSDOS
 	  diry = name_mode(fname) & 040000;
 	  if (diry != 0)
-	    cc = OK;
-	  else
+		  cc = OK;
+		else
 	    cc = 1;
 #endif
 	}
@@ -560,7 +559,7 @@ int Pascal readin(char const * fname, int props)
   if (cc != 0)
     goto out;
 
-  init_paren("(",0);
+  init_paren("(", 0);
 	
 	if (ins)
 	{ 				                          /* back up a line and save the mark here */

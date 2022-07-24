@@ -109,7 +109,7 @@ void printf2(const char * msg, const char * val)
 
 
 static
-Bool match_fn_re_ic(Char * tlt,
+Cc match_fn_re_ic(Char * tlt,
 										Char * pat
 #if S_WIN32 == 0
 									 ,int /*Bool*/ fn_ic
@@ -118,11 +118,10 @@ Bool match_fn_re_ic(Char * tlt,
 #endif
 									 )
 {	Char ch,pch;
-	--pat;
-	--tlt;
+//--pat;
   while (1)
   { pch = *++pat;
-	  ch = *++tlt;
+	  ch = *tlt++;
 		if (pch == 0 || ch == 0)
 			break;
 #if S_WIN32 == 0
@@ -136,23 +135,24 @@ Bool match_fn_re_ic(Char * tlt,
     
     if (pch != '*')
     	break;
-		if (pat[1] == 0)
-			return 1;
+    pch = pat[1];
+		if (pch == 0)
+			return 0;
 
-  { Bool rc = match_fn_re_ic(tlt, pat+1 /*,*/ msd_ignore(fn_ic));
-   	if (rc)
+  { Bool rc = match_fn_re_ic(tlt, pat /*,*/ msd_ignore(fn_ic));
+   	if (!rc)
    		return rc;
 #if S_WIN32 == 0
-    if (toupper(ch) == toupper(pat[1]) && fn_ic)
+    if (toupper(ch) == toupper(pch) && fn_ic)
 #else
-   	if (ch == pat[1])
+   	if (ch == pch)
 #endif
     	++pat;
     else
     	--pat;
   }}
 
-  return (ch | pch) == 0;						/* ?* ?? */
+  return ch | pch;						/* ?* ?? */
 }
 
 #undef fn_ic
@@ -491,7 +491,7 @@ static Bool extract_fn()
   loglog2("Match %s %s", msd_pat, s);
 
   if      (msd_pat[0] == 0 ||
-				   match_fn_re_ic(s,msd_pat /*,*/msd_ignore(msd_ic))
+				   !match_fn_re_ic(s,msd_pat-1 /*,*/msd_ignore(msd_ic))
           )
     ; // msd_attrs |= MSD_MATCHED;
   else if (! ((msd_a & MSD_DIRY) && (msd_a & MSD_SHOWDIR)))
@@ -585,7 +585,7 @@ int main(int argc, char * argv[])
 			file = filev;
 	}
 	
-{	Bool rc = match_fn_re_ic(file, pat /*,*/ msd_ignore(0));
+{	Bool rc = match_fn_re_ic(file, pat-1 /*,*/ msd_ignore(0));
 	printf("Res %d\n", rc);
 }}
 

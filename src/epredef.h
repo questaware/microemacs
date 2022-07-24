@@ -59,9 +59,13 @@ extern PD_VAR predefvars[];
 #define EVWORK		 55
 #define EVWRAPHK	 56
 #define	EVWRITEHK	 57
+#if MOUSE
 #define EVXPOS		 58
 #define EVYPOS		 59
 #define EVZCMD		 60
+#else
+#define EVZCMD		 58
+#endif
 
 #define pd_gacount  predefvars[EVACOUNT].i
 #define pd_gasave   predefvars[EVASAVE].i

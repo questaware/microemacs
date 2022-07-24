@@ -382,18 +382,25 @@ int Pascal backpage(int f, int n)
 }
 
 
-static MARK  g_rem;
+#if FLUFF
+ static MARK  g_rem;
+#endif
 
 int Pascal setmark(int f, int n)
 
-{ n = f == FALSE ? 0 : (unsigned)n & (NMARKS-1);
-{	MARK * mrk = &curwp->mrks.c[n];
-  g_rem = *mrk;
-  *mrk = *(MARK*)&curwp->w_dotp;
-
+{ n = (unsigned)n & (NMARKS-1);
+	if (f == FALSE)
+		n = 0; 
 	if (f >= 0)
 	  mlwrite(TEXT9, n);
 			  /* "[Mark %d set]" */
+{	MARK * mrk = &curwp->mrks.c[n];
+
+#if FLUFF
+  g_rem = *mrk;
+#endif
+  *mrk = *(MARK*)&curwp->w_dotp;
+
   return TRUE;
 }}
 
@@ -408,14 +415,14 @@ int Pascal remmark(int f, int n)
   return TRUE;
 }
 
-static const char text11[] = TEXT11;
+#if FLUFF
 
 int Pascal swapmark(int f, int n)
  
 { (void)setmark(f, n);
 
   if (g_rem.markp == NULL)
-  { mlwrite(text11, n);
+  { mlwrite(TEXT11, n);
 					/* No mark %d in this window" */
     return FALSE;
   }
@@ -425,6 +432,7 @@ int Pascal swapmark(int f, int n)
   return TRUE;
 }
 
+#endif
 
 int Pascal gotomark(int f, int n)
 
@@ -433,7 +441,7 @@ int Pascal gotomark(int f, int n)
 { WINDOW * wp = curwp;
 	MARK * mrk = &wp->mrks.c[n];
   if (mrk->markp == NULL)
-  { mlwrite(text11, n);
+  { mlwrite(TEXT11, n);
 					/* "No mark %d in this window" */
     return FALSE;
   }

@@ -653,7 +653,7 @@ int Pascal scanner(int direct, int again)
   if ((again & 1) ? direct > 0 : (lpos.curline->l_props & L_IS_HD))
     nextch(&lpos, direct);    /* Advance the cursor.*/
 
-  init_paren("",0);
+  init_paren("", 0);
   g_paren.sdir = direct;
 
 {	int matchlen = 0;

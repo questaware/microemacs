@@ -243,14 +243,15 @@ void Pascal USE_FAST_CALL tcapmove(int row, int col)
 	Coords.X = ttcol;
 
 	if (row < term.t_nrowm1 && g_cursor_on >= 0)
-	{ WORD MyAttr = row == term.t_nrowm1 ? BG_GREY
-                       					  	: window_bgfg(curwp) | BACKGROUND_INTENSITY;
-		WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
+	{	WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
+	{ WORD MyAttr = // row == term.t_nrowm1 ? BG_GREY :
+                       					  	  window_bgfg(curwp) | BACKGROUND_INTENSITY;
+
 	  WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );
 	
 	  g_oldattr = refresh_colour(row, col);
 	  g_oldcur = Coords;
-	}
+	}}
 	SetConsoleCursorPosition( g_ConsOut, Coords);
 }
 
@@ -308,17 +309,21 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
   WriteConsoleOutputCharacter(cout, &gch,1, g_csbi.dwCursorPosition, &Dum);
 
 /* ttcol = col;*/
-{ int col = g_csbi.dwCursorPosition.X + 1;
+{ int col = 0;
 
   if (ch != '\n' && ch != '\r')
   { // if (ch != '\b')
-    { if (col >= g_csbi.dwSize.X)
+		col = g_csbi.dwCursorPosition.X + 1;
+    { 
+#if 0
+      if (col >= g_csbi.dwSize.X)
     	{
 #if _DEBUG
         mlwrite("%pRow %d Col %d Lim %d", ttrow, col, g_csbi.dwSize.X);
 #endif
 				return;
       }
+#endif
     }
 #if 0
     else
@@ -333,13 +338,12 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 #endif
   }
   else
-  { col = 0;
-	{	int row = g_csbi.dwCursorPosition.Y;
-    if (row < g_csbi.dwSize.Y)
-    { g_csbi.dwCursorPosition.Y = row + 1;
+	{	int row = g_csbi.dwCursorPosition.Y + 1;
+    if (row <= g_csbi.dwSize.Y)
+    { g_csbi.dwCursorPosition.Y = row;
 //   	ttscup(g_csbi.dwSize.X, g_csbi.dwSize.Y);	/* direction the window moves*/
     }
-  }}
+  }
 
   g_csbi.dwCursorPosition.X = col;
 //ttrow = row;
@@ -409,8 +413,8 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 		buf[col] = (outstr[col] & 0xff);
 	}
 	
-	buf[++col] = 0;
-	cuf[col] = 0;
+	buf[col+1] = 0;
+	cuf[col+1] = 0;
 	Coords.X = 0;
 	Coords.Y = row;
 			 

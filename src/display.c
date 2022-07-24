@@ -948,15 +948,14 @@ void Pascal updline()
 static 
 int Pascal reframe(WINDOW * wp)
 
-{	LINE *lp;			 /* search pointer */
-	LINE * top = wp->w_linep;
-	int nlines = wp->w_ntrows;
+{	int nlines = wp->w_ntrows;
 	int centre = wp->w_force;
   int flags = wp->w_flag;
+	LINE * top = wp->w_linep;
+	LINE *lp = top;			 /* search pointer */
 												/* if not a requested reframe, check for a needed one */
 	if ((flags & WFFORCE) == 0)
 	{ int i;
-	  lp = top;
 		for (i = nlines; --i >= 0; ) 
 		{												 		/* if the line is in the window, no reframe */
 			if (lp == wp->w_dotp)

@@ -39,7 +39,6 @@ int Pascal millisleep(unsigned int n);
 char * USE_FAST_CALL mallocz(int n);
 void USE_FAST_CALL adb(int n);
 int Pascal arith(int, int);
-int Pascal addnewbind(int c, int (Pascal *func)(int, int));
 char * Pascal allocate(unsigned nbytes);
 char * Pascal callocate(unsigned nbytes);
 //int count_work(void);
@@ -355,7 +354,7 @@ int Pascal setekey(CRYPTKEY *);
 int Pascal setfillcol(int, int);
 int Pascal setgmode(int, int);
 int Pascal setjtable();
-void Pascal setktkey(KEYTAB*, int, char *);
+void Pascal setktkey(int, char *, KEYTAB*);
 int Pascal setmark(int, int);
 int Pascal setmod(int, int);
 int Pascal shellprog(char wh, char * cmd);
@@ -469,7 +468,7 @@ int Pascal yank(int, int);
 int Pascal zotbuf(BUFFER*);
 void Pascal MySetCoMo();
 
-int Pascal init_paren(const char *, int);
+int init_paren(const char *, int);
 int Pascal scan_paren(char);
 int Pascal scan_par_line(LINE *);
 

@@ -72,11 +72,15 @@ static int    g_slast_dir;
 static int		g_kbdwr = 0;								// -ve => play
 
 
-static void save_state()
+static void USE_FAST_CALL save_state(int wh)
 
-{	g_sll = g_ll;
-	g_slast_dir = pd_lastdir;
-	strcpy(g_savepat,pat);
+{ if (wh)
+		strcpy(pat,g_savepat);
+	else
+	{	strcpy(g_savepat,pat);
+		g_sll = g_ll;
+		g_slast_dir = pd_lastdir;
+	}
 }
 
 
@@ -96,7 +100,7 @@ int ctlxlp(int f, int n)
 //macro_start_line = curwp->w_dotp;
 	
 	macro_start_col = getccol();
-	save_state();
+	save_state(0);
 
 	mlwrite(TEXT106);
 				/* "[Start macro]" */
@@ -125,7 +129,7 @@ int  ctlxrp(int f, int n)
 //g_kbdm[g_macro_last_pos] = 0;					// exclude the sequence for this cmd!
 //g_macro_last_pos = NKBDM-1;
 	pd_lastdir = g_slast_dir;
-	strcpy(pat,g_savepat);
+	save_state(1);
 
 //#if _DEBUG
 //if (g_exec_level)
@@ -157,7 +161,7 @@ int  ctlxe(int f, int n)
 		if (macro_start_col >= 0)
 			curwp->w_doto = getgoal(macro_start_col, curwp->w_dotp);
 						
-		save_state();
+		save_state(0);
 				 
 		if (g_kbdwr >= 0)
 		{ mlwrite(TEXT105);
@@ -213,7 +217,7 @@ int  tgetc()
 //	g_exec_level = 0;					/* weak code ! */
 //	pd_lastkey = g_slastkey;
 		g_ll = g_sll;
-    strcpy(pat,g_savepat);
+    save_state(1);
 #if VISMAC == 0
     update(FALSE);		/* force a screen update after all is done */
 #endif
@@ -476,6 +480,8 @@ int g_gs_keyct;
 static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
 { char mybuf[HICHAR];
+  char * autostr = "";
+  int woffs = curwp->w_doto;
 	int cc = TRUE;
 	int llix = -1;
 	int key_ct = 0;
@@ -485,8 +491,6 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 #if S_MSDOS == 0
 	int twid = FALSE;
 #endif
-  char * autostr = "";
-  int woffs = curwp->w_doto;
 //int plain = gs_type - CMP_COMMAND;
   
   buf[0] = 0;
@@ -550,14 +554,13 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 		if (ch >= (ALTD | '1') && ch <= (ALTD | '3'))
     { ch = (ch & 0x7f) - '2';
 			redo = 3;
-		{ int cix = strlen(
-        					  strpcpy(mybuf, g_ll.lastline[g_last_cmd], HICHAR-2));
+      autostr = strpcpy(mybuf, g_ll.lastline[g_last_cmd], HICHAR-2);
+		{ int cix = strlen(autostr);
       mybuf[cix+1] = 0;
       mybuf[cix+2] = 0;
       for (; --cix > 0;)
       	if (mybuf[cix] <= ' ')
        	  mybuf[cix] = 0;
-      autostr = mybuf;
       if (ch >= 0)
       	autostr += strlen(autostr)+1;
       if (ch > 0)

@@ -158,7 +158,7 @@ int Pascal lchange(int flag)
 		g_header_scan = ct + 6;
 		ct = 24;
 
-		init_paren("",0);
+		init_paren("", 0);
 		g_paren.in_mode = (lp->l_props & Q_IN_CMT);
 
     while (true)

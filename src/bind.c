@@ -217,7 +217,6 @@ bind-to-key filter-buffer ^X|
 	{CTRL|'G', BINDFNC, kdelete}, /* tbd: freed up ^G to agree with jasspa */
 	{CTRL|'F', BINDFNC, kdelete},
 	{CTRL|'V', BINDFNC, yank},
-	{CTLX|'\\', BINDFNC, filter},
 	{CTLX|'|', BINDFNC, filter},
 	{CTRL|' ', BINDFNC, setmark},
 #endif
@@ -230,7 +229,7 @@ bind-to-key filter-buffer ^X|
 #endif
 	{META|CTRL|'G', BINDFNC, gotomark},
 	{META|CTRL|'H', BINDFNC, delbword},
-	{META|CTRL|'K', BINDFNC, unbindkey},
+//{META|CTRL|'K', BINDFNC, unbindkey},
 //{META|CTRL|'L', BINDFNC, refresh},
 	{META|CTRL|'M', BINDFNC, delgmode},
 #if 0
@@ -257,7 +256,7 @@ bind-to-key filter-buffer ^X|
 #if APROP
 	{META|'A',	BINDFNC, apro},
 #endif
-	{META|'B',	BINDFNC, backword},
+//{META|'B',	BINDFNC, backword},
 	{MUTA|'W',	BINDFNC, copyword},
 	{META|'D',	BINDFNC, delfword},
 #if CRYPT
@@ -369,8 +368,8 @@ int  getcmd()
 									/* This function looks a key binding up in the binding table */
 KEYTAB * Pascal getbind(int c)
 				/* key to find what is bound to it */
-{	if (c < 0)
-		return &hooks[-c];
+{	// if (c < 0)
+	//	return &hooks[-c];
 {		
 #if NBINDS
   KEYTAB *ktp;
@@ -417,8 +416,8 @@ KEYTAB * Pascal getbind(int c)
 }}
 
 
-
-int Pascal addnewbind(int c, int (Pascal *func)(int, int))
+static
+int Pascal USE_FAST_CALL addnewbind(int c, int (Pascal *func)(int, int))
 					/* key to find what is bound to it */
 { /*if (c == (CTRL | SPEC | 'N'))
       adb(4);*/
@@ -619,7 +618,7 @@ Pascal unbindkey(int f, int n)
   KEYTAB * ktp = getbind(0) - 1;		/* get pointer to end of table */
 			           										/* copy the last entry to the current one */
   *sktp = *ktp;
-  *ktp = ktp[1];										/* null out the last one */
+  ktp->k_code = 0;										/* null out the last one */
 
 #else
   if (in_range(sktp - keytab, 0, upper_index(keytab)))
@@ -1068,7 +1067,7 @@ int Pascal execkey(KEYTAB * key, int f, int n)
 }
 
 			/* set a KEYTAB to the given name of the given type */
-void Pascal setktkey(KEYTAB * key, int type, char * name)
+void Pascal setktkey(int type, char * name, KEYTAB * key)
 				/* type of binding */
 				/* name of function or buffer */
 {																		// Only called on table hooks
@@ -1124,7 +1123,7 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 		{	int	c = getechockey(2);
 			const char * ptr = getfname(c);				/* find the right ->function */
 			mlwrite("\001 %d %s %s", pd_lastkey, cmdstr(&outseq[0], c),
-																			 *ptr != 0 ? ptr : TEXT14);
+																			 *ptr != 0 ? ptr  TEXT14);
 			strcat(lastmesg,"\n");
 			linstr(lastmesg);
 		}}
@@ -1136,7 +1135,7 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 	const char * ptr = getfname(c);				/* find the right ->function */
 																				/* change it to something printable */
 	mlwrite("\001 %d %s %s", pd_lastkey, cmdstr(&outseq[0], c),
-																			 *ptr != 0 ? ptr : TEXT14);  
+																			*ptr != 0 ? ptr : TEXT14);
 																										/*"Not Bound" */
 }
 #endif

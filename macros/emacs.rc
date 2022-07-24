@@ -2,7 +2,7 @@ set $discmd 0
 set $col1ch 1
 set $col2ch 8
 set $palette 1234560
-set $highlight 4hello
+set $highlight 4target
 ;set $pagelen 74
 
 add-global-mode re
@@ -177,25 +177,17 @@ btk execute-macro-11 M-^H
 			set %class %x
 		!else
 			!if &not &seq %x %class
-				!if &equ %stage 0
-					set %class %x
-					set %stage 1
-				!else
-					set %clamp &sub %clamp 48
-				!endif
+				!break
 			!endif
 		!endif
-		!if &equ %lk 2362
-			forward-character
-		!else
+		!if &not &equ %lk 2362
 			backward-character
+		!else
+			forward-character
 		!endif
 	!endw
-	!if &not &equ %lk 2362 
+	!if &and &not &equ %lk 2362 &les %clamp 48
 		forward-character
-		!if &not &equ %clamp 0
-			forward-character
-		!endif
 	!endif
 !endm
 
@@ -275,7 +267,7 @@ btk execute-macro-17 M-FNF
 
 18 store-macro
    insert-string "{ "
-   newline-and-indent
+   newline
    insert-string "}"
    backward-line
    end-of-line

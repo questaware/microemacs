@@ -15,9 +15,8 @@ static int g_s_cmt, g_ps_cmt;
 
 Paren_t g_paren;
 
-int Pascal init_paren(const char * str,
-										  int len
-										 )
+int init_paren(const char * str, int len)
+
 {	Paren_t p = {0,};
 	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL+BCPAS));
 	int p_cmt = (f_cmt						  & BCPAS);
@@ -34,7 +33,7 @@ int Pascal init_paren(const char * str,
 //p.nest = len < 0 ? 0 : 1;
 	if (len >= 0)
 		++p.nest;
-{	char nch = len <= 1 ? 0 : toupper(str[1]);
+{	char nch = toupper(str[1]);
 	p.ch = toupper(*str);
 	
 { char ch = p.ch;
@@ -115,7 +114,6 @@ int Pascal init_paren(const char * str,
 	{	p.sdir = -1;
 		if (p_cmt)
 			p.olcmt = '(';
-			
 	}
 
 	g_paren = p;	
@@ -521,8 +519,8 @@ int Pascal ins_newline(int notused, int n)
 {	int s;
 																						/* insert some lines */
 	while (--n >= 0)
-	{ char * src = NULL;
-		char * eptr;
+	{ char * src;
+		char * eptr = NULL;
 		if (curbp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS))
 		{ src = &curwp->w_dotp->l_text[0];
 			eptr = skipspaces(src, &src[curwp->w_doto]);
@@ -551,6 +549,8 @@ int Pascal forwdel(int f, int n)
 {	if (rdonly())
 		return FALSE;
 
+	g_thisflag |= CFKILL;
+
 	if (f != FALSE) 											/* Really a kill. 			*/
 	{ if ((g_lastflag & CFKILL) == 0)
 			kdelete(0,0);
@@ -562,7 +562,6 @@ int Pascal forwdel(int f, int n)
 			return s;
 	}}
 
-	g_thisflag |= CFKILL;
 	return ldelchrs((Int)n, f);
 }
 

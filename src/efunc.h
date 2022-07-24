@@ -68,7 +68,9 @@ const NBIND names[] =
 #if	AEDIT
 	{"entab-region",				entab},
 #endif
+#if FLUFF
 	{"exchange-point-and-mark",swapmark},
+#endif
 	{"execute-buffer",			execbuf},
 #if FLUFF
 	{"execute-command-line",execcmd},
