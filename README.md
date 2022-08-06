@@ -9,6 +9,8 @@ cd wincon/release
 
 gmake
 
+The executable e.exe is also available here.
+
 For Visual Studio 2019:
 
 Open Project/Solution vs2019/memacs.sln
@@ -18,6 +20,8 @@ Open Project/Solution vs2019/memacs.sln
 cd unix
 
 make
+
+This makes the executable microemacs.
 
 **Installation**
 
