@@ -18,7 +18,7 @@
 #include	"elang.h"
 #include	"logmsg.h"
 
-#if S_MSDOS
+#if S_MSDOS && 0
 #include <windows.h>
 
 #define millisleep(n) Sleep(n)
@@ -113,8 +113,11 @@ unsigned short refresh_colour(int row, int col)
 		{	int wh = (scl[icol] & 0xff00) >> 8;
       if      (wh & 0x40)
       { attr = line_attr & 0xf0 | wh & 0xf;
-	      if (wh & 0x8)												// try it
+#if S_WIN32 == 0
+											// Does not work in wincon. does not compile in vs2019
+	      if (wh & 0x8)											// try it
 					attr |= COMMON_LVB_UNDERSCORE;
+#endif
       }
       else if (wh & 0x80)
         attr = line_attr;
@@ -227,6 +230,9 @@ void Pascal vtinit(int cols, int dpthm1)
 			vp->v_color = V_BLANK;
 			vp = (VIDEO *)&vp->v_text[cols+2];
 		}
+
+		for (i = cols; --i >= 0; )
+			vscreen[term.t_nrowm1]->v_text[i] = ' ';
 }}}
 
 
@@ -719,7 +725,7 @@ void Pascal pteeol(int row)
 void Pascal ptclear()
 
 {	Int row;
-	for (row = term.t_nrowm1; --row >= 0; )
+	for (row = term.t_nrowm1+1; --row >= 0; )
 		pteeol(row);
 }
 
@@ -1414,7 +1420,8 @@ void Pascal mlforce(const char * s)
  */
 void Pascal mlerase()
 
-{	mlwrite("");
+{	
+	mlwrite("       ");
 #if MEMMAP == 0
 	g_cmd_line[0] = 0;
 #endif

@@ -376,7 +376,7 @@ typedef struct Paren_s
 extern Paren_t g_paren;
 
 typedef struct Fdcr_s
-{ FILE * ip;
+{ void * ip;
   char   name[NFILEN+1];
 } Fdcr_t, *Fdcr;
 

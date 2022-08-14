@@ -144,18 +144,18 @@ wchar_t * char_to_wchar(char const * src, int sz, wchar_t * tgt)
 #endif
 
 
-
-#if VS_CHAR8 == 0
-
 void Pascal setconsoletitle(char * title)
 
 {
+#if VS_CHAR8 == 0
 	wchar_t buf[100];
 	swprintf(buf, 100, L"%S", title == null ? "" : title);
   SetConsoleTitle(buf);
+#else
+  SetConsoleTitle(title);
+#endif
 }
 
-#endif
 
 // char * Pascal getconsoletitle()
 

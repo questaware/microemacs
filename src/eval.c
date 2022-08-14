@@ -13,7 +13,7 @@
 #include	"map.h"
 #include	"logmsg.h"
 
-#if S_WIN32
+#if S_WIN32 && 0
 #include <windows.h>
 #endif
 

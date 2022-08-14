@@ -3,6 +3,7 @@
 			for MicroEMACS
 			(C)opyright 1987 by Daniel M Lawrence
 */
+#include <stdio.h>
 
 #include	"estruct.h"
 #include	"edef.h"

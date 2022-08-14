@@ -1,6 +1,5 @@
 #ifndef BUILDINC
 #define BUILDINC
-			/*  ENVIRONMENT SELECTION SECTION */
 
 /*	Program Identification.....
 	Macros can query this via the $progname variable
@@ -16,9 +15,7 @@
 #define S_AMIGA	0			/* AmigaDOS			*/
 #define S_MSDOS	1			/* MS-DOS			*/
 #define S_OS2	0			/* Microsoft or IBM OS/2	*/
-#define S_BSD	0			/* UNIX BSD 4.2 and ULTRIX	*/
 #define S_UNIX5	0			/* UNIX system V		*/
-#define	S_XENIX	0			/* IBM-PC SCO XENIX		*/
 #define	S_SUN	0			/* SUN v4.0			*/
 #define	S_HPUX	0			/* HPUX HP 9000 minicomputer	*/
 #define S_VMS	0			/* VAX/VMS			*/
@@ -26,22 +23,16 @@
 #define S_WIN32 1
 #define S_BORLAND 0
 
-#define NONDIR  0                       /* ndir.h is dirent.h           */
-#define USE_UBAR 0
-#define GOTTYPAH 1
+#define USE_FAST_CALL __fastcall
+
+#define NONDIR  	0                     /* ndir.h is dirent.h           */
+#define USE_UBAR  0
+#define HIDECRYPT 1
 
 /*	Compiler definitions			*/
 /*	[Set one of these!!]			*/
 #define UNIX	0	/* a random UNIX compiler */
-#define MWC	0	/* Mark Williams C */
-#define	ALCYON	0	/* ALCYON Atari ST compiler */ 
-#define LATTICE 0	/* Lattice 2.14 through 3.0 compilers */
-#define AZTEC	0	/* Aztec C 3.20e */
 #define MSC	1	/* MicroSoft C compile version 3 & 4 & 5.1 */
-#define XMSC    0       /* Xenix MicroSoft C */
-#define TURBO	0	/* Turbo C/MSDOS */
-#define DTL	0	/* DataLight C v3.12 */
-#define	DGC	0	/* Data General AOS/VS C... */
 
 /*#ifndef __STDC__
 #define __STDC__ 1
@@ -55,17 +46,15 @@
 #define STACK_GROWS_UP  0
 
 /*	Debugging options	*/
-#define	RAMSIZE	0	/* dynamic RAM memory usage tracking */
+#define	RAMSIZE	0						/* dynamic RAM memory usage tracking */
 
 /*	Terminal Output definitions		*/
 /*	[Set one of these!!]			*/
 
 #define ANSI	0			/* ANSI escape sequences	*/
-#define	VMSVT	0			/* various VMS terminal entries	*/
+#define VT52	0			/* VT52 terminal (Zenith).	*/
 #define TERMCAP 0			/* Use TERMCAP			*/
 #define	IBMPC	1			/* IBM-PC CGA/MONO/EGA/VGA drvr	*/
-
-#define VS_CHAR8 1  /* Visual Studio Wincon uses byte chars */
 
 /*	Language text options	(pick one)				*/
 
@@ -84,9 +73,7 @@
 #define DEBUGM	0	/* $debug triggers macro debugging		*/
 #define	LOGFLG	0	/* send all executed commands to EMACS.LOG	*/
 #define	VISMAC	0	/* update display during keyboard macros	*/
-#define	CTRLZ	0	/* add a ^Z at end of files under MSDOS only	*/
 #define	NBRACE	1	/* new style brace matching command		*/
-#define	COMPLET	1	/* new completion code (as of 3.10)		*/
 #define	CLEAN	0	/* de-alloc memory on exit			*/
 #define	CALLED	0	/* is emacs a called subroutine? or stand alone */
 #define ADDCR	0	/* ajout d'un CR en fin de chaque ligne (ST520) */
@@ -132,9 +119,20 @@
 
 #define CHARCODE ASCII
 
-				/* size for general strings */
-#define NSTRING 1026
-#define FILENAMESZ 256
+				
+#define NSTRING 1026		/* size for general strings */
+#define NBINDS	220			/* max # of bound keys		*/
+#define NFILEN  256			/* Maximum file name (inc dirs) */
+#define NBUFN		 32			/* # of bytes, buffer name */
+#define NLINE		160			/* # of bytes, input line	*/
+#define NKBDM		255			/* # of strokes, keyboard macro */
+#define NPAT		128			/* # of bytes, pattern		*/
+#define	NLOCKS	100			/* max # of file locks active	*/
+#define	KBLOCK	250			/* sizeof kill buffer chunks	*/
+#define	NBLOCK	16			/* line block chunk size	*/
+#define	NVSIZE	10			/* max #chars in a var name	*/
+#define NMARKS	 8			/* number of marks must be 2**n  */
+#define MAXVARS 64
 
 typedef int   Vint;       /* set this to short int if it is more efficient */
 
@@ -143,6 +141,11 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 
 #define PSCP_CMD "c:\\bbin\\pscp.exe "
 #define CLIP_LIFE 300					// seconds
+
+#define NOOKILL 2
+
+#define NROW	60			/* Max Screen size. 	*/
+#define NCOL 148
 
 #include "../src/base.h"
 #endif /* BUILDINC */

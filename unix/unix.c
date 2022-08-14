@@ -737,7 +737,7 @@ int Pascal filter(int f, int n)
 
 char * searchfile(char * result, Fdcr fdcr)
 
-{ FILE * ip = fdcr->ip;
+{ FILE * ip = (FILE*)fdcr->ip;
 	if (ip == NULL)
 	{ char buf[NFILEN+20];
 		char * basename = result+strlen(result)+1;	

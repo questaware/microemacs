@@ -327,6 +327,8 @@ void Pascal dcline(int argc, char * argv[])
 	{ char buf[35];
 		mlwrite(strpcpy(&buf[0], lastmesg, 30));
 	}
+#else
+	mlwrite("Done");
 #endif
 	
 	(void)gotoline(TRUE, gline);
@@ -711,7 +713,7 @@ int rdonly()
 
 int resterr()
 
-{ if (is_opt('r'))
+{ if (is_opt('R'))
 	{	mlwrite(TEXT110);
 					/* "[That command is RESTRICTED]" */
 		return TRUE;

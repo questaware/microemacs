@@ -125,12 +125,7 @@ int Pascal risearch(int, int);
 void Pascal rpl_all(int, int, LINE*, LINE*, int);
 int Pascal USE_FAST_CALL scan_for_sl(LINE * lp);
 int Pascal scanner(int, int);
-#if S_WIN32
-void setMyConsoleIP(void);
-#define setconsoletitle(title) SetConsoleTitle(title);
-#else
 void Pascal setconsoletitle(char * title);
-#endif
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);

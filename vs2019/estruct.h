@@ -186,26 +186,6 @@ struct SREGS {
 # define PATHCHR	':'
 #endif
 
-					/*	internal constants	*/
-#define NBINDS	220			/* max # of bound keys		*/
-#if AOSVS
-# define NFILEN 80			/* # of bytes, file name	*/
-#else
-# define NFILEN 256
-#endif
-#define NBUFN	64			/* # of bytes, buffer name	*/
-#define NLINE	160			/* # of bytes, input line	*/
-#define NKBDM	256			/* # of strokes, keyboard macro */
-#define NPAT	128			/* # of bytes, pattern		*/
-#define HUGE	1000			/* Huge number			*/
-#define	NLOCKS	100			/* max # of file locks active	*/
-#define	KBLOCK	250			/* sizeof kill buffer chunks	*/
-#define	NBLOCK	16			/* line block chunk size	*/
-#define	NVSIZE	10			/* max #chars in a var name	*/
-#define NMARKS	 2			/* number of marks must be po2  */
-#define MAXVARS 64
-
-
 #if	S_UNIX5 | S_HPUX | S_BSD | S_XENIX
 # define PATHCHR ':'
 #else
@@ -232,9 +212,8 @@ struct SREGS {
 #ifdef	isupper
 # undef	isupper
 #endif
-#endif
 
-#if	DIACRIT == 0 && (UNIX == 0) && (MSC == 0)
+#elif	(UNIX == 0) && (MSC == 0)
 #if	CHARCODE == ASCII
 # define isletter(c)	(('a' <= c && 'z' >= c) || ('A' <= c && 'Z' >= c))
 # define islower(c)	(('a' <= c && 'z' >= c))
@@ -260,14 +239,11 @@ struct SREGS {
 /*	Dynamic RAM tracking and reporting redefinitions	*/
 
 #if WRAP_MEM
-#define calloc	callocate
 #define malloc	allocate
 #define strdup  duplicate
 #define free	release
-#define aalloc(x) callocate(x)
 #else
 //#define aalloc(x) calloc(((x)+SIZEOF_PTR-1)/SIZEOF_PTR, SIZEOF_PTR)
-#define aalloc(x) mallocz(x)
 #endif
 
 #if MSC
@@ -309,5 +285,3 @@ struct SREGS {
 #define chmod _chmod
 
 #endif
-
-/*#include "jstruct.h"*/
