@@ -149,14 +149,19 @@ btk execute-macro-10 FN2
 btk execute-macro-10 FN^2
 
 11 store-macro		; kill line
-  !if &equ $lastkey 4
+  !if &equ $lastkey 260
 	  beginning-of-line
+		1 kill-to-end-of-line
 	!else
-		newline
-		beginning-of-line
-		backward-line
+		!while &equ 1 1
+			backward-character
+			!if &and &not &equ $curchar 32 &not &equ $curchar 9
+				!break
+			!endif
+			delete-next-character
+		!endw
+		forward-character
 	!endif
-	1 kill-to-end-of-line 
 !endm
 
 btk execute-macro-11 ^D
@@ -309,6 +314,15 @@ btk execute-macro-20 ^P
 !endm
 
 btk execute-macro-21 ^XV
+
+22 store-macro ; buffhook
+	set $highlight 4target
+	!if &seq &rig $cbufname 3 ".py"
+		set $highlight "4 def "
+	!endif
+!endm
+
+set $exbhook execute-macro-22
 
 btk search-forward A-S
 btk save-file ^XA-S

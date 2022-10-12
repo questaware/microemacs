@@ -99,6 +99,8 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalOptions>/D WIN32_LEAN_AND_MEAN %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MinSpace</Optimization>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
@@ -107,6 +109,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalOptions>/Fee.exe %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -130,9 +133,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
       <GenerateMapFile>true</GenerateMapFile>
+      <AdditionalOptions>/Fee.exe %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <ClCompile>
       <AdditionalIncludeDirectories>. ..</AdditionalIncludeDirectories>
+      <AdditionalOptions>/D WIN32_LEAN_AND_MEAN %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MinSpace</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -141,7 +147,10 @@
     <ClCompile Include="..\src\buffer.c" />
     <ClCompile Include="..\src\char.c" />
     <ClCompile Include="..\src\crypt.c" />
-    <ClCompile Include="..\src\display.c" />
+    <ClCompile Include="..\src\display.c">
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</WholeProgramOptimization>
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</WholeProgramOptimization>
+    </ClCompile>
     <ClCompile Include="..\src\dolock.c" />
     <ClCompile Include="..\src\eval.c" />
     <ClCompile Include="..\src\exec.c" />
@@ -165,7 +174,6 @@
     <ClCompile Include="..\src\tag.cpp" />
     <ClCompile Include="..\src\window.c" />
     <ClCompile Include="..\src\word.c" />
-    <ClCompile Include="..\wincon\logmsg.c" />
     <ClCompile Include="..\wincon\msemacs.c" />
     <ClCompile Include="..\wincon\msexec.c" />
     <ClCompile Include="..\wincon\oswin.c" />

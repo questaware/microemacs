@@ -265,7 +265,7 @@ const COLORREF ctrans[] =		/* ansi to Win32 color translation table */
 	{clBlack, clBlue, clGreen, clYellow, clRed, clPurple, clAqua, BG_PAPER,
 	 /*8, 12, 10, 14, 9, 13, 11, 15*/};
 
-/* editor variable: cmt_colour;		   comment colour in ibm */
+/* editor variable: pd_cmt_colour;		   comment colour in ibm */
 
 
 void Pascal NEAR tcapsetsize(int wid, int dpth)

@@ -23,6 +23,9 @@
 #include	<unistd.h>
 #endif
 
+
+#define USE_DIR S_WIN32
+
 extern int    g_crlfflag;
 extern char * g_fline;					/* from fileio.c */
 
@@ -177,16 +180,24 @@ BUFFER * Pascal bufflink(const char * filename, int create)
   int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
 
   if (srch > 0)
-  { msd_init(fname, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC|MSD_USEPATH);
-    if (is_opt('Z'))
-    { srch = 0;
+  { Cc cc = msd_init(fname, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC|MSD_USEPATH);
+  	if      (cc < OK)
+  	{ mlwrite(TEXT79);
+  		return NULL;
+  	}
+    else if (is_opt('Z'))
+    { clr_opt('Z');
+    	srch = 0;
     { unsigned int newdate = 0;
 
       while ((fn = msd_nfile()) != NULL)
-      { if (newdate < (unsigned)msd_stat.st_mtime)
-        { newdate = (unsigned)msd_stat.st_mtime;
-          strpcpy(fname,fn,NFILEN);
-        }
+      {
+#if USE_DIR == 0
+        if (newdate >= (unsigned)msd_stat.st_mtime)
+        	continue;
+        newdate = (unsigned)msd_stat.st_mtime;
+#endif
+        strpcpy(fname,fn,NFILEN);
       }
     }}
   }
@@ -301,7 +312,7 @@ int Pascal filefind(int f, int n)
 		return FALSE;
 
 {	char * s;
-  char * fname = gtfilename(TEXT133);
+  char * fname = gtfilename(0);
                       	/* "Find file" */
 	if	(fname == NULL || fname[0] <= ' ')
 	  return FALSE;
@@ -463,7 +474,7 @@ int Pascal readin(char const * fname, int props)
   	return FALSE;
 
 	if (fname == NULL)
-	{ fname = (char const*)gtfilename(ins ? TEXT132 : TEXT131);
+	{ fname = (char const*)gtfilename(ins);
     if (fname == NULL)
   		return FALSE;
 	}
@@ -522,8 +533,9 @@ int Pascal readin(char const * fname, int props)
 	if (cc != FIOSUC)			/* File not found. */
 	{ 
 #if S_MSDOS
-	  diry = name_mode(fname) & 040000;
-	  if (diry != 0)
+#define FILE_ATTRIBUTE_DIRECTORY 16
+	  diry = name_mode(fname) & FILE_ATTRIBUTE_DIRECTORY;
+	  if (diry)
 		  cc = OK;
 		else
 	    cc = 1;
@@ -876,16 +888,14 @@ int Pascal writeout(const char * fn)
 #if S_VMS
   caution = 0;
 #elif S_MSDOS
-  caution = ssave == 0 ? 0 : name_mode(fn);
-	if (caution & 0200)
-	 	caution = 0;
+  caution = pd_ssave == 0 ? 0 : name_mode(fn);
 #else
 	cc = stat(fn , &stat_);
 { int w = cc < 0 ? TRUE :
 	             (stat_.st_mode & (getuid() == stat_.st_uid ? 0200 :
 	                               getgid() == stat_.st_gid ? 020  : 02
 	                               ));
-	caution = ssave && cc >= 0 || !w;
+	caution = pd_ssave && cc >= 0 || !w;
 	if (caution && stat_.st_nlink > 1 || !w)
 	{ caution = mlyesno(w ? TEXT218 : TEXT221);
 	  if (caution < 0)

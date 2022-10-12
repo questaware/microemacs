@@ -25,7 +25,7 @@ extern struct stat msd_stat;
 #define MSD_MATCHED 128
 #define MSD_SLINK   256
 
-#define MSD_INTERNAL 0x100
+#define MSD_SEARCH	 0x100
 #define MSD_SIMPLE   0x200
 #define MSD_NOCHD    0x400
 #define MSD_REPEAT   0x800

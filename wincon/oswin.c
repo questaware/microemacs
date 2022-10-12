@@ -212,6 +212,13 @@ void setMyConsoleIP()
 }
 
 
+int Pascal iskboard()
+
+{	BY_HANDLE_FILE_INFORMATION fileinfo;
+	DWORD rc = GetFileInformationByHandle(GetStdHandle( STD_INPUT_HANDLE ), &fileinfo);
+	return !rc;
+}
+
 
 void Pascal MySetCoMo()
 
@@ -429,7 +436,7 @@ int ttgetc()
 	
 				if (/*chr !=  0x7c && */ (chr | 0x60) != 0x7c)	// | BSL < or ^ BSL
 				{	int vsc = r->Event.KeyEvent.wVirtualScanCode;
-					if      (in_range(vsc, SCANK_STT, 0x58))
+					if (in_range(vsc, SCANK_STT, 0x58))
 		      { ctrl |= SPEC;
 						chr = scantokey[vsc - SCANK_STT];
 					}
@@ -573,6 +580,61 @@ again:
 }
 #endif
 
+
+
+
+static HANDLE Create(const char * fname, int rw)
+
+{ SECURITY_ATTRIBUTES sa;
+  sa.lpSecurityDescriptor = NULL;
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.bInheritHandle = TRUE;         //allow inheritable handles
+  
+{ int open_create = OPEN_EXISTING - rw;
+	int fattr = (FILE_ATTRIBUTE_NORMAL << rw)|FILE_FLAG_BACKUP_SEMANTICS;
+	DWORD share = GENERIC_WRITE*(2-rw);
+	
+	int res =  (int)CreateFile(fname == NULL ? "nul" : fname,
+												     share, rw+1, &sa,
+													   open_create,fattr,NULL);
+//if (res < 0)
+//	res =  (int)CreateFile(fname == NULL ? "nul" : fname,
+//											   share, rw+1, &sa,
+//												 open_create,fattr|FILE_FLAG_BACKUP_SEMANTICS,NULL);
+										
+//mlwrite("%pCreate %d %s -> %x", rw, fname, res);
+	return res;
+}}
+
+
+int Pascal name_mode(const char * s)
+
+{	char filen[NFILEN+1];
+	char * t;
+  strpcpy(filen, s, NFILEN+1);
+
+	for (t = filen-1; *++t != 0; )
+		if (*t == '/')
+			*t = '\\';
+
+{	BY_HANDLE_FILE_INFORMATION fileinfo;
+	int res = 0;
+  int myfile = Create(filen, FILE_SHARE_READ-1);
+	if (myfile < 0)
+  	return 0;
+
+  if (GetFileInformationByHandle((HANDLE)myfile, &fileinfo))
+	{ res = fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
+	  if (fileinfo.nNumberOfLinks > 1)
+	  	res |= FILE_ATTRIBUTE_NORMAL;
+	}
+	
+  CloseHandle((HANDLE)myfile);
+
+	return res | 0x04;
+}}
+
+
 //#if _MSC_VER < 1900
 #undef VS_CHAR8
 #define VS_CHAR8 1
@@ -608,62 +670,59 @@ Cc WinLaunch(int flags,
 	const char * app = NULL;
 	char * ca = NULL;
 	int quote = 0;
-	char ch;
 
-	if (cmd != NULL)
-	{	const char * s = cmd - 1;
-		if (*cmd == '"')
-		{ quote = *cmd;
-			++cmd;
+	const char * s = cmd;
+	if (*s == '"')
+	{ quote = *s;
+		++s;
+	}
+{	char * t = buff - 1;
+  while (1)
+  { char ch = *s++;
+  	*++t = ch;
+  	if (ch == quote || ch <= ' ')
+		{	*t = 0;
+			break;
 		}
-	{	char * t = buff - 1;
-	  while ((ch = *++s) != 0)
-	  {	*++t = ch;
-	  	if (ca == NULL && (ch == quote || ch <= ' '))
-			{	*t = 0;
-				t += 5;
-				ca = t;
-				*t = ' ';
-			}
-	  }
+  }
 	
-		*++t = 0;
-	{ int ct = 2;
+{ int ct = 2;
 		
-		while ((app = flook('P', buff)) == NULL && --ct > 0)
-			strcat(buff, ".exe");
+	while ((app = flook('P', buff)) == NULL && --ct > 0)
+		strcat(buff, ".exe");
 			
-		if (app == NULL)							// ignore buff
-			ca = (char*)cmd;
-	}}}
-
-	if (app == NULL && (flags & WL_SHELL))					// use comspec
-	{	app = (char*)getenv("COMSPEC");
-		if (app == NULL)
-			app = "cmd.exe";
-
-		if (ca != NULL)														/* Create the command line */
-		{	char * dd = strcpy(buff," /c \"")+5;
-			char ch;
-		//char prev = 'A';
-			if (strlen(ca)+5 >= sizeof(buff))
-				return -1;
-
-			for (; (ch = *ca++); /* prev = ch */)
-			{// if (ch == '/' && 										// &&!(flags & LAUNCH_LEAVENAMES)
-			 //	  (in_range(toupper(prev), 'A','Z')
-			 // || in_range(prev, '0', '9')
-			 //	||					prev == '_'  || prev == ' '))
-			 //		ch = '\\';
-		
-				if (ch == '"')
-					*dd++ = '\\';
-				*dd++ = ch;
+	ca = (char*)cmd;								// ignore buff
+	if (app != NULL)
+		app = NULL;
+	else
+	{	if ((flags & WL_SHELL))					// use comspec
+		{	app = (char*)getenv("COMSPEC");
+			if (app == NULL)
+				app = "cmd.exe";
+	
+			if (ca != NULL)														/* Create the command line */
+			{	char * dd = strcpy(buff," /c \"")+5;
+				char ch;
+			//char prev = 'A';
+				if (strlen(ca)+5 >= sizeof(buff))
+					return -1;
+	
+				for (; (ch = *ca++); /* prev = ch */)
+				{// if (ch == '/' && 										// &&!(flags & LAUNCH_LEAVENAMES)
+				 //	  (in_range(toupper(prev), 'A','Z')
+				 // || in_range(prev, '0', '9')
+				 //	||					prev == '_'  || prev == ' '))
+				 //		ch = '\\';
+			
+					if (ch == '"')
+						*dd++ = '\\';
+					*dd++ = ch;
+				}
+	
+				*dd = '"';
+				dd[1] = 0;
+				ca = buff;
 			}
-
-			*dd = '"';
-			dd[1] = 0;
-			ca = buff;
 		}
 	}
 
@@ -691,12 +750,14 @@ Cc WinLaunch(int flags,
 							  
 	if (!(flags & WL_SPAWN))
 	{ if ((flags & WL_NOIHAND) == 0)
-			si.hStdInput = CreateFile(infile == NULL ? "nul" : infile,
-										 						GENERIC_READ,FILE_SHARE_READ,&sa,
-																OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+//		si.hStdInput = Create(infile,FILE_SHARE_READ-1);
+      si.hStdInput = Create(infile, 0);
+//      	 == NULL ? "nul" : infile,
+//                                GENERIC_READ,FILE_SHARE_READ,&sa,
+//                                OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 		if (outfile != NULL)
-		{ si.hStdOutput = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sa,
-																 CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
+    { si.hStdOutput = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sa,
+                                    CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
 #if _DEBUG
 			if (si.hStdOutput <= 0)
 				mbwrite("CFOut Failed");
@@ -708,7 +769,7 @@ Cc WinLaunch(int flags,
 	{	if      (!CreatePipe(&read_stdout,&si.hStdOutput,&sa,0)) //create stdout pipe
 	  	wcc = -1000;
 		else if ((ipstr != NULL || infile != NULL)
-		  && !CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
+		  		&& !CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
 			wcc = -2000;
 		else
 		{ // mbwrite("Created WSO");
@@ -928,7 +989,8 @@ Cc WinLaunch(int flags,
 
   return wcc != OK ? wcc :
   			 sentz < 0 ? sentz  : (Cc)exit;
-}}}
+}}}}}
+
 
 
 
@@ -952,9 +1014,7 @@ int ttsystem(const char * cmd, const char * data)
 
 	/* Pipe a one line command into a window
 	 */
-static
-int pipefilter(wh)
-	 char 	 wh;				/* # ! < @ */
+int pipefilter(char wh)
 {
  static int bix;
  				char 	 bname [10];
@@ -978,6 +1038,9 @@ int pipefilter(wh)
 		strpcpy(line, g_ll.lastline[0], sizeof(line)-2*NFILEN);
 	else
 #endif
+	if (wh == '='-'<')
+		strcpy(line, curbp->b_bname);
+	else
 	{ extern int g_last_cmd;
 	  prompt[1] = 0;
 		if (mlreply(prompt, line, NLINE) <= FALSE)
@@ -1035,9 +1098,12 @@ int pipefilter(wh)
 		cc |= LAUNCH_STDIN;
 	}
 #endif
+
 	cc = WinLaunch(cc,line, null, fnam1, fnam2);
 	if (cc != OK)
-	{	mlwrite(TEXT3, cc); 							/* "[Execution failed]" */
+	{	if (wh == '='-'<')
+			return FALSE;
+		mlwrite(TEXT3, cc); 							/* "[Execution failed]" */
 //	return FALSE;
 	}
 
@@ -1046,7 +1112,7 @@ int pipefilter(wh)
 		return FALSE;
 	close(fid);
 */
-	if (wh >= '<'-'<')   /* <  @ */
+	if (wh >= '<'-'<')   /* <  =  @ */
 	{ BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), TRUE, 0);
 		if (bp == NULL)
 			return FALSE;
@@ -1054,12 +1120,15 @@ int pipefilter(wh)
 		if (splitwind(FALSE, 1) == FALSE)
 			return FALSE;
 */
-		swbuffer(bp);
-	/*linstr(tmpnam); */
+		if (wh == '='-'<')
+			curbp = bp;
+		else
+		{	swbuffer(bp);
+		/*linstr(tmpnam); */
 								/* make this window in VIEW mode, update all mode lines */
-		curwp->w_bufp->b_flag |= MDVIEW;
-		upmode();
-																	/* and get rid of the temporary file */
+			curwp->w_bufp->b_flag |= MDVIEW;
+		/*upmode();*/
+		}
 	}
 {	Cc rc = FALSE;
 	if (wh == '!'-'<')
@@ -1188,35 +1257,50 @@ static HANDLE	g_hClipData;
 
 static int g_clix = 0;
 
-static 
-DWORD WINAPI ClipSet_(void * data)
 
-{ return ClipSet(data);
+static
+Cc OpenClip()
+
+{	HWND mwh = GetTopWindow(NULL);
+	if (mwh == NULL)
+		return -1;
+{ Cc cc = OpenClipboard(mwh);
+	if (cc == 0)
+		return 0;
+//{ DWORD ec = GetLastError();
+//	return ec == ERROR_ACCESS_DENIED ? 0 : -1;
+//}
+	
+	return 1;
+}}
+
+
+static 
+DWORD WINAPI ClipSet_(int is_thread)
+
+{ return ClipSet(is_thread);
 }
 
 
-Cc ClipSet(char * data)
+Cc ClipSet(int clix)
 
-{ int thread = ((unsigned int)data & 0xc0000000) == 0xc0000000; // top of mem?
-	HWND mwh = GetTopWindow(NULL);
-	if (mwh == NULL)
-		return -1;
-
-	if (thread)
+{	if (clix > 0)
 	{	millisleep(pd_cliplife * 1000);
 
 //	if (mwh != GetTopWindow(NULL))
 //		return -1;
 
-		if (-(int)data != g_clix)
+		if (clix != g_clix)
 			return 0;
 	}
 
-	if (OpenClipboard(mwh))
+{ Cc cc = OpenClip();
+	if (cc > 0)
 	{	
 		EmptyClipboard();
-		if (thread == 0 && data != NULL)
-		{	int len = strlen(data);
+		if (clix == 0)
+		{	char * data = getkill();
+			int len = strlen(data);
 			HANDLE m_hData = GlobalAlloc(GMEM_DDESHARE, len + KBLOCK*20 + 10);
 			if (!m_hData)  
 				return -1;
@@ -1234,24 +1318,20 @@ Cc ClipSet(char * data)
 	}
 
 #if 1
-	if (!thread && pd_cliplife != 0)
-  {	HANDLE thread = CreateThread(NULL, 0, ClipSet_, (void*)-(++g_clix),0,NULL);
+	if (clix > 0 && pd_cliplife != 0)
+  {	HANDLE thread = CreateThread(NULL, 0, ClipSet_, (void*)(++g_clix),0,NULL);
   }
 #endif
 	return OK;
-}
+}}
 
 
 #if 0
 
 Cc ClipDelete()
 
-{ 
-	HWND mwh = GetTopWindow(NULL);
-	if (mwh == NULL)
-		return -1;
-
-	if (!OpenClipboard(/*m_pMainWnd->*/mwh))
+{ Cc cc = OpenClip();
+	if (cc <= 0)
 		return -1;
 
 	EmptyClipboard();
@@ -1269,15 +1349,15 @@ Cc ClipDelete()
 
 char * ClipPasteStart()
 
-{ HWND mwh = GetTopWindow(NULL);
-	if (mwh != NULL &&
-			OpenClipboard(mwh))
-	{ g_hClipData = GetClipboardData(CF_TEXT);
+{ Cc cc = OpenClip();
+	if (cc > 0)
+	{	g_hClipData = GetClipboardData(CF_TEXT);
 		if (g_hClipData)
 			return (char *)GlobalLock(g_hClipData);
 	}
 
-	loglog("PasteFailed");
+	if (cc < 0)
+		loglog("PasteFailed");
 	return null;
 }
 

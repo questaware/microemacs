@@ -85,15 +85,15 @@ extern PD_VAR predefvars[];
 #define pd_keyct   predefvars[EVKEYCT].i
 #define pd_tabsize predefvars[EVHARDTAB].i
 #define pd_hjump	 predefvars[EVHJUMP].i
-#define cmt_colour predefvars[EVCMTCOL].i
-#define macbug	   predefvars[EVDEBUG].i
-#define pd_cmdstatus predefvars[EVSTATUS].i
+#define pd_cmt_colour predefvars[EVCMTCOL].i
+#define pd_macbug	    predefvars[EVDEBUG].i
+#define pd_cmdstatus  predefvars[EVSTATUS].i
 #define pd_got_msg predefvars[EVCFNAME].i /* stolen */
 #define diagflag   predefvars[EVDIAGFLAG].i
 #define pd_discmd	 predefvars[EVDISCMD].i /* 0 : nowt, -1 record only */
 #define g_disinp	 predefvars[EVDISINP].i
 #define pd_fcol		 predefvars[EVFCOL].i
-#define ssave      predefvars[EVSSAVE].i
+#define pd_ssave   predefvars[EVSSAVE].i
 #define pd_incldirs predefvars[EVINCLD].p
 #define mouseflag  predefvars[EVMSFLAG].i
 #define pd_predef  predefvars[EVLINE].i /* stolen */

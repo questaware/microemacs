@@ -10,7 +10,7 @@
 #include "etype.h"
 #include "elang.h"
 
-static REGION g_region;
+REGION g_region;
 
 /* This routine figures out the bounds of the region in the current
  * window, and fills in the fields of the "REGION" structure pointed to by
@@ -82,163 +82,6 @@ REGION * Pascal getregion()
 
 	return &g_region;
 }}
-
-static char * g_doregt;
-/* doregion */
-
-static
-Pascal doregion(int wh, char * t)
-	
-{ if (wh < 0)
-	{ 
-		int offs =  curwp->w_doto;
-		LINE * ln = curwp->w_dotp;
-		int len = ln->l_used;
-		char * lp = lgets(ln, 0);
-		char ch;
-
-		while (offs >= 0 && 
-               ((ch = lp[offs]) == '_' || isalnum(ch)))
-			--offs;
-
-    while (++offs < len && 
-               ((ch = lp[offs]) == '_' || isalnum(ch)))
-    { int cc = kinsert(ch);
-	    if (cc <= FALSE)
-	      return cc;
-    }
-  }
-	else if (wh > 1 && rdonly())	/* disallow this command if */
-	  return FALSE;		        		/* we are in read only mode */
-  else
-	{ LINE  *linep;
-	  int	 loffs;
-		int  space = NSTRING-1;
-	  REGION * ion = getregion();
-	  if (ion == NULL)
-	    return 0;
-
-	  linep = ion->r_linep; 		/* Current line.	*/
-
-		    /* don't let the region be larger than a string can hold */
-	  if (wh == 0 && ion->r_size >= NSTRING)
-	    ion->r_size = NSTRING - 1;
-
-	  for (loffs = ion->r_offset; g_region.r_size--; ++loffs)
-	  { int ch;
-	  	if (loffs != llength(linep))		/* End of line. 	*/
-	      ch = lgetc(linep, loffs);
-	    else
-	    { linep = lforw(linep);
-	      loffs = -1;
-	      ch = '\n';
-	    } 
-	    if      (wh == 0)
-	    { if (--space >= 0)
-	        *t++ = ch;
-	    }
-	    else if (wh == 1) 
-	    { ch = kinsert(ch);
-	      if (ch <= FALSE)
-	        return ch;
-	    }
-	    else
-	    { if (isalpha(ch) && (ch & 0x20) == (wh & ~2)) /* isupper */
-	      {	lputc(linep, loffs, chcaseunsafe(ch));
-	      	lchange(WFHARD);
-	      }
-	    }
-	  }
-	  if (t != NULL)
-	    *t = 0;
-	}
-	return TRUE;
-}
-
-/* return some of the contents of the current region
-*/
-const char *Pascal getreg(char * t)
-
-{ return doregion(0,t) <= FALSE ? g_logm[2] : t;
-}
-
-
-int to_kill_buff(int wh, int n)
-
-{ if (wh == -2)
-		kinsert_n = NOOKILL;
-	else
-	{ kinsert_n = chk_k_range(n);
-	  if (kinsert_n < 0)
-	    return 1;
-	}
-	
-	if (wh < 0)
-	  (void)kdelete(wh+1, kinsert_n);
-
-{ int cc = doregion(wh, NULL);
-  if (cc <= FALSE)
-    return cc;
-  
-#if S_WIN32
-  if (kinsert_n == 0)
-  { Char * src = getkill();
-    ClipSet(src);
-  }
-#endif
-  mlwrite(TEXT70);
-				/* "[region copied]" */
-  g_thisflag |= CFKILL;
-  return cc;
-}}
- 
-
-
-/* Append all of the characters in the region to the n.th kill buffer. 
- * Don't move dot at all. 
- * Bound to "^XC".
- */
-int copyregion(int f, int n)
-
-{ return to_kill_buff(1, n);
-}
-
-
-/* Copy all of the characters in the current word to the n.th kill buffer.
- * Don't move dot at all. 
- * Bound to "A-W".
- */
-int copyword(int f, int n)
-
-{ return to_kill_buff(-1, n);
-}
-
-
-
-/* Lower case region. Zap all of the upper
- * case characters in the region to lower case. Use
- * the region code to set the limits. Scan the buffer,
- * doing the changes. Call "lchange" to ensure that
- * redisplay is done in all buffers. Bound to
- * "C-X C-L".
- */
-Pascal lowerregion(int f, int n)
-
-{ return doregion(2 + 0, NULL);
-}
-
-/* Upper case region. Zap all of the lower
- * case characters in the region to upper case. Use
- * the region code to set the limits. Scan the buffer,
- * doing the changes. Call "lchange" to ensure that
- * redisplay is done in all buffers. Bound to
- * "C-X C-U".
- */
-int Pascal upperregion(int f, int n)
-
-{ return doregion(0x20, NULL);
-}
-
 
 													/*	reglines:	how many lines in the current region */
 int Pascal reglines(Bool ask)

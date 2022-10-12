@@ -27,7 +27,7 @@ extern int rubbish;
 
 Char * ClipAlloc(int);
 Char * ClipRef(void);
-Cc ClipSet(char * src);
+Cc ClipSet(int wh);
 char * ClipPasteStart(void);
 void ClipPasteEnd(void);
 
@@ -66,7 +66,7 @@ const char *Pascal getreg(char * t);
 extern const char getvalnull[];
 char *Pascal getval(char *, char *);
 
-const char * gtfilename(const char *);
+const char * gtfilename(int wh);
 const char *Pascal gtusr(char*);
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
@@ -77,7 +77,6 @@ int Pascal makename(char *, const char *);
 char *Pascal mkkey(const char *);
 char *Pascal mkul(int, char *);
 char *Pascal namval();
-int Pascal pipefilter(char);
 BUFFER * Pascal prevele(BUFFER*, BUFFER*);
 char *Pascal timeset();
 char *Pascal token(char * tok, int size);
@@ -86,7 +85,7 @@ const char *Pascal transbind(char *);
 int Pascal USE_FAST_CALL trimstr(int from, char * s);
 char *Pascal xlat(char *, char *, char *);
 int (Pascal *Pascal USE_FAST_CALL fncmatch(char *))(int, int);
-Command getname(const char *);
+Command getname(int wh);
 char * Pascal getconsoletitle();
 int Pascal desfunc(int,int);
 int Pascal desvars(int, int);
@@ -96,8 +95,9 @@ int Pascal ernd(void);
 int Pascal execkey(KEYTAB *, int, int);
 int Pascal execporb(int isp, int n);
 #if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
-int Pascal fexist(const char *);
+ int Pascal fexist(const char *);
 #else
+int Pascal name_mode(const char *);
 #define fexist(fn) name_mode(fn)
 #endif
 char * fex_up_dirs(const char * dir, const char * file);
@@ -116,7 +116,7 @@ void openwindbuf(char *);
 int Pascal orwindmode(int);
 char * Pascal pathcat(char *, int, const char *, const char *);
 #if S_MSDOS
-unsigned short refresh_colour(int row, int col);
+unsigned short USE_FAST_CALL refresh_colour(int row, int col);
 #endif
 int Pascal reglines(Bool ask);
 void Pascal release(char * mp);
@@ -130,6 +130,7 @@ int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);
 int Pascal set_var(char *, char *);
+int Pascal shiftkill(int f, int n);
 int USE_FAST_CALL stol(char * s);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
@@ -294,12 +295,13 @@ int Pascal movemd();
 int Pascal movemu();
 int Pascal mregdown();
 int Pascal mregup();
+char * msd_tidy();
 char * Pascal msd_nfile(void);
 int Pascal mvdnwind(int, int);
 int Pascal mvupwind(int, int);
 int Pascal namebuffer();
 int Pascal namedcmd(int, int);
-int Pascal name_mode(const char * s);
+int Pascal replace_file(const char * s);
 int Pascal narrow(int, int);
 int Pascal ins_newline(int, int);
 int Pascal newdims(int, int);
@@ -317,6 +319,7 @@ int Pascal openline(int, int);
 #endif
 int Pascal ovstring(int, int);
 int Pascal pipecmd(int, int);
+int pipefilter(char);
 int Pascal prevwind(int, int);
 int Pascal putctext(char *);
 void       putpad(const char *);
@@ -404,7 +407,7 @@ void Pascal ttopen();
 #else
 #define ttopen()
 #endif
-int Pascal tcapclose(int lvl);
+void Pascal tcapclose(int lvl);
 #ifndef tcapkopen
 void Pascal tcapkopen();
 #endif

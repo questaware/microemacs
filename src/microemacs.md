@@ -641,7 +641,7 @@ In Unix EMACS uses the command infocmp to read the keyboard codes.
   MONAMIC, RINT, "neg",   /* negate */
   MONAMIC, RSTR, "not",   /* logical not */
   DYNAMIC, RSTR, "or",    /* logical or */
-  DYNAMIC, RINT, "rig",   /* right string(string, pos) */
+  DYNAMIC, RINT, "rig",   /* right string(string, pos) rightmost pos chars */
   MONAMIC, RINT, "rnd",   /* get a random number */
   DYNAMIC, RSTR, "seq",   /* string logical equality check */
   DYNAMIC, RSTR, "sgr",   /* string logical greater than */

@@ -312,11 +312,13 @@ typedef struct	{
 typedef struct	{
 	short	t_nrowm1; 		/* current number of rows used	*/
 	short	t_ncol; 		/* current Number of columns.	*/
+#if MEMMAP == 0
 	short	t_margin;		/* min margin for extended lines*/
 	short	t_scrsiz;		/* size of scroll region "	*/
+#endif
 }	TERM;
 
-typedef int Pascal Emacs_cmd(int, int);
+typedef int Emacs_cmd(int, int);
 
                         /* Structure for the table of current key bindings */
 union EPOINTER {
@@ -404,6 +406,7 @@ extern int g_opts;
 
 #define val_opt(ch) ((g_opts >> ('Z' - ch)) & 1)
 #define is_opt(ch)  (g_opts & (1 << ('Z' - ch)))
+#define clr_opt(ch) g_opts ^= (g_opts & (1 << ('Z' - ch)))
 
 extern int kinsert_n;
 extern int g_got_uarg;

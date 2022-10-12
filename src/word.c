@@ -102,14 +102,14 @@ int Pascal backword(int notused, int n)
         return FALSE;
       f_size += 1;
       ch = thischar();
-      if (!is_space(ch) && ch != A_LEND)
+      if (isword(ch)) // !isspace(ch) && ch != A_LEND)
 				break;
     }
 
 //  if (n <= 0 && g_ignore >= 0)
 //   	break;
 	  																			// skip non spaces
-    for ( ;!is_space(ch) && ch != A_LEND ; ch = thischar())
+    for ( ; is_word(ch)/*!is_space(ch) && ch != A_LEND */ ; ch = thischar())
     { if (forwbychar(-1) == FALSE)
 			  return TRUE;
       f_size += 1;
@@ -141,6 +141,7 @@ int Pascal nextword(int notused, int n)
 	}
 
 { int f_size = -mask;
+  int prev_ch = -1;
 
   while (--n >= 0)
 	{	if (dir < 0)
@@ -148,12 +149,19 @@ int Pascal nextword(int notused, int n)
 				return FALSE;
 			
   { int ch = thischar();
-		int state = !is_space(ch) ^ mask;
+		int state = isword(ch) ^ mask;
 		int iter = 1 + state;
 
   	while (--iter >= 0)
-		{	while (state == (!is_space(ch) ^ mask))
-	    { ch = nextch((Lpos_t*)curwp, dir);
+		{	while (state == (isword(ch) ^ mask))
+		  { if      (!isspace(ch))
+		  	{ if (!mask && isspace(prev_ch))
+		  			break;
+		  	}
+		  	else if (mask && prev_ch >= 0 && !isspace(prev_ch))
+		  		break;
+	    	prev_ch = ch;
+	      ch = nextch((Lpos_t*)curwp, dir);
 				if (ch < 0)
 				{	if (dir < 0)
 						gotobob(0,0);

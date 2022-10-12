@@ -179,11 +179,9 @@ struct SREGS {
 #if	S_MSDOS || S_OS2
 # define DIRSEPSTR	"\\"
 # define DIRSEPCHAR	'\\'
-# define PATHCHR	';'
 #else
 # define DIRSEPSTR	"/"
 # define DIRSEPCHAR	'/'
-# define PATHCHR	':'
 #endif
 
 #if	S_UNIX5 | S_HPUX | S_BSD | S_XENIX

@@ -90,7 +90,7 @@ int Pascal namedcmd(int f, int n)
 
 	if (! scle)
 																	/* prompt the user to type a named command */
-	  kfunc = getname(" ");					/* and get the function name to execute */
+	  kfunc = getname(0);						/* and get the function name to execute */
 	else
 	{	char ebuffer[40];
 																						/* grab token and advance past */
@@ -590,7 +590,7 @@ failexit:
 #endif
 																				/* only do this if we are debugging */
 #if	DEBUGM
-		  if (macbug && g_bstore == null && exec_level == 0)
+		  if (pd_macbug && g_bstore == null && exec_level == 0)
 		    if (debug(bp, eline) == FALSE)
 		    { mlwrite("%!"TEXT54); /*	"[Macro aborted]" */
 		      cc = FALSE;
@@ -802,7 +802,7 @@ dinput:
 					    /* META key turns off debugging */
 	key = getbind(c);
 	if	(key->k_ptr.fp == meta)
-	  macbug = FALSE;
+	  pd_macbug = FALSE;
 	else 
 	{ int oldcmd = pd_discmd;		        
 	  int oldinp = g_disinp;

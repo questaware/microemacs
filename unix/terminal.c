@@ -217,13 +217,13 @@ int	cbcolor = C_BLACK;		/* current background color */
 int	ctrans[] =		/* ansi to ibm color translation table */
 	{0, 4, 2, 6, 1, 5, 3, 7,
 	 8, 12, 10, 14, 9, 13, 11, 15};
-/* editor variable cmt_colour;		   comment colour in ibm */
+/* editor variable pd_cmt_colour;		   comment colour in ibm */
 
 
 #define M_BOLD 1
 #define M_REV  2 /* must be 2 */
 
-  int  g_cursor_on = 0;
+//int  g_cursor_on = 0;
 
   Char key_bspace = 0x7f;
 

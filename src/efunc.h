@@ -231,6 +231,7 @@ const NBIND names[] =
 #endif
 	{"set-mark",						setmark},
 	{"shell-command",				spawn},
+	{"shift-kill",					shiftkill},
 	{"shrink-window",				shrinkwind},
 	{"source",							execfile},
 	{"split-current-window",splitwind},

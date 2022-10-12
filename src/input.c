@@ -51,7 +51,7 @@
 
 extern int ttgetraw(void);
 
-extern int   g_cursor_on;
+//extern int   g_cursor_on;
 extern unsigned int g_Dmatchlen;
 
 LL g_ll;
@@ -390,6 +390,7 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
       	else /* if (wh == CMP_FILENAME) */
       
       	  eny = msd_nfile();
+
 	      if (eny == NULL)
         	break;
       }
@@ -400,7 +401,7 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 #if S_MSDOS == 0
         if (name[i] != eny[i])
 #else
-				if (name[i] == '\\' && eny[i] == '/')
+				if (name[i] == '/' && eny[i] == '\\')
 					continue;	
         if (((name[i] ^ eny[i]) & ~0x20) != 0)
 #endif
@@ -420,7 +421,7 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 #else
         else if (((name[i] ^ eny[i]) & ~0x20) != 0)
 #endif
-          return i;
+          goto fin;
       }
     } /* while over entries */
                                                /* with no match, we are done */
@@ -437,6 +438,9 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
     mlout(name[cpos]);
     TTflush();
   }} /* for (cpos) */
+
+fin:
+	(void)msd_tidy();
   return cpos;
 }
 
@@ -495,7 +499,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
   
   buf[0] = 0;
 
-  ++g_cursor_on;
+//++g_cursor_on;
   g_chars_since_ctrl = 1000;
   
   for (;;)
@@ -661,8 +665,8 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
 #endif
     else if ((c == ' '|| c == '\t' || c == 'F'-'@') && gs_type >= 0 && cpos > 0)
-    { if (gs_type == CMP_TOSPACE)
-        break;
+    {// if (gs_type == CMP_TOSPACE)
+     //   break;
 
     { int typ = c == 'F'-'@' ? CMP_FILENAME : gs_type;
     	int tpos = comp_name(cpos, typ, buf);    /* attempt a completion */
@@ -672,12 +676,13 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       fulllen = cpos;
       buf[cpos] = 0;
     }}
-    else if ((c <= 'Z'-'@' || c == (ALTD | 'S')) && ch != quotec)
+    else if ((c <= 'Z'-'@' && c != 'I'-'@' || c == (ALTD | 'S')) && ch != quotec)
     { switch(c)
       {	case 'B'-'@':
     			autostr = getkill();
 				when 'N'-'@':
-					autostr = curbp->b_fname;
+					if (curbp->b_fname)
+						autostr = curbp->b_fname;
 				when 'S'-'@':
 				case ALTD | 'S':
 					if (pd_patmatch != NULL)
@@ -725,7 +730,7 @@ getliteral:
   }}
 
   g_gs_keyct = key_ct;
-  ++g_cursor_on;
+//++g_cursor_on;
 
 	if (cc > FALSE)
   {	g_ll.ll_ix += 1;
@@ -774,18 +779,18 @@ char * complete(const char * prompt, char * defval, int type)
 	   that pressing a <SPACE> attempts to complete an unfinished command
 	   name if it is unique.
 	*/
-Command getname(const char * prompt)
+Command getname(int wh)
 				/* string to prompt with */
-{ char *sp = complete(prompt, NULL, CMP_COMMAND);
+{ char *sp = complete(TEXT15+wh, NULL, CMP_COMMAND);
 
   return sp == NULL ? NULL : fncmatch(sp);
 }
 
 
-const char * gtfilename(const char * prompt)
+const char * gtfilename(int wh)
 				/* prompt to user on command line */
 {
-  return (const char *)complete(prompt, NULL, CMP_FILENAME);
+  return (const char *)complete(wh ? TEXT132 : TEXT131, NULL, CMP_FILENAME);
 }
 
 

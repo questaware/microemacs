@@ -18,14 +18,14 @@ Paren_t g_paren;
 int init_paren(const char * str, int len)
 
 {	Paren_t p = {0,};
+	int c_cmt = (curbp->b_langprops & BCCOMT);
 	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL+BCPAS));
 	int p_cmt = (f_cmt						  & BCPAS);
 	int s_cmt = (f_cmt							& BCSQL);
-	int c_cmt = (curbp->b_langprops & BCCOMT);
 		
-	p.olcmt = c_cmt ? '/' :
-						s_cmt ? '-' : 
-						p_cmt ? ')' : (char)-1;
+	p.olcmt = s_cmt ? '-' : 
+						p_cmt ? ')' :
+						c_cmt ? '/' : (char)-1;
 	p.complex = true;
 	p.sdir = 1;
 //p.in_mode = 0;
@@ -445,8 +445,7 @@ int Pascal indent(int notused, int n)
 
 int Pascal cinsert()				/* insert a newline and indentation for C */
 
-{ int bracef;				 								/* was there a brace at the end of line? */
-	LINE *lp = curwp->w_dotp;
+{	LINE *lp = curwp->w_dotp;
 																		/* trim the whitespace before the point */
 	int offset = curwp->w_doto;
 	while (--offset >= 0 &&
@@ -512,22 +511,24 @@ int Pascal ins_newline(int notused, int n)
 				 * negative, wrap mode is enabled, and we are now past fill column,
 				 * and we are not read-only, perform word wrap.
 				 */
+	short lang = curbp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS);
+
 	if ((curbp->b_flag & MDWRAP) && 
 			getccol() > pd_fillcol)
 		execkey(&wraphook, FALSE, 1);
-
-{	int s;
 																						/* insert some lines */
 	while (--n >= 0)
 	{ char * src;
 		char * eptr = NULL;
-		if (curbp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS))
+		if (lang)
 		{ src = &curwp->w_dotp->l_text[0];
 			eptr = skipspaces(src, &src[curwp->w_doto]);
 		}
 
-		if ((s = lnewline()) <= FALSE)
+	{	int s = lnewline();
+		if (s <= FALSE)
 			return s;
+
 		if (eptr != NULL)
 		{ char schar = eptr[0];
 		  eptr[0] = 0;

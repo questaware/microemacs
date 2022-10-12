@@ -170,6 +170,8 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define NMARKS	 4			/* number of marks must be po2  */
 #define MAXVARS 64
 
+#define USE_DIR 0
+
 #define PSCP_CMD "pscp "
 #define CLIP_LIFE 0					// seconds, not in use
 

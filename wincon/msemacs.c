@@ -29,9 +29,13 @@ long unsigned int thread_id(void)
 }
 
 
+UINT g_codepage;
+
 void init_wincon()
 
-{	
+{	g_codepage = GetConsoleOutputCP();
+  SetConsoleCP(1252);
+  SetConsoleOutputCP(1252);
 #if 0
   SC_CHAR buf[129];
 	HINSTANCE hInstance = GetModuleHandle(NULL);	 // Grab An Instance For Window
@@ -86,18 +90,18 @@ void Pascal tcapepage()
 */
 
 
-#if 0
+#if 1
 
 /* This function gets called just before we go back home to the command
  * interpreter.
  */
-int Pascal tcapclose(int lvl)
+void Pascal tcapclose(int lvl)
 
-{ 
+{ SetConsoleCP(g_codepage);
+  SetConsoleOutputCP(g_codepage);
 /*CloseHandle(hConsoleIn);
   hConsoleIn = NULL;  cannot do this */
-  tcapsetsize(csbiInfoO.dwSize.X, csbiInfoO.dwSize.Y, 2);
-  return OK;
+//tcapsetsize(csbiInfoO.dwSize.X, csbiInfoO.dwSize.Y, 2);
 }
 
 #endif
@@ -199,8 +203,9 @@ void Pascal tcapsetsize(int wid, int dpth, int clamp)
 // HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
 // SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 
+#if 0
 	GetConsoleScreenBufferInfo( h, &g_csbi );
-
+#endif
 																	// set the screen buffer to be big enough
 { int rc = SetConsoleWindowInfo(h, 1, &rect);
 #if _DEBUG
@@ -211,7 +216,7 @@ void Pascal tcapsetsize(int wid, int dpth, int clamp)
 #endif
 }}
 
-			 int   g_cursor_on = 0;
+//		 int   g_cursor_on = 0;
 static COORD g_oldcur;
 static WORD  g_oldattr = BG_GREY;
 
@@ -229,7 +234,6 @@ void Pascal USE_FAST_CALL tcapmove(int row, int col)
 
 {/* if (row == ttrow && col == ttcol)
       return; */
-  DWORD  Dummy;
   COORD  Coords;
 
 	if (row > term.t_nrowm1)
@@ -242,15 +246,15 @@ void Pascal USE_FAST_CALL tcapmove(int row, int col)
 	ttcol = col;
 	Coords.X = ttcol;
 
-	if (row < term.t_nrowm1 && g_cursor_on >= 0)
-	{	WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
+	if (row < term.t_nrowm1 /* && g_cursor_on >= 0 */)
+  {	DWORD  Dummy;
+		WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
+	  g_oldattr = refresh_colour(row, col);
+	  g_oldcur = Coords;
 	{ WORD MyAttr = // row == term.t_nrowm1 ? BG_GREY :
                        					  	  window_bgfg(curwp) | BACKGROUND_INTENSITY;
 
-	  WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );
-	
-	  g_oldattr = refresh_colour(row, col);
-	  g_oldcur = Coords;
+	  WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );	
 	}}
 	SetConsoleCursorPosition( g_ConsOut, Coords);
 }

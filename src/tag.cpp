@@ -69,7 +69,6 @@ void ml write(const char * msg)
 
 { printf("%s\n", msg);
 }
-#endif
 
 
 int name_mode(const char * s)
@@ -92,6 +91,8 @@ int fexist(char * fname)	/* does <fname> exist on disk? */
   return name_mode(fname);
 #endif
 }
+
+#endif
 
 /* replace the last entry in dir by file */
 /* t can equal dir */
@@ -266,8 +267,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 		  pos = 0;
 		while (1)
 		{ fseek(fp, pos, 0);
-		  if (pos > 0)
-			pos += get_to_newline();
+		  pos += get_to_newline();
 	  	{ int g = get_to_newline();
 	  	  fd_cc = strcmp(key, tagline);
 	  	  if (g == 0 || fd_cc <= 0)
@@ -342,8 +342,9 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 
 	strcpy(Tag::g_LastName, tagline);
 
-	BUFFER * bp;
 	char * fn = tagline;
+
+	BUFFER * bp;
 	int iter;
 	for (iter = 2; --iter >= 0; )
 
@@ -366,21 +367,21 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 				break;
 		}
 		else    			/* convert search pattern to magic search string */
-	    {		  	/* if first char is '/' search forwards, '?' for backwards */
+	    {		  			/* if first char is '/' search forwards, '?' for backwards */
 			char typ = *file;
 			if (typ == '?')
 				gotoeob(0, 0);
 			else
 				gotobob(0, 0);
 
-			char * dd = pat - 1;
 #if 0
 			strcpy(tagfile,pat);			/* save for restore */
 #endif
-			if (typ == 0)	
-	    		strcat(strcpy(dd+1, key), "[^A-z0-9_]");
+	    	char * dd = strcat(strcpy(pat, key), "[^A-z0-9_]") - 1;
+
+			if (typ != 0)	
 	
-			else	/* look for end '/' or '?' - start at end and look backwards*/
+						/* look for end '/' or '?' - start at end and look backwards*/
 			{	char ch;
 				int lim = sizeof(pat) - 3;
 				int ix = 0;
@@ -438,7 +439,7 @@ findTag(int f, int n)
     {	char * ss = curwp->w_dotp->l_text;
 		int  ll   = curwp->w_dotp->l_used;
         int  offs = curwp->w_doto;
-        middle = offs > 0 & ss[offs - 1] == ':';
+        middle = offs > 0 && ss[offs - 1] == ':';
 												/* Go to the start of the word.*/
         while (--offs >= 0 && (ss[offs] == ':' || isword(ss[offs])))
             ;

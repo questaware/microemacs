@@ -49,7 +49,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT12	"Help file missing"
 #define	TEXT13	": describe-key "
 #define	TEXT14	"Not Bound"
-#define	TEXT15	"Command to use "
+#define	TEXT15	" \000Command to use "
 #define	TEXT16	"No such function"
 #define	TEXT17	"Binding table FULL!"
 #define	TEXT18	": unbind-key "
@@ -64,8 +64,8 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT31	"         Global Modes"
 #define	TEXT32	"Discard changes"
 #define	TEXT33	"Encryption Key: "
-#define	TEXT34	" File:"
-#define	TEXT35	"another user"
+#define	TEXT34
+#define	TEXT35
 #define	TEXT36	"LOCK ERROR -- "
 #define	TEXT37	"checking for existence of %s\n"
 #define	TEXT38	"making directory %s\n"
@@ -152,9 +152,9 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT128	"(e)val exp,(c/x)ommand,(t)rack exp,(^G)abort,<SP>exec,<META> stop debug"
 #define	TEXT129	"File to execute: "
 #define	TEXT130	"Macro not defined"
-#define	TEXT131	"Read file"
+#define	TEXT131	"File"
 #define	TEXT132	"Insert file"
-#define	TEXT133	"File (^N)"
+#define	TEXT133
 #define	TEXT134	"View file"
 #define	TEXT135	"[Old buffer]"
 #define	TEXT136	"Buffer ("

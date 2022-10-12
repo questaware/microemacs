@@ -24,7 +24,7 @@
 #define millisleep(n) Sleep(n)
 #endif
 
-extern int   g_cursor_on;
+//extern int   g_cursor_on;
 
 #define MARGIN	8 		/* size of minimim margin and */
 #define SCRSIZ	64			/* scroll size for extended lines */
@@ -39,8 +39,10 @@ TERM		term		= {
 #else
 	0, 0, /* these four values are set dynamically at open time */
 #endif
+#if MEMMAP == 0
 	MARGIN,
 	SCRSIZ,
+#endif
 };
 
 #define CHROM_OFF 0x8000
@@ -101,7 +103,7 @@ static void Pascal updateline(int);
  * 8 : Use line foreground
  * An attribute of 0 therefore means the attributes for the line/new foreground
  */
-unsigned short refresh_colour(int row, int col)
+unsigned short USE_FAST_CALL refresh_colour(int row, int col)
 
 { VIDEO * vp = vscreen[row];
   short * scl = vp->v_text;
@@ -231,8 +233,8 @@ void Pascal vtinit(int cols, int dpthm1)
 			vp = (VIDEO *)&vp->v_text[cols+2];
 		}
 
-		for (i = cols; --i >= 0; )
-			vscreen[term.t_nrowm1]->v_text[i] = ' ';
+ 		for ( ; --cols >= 0; )
+ 			vscreen[dpthm1]->v_text[cols] = ' ';
 }}}
 
 
@@ -302,10 +304,9 @@ const short ctrans_[] = 	/* ansi to ibm color translation table */
 
 static int palcol(int ix)
 
-{ int clr = pd_palstr[ix];
+{ int clr = pd_palstr[ix] | 0x20;
 	return (in_range(clr,'0','9') ? clr - '0' :
-				  in_range(clr,'A','F') ? clr - 'A' + 10 :
-				  in_range(clr,'a','f') ? clr - 'a' + 10 : 0) << 8;
+ 				  in_range(clr,'a','F') ? clr - 'a' + 10 : 0) << 8;
 }
 #else
 #define palcol(c) (((c) + 1) << 8)
@@ -343,11 +344,13 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 {	VIDEO *vp = vscreen[row];
 	short * tgt = &vp->v_text[-1];
-	char * hlite = (vp->v_flag & VFML) ? "" : pd_highlight;
+	char * hlite = (vp->v_flag & VFML) ? " " : pd_highlight;
 	int len = llength(lp); 		/* an upper limit */
   unsigned char * str = (unsigned char *)&lp->l_text[-1];
 	unsigned char s_props = *str;												/* layout dependent */
 	*str = 0;																						/* restored below */
+	if (cmt_chrom)
+		cmt_chrom = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
 {	Short  clring = g_clring;
 	int mode = clring == 0 || cmt_chrom == 0 || (vp->v_flag & VFML)
 								 		? -1 : s_props & VFCMT;
@@ -378,18 +381,18 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 		}
 		
 	{ int c = *++str;
-		if (c != 0 && c == hlite[(++highlite)])
+		if (c == 0 || c != hlite[(++highlite)])
+		{ highlite = 0;
+			if (c != 0 && c == hlite[1])
+				highlite = 1;
+		}
+		else
 		{ if (hlite[1+highlite] == 0 && vtc-highlite+1 >= 0)
 			{ tgt[vtc-highlite+2] |= palcol(hlite[0]-'1') | CHR_NEW;
 				highlite = 0;
 			//chrom_on = 1;
 				chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
 			}
-		}
-		else
-		{ highlite = 0;
-			if (c != 0 && c == hlite[1])
-				highlite = 1;
 		}
 
 		if			(c == '\t') 
@@ -431,11 +434,11 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			  else
         { int wh = find_match(str, len);
           if (wh >= 0)
-					{	markuplen = wh;
+					{	chrom_nxt = wh ? chrom | CHR_UL : cmt_chrom;
+            mode |= wh ? Q_IN_CMT : Q_IN_CMT0;
+						markuplen = wh;
             len -= wh;
             str += wh;
-            chrom_nxt = wh ? chrom | CHR_UL : cmt_chrom;
-            mode |= wh ? Q_IN_CMT : Q_IN_CMT0;
             markupterm = c;
             continue;
           }
@@ -531,10 +534,11 @@ void Pascal modeline(WINDOW * wp)
 	  char c[NLINE+24]; /* buffer for mode line */
 	}   tline;
 
+
 	tline.lc.l_used = term.t_ncol;
 
 #if S_MSDOS
-	n = wp == curwp ? 0xcd : /* 173 :  */
+	n = wp == curwp ? 0x5f : /* 0xcdm 173 :  */
 #else
 	n = wp == curwp ? '='  :
 #endif
@@ -649,7 +653,7 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 	int	zline = sline + wp->w_ntrows;
 			
 	int color = window_bgfg(wp);
-	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
+//int cmt_clr = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
 
 #if MEMMAP == 0
 	if (color == 0x70)
@@ -665,7 +669,7 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 	while (++sline <= zline)
 	{ if      (wh < 0)
 		{ if (vscreen[sline]->v_flag & VFEXT)
-			{ VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
+			{ VIDEO * vp = vtmove(sline, wp->w_fcol, 1, lp);
 																		/* this line no longer is extended */
 				if (lp != wp->w_dotp)
 				{	vp->v_flag -= VFEXT;
@@ -675,7 +679,7 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 		}	
 		else if (wh || lp == wp->w_dotp)	/* and update the virtual line */
 		{
-			VIDEO * vp = vtmove(sline, wp->w_fcol, cmt_clr, lp);
+			VIDEO * vp = vtmove(sline, wp->w_fcol, 1, lp);
 
 			vp->v_color = color;
 			vp->v_flag &= ~(VFREQ | VFML);
@@ -844,7 +848,7 @@ void Pascal updline()
 
 //g_currow = row;
 
-{	int cmt_clr = (trans(cmt_colour & 0xf)) << 8 | CHR_NEW;
+{	// int cmt_clr = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
 #if MOUSE == 0
 	int g_lbound = 0;		/* leftmost column of line being displayed */
 #endif							
@@ -870,7 +874,7 @@ void Pascal updline()
 											/* scan through the line copying to the virtual screen*/
 											/* once we reach the left edge						*/
 											/* start scanning offscreen */
-		{ VIDEO * vp = vtmove(row, g_lbound + fcol, cmt_clr, g_up_lp);
+		{ VIDEO * vp = vtmove(row, g_lbound + fcol, 1, g_up_lp);
 			
 //		vp->v_text[0] = /*BG(C_BLUE)+FG(C_WHITE)+*/'$';
 								 			/* and put a '$' in column 1 */
@@ -912,7 +916,7 @@ void Pascal updline()
 	}
 #endif
 
-	for (i = -1; ++i <= term.t_nrowm1; )
+	for (i = -1; ++i < term.t_nrowm1; )
 	{
 		VIDEO * vp = vscreen[i];
 #if MEMMAP == 0
@@ -1065,16 +1069,14 @@ int /*Pascal*/ update(int force)
 	{ 															/* update any windows that need refreshing */
 		for (wp = wheadp; wp != NULL; wp = wp->w_next)
 			if (wp->w_flag) 			 				/* if the window has changed, service it */
-			{ int set = reframe(wp) & ~( WFMOVE+WFMODE); 
+			{ int set = reframe(wp) & ~( WFMOVE+WFMODE);
 														 				/* check the framing */
 				if			(set & (WFTXTU+WFTXTD))
 					scrollupdn(set, wp);	
-				else if (set & WFEDIT)
+				else if (set & WFHARD)
+					updall(1, wp);			/* update all lines */
+				else if (set)
 					updall(0, wp);			/* update EDITed line */
-				else
-				{ if (set)
-						updall(1, wp);						/* update all lines */
-				}
 			}
 								/* update physical screen from virtual screen */
 								/* update the cursor and flush the buffers */
@@ -1314,7 +1316,7 @@ int mlwrite(const char * fmt, ...)
 {	int  ch;
 	int  s_discmd = pd_discmd++;
 	Bool popup = false;
-	--g_cursor_on;
+//--g_cursor_on;
 
 	if (*fmt != '\001')
 	{ --fmt;
@@ -1389,7 +1391,7 @@ int mlwrite(const char * fmt, ...)
 #endif
 
 	pd_discmd = s_discmd;
-	++g_cursor_on;
+//++g_cursor_on;
 	return ttcol;															/* Number of characters */
 }}
 
@@ -1421,7 +1423,7 @@ void Pascal mlforce(const char * s)
 void Pascal mlerase()
 
 {	
-	mlwrite("       ");
+	mlwrite("");
 #if MEMMAP == 0
 	g_cmd_line[0] = 0;
 #endif

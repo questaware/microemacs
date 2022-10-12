@@ -9,6 +9,9 @@
 #include	<sys/stat.h>
 
 #include	"estruct.h"
+#if S_MSDOS
+#include <windows.h>
+#endif
 #include	"edef.h"
 #include	"etype.h"
 #include	"elang.h"
@@ -17,7 +20,7 @@
 #include	"logmsg.h"
 
 extern char *getenv();
-extern char * g_invokenm;
+char * g_invokenm;
 
 #if 0
 
@@ -582,7 +585,7 @@ int Pascal getechockey(int mode)
 int Pascal bindtokey(int f, int n)
 									/* int f, n;	** command arguments [IGNORED] */
 {
-	int (Pascal *kfunc)(int, int) = getname(TEXT15);
+	int (Pascal *kfunc)(int, int) = getname(2);
 																				/* ": bind-to-key " */
 	if (kfunc == NULL)
 	{ mlwrite(TEXT16);
@@ -775,6 +778,9 @@ void Pascal flook_init(char * cmd)
 #define HOMEPATH "HOME"
 #else
 #define HOMEPATH "HOMEPATH"
+	char * c = malloc(1050);
+	int len = GetModuleFileName(0, c, 1049);
+#if 0
 	int clen = strlen(cmd);
 	char * c = strcpy(malloc(clen+5),cmd);
 
@@ -787,8 +793,9 @@ void Pascal flook_init(char * cmd)
 		c[clen-4] = 0;
 	c = strcat(c,".exe");
 #endif
+#endif
 	g_invokenm = c;
-#if S_MSDOS
+#if S_MSDOS && 0
   for (; *c != 0; ++c)
     if (*c == '\\')
       *c = '/';
@@ -802,41 +809,39 @@ void Pascal flook_init(char * cmd)
 /*!********************************************************
  bool name_mode(char * fname)
  
- Remarks
- ~~~~~~~
- return the mode of the file S_ISREG, S_ISDIR, ..
- 
  Return Value
  ~~~~~~~~~~~~
- As above
+ st_mode
 
  Parameters
  ~~~~~~~~~~
  char * fname		the name of the file from the current directory or absolute
 **********************************************************/
 
+#if S_WIN32 == 0
+
 int Pascal name_mode(const char * s)
 
 {	struct stat stat_;
-	if (stat(s, &stat_) != OK)
-	  return 0;
+ 	if (stat(s, &stat_) != OK)
+ 	  return 0;
 	return stat_.st_mode;
 }
 
-
+#endif
+ 
 #if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
 
 int Pascal fexist(const char * fname)	/* does <fname> exist on disk? */
 					/* file to check for existance */
 {
   char tfn[NFILEN+2];
-  /* nmlze_fname(&tfn[0], fname,?); */
+  /* nmlze_fname(&tfn[0], fname); */
   return access(fname, 0) == 0;
 }
 
 #endif
-
-
+ 
 /* replace the last entry in dir by file */
 /* t can equal dir */
 
@@ -909,10 +914,10 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 		*ref_dir = dir + ix - (ch == 0);
 	{	char * diry = strpcpy(g_fspec, dir, ix + 1);
 		if (app)
-			strcat(diry,"/");
+			strcat(diry,DIRSEPSTR);
 // 	mbwrite(diry);
   {	char * pc = pathcat(g_fspec, sl-1, diry, file);
-// 	mlwrite("After %s%p", pc);
+// 	mlwrite("%pAfter %s", pc);
     if (fexist(pc))
     	return (const char*)pc;
   }}}}
@@ -970,8 +975,11 @@ const char * Pascal flook(char wh, const char * fname)
 			path = getenv(HOMEPATH);
 	    if ((res = fex_file(1, &path, fname)))
 	      return res;
-
+#if S_WIN32
+			path = g_invokenm;
+#else
 			path = flook('P', g_invokenm);
+#endif
 		 	return fex_file(0, &path, fname);
 	}
 
@@ -1066,17 +1074,21 @@ int Pascal execkey(KEYTAB * key, int f, int n)
 		  													: (*(key->k_ptr.fp))(f, n);
 }
 
+#if 0
 			/* set a KEYTAB to the given name of the given type */
 void Pascal setktkey(int type, char * name, KEYTAB * key)
 				/* type of binding */
 				/* name of function or buffer */
 {																		// Only called on table hooks
+  key->k_code = 1;
   key->k_type = type;
 	if      (type == BINDFNC)
 	  key->k_ptr.fp = fncmatch(name);
 	else if (type == BINDBUF)
 	  /* not quite yet... */;
 }
+
+#endif
 
 int Pascal help(int f, int n)	/* give me some help!!!!
 		   bring up a fake buffer and read the help file

@@ -51,13 +51,15 @@ int g_crlfflag;
 
 					/* returns old input */
 
+#if S_WIN32 == 0
+
 int Pascal iskboard()
 
 { struct stat stat_;
   return fstat(0 , &stat_) != 0 ? 0 : (stat_.st_mode & S_IFCHR);
 }
 
-
+#endif
 
 #if S_VMS == 0
 

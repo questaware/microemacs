@@ -500,8 +500,8 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 	if      (funcs[fnum].f_kind < RINT)
 	 switch (fnum)
 	 {case UFDIT:		return plinecpy(fname);
-		when UFRIGHT: iarg1 -= iarg2;
-				        	return iarg1 <= 0 ? arg1 : strcpy(arg1, &arg1[iarg1]);
+		when UFRIGHT: iarg2 -= strlen(arg1);
+				        	return iarg2 >= 0 ? arg1 : strcpy(arg1, &arg1[-iarg2]);
 		when UFDIR:		return pathcat(arg1, NSTRING-1, arg1, arg2);
 		when UFIND:		return getval(arg1, arg1);
 
@@ -930,7 +930,10 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  case EVCMDHK:   ++hookix;
 	  case EVWRAPHK:  ++hookix;
     case EVREADHK:  ++hookix;
-										setktkey(BINDFNC, value, &hooks[hookix]);
+										hooks[hookix].k_code = 1;
+										hooks[hookix].k_type = BINDFNC;
+										hooks[hookix].k_ptr.fp = fncmatch(value);
+//									setktkey(BINDFNC, value, &hooks[hookix]);
 #if S_WIN32
 		when EVWINTITLE:setconsoletitle(value);
 #endif
@@ -982,7 +985,7 @@ int Pascal set_var(char var[NVSIZE+1], char * value)	/* set a variable */
 {	int cc = svar(vd, value);	/* and set the appropriate value */
 		/* if $debug == TRUE, every assignment will echo a statment to
 							that effect here. */
-	if (macbug && (strcmp(var, "%track") != 0))
+	if (pd_macbug && (strcmp(var, "%track") != 0))
 	{ mlwrite("%!(%s <- %s)", var, value);
 	  update(TRUE);
 	        

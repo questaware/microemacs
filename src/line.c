@@ -147,8 +147,6 @@ int Pascal lchange(int flag)
 												   /* make sure all the needed windows get this flag */ 
   (void)orwindmode(window_ct(curbp) > 1 ? WFHARD : flag);
 
-{	int all = 0;
-
   if (g_inhibit_scan == 0)
   {	LINE * lp = curwp->w_dotp;
 		int ct = g_header_scan + 6;     								/* just 6 more */
@@ -157,6 +155,8 @@ int Pascal lchange(int flag)
 
 		g_header_scan = ct + 6;
 		ct = 24;
+
+	{	int all = 0;
 
 		init_paren("", 0);
 		g_paren.in_mode = (lp->l_props & Q_IN_CMT);
@@ -176,10 +176,10 @@ int Pascal lchange(int flag)
 		}
 
 		updall(all, curwp);
-  }
+  }}
   
 	return TRUE;
-}}
+}
 
 #define EXPANSION_SZ 8
 
@@ -443,7 +443,7 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
 
 #if S_WIN32
   if (tokill && kinsert_n <= 0)
-    ClipSet(getkill());
+    ClipSet(0);
 #endif
   lchange(WFEDIT);
   ++g_overmode;
@@ -510,14 +510,175 @@ char * Pascal getctext(char * t)
   lchange(WFHARD);
 	return TRUE;
 }
+
+extern REGION g_region;
 
 /* The kill buffer abstraction */
 
-static struct
+typedef struct t_kill
 { char * mem;
   int    size;
   int    kfree;		/* # of bytes used in kill buffer*/
-} kills[NOOKILL+1];
+} t_kill;
+
+static t_kill kills[NOOKILL+1];
+
+
+static char * g_doregt;
+/* doregion */
+
+static
+Pascal doregion(int wh, char * t)
+	
+{ if (wh < 0)
+	{ 
+		int offs =  curwp->w_doto;
+		LINE * ln = curwp->w_dotp;
+		int len = ln->l_used;
+		char * lp = lgets(ln, 0);
+		char ch;
+
+		while (offs >= 0 && 
+               ((ch = lp[offs]) == '_' || isalnum(ch)))
+			--offs;
+
+    while (++offs < len && 
+               ((ch = lp[offs]) == '_' || isalnum(ch)))
+    { int cc = kinsert(ch);
+	    if (cc <= FALSE)
+	      return cc;
+    }
+  }
+	else if (wh > 1 && rdonly())	/* disallow this command if */
+	  return FALSE;		        		/* we are in read only mode */
+  else
+	{ LINE  *linep;
+	  int	 loffs;
+		int  space = NSTRING-1;
+	  REGION * ion = getregion();
+	  if (ion == NULL)
+	    return 0;
+
+	  linep = ion->r_linep; 		/* Current line.	*/
+
+		    /* don't let the region be larger than a string can hold */
+	  if (wh == 0 && ion->r_size >= NSTRING)
+	    ion->r_size = NSTRING - 1;
+
+	  for (loffs = ion->r_offset; g_region.r_size--; ++loffs)
+	  { int ch;
+	  	if (loffs != llength(linep))		/* End of line. 	*/
+	      ch = lgetc(linep, loffs);
+	    else
+	    { linep = lforw(linep);
+	      loffs = -1;
+	      ch = '\n';
+	    } 
+	    if      (wh == 0)
+	    { if (--space >= 0)
+	        *t++ = ch;
+	    }
+	    else if (wh == 1) 
+	    { ch = kinsert(ch);
+	      if (ch <= FALSE)
+	        return ch;
+	    }
+	    else
+	    { if (isalpha(ch) && (ch & 0x20) == (wh & ~2)) /* isupper */
+	      {	lputc(linep, loffs, chcaseunsafe(ch));
+	      	lchange(WFHARD);
+	      }
+	    }
+	  }
+	  if (t != NULL)
+	    *t = 0;
+	}
+	return TRUE;
+}
+
+/* return some of the contents of the current region
+*/
+const char *Pascal getreg(char * t)
+
+{ return doregion(0,t) <= FALSE ? g_logm[2] : t;
+}
+
+
+/* Append all of the characters in the region to the n.th kill buffer. 
+ * Don't move dot at all. 
+ * Bound to "^XC".
+ */
+int copyregion(int f, int n)
+
+{ return to_kill_buff(1, n);
+}
+
+
+/* Copy all of the characters in the current word to the n.th kill buffer.
+ * Don't move dot at all. 
+ * Bound to "A-W".
+ */
+int copyword(int f, int n)
+
+{ return to_kill_buff(-1, n);
+}
+
+
+
+/* Lower case region. Zap all of the upper
+ * case characters in the region to lower case. Use
+ * the region code to set the limits. Scan the buffer,
+ * doing the changes. Call "lchange" to ensure that
+ * redisplay is done in all buffers. Bound to
+ * "C-X C-L".
+ */
+Pascal lowerregion(int f, int n)
+
+{ return doregion(2 + 0, NULL);
+}
+
+/* Upper case region. Zap all of the lower
+ * case characters in the region to upper case. Use
+ * the region code to set the limits. Scan the buffer,
+ * doing the changes. Call "lchange" to ensure that
+ * redisplay is done in all buffers. Bound to
+ * "C-X C-U".
+ */
+int Pascal upperregion(int f, int n)
+
+{ return doregion(0x20, NULL);
+}
+
+
+int to_kill_buff(int wh, int n)
+
+{ if (wh == -2)
+	{	kinsert_n = NOOKILL;
+	  kills[NOOKILL].size = 0;
+	}
+	else
+	{ kinsert_n = chk_k_range(n);
+	  if (kinsert_n < 0)
+	    return 1;
+	}
+	
+	if (wh < 0)
+	  (void)kdelete(wh+1, kinsert_n);
+
+{ int cc = doregion(wh, NULL);
+  if (cc <= FALSE)
+    return cc;
+  
+#if S_WIN32
+  if (kinsert_n == 0)
+  	ClipSet(0);
+#endif
+  mlwrite(TEXT70);
+				/* "[region copied]" */
+  g_thisflag |= CFKILL;
+  return cc;
+}}
+ 
 
 
 int Pascal USE_FAST_CALL chk_k_range(int n)
@@ -538,14 +699,13 @@ int Pascal USE_FAST_CALL chk_k_range(int n)
 int Pascal kdelete(int f, int n)
 
 {				/* first, delete all the chunks */
-  if (f >= 0)
-  { n = chk_k_range(n);
-  	if (n < 0)
-    	return FALSE;
-  }
+  n = chk_k_range(n);
+  if (n < 0)
+   	return FALSE;
+
 #if S_MSDOS
   if (n == 0)
-  { ClipSet(NULL);
+  { ClipSet(-1);
   }
 #endif
   free(kills[n].mem);
@@ -598,6 +758,20 @@ int Pascal kinsert(char ch)
 }}}
 
 
+/* shift up all the kill buffers
+ */
+int Pascal shiftkill(int f, int n)
+
+{ int ix;
+	for (ix = NOOKILL-1; --ix >= 0; )
+	{ t_kill skill = kills[ix+1];
+		kills[ix+1] = kills[ix];
+		kills[ix] = skill;
+	}
+	return TRUE;
+}
+
+
 /* return contents of the kill buffer 
  */
 char *Pascal getkill()
@@ -632,26 +806,25 @@ int Pascal yank(int notused, int n)
 //last_was_yank = true;
 				/* make sure there is something to yank */
   while (n--)
-  { int	len;
-  	char	*sp;					/* pointer into string to insert */
-
-    g_header_scan = 1;
+  { g_header_scan = 1;
     g_inhibit_scan += 1;
+
+  {	int	len;
+  	char	*sp = NULL;					/* pointer into string to insert */
 
 #if S_WIN32
     if (ix == 0 && gtusr("NOPASTE") == NULL)
     { 
       sp = ClipPasteStart();
-      if (sp == null)
-        break;
-      len = strlen(sp);
+      if (sp != null)
+	      len = strlen(sp);
     }
-    else
 #endif
+		if (sp == NULL)
     { sp = kills[ix].mem;
       len = kills[ix].size;
     }
-      
+ 
     while (--len >= 0)
     { if (*sp == 'M' - '@' && sp[1] == '\n')
         ++sp;
@@ -665,10 +838,8 @@ int Pascal yank(int notused, int n)
     lchange(WFEDIT);
 #if S_WIN32
     if (ix == 0)
-    { ClipPasteEnd();
-      break;
-    }
+    	ClipPasteEnd();
 #endif
-  }
+  }}
   return TRUE;
 }

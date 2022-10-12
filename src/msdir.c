@@ -45,6 +45,12 @@
 extern char * strpcpy(char * tgt, const char * src, int mlen);
 
 #include        "msdir.h"
+#if USE_DIR
+#include         <stdio.h>
+#include				"estruct.h"
+#include        "edef.h"
+#include        "etype.h"
+#endif
 /*#include 	"h/msera.h"*/
 /*#include	"h/eprintf.h"*/
 
@@ -105,8 +111,6 @@ void printf2(const char * msg, const char * val)
 #endif
 }
 
-#endif
-
 
 static
 Cc match_fn_re_ic(Char * tlt,
@@ -156,12 +160,17 @@ Cc match_fn_re_ic(Char * tlt,
 }
 
 #undef fn_ic
+
+#endif
 
 /*	FILE Directory routines		*/
 
 // Bool msd_empty_dir = false;
 
+#if USE_DIR == 0
+
 #if S_WIN32
+
  staticc HANDLE msd_curr = 0;
  
 //#if _MSC_VER < 1900
@@ -201,16 +210,27 @@ staticc Char  rbuf[FILENAMESZ+2];
 #define rbuf msd_path
 #endif
 
+struct stat msd_stat;
+
 staticc Vint    msd_iter;		/* FIRST then NEXT */
 staticc Set16   msd_props;		/* which files to use */
-static  Set16   msd_attrs;		/* attributes of result: MSD_xxx */
+//static Set16  msd_attrs;		/* attributes of result: MSD_xxx */
 #if S_MSDOS			
 #define msd_ic 1
 #else
         Bool    msd_ic;				/* Ignore case in file names */
 #endif
 
-struct stat msd_stat;
+#else
+
+static BUFFER * msd_buffer;
+//static short  msd_isrel;
+
+static LINE * msd_curr;
+static Char   msd_path[NFILEN+4];
+
+#endif
+
 
 
 #define MAX_TREE 18
@@ -227,26 +247,47 @@ staticc int   msd_nlink[MAX_TREE+1];		/* stack of number of dirs */
 
 Cc msd_init(Char const *  diry,	/* must not be "" */
 						int     props)	/* msdos props + top bits set => repeat first file */
-{ msd_props = props;
+{ 
 //msd_attrs = 0;
+#if USE_DIR == 0
+	msd_props = props;
   msd_iter = DOS_FFILE;
+#endif
 
 { Char ch;
   short pe;
-  short pe_last_sl = -1;
+  short pe_last_sl = 0;
 
 // msd_relpath = msd_path;
 												/* msd_path often == diry */
   for ( pe = -1; ++pe < FILENAMESZ && (msd_path[pe] = (ch = diry[pe])) != 0; )
-  { if (ch == '\\' || ch == '/')
-    { msd_path[pe] = '/';
-      pe_last_sl = pe;
+  {	if (ch == '\\' || ch == '/')
+    { msd_path[pe] = USE_DIR ? '\\' : '/';
+      pe_last_sl = pe + 1;
     }
   } 
-							  				/* extract pattern, and cut back */
-	msd_pat[0] = 0;
+#if USE_DIR
+{	char cmd[NFILEN+40];
+	int offs = (props & MSD_SEARCH) ? 2 : 0;
+	strcpy(strcpy(cmd,"dir /b /t:a /od /s ")+16+offs, msd_path);
+
+	if (pe_last_sl > 0)
+		msd_path[pe_last_sl] = 0;
+{	BUFFER * sbp = curbp;
+ 	BUFFER * bp = bfind(cmd, 1, 0);
+	curbp = bp;
+{	int rc = pipefilter('=');
+	zotbuf(bp);
+	curbp->b_flag &= ~BFCHG;
+	msd_buffer = curbp;
+	msd_curr = &msd_buffer->b_baseline;
+	curbp = sbp;
+	return rc - 1;
+}}}
+#else
+	msd_pat[0] = 0;							/* extract pattern, and cut back */
   if (props & MSD_USEPATH)
-  { pe = pe_last_sl + 1;
+  { pe = pe_last_sl;
     strpcpy(msd_pat, &diry[pe], sizeof(msd_pat)-1);
   }
 
@@ -296,11 +337,14 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
   if (pe_last_sl > 0)
   	msd_relpath[pe_last_sl] = '/';
 #endif
-
+}
   return OK;
-}}}
+#endif
+}}
 
 
+
+#if USE_DIR == 0
 
 staticc Cc getnext()
 {
@@ -346,7 +390,6 @@ staticc Cc getnext()
 }
 
 
-
 static Bool extract_fn()
 
 {
@@ -369,7 +412,7 @@ static Bool extract_fn()
 #endif
 
 /*eprintf(null, "MFRI %d %s:%s\n", g_pathend, s, msd_pat);*/
-  msd_attrs = 0;	/* do not allow push to . or .. */
+//msd_attrs = 0;	/* do not allow push to . or .. */
 //*fnoffs = g_pathend;
 { int msd_a;
   int i;
@@ -386,14 +429,14 @@ static Bool extract_fn()
     return false;
 
 #if S_WIN32
-  msd_attrs = msd_sct.dwFileAttributes;
-  if (msd_attrs & MSD_DIRY)
+//msd_attrs = msd_sct.dwFileAttributes;
+  if (msd_sct.dwFileAttributes & MSD_DIRY)
   { 
     tl[-1] = '/';
     tl[0] = 0;
   }
-  msd_stat.st_size = msd_sct.nFileSizeLow;
-//msd_a = msd_sct.dwFileAttributes;
+//msd_stat.st_size = msd_sct.nFileSizeLow;
+	msd_a = msd_sct.dwFileAttributes;
 
 /*eprintf(null, "doFatDate\n");*/
 
@@ -405,7 +448,7 @@ static Bool extract_fn()
 #elif S_MSDOS
   msd_a =  dta[0x15] & 0x3f;
 
-  msd_stat.st_size  = *(Int*)&dta[0x1a];
+//msd_stat.st_size  = *(Int*)&dta[0x1a];
   msd_stat.st_mtime = *(Int*)&dta[0x16];
 /*
    printf( "ma %x %x %x %x œ%x %x %x %x.%x %x\n"
@@ -479,9 +522,9 @@ static Bool extract_fn()
 #endif
 
 #if S_WIN32 == 0
-  msd_attrs = msd_a;
+//msd_attrs = msd_a;
 
-  if (msd_attrs & MSD_DIRY)
+  if (msd_a & MSD_DIRY)
   { 
     tl[-1] = '/';
     tl[0] = 0;
@@ -508,11 +551,40 @@ static Bool extract_fn()
   return true;
 }
 
+#endif
+
+Char * msd_tidy()
+
+{ if (msd_buffer)
+		zotbuf(msd_buffer);
+
+	return (Char*) msd_buffer = NULL;
+}
 
 
 Char * msd_nfile()
 
-{ int fnoffs;
+{
+#if USE_DIR
+	msd_curr = lforw(msd_curr);
+	if (msd_curr->l_props & L_IS_HD)
+		return msd_tidy();
+
+{ int pe = 0;
+	int ix;
+	for ( ix = strlen(msd_path); --ix > 0; )
+		if (msd_path[ix] == '\\' || msd_path[ix] == '/')
+		{ msd_path[ix] = '/';
+			if (pe == 0)
+				pe = ix + 1;
+		}
+
+	strpcpy(msd_path+pe, msd_curr->l_text, msd_curr->l_used+1);
+
+	return msd_path;
+}
+#else
+  int fnoffs;
 
   while (true)
   { 
@@ -542,6 +614,7 @@ Char * msd_nfile()
 
     msd_cc = -100;
   }
+#endif
 }
 
 #if 0
@@ -568,6 +641,7 @@ int msd_getprops(Char * fn)
 #endif
 
 #define STANDALONE 0
+
 #if STANDALONE
 
 #include        <stdio.h>*/

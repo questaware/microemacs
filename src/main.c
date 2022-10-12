@@ -327,8 +327,6 @@ void Pascal dcline(int argc, char * argv[])
 	{ char buf[35];
 		mlwrite(strpcpy(&buf[0], lastmesg, 30));
 	}
-#else
-	mlwrite("Done");
 #endif
 	
 	(void)gotoline(TRUE, gline);
@@ -405,12 +403,11 @@ int main(int argc, char * argv[])
 	while (!eexitflag);
 
 #if S_WIN32
-	ClipSet(NULL);
+  ClipSet(-1);
 //tcapbeeol(-1,0);
-	tcapmove(255, 0);
-#else
-	tcapclose(0);
+	tcapmove(term.t_nrowm1, 0);
 #endif
+	tcapclose(0);
 
 #if CLEAN
 	clean();
