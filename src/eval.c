@@ -43,11 +43,11 @@ static const UFUNC funcs[] = {
 	DYNAMIC, RINT, "add",   /* add two numbers together */
 	DYNAMIC, RSTR, "and", 	/* logical and */
 	MONAMIC, RINT, "asc", 	/* char to integer conversion */
-	DYNAMIC, RINT, "ban", 	/* bitwise and	 9-10-87  jwm */
+	DYNAMIC, RINT, "ban", 	/* bitwise and */
 	MONAMIC, RRET, "bin", 	/* loopup what function name is bound to a key */
 	MONAMIC, RINT, "bno", 	/* bitwise not */
-	DYNAMIC, RINT, "bor", 	/* bitwise or	 9-10-87  jwm */
-	DYNAMIC, RINT, "bxo", 	/* bitwise xor	 9-10-87  jwm */
+	DYNAMIC, RINT, "bor", 	/* bitwise or	 */
+	DYNAMIC, RINT, "bxo", 	/* bitwise xor */
 	DYNAMIC, RRET, "cat", 	/* concatenate string */
 	MONAMIC, RRET, "chr", 	/* integer to char conversion */
 	DYNAMIC, RRET, "dir",		/* replace tail of filename with filename */
@@ -87,23 +87,22 @@ static const UFUNC funcs[] = {
 
 #define NFUNCS	sizeof(funcs) / sizeof(UFUNC)
 
-/*	and its preprocesor definitions 	*/
-
-#define UFABS		0
-#define UFADD		1
-#define UFAND		2
-#define UFASCII 3
-#define UFBAND	4
-#define UFBIND	5
-#define UFBNOT	6
-#define UFBOR		7
-#define UFBXOR	8
-#define UFCAT		9
-#define UFCHR		10
-#define UFDIR	  11
-#define UFDIT		12
-#define UFDIV		13
-#define UFENV		14
+											/*	and its preprocesor definitions 	*/
+#define UFABS			 0
+#define UFADD			 1
+#define UFAND			 2
+#define UFASCII 	 3
+#define UFBAND		 4
+#define UFBIND		 5
+#define UFBNOT		 6
+#define UFBOR			 7
+#define UFBXOR		 8
+#define UFCAT			 9
+#define UFCHR		  10
+#define UFDIR	    11
+#define UFDIT		  12
+#define UFDIV		  13
+#define UFENV		  14
 #define UFEQUAL 	15
 #define UFEXIST 	16
 #define UFFIND		17
@@ -115,13 +114,13 @@ static const UFUNC funcs[] = {
 #define UFLENGTH	23
 #define UFLESS		24
 #define UFLOWER 	25
-#define UFMID		26
-#define UFMOD		27
-#define UFNEG		28
-#define UFNOT		29
-#define UFOR		30
-#define UFRIGHT 31
-#define UFRND		32
+#define UFMID			26
+#define UFMOD			27
+#define UFNEG			28
+#define UFNOT			29
+#define UFOR			30
+#define UFRIGHT 	31
+#define UFRND			32
 #define UFSEQUAL	33
 #define UFSGREAT	34
 #define UFSINDEX	35
@@ -163,7 +162,10 @@ const char * const g_envars[] = {
 	"gflags",			/* global internal emacs flags */
 	"gmode",			/* global modes */
 	"hardtab",		/* current hard tab size */
-	"highlight",	/* highlighting string */
+	"highpat1",		/* highlighting string */
+	"highpat2",		/* highlighting string */
+	"highpat3",		/* highlighting string */
+	"highpat4",		/* highlighting string */
 	"hjump",			/* horizontal screen jump size */
 	"incldirs",		/* directories to search */
 	"keycount",		/* consecutive times key has been pressed */
@@ -274,8 +276,11 @@ UNDEF, /* EVWRITEHK */
 
 void Pascal varinit()	/* initialize the user variable list */
 
-{ predefvars[EVHIGHLIGHT].p = mallocz(2);
-	predefvars[EVPALETTE].p = mallocz(2);
+{ const short pd_ix[] = 
+                 {EVHLIGHT1, EVHLIGHT2, EVHLIGHT3, EVHLIGHT4, EVMATCH, EVPALETTE,};
+	int ix;
+	for (ix = sizeof(pd_ix) / sizeof(short); --ix >= 0; )
+		predefvars[pd_ix[ix]].p = mallocz(2);
 //predefvars[EVINCLD].p = strdup("");
 #if CALLED
   for (i = MAXVARS; --i >= 0;)
@@ -577,16 +582,23 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 		case UFGREATER: iarg1 = iarg1 > iarg2;
 
 		when UFSEQUAL:
-		case UFSLESS:
-		case UFSGREAT:	iarg1 = strcmp(arg1, arg2);
+		case UFSGREAT:	
+		case UFSLESS:		iarg1 = strcmp(arg1, arg2);
 										/*if (! in_range(iarg1, -1, 1))
 				    						adb(iarg1);*/
 		                if      (fnum == UFSLESS)
-		                  iarg1 = (iarg1 & 0x100);
+		                  iarg1 &= 2;
+#if 1
+										else
+										{ iarg1 += 1;
+											iarg1 &= (fnum - UFSEQUAL + 1);
+										}
+#else
 		                else if (fnum == UFSEQUAL)
 		                  iarg1 = iarg1 == 0;
 		                else if (iarg1 < 0)
 		                  iarg1 = 0;
+#endif
 		when UFNOT: 	  
 		case UFAND:
 		case UFOR:		  iarg1 = stol(arg1);
@@ -625,7 +637,10 @@ const char * USE_FAST_CALL gtenv(const char * vname)
 	  case EVINCLD:	 
 	  case EVPALETTE:
 //	case EVSEARCH:
-		case EVHIGHLIGHT:
+		case EVHLIGHT1:
+		case EVHLIGHT2:
+		case EVHLIGHT3:
+		case EVHLIGHT4:
 	  case EVFILEPROF:
 		case EVMATCH:
 	    return predefvars[vnum].p;
@@ -909,7 +924,10 @@ int Pascal svar(int var, char * value)	/* set a variable */
 
 	  when EVSEARCH:
 	  case EVREPLACE:	 strpcpy(vnum == EVSEARCH ? pat : rpat,value,NPAT);
-	  when EVHIGHLIGHT:
+	  when EVHLIGHT1:
+	  case EVHLIGHT2:
+	  case EVHLIGHT3:
+	  case EVHLIGHT4:
 	  case EVPALETTE:
 	  case EVFILEPROF:
 	  case EVINCLD:		 varref = &predefvars[vnum].p;

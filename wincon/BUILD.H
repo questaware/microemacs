@@ -150,4 +150,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define NCOL 148
 
 #include "../src/base.h"
+
+#define atoi atol
+
 #endif /* BUILDINC */

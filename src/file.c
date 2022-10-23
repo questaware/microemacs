@@ -191,7 +191,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
     { unsigned int newdate = 0;
 
       while ((fn = msd_nfile()) != NULL)
-      {
+      {															// USE_DIR => newest file comes last
 #if USE_DIR == 0
         if (newdate >= (unsigned)msd_stat.st_mtime)
         	continue;

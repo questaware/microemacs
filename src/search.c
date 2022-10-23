@@ -371,7 +371,7 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		  dir = -1;
 		}
 	  pd_lastdir = dir;
-		pd_highlight[1] = 0;
+		pd_hlight1[1] = 0;
 	  if ((curwp->w_bufp->b_flag & MDSRCHC) == 0)
 	  	again |= 2;
 	
@@ -382,7 +382,7 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		if (cc <= 0)
 		  mlwrite(TEXT79);
 					/* "Not found " */
-	}
+	}}
 			   /* Save away the match, or complain if not there. */
 	if (cc > 0)
 	{ WINDOW * wp = curwp;
@@ -411,12 +411,12 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		}
 #endif
 	{	char color = '2'; // pd_highlight == NULL ? '2' : pd_highlight[0];
-		pd_highlight = remallocstr(&pd_highlight, NULL, pmlen);
-		strcpy(pd_highlight+1, pd_patmatch)[-1] = color;
+		pd_hlight1 = remallocstr(&pd_hlight1, NULL, pmlen);
+		strcpy(pd_hlight1+1, pd_patmatch)[-1] = color;
 	  update(TRUE);
 	}}}
 	return cc > 0;
-}}
+}
 
 /*
  * forwhunt -- Search forward for a previously acquired search string.

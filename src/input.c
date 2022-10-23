@@ -156,7 +156,7 @@ int  ctlxe(int f, int n)
 { int col = getccol();
 //g_slastkey = lastkey;
 
-	if (col >= macro_start_col)
+	if (col >= macro_start_col && curwp->w_dotp->l_used > 0)
 	{
 		if (macro_start_col >= 0)
 			curwp->w_doto = getgoal(macro_start_col, curwp->w_dotp);
@@ -440,7 +440,9 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
   }} /* for (cpos) */
 
 fin:
+#if S_WIN32
 	(void)msd_tidy();
+#endif
   return cpos;
 }
 

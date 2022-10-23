@@ -344,11 +344,14 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 {	VIDEO *vp = vscreen[row];
 	short * tgt = &vp->v_text[-1];
-	char * hlite = (vp->v_flag & VFML) ? " " : pd_highlight;
+	char * high[] = {"","","","",};
 	int len = llength(lp); 		/* an upper limit */
   unsigned char * str = (unsigned char *)&lp->l_text[-1];
 	unsigned char s_props = *str;												/* layout dependent */
 	*str = 0;																						/* restored below */
+	if ((vp->v_flag & VFML) == 0)
+		memcpy(&high[0], &pd_hlight1, sizeof(char*)*4);
+
 	if (cmt_chrom)
 		cmt_chrom = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
 {	Short  clring = g_clring;
@@ -364,7 +367,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 {	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
 	int  markuplen = 1;
 	char markupterm = 0;
-	int highlite = 0;
+	int highix[] = {0,0,0,0,};
 //int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
 	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
 	int tabsize = curbp->b_tabsize;
@@ -380,17 +383,50 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			break;
 		}
 		
-	{ int c = *++str;
-		if (c == 0 || c != hlite[(++highlite)])
-		{ highlite = 0;
-			if (c != 0 && c == hlite[1])
-				highlite = 1;
+	{ int wix = 0;
+	  int tgtix = 0;
+	  int c = *++str;
+		if (c == 0)
+		{ highix[0] = 0;
+			highix[1] = 0;
+			highix[2] = 0;
+			highix[3] = 0;
 		}
 		else
-		{ if (hlite[1+highlite] == 0 && vtc-highlite+1 >= 0)
-			{ tgt[vtc-highlite+2] |= palcol(hlite[0]-'1') | CHR_NEW;
-				highlite = 0;
-			//chrom_on = 1;
+		{ if (c != high[0][(++highix[0])])
+				highix[0] = (c == high[0][1]);
+			else
+			{ if (high[0][1+highix[0]] == 0 && vtc-highix[0]+2 > 0)
+				{ tgtix = vtc-highix[0]+2;
+				}
+			}
+			if (c != high[1][(++highix[1])])
+				highix[1] = (c == high[1][1]);
+			else
+			{ if (high[1][1+highix[1]] == 0 && vtc-highix[1]+2 > 0)
+				{ tgtix = vtc-highix[1]+2;
+					wix = 1;
+				}
+			}
+			if (c != high[2][(++highix[2])])
+				highix[2] = (c == high[2][1]);
+			else
+			{ if (high[2][1+highix[2]] == 0 && vtc-highix[2]+2 > 0)
+				{ tgtix = vtc-highix[2]+2;
+					wix = 2;
+				}
+			}
+			if (c != high[3][(++highix[3])])
+				highix[3] = (c == high[3][1]);
+			else
+			{ if (high[3][1+highix[3]] == 0 && vtc-highix[3]+2 > 0)
+				{ tgtix = vtc-highix[3]+2;
+					wix = 3;
+				}
+			}
+			if (tgtix > 0)
+			{ tgt[tgtix] |= palcol(high[wix][0]-'1') | CHR_NEW;
+				highix[wix] = 0;
 				chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
 			}
 		}

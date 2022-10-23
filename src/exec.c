@@ -504,7 +504,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	  
 			if (eline[1] == 'w' && eline[2] == 'h' ||
 					eline[1] == 'b' && eline[2] == 'r')
-			{
+			{ 
 #if LIM_WHILE
 				WHBLOCK * whtemp = topwh <= 0 ? NULL : &whiles[topwh--];
 #else			
@@ -512,13 +512,13 @@ int Pascal dobuf(BUFFER * bp, int iter)
 #endif
 		 		if (whtemp == NULL ||
 	     															/* "%%!BREAK outside of any !WHILE loop" */
-	         (eline[1] == 'b' && scan == NULL))
+	         (scan == NULL && (eline[1] - 'w') != 0))
 					goto failexit;
 
-		    whtemp->w_break = eline[1];
+		    whtemp->w_break = (eline[1] - 'w');
 		    whtemp->w_begin = lp;
 	  	  whtemp->w_next = scan;
-//  	  whtemp->w_end = 0;
+//  	  scan->w_end = 0;
 	    	scan = whtemp;
 	  	}
 												/* if it is an endwhile directive, record the spot.. */
@@ -534,7 +534,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 		 			whlist = scan;
 		 			scan = scan->w_next;
 		 			whlist->w_next = whtemp;
-	    	} while (whlist->w_break == 'b');
+	    	} while (whlist->w_break);
 	  	}
 		} /* for */
 
@@ -702,7 +702,7 @@ failexit:
 																					/* find the right while loop */
 						{ WHBLOCK * whtemp; 
 						  for (whtemp = whlist; whtemp; whtemp = whtemp->w_next)
-						    if (whtemp->w_break == 'w' &&
+						    if (whtemp->w_break == 0 &&
 										whtemp->w_end == lp)
 						      break;
 		        

@@ -2,7 +2,7 @@ set $discmd 0
 set $col1ch 1
 set $col2ch 8
 set $palette 71727374757670
-set $highlight 4hello
+set $highpat1 4hello
 ;set $pagelen 74
 
 add-global-mode re
@@ -316,9 +316,13 @@ btk execute-macro-20 ^P
 btk execute-macro-21 ^XV
 
 22 store-macro ; buffhook
-	set $highlight 4target
+	set $highpat2 ""
+	set $highpat3 ""
+	set $highpat4 ""
 	!if &seq &rig $cbufname 3 ".py"
-		set $highlight "4 def "
+		set $highpat2 "4 def "
+    set $highpat3 "4 if "
+		set $highpat4 "4else:"
 	!endif
 !endm
 

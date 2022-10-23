@@ -12,7 +12,7 @@
 
 extern void flagerr(const char * fmt);
 
-HANDLE  g_ConsOut;                   /* Handle to the console */
+static HANDLE  g_ConsOut;                   /* Handle to the console */
 
 CONSOLE_SCREEN_BUFFER_INFO g_csbi;   /* Console information */
 //CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
@@ -29,13 +29,17 @@ long unsigned int thread_id(void)
 }
 
 
-UINT g_codepage;
+static UINT g_codepage;
+
+void USE_FAST_CALL setcp(int v)
+
+{ SetConsoleCP(v);
+  SetConsoleOutputCP(v);
+}
 
 void init_wincon()
 
-{	g_codepage = GetConsoleOutputCP();
-  SetConsoleCP(1252);
-  SetConsoleOutputCP(1252);
+{
 #if 0
   SC_CHAR buf[129];
 	HINSTANCE hInstance = GetModuleHandle(NULL);	 // Grab An Instance For Window
@@ -68,6 +72,8 @@ void init_wincon()
 		 
 //tcapepage();
 //SetConsoleTextAttribute(g_ConsOut, BG_GREY);
+	g_codepage = GetConsoleOutputCP();
+  setcp(1252);
 }
 
 
@@ -97,8 +103,7 @@ void Pascal tcapepage()
  */
 void Pascal tcapclose(int lvl)
 
-{ SetConsoleCP(g_codepage);
-  SetConsoleOutputCP(g_codepage);
+{ setcp(g_codepage);
 /*CloseHandle(hConsoleIn);
   hConsoleIn = NULL;  cannot do this */
 //tcapsetsize(csbiInfoO.dwSize.X, csbiInfoO.dwSize.Y, 2);

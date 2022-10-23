@@ -500,7 +500,7 @@ void Pascal tcapopen()
 
 			/* This function gets called just before we go
 			 * back home to the command interpreter.	 */
-int tcapclose(int lvl)
+void tcapclose(int lvl)
 
 {			/* send end-of-keypad-transmit string if defined */
  /* if (gflags & MD_NO_MMI)
@@ -526,7 +526,6 @@ int tcapclose(int lvl)
   		scbot = term.t_nrowm1;
 	}
   serialclose();
-	return OK;
 }
 
 

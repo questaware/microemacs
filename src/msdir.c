@@ -56,16 +56,6 @@ extern char * strpcpy(char * tgt, const char * src, int mlen);
 
 /*extern char * strchr();*/
 
-#if S_WIN32
-#define write _write
-#define chdir _chdir
-#define getcwd _getcwd
-#endif
-
-
-extern char * getcwd();
-
-
 #if NONDIR
    #define DIRENT direct
 #else
@@ -430,19 +420,22 @@ static Bool extract_fn()
 
 #if S_WIN32
 //msd_attrs = msd_sct.dwFileAttributes;
-  if (msd_sct.dwFileAttributes & MSD_DIRY)
+	msd_a = msd_sct.dwFileAttributes;
+  if (msd_a & MSD_DIRY)
   { 
     tl[-1] = '/';
     tl[0] = 0;
   }
 //msd_stat.st_size = msd_sct.nFileSizeLow;
-	msd_a = msd_sct.dwFileAttributes;
 
 /*eprintf(null, "doFatDate\n");*/
 
-  FileTimeToDosDateTime(&msd_sct.ftLastWriteTime, &fat_date, &fat_time);
+//FileTimeToDosDateTime(&msd_sct.ftLastWriteTime, &fat_date, &fat_time);
 /*eprintf(null,"FatDate %lx FatTime %lx\n", fat_date, fat_time);*/
-  msd_stat.st_mtime = ((Int)fat_date << 16) + (fat_time & 0xffff);
+//msd_stat.st_mtime = ((Int)fat_date << 16) + (fat_time & 0xffff);
+#define TOJAN2000 1221535
+  msd_stat.st_mtime = ((msd_sct.ftLastWriteTime.dwHighDateTime -  TOJAN2000) << 13) +
+ 										   (msd_sct.ftLastWriteTime.dwLowDateTime >> 19);
 #elif S_VMS
   
 #elif S_MSDOS
@@ -490,7 +483,9 @@ static Bool extract_fn()
   }
 #if S_WIN32 == 0
   else
-  { if (stat(msd_relpath, &msd_stat)!= OK)
+  { extern char * getcwd();
+
+    if (stat(msd_relpath, &msd_stat)!= OK)
     { char cwdb[160];
       printf2("staterr ", msd_relpath);
       printf2("CWD now ", getcwd(cwdb, sizeof(cwdb)-1));
@@ -519,9 +514,6 @@ static Bool extract_fn()
                msd_stat.st_ino, msd_stat.st_nlink,
                msd_a);*/
   }
-#endif
-
-#if S_WIN32 == 0
 //msd_attrs = msd_a;
 
   if (msd_a & MSD_DIRY)
@@ -551,7 +543,7 @@ static Bool extract_fn()
   return true;
 }
 
-#endif
+#else
 
 Char * msd_tidy()
 
@@ -560,6 +552,8 @@ Char * msd_tidy()
 
 	return (Char*) msd_buffer = NULL;
 }
+
+#endif
 
 
 Char * msd_nfile()
@@ -573,7 +567,7 @@ Char * msd_nfile()
 { int pe = 0;
 	int ix;
 	for ( ix = strlen(msd_path); --ix > 0; )
-		if (msd_path[ix] == '\\' || msd_path[ix] == '/')
+		if (msd_path[ix] == '\\')
 		{ msd_path[ix] = '/';
 			if (pe == 0)
 				pe = ix + 1;

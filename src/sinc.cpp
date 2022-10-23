@@ -1513,6 +1513,7 @@ int Pascal getIncls(int f, int n)
 	  if (bp->b_baseline.l_fp == &bp->b_baseline)
 	  	linstr(TEXT79);		/* "Not found" */
 
+	  bp->b_flag |= BFACTIVE;			/* code added */
 	  swbuffer(bp);
 
 	  Sinc::g_outbuffer = NULL;
