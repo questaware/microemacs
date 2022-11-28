@@ -271,23 +271,21 @@ int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 {	WINDOW *wp;														  /* window to receive deleted space */
 	WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_next);		/* previous */
 	WINDOW *nwp = NULL;
+	WINDOW * next;
+	WINDOW * cwp = curwp;
 													     		/* find receiving window and give up space */
-	int top = curwp->w_toprow;
-	int nxttop = top + curwp->w_ntrows + 1;
+	int top = cwp->w_toprow;
+	int nxttop = top + cwp->w_ntrows + 1;
         
-	for (wp = wheadp; wp != NULL; wp = wp->w_next)
-	{ if (wh == 0)
-		{	if (wp != curwp)
-		  { //tcapbeep();
-	  	  if (wheadp == wp)
-	    	  wheadp = wp->w_next;
-	    	leavewind(1, wp);
-	    }
+	for (wp = wheadp; wp != NULL; wp = next)
+	{ next = wp->w_next;
+		if (next == cwp)
+			pwp = wp;
+		if (wh == 0)
+		{	if (wp != cwp)
+		   	leavewind(1, wp);
 	    continue;
 	  }
-
-		if (wp->w_next == curwp)
-	    pwp = wp;
 																	 							 /* find window before curwp */
 	  if ((wp->w_toprow + wp->w_ntrows + 1) == top)
 	    nwp = wp;
@@ -298,27 +296,26 @@ int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 	}
 
 	if (wh == 0)
-	{	wp = wheadp;
-		wp->w_next = NULL;
-		wp->w_toprow = 0;
-		wp->w_ntrows = term.t_nrowm1-1;
-		wp->w_flag  |= WFMODE|WFHARD;
+	{	wheadp = cwp;
+		cwp->w_next = NULL;
+		cwp->w_toprow = 0;
+		cwp->w_ntrows = term.t_nrowm1-1;
+		cwp->w_flag  |= WFMODE|WFHARD;
 	}
 	else
-	{	wp = nwp;
-		if (wp == NULL)
+	{	if (nwp == NULL)
 	  	return FALSE;
-														   					/* unlink the current window */
-		pwp->w_next = curwp->w_next;
+		pwp->w_next = cwp->w_next;			/* unlink the current window */
+														   					
+		nwp->w_ntrows += 1 + cwp->w_ntrows;
+		nwp->w_flag |= WFHARD | WFMODE;				/* update all lines */
+		leavewind(1,NULL);
 
-		wp->w_ntrows += 1 + curwp->w_ntrows;
-		wp->w_flag |= WFHARD | WFMODE;				/* update all lines */
-		curbp = wp->w_bufp;
-		leavewind(1, NULL);
+		curwp = nwp;
+		curbp = nwp->w_bufp;
 	/*refresh(0, 0); */
 	}
 
-	curwp = wp;
 	return TRUE;
 }
 

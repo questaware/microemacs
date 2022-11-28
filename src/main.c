@@ -290,8 +290,7 @@ void Pascal dcline(int argc, char * argv[])
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 	{ bp->b_flag |= g_gmode;
 		bp->b_color = g_colours;
-	  if (bp->b_fname != NULL)
-	  	customise_buf(bp);
+	  customise_buf(bp);
 	}
 
 #if S_WIN32 == 0

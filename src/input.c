@@ -678,7 +678,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       fulllen = cpos;
       buf[cpos] = 0;
     }}
-    else if ((c <= 'Z'-'@' && c != 'I'-'@' || c == (ALTD | 'S')) && ch != quotec)
+    else if ((c <= 'Z'-'@' && c != 'I'-'@' || c == (ALTD | 'S')) && c != quotec)
     { switch(c)
       {	case 'B'-'@':
     			autostr = getkill();
@@ -696,7 +696,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
     else 
     { int tpos;
-      if (ch == quotec)
+      if (c == quotec)
       	ch = getkey();     /* get a character from the user */
       
 getliteral:

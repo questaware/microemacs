@@ -381,7 +381,7 @@ const char * Pascal strsame(const char *, const char *);
 extern char * Pascal strpcpy(char * tgt, const char * src, int mlen);
 char * Pascal strpcpypfx(char *, const char *, int, char);
 int Pascal swapmark(int, int);
-void Pascal USE_FAST_CALL swbuffer(BUFFER*);
+int Pascal USE_FAST_CALL swbuffer(BUFFER*);
 void Pascal tcapopen();
 int Pascal toggmode(int, int);
 int Pascal togmod(int, int);
@@ -467,7 +467,7 @@ int Pascal zotbuf(BUFFER*);
 void Pascal MySetCoMo();
 
 int init_paren(const char *, int);
-int Pascal scan_paren(char);
+int Pascal USE_FAST_CALL scan_paren(char);
 int Pascal scan_par_line(LINE *);
 
 unsigned int Pascal chcase();

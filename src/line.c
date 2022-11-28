@@ -148,18 +148,17 @@ int Pascal lchange(int flag)
   (void)orwindmode(window_ct(curbp) > 1 ? WFHARD : flag);
 
   if (g_inhibit_scan == 0)
+	{	int all = 0;
+		init_paren("", 0);
+
   {	LINE * lp = curwp->w_dotp;
 		int ct = g_header_scan + 6;     								/* just 6 more */
 		while ((lp->l_props & L_IS_HD) == 0 && --ct >= 0)
 		  lp = lback(lp);
 
+		g_paren.in_mode = (lp->l_props & Q_IN_CMT);
 		g_header_scan = ct + 6;
 		ct = 24;
-
-	{	int all = 0;
-
-		init_paren("", 0);
-		g_paren.in_mode = (lp->l_props & Q_IN_CMT);
 
     while (true)
 		{ scan_par_line(lp);
@@ -220,6 +219,28 @@ int Pascal lnewline()
   return lchange(WFHARD);
 }}}
 
+#if 0
+
+static
+void line_openclose(LINE * to, LINE * from, int gap, int len)
+
+{	if (len > 0)
+	{ int src 0;
+	  int tgt = 0;
+		if (gap > 0)
+			tgt = gap
+		else
+			src = -gap
+		to->l_used += gap;
+		to->l_spare -= gap;
+//	if (to->l_spare > 255)
+//		to->l_spare = 255;
+		memmove(&to->l_text[tgt], &from->[src], len)
+	}
+}
+
+#endif
+
 int g_overmode;
 
 /* Insert n copies of the character "c" at the current location of dot. 
@@ -274,6 +295,7 @@ int Pascal linsert(int ins, char c)
   }
 
   if (ins != 0)
+//  line_openclose(newlp, lp, ins, (Int)lp->l_used-doto);
   	if ((Int)lp->l_used - doto > 0)
    		memmove(&newlp->l_text[doto+ins],&lp->l_text[doto],(Int)lp->l_used-doto);
 
@@ -290,8 +312,8 @@ int Pascal linsert(int ins, char c)
 	  }
   }
 
-  newlp->l_spare -= ins;
-  newlp->l_used += ins;
+  newlp->l_used += ins;		// in line_openclose
+  newlp->l_spare -= ins;	// in line_openclose
   memset(&newlp->l_text[doto],c,ins);
 
   rpl_all(1, ins, lp, newlp, doto);
@@ -422,6 +444,7 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
           res = ABORT;
     }
 
+//  line_openclose(dotp, dotp, -chunk, (Int)lp->l_used-doto);
 		if (dotp->l_used-(doto+chunk) <= 0)
 	  {
 #if _DEBUG
@@ -433,9 +456,9 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
     	memmove(&dotp->l_text[doto], &dotp->l_text[doto+chunk],
     				  dotp->l_used-(doto+chunk));
 
-    dotp->l_used -= chunk;
+    dotp->l_used -= chunk;	// in line_openclose
 
-    chunk += dotp->l_spare;
+    chunk += dotp->l_spare;	// in line_openclose
     if (chunk > 255)
       chunk = 255;
     dotp->l_spare = chunk;

@@ -203,7 +203,6 @@ staticc Char  rbuf[FILENAMESZ+2];
 struct stat msd_stat;
 
 staticc Vint    msd_iter;		/* FIRST then NEXT */
-staticc Set16   msd_props;		/* which files to use */
 //static Set16  msd_attrs;		/* attributes of result: MSD_xxx */
 #if S_MSDOS			
 #define msd_ic 1
@@ -221,6 +220,7 @@ static Char   msd_path[NFILEN+4];
 
 #endif
 
+staticc Set16   msd_props;		/* which files to use */
 
 
 #define MAX_TREE 18
@@ -565,13 +565,15 @@ Char * msd_nfile()
 		return msd_tidy();
 
 { int pe = 0;
-	int ix;
-	for ( ix = strlen(msd_path); --ix > 0; )
-		if (msd_path[ix] == '\\')
-		{ msd_path[ix] = '/';
-			if (pe == 0)
-				pe = ix + 1;
-		}
+	if (msd_props & MSD_DIRY)
+	{	int ix;
+		for ( ix = strlen(msd_path); --ix > 0; )
+			if (msd_path[ix] == '\\')
+			{ msd_path[ix] = '/';
+				if (pe == 0)
+					pe = ix + 1;
+			}
+	}
 
 	strpcpy(msd_path+pe, msd_curr->l_text, msd_curr->l_used+1);
 

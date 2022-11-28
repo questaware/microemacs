@@ -134,9 +134,9 @@ extern char nulls[];
 				/* language properties */
 #define BCCOMT  0x01		/* c style comments */
 #define BCPRL   0x02		/* perl style comments */
-#define BCFOR   0x04		/* fortran style comments */
-#define BCSQL   0x08    /* sql style comments */
-#define BCPAS   0x10		/* pascal style comments */
+#define BCSQL   0x04    /* sql style comments */
+#define BCPAS   0x08		/* pascal style comments */
+#define BCFOR   0x10		/* fortran style comments */
 #define BCML    0x20    /* Markup language */
 
 /*

@@ -142,7 +142,7 @@ char * pathcat(char * t, int bufsz, char * dir, char * file)
 
 #if MEOPT_TAGS || STANDALONE
 
-#define TAGBUFFSZ 1024
+#define TAGBUFFSZ 10000
 
 #if NFILEN < NPAT 
 #define TAGFILEN (NPAT+2)

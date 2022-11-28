@@ -961,7 +961,7 @@ bmfind	./src/exec.c
 bpushk	./unix/terminal.c
 bufappline	./src/line.c
 bufferposition	./src/random.c
-bufflink	./src/file.c
+bufflink	./src/buffer.c
 bufflkup	./src/file.c
 bufhook	./src/edef.h
 buildlist	./src/bind.c

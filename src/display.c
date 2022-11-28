@@ -354,10 +354,16 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 	if (cmt_chrom)
 		cmt_chrom = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
-{	Short  clring = g_clring;
+
+{ // const char c_beg_cmt[16] = "`/`///`/(/`///`/";
+	// const char c_sec_cmt[16] = " *#***#***#***#*";
+ 	Short  clring = g_clring;
 	int mode = clring == 0 || cmt_chrom == 0 || (vp->v_flag & VFML)
 								 		? -1 : s_props & VFCMT;
 	int chrom_nxt = 0;
+//int beg_cmt = c_beg_cmt[clring & 15];
+//int sec_cmt = c_sec_cmt[clring & 15];
+	
 	if ((clring & BCD) && (s_props & VFCMT) ||
 			(clring & BCFOR) && toupper(str[1]) == 'C' && len > 0)
 		chrom_nxt = cmt_chrom;
@@ -369,11 +375,11 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	char markupterm = 0;
 	int highix[] = {0,0,0,0,};
 //int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
-	char duple = (curbp->b_langprops & BCPAS) == 0 ? '/' : ')';
+	char duple = curbp->b_langprops & BCPAS 				? ')' :
+							 curbp->b_langprops &(BCCOMT+BCSQL) ? '/' : 0;
 	int tabsize = curbp->b_tabsize;
 	if (tabsize < 0)
 		tabsize = - tabsize;
-
 
 	while (--len >= 0)
 	{	int chrom = chrom_nxt;
@@ -481,7 +487,9 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
         }
 			}
 			else if (mode & (Q_IN_CMT+Q_IN_CMT0))
-			{ if (str[-1] == '*' && c == duple)	/* l_props cannot be '*' */
+			{ 
+			  if (str[-1] == '*' && c == duple	/* l_props cannot be '*', '"' */
+				|| (c == '\'' || c == '"') && c == str[-1] && c == str[-2])
 				{ mode = 0;
 					chrom_nxt = CHR_OLD;
 				}
@@ -489,16 +497,26 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			else if (c == '"')
 				mode ^= Q_IN_STR;
 			else if ((mode & (Q_IN_STR+Q_IN_EOL)) == 0)
-				if ( 		
-						(clring & BCCOMT) && (c == '*' || c == '/') && str[-1] == '/'||
-						(clring & BCPAS)	&&	c == '*' && str[-1] == '(' ||
-						(clring & BCSQL)	&&  c == '-'  && str[-1] == '-' ||
-						(clring & BCFOR)	&&  c == '!' ||
-						(clring & BCPRL)	&&  c == '#')
+#if 1
+				if ((clring & BCCOMT+BCSQL) && (c == '*' || c == '/') && str[-1] == '/'
+				||	(clring & BCPAS)				&&	c == '*' && str[-1] == '('
+				||	(clring & BCSQL)				&&  c == '-' && str[-1] == c
+				||	(clring & BCPRL)				&& (c == '#' ||
+																			 (c == '\'' || c == '"') && c == str[-1] && c == str[-2])
+				||	(clring & BCFOR)				&&  c == '!')
+#else
+				if (c == sec_cmt & (str[-1] == beg_cmt || (clring & BCPRL))
+				||  c == '/'  && c == str[-1] && (clring & BCCOMT)
+				||	c == '\'' && str[-1] == c && str[-2] == c && (clring & BCPRL)
+				||  c == '-'  && str[-1] == c && (clring & BCSQL)
+				||  c == '!'  && (clring & BCFOR))
+#endif
 				{ mode = c != '*' ? Q_IN_EOL : Q_IN_CMT;
+					if (c != '#' && (clring & BCPRL))
+						mode = Q_IN_CMT;
 					chrom = cmt_chrom;
- 					if (((clring & (BCFOR | BCPRL)) == 0) && vtc-1 >= 0)
- 						tgt[vtc] |= chrom;
+//				if (((clring & (BCFOR | BCPRL)) == 0) && vtc-1 >= 0)
+						tgt[vtc] |= chrom;
 				}
 		}
 
@@ -1288,7 +1306,7 @@ void Pascal upwind(int garbage)	/* force hard updates on all windows */
 #if MEMMAP == 0
 	pd_sgarbf |= garbage;
 #endif
-	orwindmode(WFMODE | WFHARD | WFMOVE);
+	orwindmode(WFMODE | WFHARD); //  | WFMOVE);
 }
 
 /* Write a message into the message line. Keep track of the physical cursor

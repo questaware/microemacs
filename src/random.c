@@ -23,9 +23,10 @@ int init_paren(const char * str, int len)
 	int p_cmt = (f_cmt						  & BCPAS);
 	int s_cmt = (f_cmt							& BCSQL);
 		
-	p.olcmt = s_cmt ? '-' : 
+	p.olcmt = s_cmt ? '-' :
 						p_cmt ? ')' :
 						c_cmt ? '/' : (char)-1;
+
 	p.complex = true;
 	p.sdir = 1;
 //p.in_mode = 0;
@@ -795,34 +796,56 @@ int Pascal writemsg(int notused, int n)
 	 EOL					Comment to end of line
 #endif
 
-int Pascal scan_paren(char ch)
+
+int Pascal USE_FAST_CALL scan_paren(char ch)
 				
-{	int beg_cmt = g_clring & BCPAS ? '(' :
-								g_clring & BCPRL ? '#' :
-	              g_clring & (BCCOMT+BCSQL) ? '/' : 257;
-	int end_cmt = g_clring & BCPAS ? ')' : '/';
-	int mode = g_paren.in_mode;
-	int dir = g_paren.sdir;
+{ int dir = g_paren.sdir;
+	const char g_beg_cmt[16] = "\000/#///#/(/#///#/";
+	int beg_s1 = '\'';
+	int beg_cmt = g_beg_cmt[g_clring & 15];
+//int beg_cmt = g_clring & BCPAS ? '(' :
+//							g_clring & BCPRL && dir > 0 ? '#' :
+//              g_clring & (BCCOMT+BCSQL) ? '/' : 0;
+	
+	int end_cmt = beg_cmt == '(' ? ')' : '/';
+	if (beg_cmt != '#')
+	  beg_s1 = 0;
+	else
+	{	end_cmt = 0;
+	
+	  if (dir < 0)
+			beg_cmt = 0;
+	}
+
+{	int mode = g_paren.in_mode;
 
 	do
 	{ if (mode & (Q_IN_CMT + Q_IN_CMT0))
 		{ 
-			if (mode & Q_IN_CMT)
+			if      (mode & Q_IN_CMT)
 			{ if (mode & Q_IN_EOL)
 				{ if (ch == '\n')
 						mode = 0;
 					break;
 				}
+				else if ((ch == beg_s1 || ch == '"') && ch == g_paren.prev)
+				{ if (mode & Q_IN_CMTL)
+						mode = 0;
+				  mode |= Q_IN_CMTL;
+					break;
+				}
 				else if (ch == end_cmt && g_paren.prev == '*')
-				{ mode = Q_IN_CMT_;
+				{ mode = 0;
 					break;
 				}
 			}
-			else // if (mode & Q_IN_CMT0)
-			{ mode = ch == '*'													  ? Q_IN_CMT 					 :
-							 ch == g_paren.olcmt &&
-							 ch == g_paren.prev  && dir >= 0 ? Q_IN_CMT + Q_IN_EOL : 0;
-			} 			
+			else
+			{ mode = beg_s1 ? 
+									ch == g_paren.prev 							? Q_IN_CMT : 0
+							  : ch == '*'												? Q_IN_CMT 					  :
+									ch == g_paren.olcmt &&
+								  ch == g_paren.prev  && dir >= 0 ? Q_IN_CMT + Q_IN_EOL : 0;
+			}
 		} 
 		else if ((mode & (Q_IN_STR + Q_IN_CHAR)) != 0)
 		{ if			(ch == '\n' && g_paren.olcmt != '-')
@@ -832,14 +855,13 @@ int Pascal scan_paren(char ch)
 			else if (ch == '\\' && dir >= 0)
 				mode |= Q_IN_ESC;
 			else if ((mode & Q_IN_STR) && ch == '"' ||
-							 (mode & Q_IN_CHAR) && ch == '\'') 
-				mode = 0;
+							 (mode & Q_IN_CHAR) && ch == '\'')
+				mode = beg_s1 && ch == g_paren.prev ? Q_IN_CMT0 : 0;
 			break;
 		}
-		else // if	((mode & ~Q_IN_CMT_) == 0)
+		else
 		{ mode = ch == '\'' 	 ? Q_IN_CHAR :
 						 ch == '"'		 ? Q_IN_STR	:
-						 ch == beg_cmt ? beg_cmt == '#' ? Q_IN_CMT + Q_IN_EOL : Q_IN_CMT0 :
 						 ch == g_paren.olcmt ? Q_IN_CMT0 :
 						 ch == '\\' && dir < 0 
 												&& (g_paren.prev == '\'' || g_paren.prev == '"')
@@ -882,7 +904,7 @@ int Pascal scan_paren(char ch)
 	g_paren.prev = ch;
 	g_paren.in_mode = mode;
 	return mode;
-}
+}}
 
 
 

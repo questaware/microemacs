@@ -59,14 +59,14 @@ void logstr(char * str)
 #endif
 
 static
-BUFFER * Pascal bmfind(int create, int n)
+BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 
 { char ebuffer[NBUFN+1];
-	strcpy(ebuffer, "[Macro xx");
+	strcpy(ebuffer, "*Macroxx");
   																			/* make the buffer name */
 	if (n > 0)					
-	{ ebuffer[7] = '0' + (n / 10);
-	  ebuffer[8] = '0' + (n % 10);
+	{ ebuffer[6] = '0' + (n / 10);
+	  ebuffer[7] = '0' + (n % 10);
 	}
 	else /* n is 0 or -1 */
 	{																				/* find buffer user wants to execute */
@@ -76,7 +76,7 @@ BUFFER * Pascal bmfind(int create, int n)
 		  return NULL;
 	}
 					/* find the pointer to that buffer */
-	return bfind(strcat(ebuffer, "]"), create, n <= 0 ? 0 : BFINVS);
+	return bfind(ebuffer, create, n <= 0 ? 0 : BFINVS);
 }
 
 /* namedcmd:	execute a named command even if it is not bound */

@@ -24,6 +24,7 @@
 #endif
 
 
+#undef USE_DIR
 #define USE_DIR S_WIN32
 
 extern int    g_crlfflag;
@@ -87,187 +88,9 @@ int Pascal insfile(int f, int n)
   									readin(NULL, FILE_LOCK+FILE_REST+FILE_INS);
 }
 
-#if 0
-const char nm[][4] = {"c","cpp", "cxx", "cs",	"h","pc","jav", "prl","pl",
-											"for","fre","inc","pre","f", "sql","pas","md"};
-const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL,
-                 			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
-#endif
-const char * suftag  = "cpfqPm";
-
-void Pascal customise_buf(BUFFER * bp)
-
-{		int tabsize = pd_tabsize;
-	  const char * pat = NULL;
-		const char *fn = bp->b_bname;
-		int iter = 2;
-		while (--iter >= 0 && fn != NULL)
-		{ for ( --fn; *++fn != 0; )
-      	if (*fn == '.')
-        	pat = fn;
-
-	    if (pat != NULL)
-	    { if (strcmp(".e2", pat) == 0)
-	      	bp->b_mode |= BCRYPT2;
-	
-				if (pd_file_prof != NULL)
-	    	{	
-	    		char * pr = pd_file_prof - 1;
-	        while (*++pr != 0)
-	        { if (*pr != '.') continue;
-	        
-	        { const char * p = pat;
-	
-	          while (*++p != 0 && *++pr == *p)
-	            ;
-	
-	          if (*p != 0 || pr[1] != '=') continue;
-	
-					{	int diff = pr[2] == '^';
-						bp->b_flag &= ~ MDIGCASE;
-						bp->b_flag |= diff * MDIGCASE;
-	          pr += diff;
-	        { int six;
-	          for (six = 6; --six >= 0 && suftag[six] != pr[2]; )
-	          	;
-	          if (six >= 0)
-	          { bp->b_langprops = (1 << six);
-	            ++pr;
-					  }
-	          
-						iter = 0;
-	          tabsize = atoi(pr+2);
-	          break;
-	        }}}}
-	      }
-	    }
-		}
-    bp->b_tabsize = tabsize;
-}
-
-
-
-BUFFER * Pascal bufflink(const char * filename, int create)
-												/* create: 1: create, MSD_DIRY=16: dont search, 
-																	 32:dont stay, 64: swbuffer, 128 no_share */
-{ BUFFER * bp_first = NULL;
-  char fname[NFILEN];
-  char * fn;
-#if 0
-  if 			(create & 32)
-    ;
-  else if (create & 16)
-  { for (; *fn != 0; ++fn)
-      if (*fn == '/')
-      { *fn = 0;
-        pat = fn+1;
-      }
-    fn = fname;
-    if (pat == null)
-    { pat = fn;
-      fn = "./";
-    }
-  }
-#endif
-
-#if NFILEN < 2 * NBUFN + 30
-  error error
-#endif
-{ Fdcr_t fdcr = {NULL};
-  char bname[NFILEN];
-#define text (&bname[NBUFN+1])
-//int cr = create & ~(16+32+64);
-  int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
-
-  if (srch > 0)
-  { Cc cc = msd_init(fname, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC|MSD_USEPATH);
-  	if      (cc < OK)
-  	{ mlwrite(TEXT79);
-  		return NULL;
-  	}
-    else if (is_opt('Z'))
-    { clr_opt('Z');
-    	srch = 0;
-    { unsigned int newdate = 0;
-
-      while ((fn = msd_nfile()) != NULL)
-      {															// USE_DIR => newest file comes last
-#if USE_DIR == 0
-        if (newdate >= (unsigned)msd_stat.st_mtime)
-        	continue;
-        newdate = (unsigned)msd_stat.st_mtime;
-#endif
-        strpcpy(fname,fn,NFILEN);
-      }
-    }}
-  }
-
-  while ((fn = srch == 0 ? fname : 
-  						 srch < 0  ? searchfile(fname, &fdcr) :
-													 msd_nfile()) != NULL)
-  { BUFFER * bp;
-    for (bp = bheadp; bp != NULL; bp = bp->b_next)
-      if ((bp->b_flag & BFINVS)==0 &&
-          bp->b_fname != null && strcmp(fn, bp->b_fname) == 0)
-				break;
-
-    if (bp == NULL)
-    { makename(bname, fn); 		/* New buffer name.	*/
-
-      while (TRUE)
-      { bp = bfind(bname, create, 0);
-				if (bp == NULL)
-				{ if (create & 1)
-				  { mlwrite(TEXT137);
-                  /* "Cannot create buffer" */
-				    return null;
-				  }
-	  			create |= 3;
-				} 
-				else
-      	{	create |= 2;
-				  if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
-	          break;
-#if 0
-				  else				/* old buffer name conflict code */
-				  { int cc = mlreply(concat(&text[0], TEXT136, bname, "):", null),
-								     							  bname, NBUFN);
-                                            /* "Buffer (" */
-				    if (cc < 0) 		  /* ^G to just quit	*/
-				      return bp_first;
-				    if (cc != FALSE) 		  /* CR to clobber it	*/
-				      continue;
-
-				    makename(bname, fn);	/* restore it */
-				    create |= 1;		    			/* It already exists but this causes */
-				  }         				      /* a quit the next time around	     */
-#endif
-				}
-	    }
-	    
-	    bp->b_flag &= ~BFACTIVE;
-	    repl_bfname(bp, fn);
-	    customise_buf(bp);
-	  }
-	  if (bp_first == NULL)
-	    bp_first = bp;
-
-	  if (!srch)
-	    break;
-  } /* while */
-
-	if (create & 64)
-		swbuffer(bp_first);
-
-  return bp_first;
-}}
-
-
-
 static
-BUFFER * Pascal bufflkup(const char * filename, int create)
-                              /* create: 1:create, 16:search, 32: dont stay */
-{ 
+BUFFER * Pascal bufflkup(const char * filename)
+{
 //const char tagf[] = "/../../../../../tags";
   char fname[NFILEN+5*3];
 
@@ -296,9 +119,10 @@ BUFFER * Pascal bufflkup(const char * filename, int create)
 		filename = (const char *)fname;
 	}}}
 
-  return bufflink(filename,create);
+  return bufflink(filename,g_macargs > 0);
 }
-
+
+
 /* Select a file for editing.
  * Look around to see if you can find it another buffer; 
  * if you can find it just switch to the buffer; 
@@ -311,23 +135,21 @@ int Pascal filefind(int f, int n)
 {	if (resterr())		/* don't allow this command if restricted */
 		return FALSE;
 
-{	char * s;
+{	char ch;
+  char * s;
   char * fname = gtfilename(0);
                       	/* "Find file" */
 	if	(fname == NULL || fname[0] <= ' ')
 	  return FALSE;
 
-	for (s = fname-1; *++s != 0																	// strip off :n
-  					     && !((*s == ':' || *s == '(') && isdigit(s[1]))
+	for (s = fname-1; (ch = *++s) != 0																	// strip off :n
+  					     && !((ch == ':' || ch == '(') && isdigit(s[1]))
                   ; )
 		;
           
-	if (*s == 0)
-		s = NULL;
-	else
-		*s = 0;
+ *s = 0;
 
-{	BUFFER * bp = bufflkup(fname, (g_macargs > 0));
+{	BUFFER * bp = bufflkup(fname);
 	if (bp == NULL)
 	  return FALSE;
 
@@ -336,7 +158,7 @@ int Pascal filefind(int f, int n)
 					/* "[Old buffer]" */
 	swbuffer(bp);
 	
-	return s == NULL ? TRUE : gotoline(1,atoi(s+1));
+	return ch == 0 ? TRUE : gotoline(1,atoi(s+1));
 }}}
 
 
@@ -594,7 +416,7 @@ int Pascal readin(char const * fname, int props)
   char spareline[257];
 #endif
 	if (diry)
-	{ msd_init(fname, MSD_DIRY | MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
+	{ msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
 	  bp->b_flag |= MDDIR;
 	}
 
