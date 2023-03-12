@@ -21,7 +21,8 @@ REGION g_region;
  */
 REGION * Pascal getregion()
 {
-  if (curwp->mrks.c[0].markp == NULL)
+  LINE * mark_line = curwp->mrks.c[0].markp;
+  if (mark_line == NULL)
   {	mlwrite(TEXT76);
 					/* "No mark set in this window" */
 	  return NULL;
@@ -30,58 +31,47 @@ REGION * Pascal getregion()
 {	int wh = 0;
 	int _lines = 0;
 	int _size = (int)curwp->mrks.c[0].marko - curwp->w_doto;
+	int bsize = -_size;
 
-  LINE * flp = curwp->w_dotp;
-	LINE * blp = flp;
-	g_region.r_linep = flp;
+	g_region.r_linep = curwp->w_dotp;
+{	LINE* flp = curwp->w_dotp;
+	LINE* blp = flp;
 
-	if (flp == curwp->mrks.c[0].markp)
-	{	_lines = 1;
-		if (_size < 0)
-		{ _size = - _size;
+	while (true)
+	{
+		_lines += 1;
+
+		if (blp == mark_line)
+		{	g_region.r_linep = blp;
+			_size = bsize;
 			wh = 1;
+			break;
 		}
-	}
-	else
-	{	int bsize = -_size;
 
-		while (true)
-		{ _lines += 1;
-
-			if (blp == curwp->mrks.c[0].markp)
-			{ wh = 1;
-				g_region.r_linep = blp;
-				_size = bsize;
-				break;
+		if (wh >= 0)
+		{	blp = lback(blp);
+			bsize += llength(blp) + 1;
+			if (l_is_hd(blp))
+			{	wh = -1;
+			  --bsize;
 			}
+		}
 
-			blp = lback(blp);
-			if ((blp->l_props & L_IS_HD) == 0)
-				bsize += llength(blp)+1;
+		if (flp == mark_line)
+			break;
 
-			if (flp == curwp->mrks.c[0].markp)
-				break;
-
-			if      ((flp->l_props & L_IS_HD) == 0)
-			{ _size += llength(flp)+1;
-				flp = lforw(flp);
-			}
-			else if ((blp->l_props & L_IS_HD) != 0)
-			{
-#if _DEBUG			
-				adb(99);
-#endif
-				break;
-			}
+		if (!l_is_hd(flp))
+		{	_size += llength(flp) + 1;
+			flp = lforw(flp);
 		}
 	}
 
 	g_region.r_lines = _lines;
 	g_region.r_size = _size;
-	g_region.r_offset = wh == 0 ? curwp->w_doto : curwp->mrks.c[0].marko;
+	g_region.r_offset = wh <= 0 ? curwp->w_doto : curwp->mrks.c[0].marko;
 
 	return &g_region;
-}}
+}}}
 
 													/*	reglines:	how many lines in the current region */
 int Pascal reglines(Bool ask)
@@ -122,7 +112,7 @@ int Pascal killregion(int f, int n)
 
 /*if ((g_lastflag&CFKILL) == 0)		** This is a kill type	**
     kdelete() */;								/* command, so do magic */
-	g_thisflag |= CFKILL;			/* kill buffer stuff.	*/
+	g_thisflag = CFKILL;					/* kill buffer stuff.	*/
 	kinsert_n = chk_k_range(n);
 	return ldelchrs(g_region.r_size, TRUE);
 }}
@@ -136,18 +126,17 @@ int Pascal narrow(int f, int n)
 {													/* find buffer and ensure it's not already narrow */
 	BUFFER* bp = curwp->w_bufp;
 	if (bp->b_flag & BFNAROW)
-	{ mlwrite(TEXT71);
-				 /* "%%Buffer already narrowed" */
-	  return FALSE;
+	{ mlwrite(TEXT71); /* "%%Buffer already narrowed" */
+		return FALSE;
 	}
 									       /* find the boundries of the current region */
-{	int status = reglines(FALSE);
+{ int	status = reglines(FALSE);
 	if (status <= 1)
-	{ mlwrite(TEXT72);
-					/* "%%Must narrow at least 1 full line" */
-	  return FALSE;
-	}										   								/* move forward to the end of this region
-										  					   		  	 (a long number of bytes perhaps) */
+	{ mlwrite(TEXT72); /* "%%Must narrow at least 1 full line" */
+		return FALSE;
+	}
+	   								/* move forward to the end of this region		
+		  					   		  	 (a long number of bytes perhaps) */
 	forwbychar(g_region.r_size);
 //curwp->w_doto = 0;										/* only by full lines please! */
 
@@ -160,7 +149,7 @@ int Pascal narrow(int f, int n)
 	bp->b_narlims[1] = lforw(curwp->w_dotp);
 	lforw(curwp->w_dotp) = &bp->b_baseline;
 #if 1
-	rpl_all(-1, 0, (LINE*)bp, g_region.r_linep, 0);
+	rpl_all(-1, 0, 0, (LINE*)bp, g_region.r_linep);
 #else
 { WINDOW *wp;
 																	   /* let all the proper windows be updated */
@@ -170,18 +159,18 @@ int Pascal narrow(int f, int n)
 	    wp->w_linep = g_region.r_linep;
 	    wp->w_dotp = g_region.r_linep;
 	    wp->w_doto = 0;
-	    for (m = &wp->mrks.c[NMARKS - 1]; m >= &wp->mrks.c[0]; --m)
-	    { m->markp = g_region.r_linep;
-	      m->marko = 0;
-	    }
 	    wp->w_flag |= (WFHARD|WFMODE);
+	    for (m = &wp->mrks.c[NMARKS - 1]; m >= &wp->mrks.c[0]; --m)
+	    { m->marko = 0;
+	      m->markp = g_region.r_linep;
+	    }
 	  }
 }
 #endif
 	setcline();
 
-	mlwrite(TEXT73);
-				/* "[Buffer is narrowed]" */
+	mlwrite(TEXT73); /* "[Buffer is narrowed]" */
+				 
 	return TRUE;
 }}
 
@@ -199,29 +188,34 @@ int Pascal widen(int notused, int n)
 
 	bp->b_flag &= (~BFNAROW);
 {	LINE * bl = &bp->b_baseline;
-	LINE ** nlims = bp->b_narlims-1;
 	int iter;
 	for (iter = 2; --iter >= 0; )
+	{	int niter = 1 - iter;
+	  LINE * nl = bp->b_narlims[niter];
+//  if (nl == NULL)
+//  	continue;
 	{	LINE *lp;
-		++nlims;
-		if (*nlims != NULL)
-	  { LINE * nl = *nlims;
-	  	for (lp = nl;
-	         lmove(lp,iter) != bl;  lp = lmove(lp,iter))
-	      ;
-	    if (iter)			 						/* recover the top fragment */
-	    { nl->l_fp = (Lineptr)bl->l_fp;
-	      lforw(nl)->l_bp = (Lineptr)nl;
-	      bl->l_fp = (Lineptr)lp;
-	    }
-	    else			      		 			/* recover the bottom fragment */
-	    { nl->l_bp = bl->l_bp;
-	    	bl->l_bp->l_fp = nl;
-	      bl->l_bp = (Lineptr)lp;
-	    }
+  	for (lp = nl;
+	       lmove(lp,iter) != bl;  lp = lmove(lp,iter))
+	     ;
+#if 1
+		lmove(nl,niter) = lmove(bl,niter);
+		lmove(lmove(nl,niter),iter) = nl;
+		lmove(bl,niter) = lp;
+#else	
+	   if (iter)			 						/* recover the top fragment */
+	   { nl->l_fp = bl->l_fp;
+	     lforw(nl)->l_bp = nl;
+	     bl->l_fp = lp;
+	   }
+	   else			      		 			/* recover the bottom fragment */
+	   { nl->l_bp = bl->l_bp;
+	   	 lback(bl)->l_fp = nl;
+	     bl->l_bp = lp;
+	   }
+#endif
 //    *nlims = NULL;
-	  }
-	}
+	}}
 
 	setcline();
 	orwindmode(WFHARD|WFMODE);

@@ -61,12 +61,12 @@ extern char nulls[];
 #define	CMP_FILENAME 2
 #define	CMP_TOSPACE  3
 				/* Directive definitions */
-#define DIF		0
-#define DELSE		1
+#define DIF		    0
+#define DELSE			1
 #define DENDIF		2
-#define DGOTO		3
+#define DGOTO			3
 #define DRETURN		4
-#define DENDM		5
+#define DENDM			5
 #define DWHILE		6
 #define	DENDWHILE	7
 #define	DBREAK		8
@@ -81,13 +81,13 @@ extern char nulls[];
 #define	FORWARD	0			/* forward direction		*/
 #define REVERSE	1			/* backwards direction		*/
 
-#define FIOEOF -1		/* File I/O, end of file.	*/
 #define FIOSUC	0		/* File I/O, success.		*/
-#define	FIOMEM	1		/* File I/O, out of memory	*/
-#define FIOFNF	2		/* File I/O, file not found.	*/
-#define FIOERR	3		/* File I/O, error.		*/
-#define	FIOFUN	4		/* File I/O, eod of file/bad line*/
-#define	FIODEL	5		/* Can't delete/rename file	*/
+#define FIOEOF -1		/* File I/O, end of file.	*/
+#define	FIOMEM -2		/* File I/O, out of memory	*/
+#define FIOFNF -3		/* File I/O, file not found.	*/
+#define FIOERR -4		/* File I/O, error.		*/
+#define	FIOFUN -5		/* File I/O, eod of file/bad line*/
+#define	FIODEL -6		/* Can't delete/rename file	*/
 
 #define CFKILL  0x0001
 #define CFCPCN	0x0002			/* Last command was C-P, C-N	*/
@@ -112,21 +112,20 @@ extern char nulls[];
 #define	BFNAROW	0x08		/* buffer has been narrowed	*/
 
 				/*	mode flags	*/
-#define	NUMMODES  12		/* # of defined modes	       */
+#define	NUMMODES  11		/* # of defined modes	       */
 
 #define MDSTT    0x0010
-#define MDWRAP	 0x0010		/* word wrap			*/
-#define	MDCMOD	 0x0020		/* C indentation and fence match*/
-#define	MDMS		 0x0040		/* File to have CRLF		*/
+#define	MDVIEW	 0x0010		/* read-only buffer		*/
+#define MDWRAP	 0x0020		/* word wrap			*/
+#define MDOVER	 0x0040		/* overwrite mode		*/
 #define	MDIGCASE 0x0080		/* Exact matching for searches	*/
-#define	MDVIEW	 0x0100		/* read-only buffer		*/
-#define MDOVER	 0x0200		/* overwrite mode		*/
-#define MDMAGIC	 0x0400		/* regular expresions in search */
+#define MDMAGIC	 0x0100		/* regular expresions in search */
+#define MDSRCHC  0x0200   /* search comments also */
+#define	MDMS		 0x0400		/* File to have CRLF		*/
 #define	MDCRYPT	 0x0800		/* encrytion mode active	*/
 #define	MDASAVE	 0x1000		/* auto-save mode		*/
-#define MDSRCHC  0x2000    /* search comments also */
-#define MDDIR    0x4000		/* this file is a directory	*/
-#define BFACTIVE 0x8000		/* this buffer is active */
+#define MDDIR    0x2000		/* this file is a directory	*/
+#define BFACTIVE 0x4000		/* this buffer is active */
 
 #define BSOFTTAB 0x01			/* not in use */
 #define BCRYPT2	 0x02
@@ -181,13 +180,11 @@ extern char nulls[];
 typedef struct	LINE {
 	struct LINE * l_fp;		/* Link to the next line	*/
 	struct LINE * l_bp;		/* Link to the previous line	*/
-	short	l_used; 		    /* Used size			*/
-  unsigned char l_spare;/* spare space */
-	char  l_props;
-	char	l_text[1];		/* A bunch of characters.	*/
+	int 	        l_dcr; 	/* Used(22) spare(6) incomment(1) header(1) */
+	char	        l_text[8]; /* A bunch of characters.	*/
 }	LINE;
 
-#define L_IS_HD 1
+#define l_is_hd(lp) (!(lp->l_dcr))
 
 #define lforw(lp)	((lp)->l_fp)
 #define lback(lp)	((lp)->l_bp)
@@ -196,10 +193,14 @@ typedef struct	LINE {
 #define lgetc(lp, n)	((lp)->l_text[n]&0xFF)
 #define lgets(lp, n)	&(lp)->l_text[n]
 #define lputc(lp, n, c) ((lp)->l_text[n]=(c))
-#define llength(lp)	((lp)->l_used)
 
 #define Lineptr		struct LINE *  
 
+#define SPARE_SZ 6
+
+#define lused(x) ((x) >> SPARE_SZ+2)
+#define SPARE_MASK (((1 << SPARE_SZ) - 1) << 2)
+#define llength(lp)	((lp)->l_dcr >> SPARE_SZ+2)
 
 typedef struct
 { struct LINE * curline;
@@ -257,8 +258,8 @@ typedef char * CRYPTKEY;
 typedef struct	BUFFER
 {	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
 	int	  				b_doto; 		/* offset of "."; isomorphism to MARK ends */
-	int 					b_line_no;  /* exists for isomorphism but the value is not used */
-  struct  MARKS mrks;
+	int 					b_window_ct;/* valid only after window_ct() */
+  struct  MARKS b_mrks;
 	struct	LINE *b_wlinep;		/* top LINE in last window */
 	struct	BUFFER *b_next; 	/* next BUFFER		*/   /* isomorphism ends */
 	struct	LINE  b_baseline;	/* the header LINE	*/
@@ -367,12 +368,12 @@ typedef struct Paren_s
   char          ch;
   char          fence;
   char          prev;			// must follow fence
-  char          olcmt;
-  int         	nest;
+  char          complex;
+  char					lang;
+  signed char		sdir;
+  short         nest;
   short		      nestclamped;
   short         in_mode;
-  short         complex;
-  short				  sdir;
 } Paren_t, *Paren;
 
 extern Paren_t g_paren;
@@ -424,18 +425,32 @@ NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
 NOSHARE extern char golabel[];		/* current line to go to	*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
 extern const NBIND names[];				/* name to function table	*/
-NOSHARE extern int ttrow;		  		/* Row location of HW cursor	*/
-NOSHARE extern int ttcol;		  		/* Column location of HW cursor */
+
+#ifdef _MSC_VER
+
+#include <windows.h>
+
+#else
+typedef struct 
+{   short X;
+    short Y;
+} COORD;
+
+#endif
+
+extern COORD  g_coords;						/* location of HW cursor */
+#define ttrow g_coords.Y		  		
+#define ttcol g_coords.X
 #if MOUSE
 NOSHARE extern int g_lbound;		/* leftmost col of current line being displayed*/
 #endif
-NOSHARE extern int abortc;			/* current abort command char	*/
+NOSHARE extern int g_abortc;			/* current abort command char	*/
 
 //NOSHARE extern char highlight[64];	/* the highlight string */
 
 NOSHARE extern int cryptflag;		/* currently encrypting?	*/
 //NOSHARE extern int g_newest;  /* choose newest file           */
-NOSHARE extern Int envram;		/* # of bytes current in use by malloc */
+NOSHARE extern Int envram;			/* # of bytes current in use by malloc */
 
 const extern char g_logm[3][8];
 
@@ -443,12 +458,12 @@ const extern char g_logm[3][8];
 NOSHARE extern char lastmesg[NCOL+2];	/* last message posted		*/
 NOSHARE extern int (Pascal *lastfnc)(int, int);/* last function executed */
 NOSHARE extern char *fline; 		/* dynamic return line */
-NOSHARE extern int eexitflag;		/* EMACS exit flag */
+NOSHARE extern int  eexitflag;		/* EMACS exit flag */
 
 /* uninitialized global external declarations */
 
-NOSHARE extern int g_thisflag;	/* Flags, this command		*/
-NOSHARE extern int g_lastflag;	/* Flags, last command		*/
+NOSHARE extern int   g_thisflag;	/* Flags, this command		*/
+NOSHARE extern int   g_lastflag;	/* Flags, last command		*/
 NOSHARE extern Short g_clring;
 
 NOSHARE extern WINDOW *curwp; 		/* Current window		*/
@@ -506,15 +521,16 @@ NOSHARE extern TERM	term;		/* Terminal information.	*/
 
 
 #define Q_IN_ESC   1
-#define Q_IN_CHAR  2
-#define Q_IN_STR   4
-#define Q_IN_CMT0  8
-#define Q_IN_CMTL 16
-#define Q_IN_CMT  32
+#define Q_IN_CMT   2
+#define Q_IN_CHAR  4
+#define Q_IN_STR   8
+#define Q_IN_CMT0 16
+#define Q_IN_CMTL 32
 #define Q_IN_CMT_ 64
 #define Q_IN_EOL 128
+#define Q_IS_NEG 256
 
-#define quotec ('Q' - '@')
+#define QUOTEC ('Q' - '@')
 
 /*
 	This is the message which should be added to any "About MicroEMACS"

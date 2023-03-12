@@ -4,12 +4,6 @@
 #define update_map(map) 
 #endif
 
-#ifdef MINIMAP
-
-#define DO_SRIAL 0
-#else
-#define DO_SRIAL 1
-#endif
 			/* all these enumeration values cannot change */
 #define T_DOMINT1     1
 #define T_DOMINT2     2
@@ -47,7 +41,8 @@ typedef struct Format_s
 
 typedef struct Map_s
 { Format_t     format;
-  const Char * srch_key;	/* These 2 form a pair.   See Note 1. */
+  Byte * 			 table;
+//const Char * srch_key;	/* These 2 form a pair.   See Note 1. */
 #ifndef MINIMAP
   Short    last_ix;
   Short    max_len;	/* in bytes */
@@ -67,16 +62,16 @@ typedef struct Map_s
 #ifndef MINIMAP
 
 #define mk_const_map(typ,keyoffs, tbl, deduct) \
-		     			{{typ, keyoffs, sizeof(tbl[0])}, \
-	/*srch_key*/  null, -1 \
-	/*max_len*/		sizeof(tbl), sizeof(tbl)-(deduct)*sizeof(tbl[0]), \
-	/*cur_mult*/  sizeof(tbl)/sizeof(tbl[0])-(deduct) \
+		     			{{typ, keyoffs, sizeof(tbl[0])}, (Byte*)tbl,\
+	/*last_ix*/  -1, \
+	/*max_len*/		sizeof(tbl),  sizeof(tbl)-(deduct)*sizeof(tbl[0]), \
+	/*curr_mult*/ sizeof(tbl)/sizeof(tbl[0])-(deduct) \
               }
 #else
 #define mk_const_map(typ,keyoffs, tbl, deduct) \
-		     			{{typ, keyoffs, sizeof(tbl[0])}, \
-	/*srch_key*/  null, \
-	/*cur_mult*/  sizeof(tbl)/sizeof(tbl[0])-(deduct), \
+		     			{{typ, keyoffs, sizeof(tbl[0])}, (Byte*)tbl,\
+	/*srch_key*/  \
+	/*curr_mult*/ sizeof(tbl)/sizeof(tbl[0])-(deduct), \
               }
 #endif
 
@@ -100,7 +95,7 @@ typedef struct Mapstrm_s
 Map mk_map(Map c, Format_t format, Vint len);
 void map_cache_clear(Map map)	;
 
-Vint binary(Map map, Byte * table);
+Vint binary(int wh, const char * key);
 Cc map_add_(Map * map_ref, Byte * rec);
 Byte * map_find_(Map map, Byte * table, void * key);
 void map_remove_last_(Map * map_ref, Byte * table);
@@ -114,6 +109,6 @@ Byte * map_next_(Mapstrm strm, Byte * table);
 #define map_next(strm)    map_next_((strm), &((strm)->map->c)[0])
 
 
-#define binary_const(map,tbl)       binary(map,(Byte*)(tbl))
+#define binary_const(wh,key)    binary(wh,key)
 #define map_find_const(map,tbl,key) map_find_((map), (Byte*)(tbl), (void*)(key))
 #define map_next_const(strm,tbl)    map_next_((strm), (Byte*)(tbl))

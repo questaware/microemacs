@@ -15,14 +15,19 @@
 
 
 
-int Pascal window_ct(BUFFER* bp)
+WINDOW * Pascal window_ct(BUFFER* bp)
 
 { WINDOW * wp;
+  WINDOW * res = NULL;
 	int ct = 0;
   for (wp = wheadp; wp != NULL; wp = wp->w_next)
   	if (wp->w_bufp == bp)
+  	{ res = wp;
   		++ct;
-  return ct;
+  	}
+  	
+  bp->b_window_ct = ct;
+  return res;
 }
 
 
@@ -175,7 +180,7 @@ int Pascal getwpos()
   for (lp = curwp->w_linep;
        lp != curwp->w_dotp;
        lp = lforw(lp))
-  { if (lp->l_props & L_IS_HD)
+  { if (l_is_hd(lp))
       return -2;
     if (--sline <= 0)
       return -1;

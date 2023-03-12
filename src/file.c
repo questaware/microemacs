@@ -264,17 +264,10 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 
 
 
-extern
-void io_message(const char * txt, int cc, int nline)
+static
+void io_message(const char * txt, int nline)
 
-{ if (cc >= FIOMEM)
-  { txt = cc == FIOMEM ? TEXT99 : TEXT141;
-			/* "OUT OF MEMORY, " */
-			/* "I/O ERROR, " */
-    curbp->b_flag |= BFTRUNC;
-  }
-
-  mlwrite("[%s%d%s%s", txt, nline,  TEXT143,nline == 1 ? "]" : "s]");
+{ mlwrite("[%s%d%s%s", txt, nline,  TEXT143,nline == 1 ? "]" : "s]");
 }
 
 
@@ -355,7 +348,7 @@ int Pascal readin(char const * fname, int props)
 	if (cc != FIOSUC)			/* File not found. */
 	{ 
 #if S_MSDOS
-#define FILE_ATTRIBUTE_DIRECTORY 16
+//#define FILE_ATTRIBUTE_DIRECTORY 16
 	  diry = name_mode(fname) & FILE_ATTRIBUTE_DIRECTORY;
 	  if (diry)
 		  cc = OK;
@@ -402,12 +395,11 @@ int Pascal readin(char const * fname, int props)
 	    curwp->w_line_no -= 1;
 	  }
 	  curwp->w_doto    = 0;
-    g_paren.in_mode |= curwp->w_dotp->l_props & Q_IN_CMT;
+    g_paren.in_mode |= curwp->w_dotp->l_dcr & Q_IN_CMT;
 	/*curwp->mrks.c[0].markp = lback(curwp->w_dotp);
 	  curwp->mrks.c[0].marko = 0;*/
   }
-{	int   len;
- 	int   nline = 0;
+{	int   nline = 0;
  	char * sfline = NULL;
   LINE * nextline = ins == 0 ? &bp->b_baseline : lforw(curwp->w_dotp);
 #if S_MSDOS == 0
@@ -420,13 +412,13 @@ int Pascal readin(char const * fname, int props)
 	  bp->b_flag |= MDDIR;
 	}
 
-	cc = FIOSUC;
 //sp_langprops = bp->b_langprops & BCCOMT;
-	while (cc == FIOSUC)
+	while (1)
   { char * ln;
   	LINE *lp1;
 	  if (diry)
-	  { ln = msd_nfile();
+		{	cc = FIOEOF;
+	    ln = msd_nfile();
 	    if (ln == NULL)
 	      break;
 	     
@@ -436,24 +428,21 @@ int Pascal readin(char const * fname, int props)
 #endif
 			if (ln[0] == '.' && ln[1] == '/')
 				ln += 2;
-	    len = strlen(ln);
+	    cc = strlen(ln);
 	  }
 	  else 
-	  { cc = ffgetline(&len);
-	  	if (cc != FIOSUC && len == 0)
+	  { cc = ffgetline();
+	  	if (cc < 0)
 	  		break;
 	  	ln = g_fline;
 	  }
 	  
-	  lp1 = mk_line(ln,len,len);
+	  lp1 = mk_line(ln,cc,(g_paren.in_mode & Q_IN_CMT));
 	  if (lp1 == NULL)
-	  	cc = FIOMEM;
-	  if (cc == FIOMEM)
-	  {	(void)repl_bfname(bp, "SHORT");
+	  {	cc = FIOMEM;
 	    break;
 	  }
 
-    lp1->l_props = g_paren.in_mode & Q_IN_CMT;
 	  ibefore(nextline, lp1);
 	  ++nline;
 
@@ -474,8 +463,13 @@ int Pascal readin(char const * fname, int props)
 	  (void)fclose(g_ffp);
 
 	if ((props & FILE_NMSG) == 0)
-		io_message(ins >= 0 ? TEXT140 : TEXT154, cc, nline);
-																	/* "Read 999 line" */
+	{ char * txt = cc == FIOEOF ? ins >= 0 ? TEXT140 : TEXT154 :
+																	/* "Read/Inserted 999 line" */
+								 cc == FIOMEM ? TEXT99                       : TEXT141;
+		if (cc < FIOEOF)
+	  	(void)repl_bfname(bp, "SHORT");
+	  io_message(txt, nline);
+	}
 }}
 out:
 //readin_lines = nline;
@@ -527,22 +521,21 @@ out:
 #endif
 
 	for (lp = &bp->b_baseline; 
-			 ((lp=lforw(lp))->l_props & L_IS_HD) == 0 && --clamp != 0; )
-	{
+			 !l_is_hd((lp=lforw(lp))) && --clamp != 0; )
+	{ int len = lused(lp->l_dcr);
 #if	CRYPT
 		if (clamp < 0)
-		{	int len = lp->l_used;
+		{	
 			ucrypt(lp->l_text, len);
 			if (bp->b_mode & BCRYPT2)
 				double_crypt(lp->l_text, len);
 		}
 #endif
-	
-		if (lp->l_used > 6 &&(lp->l_text[0] == '/' && lp->l_text[1] == '*' ||
-                          lp->l_text[0] == '/' && lp->l_text[1] == '/' ||
-                          lp->l_text[0] == '-' && lp->l_text[1] == '-')
-									     && lp->l_text[2] == 't' && lp->l_text[3] == 'a'
-									     && lp->l_text[4] == 'b' && lp->l_text[5] == ' ')
+		if (len > 6 &&(lp->l_text[0] == '/' && lp->l_text[1] == '*' ||
+                   lp->l_text[0] == '/' && lp->l_text[1] == '/' ||
+                   lp->l_text[0] == '-' && lp->l_text[1] == '-')
+					      && lp->l_text[2] == 't' && lp->l_text[3] == 'a'
+								&& lp->l_text[4] == 'b' && lp->l_text[5] == ' ')
 	  { int tabw = atoi(lp->l_text+6);
 	    if (tabw != 0)
 	      bp->b_tabsize = tabw;
@@ -576,8 +569,8 @@ int Pascal filewrite(int f, int n)
 
 	cc = writeout(fname);
 	if (cc > FALSE)
-	{	repl_bfname(curbp, fname);
-		curbp->b_flag &= ~BFCHG;
+	{	curbp->b_flag &= ~BFCHG;
+		repl_bfname(curbp, fname);
 		upmode();			/* Update mode lines.	*/
 	}
 	return cc;
@@ -734,7 +727,7 @@ int Pascal writeout(const char * fn)
 	for (nline = 4; --nline >= 0; )/* mk unique name using random numbers */
 	{ if (caution)
 			strcpy(&tname[sp+1], int_asc(ernd()));
-		op = fopen(tname, caution == 0 ? "wb" : "wbx");
+		op = fopen(tname, caution == 0 || S_WIN32 ? "wb" : "wbx");
 		if (op != NULL)
 			break;
 	}
@@ -750,8 +743,10 @@ int Pascal writeout(const char * fn)
 		cc = OK;
 		nline = 0;					/* track the Number of lines		*/
 		for (lp = &bp->b_baseline;
-				((lp = lforw(lp))->l_props & L_IS_HD) == 0; )
-		{ if ((cc = ffputline(op, &lp->l_text[0], llength(lp))) != FIOSUC)
+				!l_is_hd((lp = lforw(lp))); )
+		{ 
+		  cc = ffputline(op, &lp->l_text[0], llength(lp));
+			if (cc != FIOSUC)
 				break;
 			++nline;
 		}
@@ -772,12 +767,11 @@ int Pascal writeout(const char * fn)
 			else
 			{ concat(&mesg[0], TEXT150, tname, null);
 												/* ", saved as " */
-				cc = FIODEL;		/* failed */
 			}
 		}
 #endif
 																						 /* report on status of file write */
-		io_message(strcat(&mesg[0], TEXT149), FIOSUC, nline);
+		io_message(strcat(&mesg[0], TEXT149), nline);
 															/* "[Wrote 999 line" */
 	}}
 	tcapkopen();						/// reopen the keyboard (Unix only)
@@ -823,7 +817,7 @@ int Pascal fetchfile(int f, int n)
 	 	return FALSE;
 	}
 
-{	int len = lp->l_used > 2*NFILEN ? 2*NFILEN : lp->l_used;
+{	int len = lused(lp->l_dcr) > 2*NFILEN ? 2*NFILEN : lused(lp->l_dcr);
 	char cmdline[2*NFILEN+1];
 	((char*)memcpy(cmdline, (char*)lp->l_text, len))[len] = 0;
 	if (curbp->b_mode & BCRYPT2)
@@ -862,13 +856,13 @@ int Pascal fetchfile(int f, int n)
 { BUFFER * bp = get_remote(encrypt | f, NULL, pw, cmdline);
 
 	memset(cmdline, 0, len);
-  if (bp == NULL)
-    return -1;
                           // If the fetch failed continue with any file from last time
-  swbuffer(bp);
+{ int cc = swbuffer(bp);
+	if (cc < 0)
+		return cc;
 
 //sprintf(diag_p, "EKEY %x %s", tbp, tbp->b_key == NULL ? "()" : tbp->b_key);
 //mbwrite(diag_p);
 
 	return gotobob(0,0);
-}}}}}
+}}}}}}

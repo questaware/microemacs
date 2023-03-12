@@ -491,12 +491,13 @@ int Pascal dobuf(BUFFER * bp, int iter)
 		int msg = 0;
 		int exec_level = 0;			/* clear IF level flags/while ptr */
 
-		for (lp = &bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; ) 
+		for (lp = &bp->b_baseline; !l_is_hd((lp=lforw(lp))); ) 
 		{ 					   													/* scan the current line */
 																						/* trim leading whitespace */
-		  eline = skipleadsp(lp->l_text, lp->l_used);
+		  int len = lused(lp->l_dcr);
+		  eline = skipleadsp(lp->l_text, len);
 		  
-		  if (lp->l_used + (lp->l_text - eline) < 4)
+		  if (len + (lp->l_text - eline) < 4)
 		  	continue;
 																/* if is a while directive, make a block... */
 			if (eline[0] != '!')
@@ -559,7 +560,7 @@ failexit:
 		    free(ebuf);
 
 	    if (eexitflag || cc <= FALSE ||
-				  ((lp = lforw(lp))->l_props & L_IS_HD) != 0)
+				  l_is_hd((lp = lforw(lp))))
 				break;
 
 			++lineno;
@@ -568,7 +569,7 @@ failexit:
 #endif
 													/* allocate eline and copy macro line to it */
 		{	int dirnum;					/* directive index */
-			int linlen = lp->l_used+1;
+			int linlen = lused(lp->l_dcr)+1;
 		  if (linlen < sizeof(smalleline))
 			  ebuf = smalleline;
 	    else 
@@ -612,7 +613,7 @@ failexit:
 		  }
 																		/* if macro store is on, salt this away */
 		  if (g_bstore != null && dirnum != DENDM)
-		  { LINE * mp = mk_line(ebuf,linlen-1,linlen-1);
+		  { LINE * mp = mk_line(ebuf,linlen-1,0);
 		    if (mp == NULL)
 		    { cc = FALSE;
 		      continue;
@@ -685,12 +686,12 @@ failexit:
 							(void)token(golabel, sizeof(golabel));
 						  
 						  for (lp = &bp->b_baseline; 
-						      ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
+						      !l_is_hd((lp=lforw(lp))); )
 						    if (*lp->l_text == '*' &&
 										strcmp_right(&lp->l_text[1],golabel) == 0)
 									break;
 
-							if (lp->l_props & L_IS_HD)
+							if (l_is_hd(lp))
 						  {	mlwrite(TEXT127, golabel);				/* "%%No such label" */
 						  	cc = FALSE;
 							}
@@ -892,7 +893,7 @@ Cc Pascal startup(const char * sfname)
 		  	cc = dobuf(dfb,1);
 
 		  if (cc > FALSE &&
-			    window_ct(dfb) == 0)
+			    window_ct(dfb) == NULL)
 		            		  	/* not displayed, remove the unneeded buffer and exit */
 		  	zotbuf(dfb);
 		}

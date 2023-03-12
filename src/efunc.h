@@ -254,7 +254,9 @@ const NBIND names[] =
 	{"view-file",						viewfile},
 	{"widen-from-region",		widen},
 	{"word-search",					wordsearch},
+#if FLUFF
 	{"wrap-word",						wrapword},
+#endif
 	{"write-file",					filewrite},
 	{"write-message",				writemsg},
 	{"yank",								yank},

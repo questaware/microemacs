@@ -73,39 +73,45 @@ int Pascal gotoeol(int notused, int n)
  */
 int Pascal nextch(Lpos_t * lpos, int dir)
 
-{ LINE * lp = lpos->curline;
+{	int adj = 0;
+	LINE * lp = lpos->curline;
   int	off = lpos->curoff;
-	int adj = 0;
 	char c = '\n';
-  int ct = dir == 0 ? 1 : dir;
+	if (dir == 0)
+		dir = 1;
 
-  if (ct > 0)
-  { while (--ct >= 0)
-  	{	if (off < llength(lp)) 	    	/* if at EOL */
+  if (dir > 0)
+  { while (--dir >= 0)
+  	{ if (off < llength(lp)) 	    	/* if at EOL */
 	      c = lgetc(lp, off++);				/* get the char */
 	    else
-	    { lp = lforw(lp);	/* skip to next line */
+	    { off = 0;
 	      adj += 1;
-	      off = 0;
+	      lp = lforw(lp);	/* skip to next line */
+	      if (l_is_hd(lp))
+	      	break;
 			}
     }
   }
   else		       								/* Reverse.*/
-  { while (++ct <= 0)
-	  { if (off > 0)
+  { dir = -dir;
+    while (--dir >= 0)
+  	{ if (off > 0)
 				c = lgetc(lp, --off);
 	    else
 			{	adj -= 1;
 				lp = lback(lp);
+	      if (l_is_hd(lp))
+	      	break;
 	      off = llength(lp);
 	    }
 		}
   }
-{ int res = lp->l_props & L_IS_HD ? -1 : c & 0xff;
+{ int res = dir >= 0 ? -1 : c & 0xff;
   if (res >= 0)
-  {	lpos->curoff = off;
+  {	lpos->curline = lp;
+  	lpos->curoff = off;
 		lpos->line_no += adj;
-  	lpos->curline = lp;
   }
 
   return res;
@@ -117,12 +123,12 @@ int Pascal forwchar(int notused, int n)
 { WINDOW * wp = curwp;
 #if 1
   wp->w_flag |= WFMOVE;
-{	LINE * lp = wp->w_dotp;
-  if (n < 0 && wp->w_doto == 0)
-  	lp = lback(lp);
-  return (lp->l_props & L_IS_HD) ? FALSE
-  															 : nextch((Lpos_t*)wp, n) >= 0;
-}
+//{	LINE * lp = wp->w_dotp;
+//if (n < 0 && wp->w_doto == 0)
+// 	lp = lback(lp);
+  return /* (lp->l_props & L_IS_HD) ? FALSE : */
+  															 nextch((Lpos_t*)wp, n) >= 0;
+//}
 #else
 	if (n < 0)
 	{ while (n++)
@@ -130,7 +136,7 @@ int Pascal forwchar(int notused, int n)
 	    	wp->w_doto--;
 			else
 	    { LINE * lp = lback(wp->w_dotp);
-	      if (lp->l_props & L_IS_HD)
+	      if (l_is_hd(lp))
 					return FALSE;
 	      wp->w_dotp  = lp;
 	      wp->w_doto  = llength(lp);
@@ -139,7 +145,7 @@ int Pascal forwchar(int notused, int n)
 	}
 	else
 	  while (n--) 
-		{ if (wp->w_dotp->l_props & L_IS_HD)
+		{ if (l_is_hd(wp->w_dotp))
 				return FALSE;
 	    if (++(wp->w_doto) > llength(wp->w_dotp)) 
 	    { wp->w_dotp  = lforw(wp->w_dotp);
@@ -308,7 +314,7 @@ int Pascal gotoeop(int notused, int n)  /* go forword to end of current paragrap
       ln = lforw(ln);
 				 		     				/* and scan forword until we hit a <NL><NL> or <NL><TAB>
 				  			  				 or a <NL><SPACE>				*/
-    while ((ln->l_props & L_IS_HD) == 0)
+    while (!l_is_hd(ln))
     { if (llength(ln) == 0 ||
 				  (suc = lgetc(ln, 0)) == '\t' || suc == ' ')
 				break;
@@ -322,7 +328,7 @@ int Pascal gotoeop(int notused, int n)  /* go forword to end of current paragrap
     wp->w_doto = 0;											
 	  wp->w_flag |= WFMOVE; /* force screen update */
  
-    if (dir < 0 && (ln->l_props & L_IS_HD))
+    if (dir < 0 && l_is_hd(ln))
       return gotobob_();
     
     				/* and then backward until we are in a word */
@@ -373,7 +379,7 @@ int Pascal backpage(int f, int n)
 
 {
 #if S_MSDOS == 0
-  if (n > 0 && (lback(curwp->w_linep)->l_props & L_IS_HD))
+  if (n > 0 && l_is_hd(lback(curwp->w_linep)))
   {/*tcapbeep();*/
     return TRUE;
   }

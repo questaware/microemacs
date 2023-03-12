@@ -87,7 +87,7 @@ static void log_restart( logfile, filename, max_size )
       if( *logfile == NULL )
       { if (--log_stderr_clamp >= 0)
           fprintf( stderr, "Unable to open logfile '%s' (%d)\n", filename,
-                                   ferror( *logfile ) );
+                                   feof( *logfile ) );
       }
     }
 

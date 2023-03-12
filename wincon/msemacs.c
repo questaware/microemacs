@@ -79,13 +79,13 @@ void init_wincon()
 
 void Pascal tcapeeol()
 
-{ COORD     Coords;
-  Coords.Y = ttrow;
-  Coords.X = ttcol;
+{ // COORD     Coords;
+  // Coords.Y = ttrow;
+  // Coords.X = ttcol;
 { int sz = g_csbi.dwSize.X-ttcol;
 	DWORD     Dummy;
   
-  FillConsoleOutputCharacter(g_ConsOut, ' ',sz,Coords,&Dummy );
+  FillConsoleOutputCharacter(g_ConsOut, ' ',sz,g_coords,&Dummy );
 }}
 
 /*
@@ -237,31 +237,28 @@ Bool Pascal cursor_on_off(Bool on)
 
 void Pascal USE_FAST_CALL tcapmove(int row, int col)
 
-{/* if (row == ttrow && col == ttcol)
-      return; */
-  COORD  Coords;
+{ COORD  coords;
+	coords.X = col;
 
 	if (row > term.t_nrowm1)
   { // tcapbeep();
     row = term.t_nrowm1;
   }
-	ttrow = row;
-	Coords.Y = row;
 
-	ttcol = col;
-	Coords.X = ttcol;
+	coords.Y = row;
 
 	if (row < term.t_nrowm1 /* && g_cursor_on >= 0 */)
   {	DWORD  Dummy;
 		WriteConsoleOutputAttribute( g_ConsOut, &g_oldattr, 1, g_oldcur, &Dummy );
 	  g_oldattr = refresh_colour(row, col);
-	  g_oldcur = Coords;
+	  g_oldcur = coords;
 	{ WORD MyAttr = // row == term.t_nrowm1 ? BG_GREY :
                        					  	  window_bgfg(curwp) | BACKGROUND_INTENSITY;
 
-	  WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, Coords, &Dummy );	
+	  WriteConsoleOutputAttribute( g_ConsOut, &MyAttr, 1, coords, &Dummy );	
 	}}
-	SetConsoleCursorPosition( g_ConsOut, Coords);
+	g_coords = coords;
+	SetConsoleCursorPosition( g_ConsOut, coords);
 }
 
 
@@ -381,7 +378,7 @@ void Pascal tcapopen()
 
 
 
-int Pascal scwrite(row, outstr, color)	/* write a line out */
+void Pascal scwrite(row, outstr, color)	/* write a line out */
 	int 	 row; 			/* row of screen */
 	short *outstr;		/* string to output (must be term.t_ncol long)*/
 	int 	 color;		 	/* background, foreground */
@@ -391,9 +388,10 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 	unsigned long n_out;
 	WORD attr = color;
 	const SC_WORD sclen = g_csbi.dwSize.X >= 148 ? 148 : g_csbi.dwSize.X;
-
-	COORD Coords;
 	int col;
+	
+	buf[sclen] = 0;
+	cuf[sclen] = 0;
 
 	for (col = -1; ++col < sclen; )
 	{
@@ -422,19 +420,17 @@ int Pascal scwrite(row, outstr, color)	/* write a line out */
 		buf[col] = (outstr[col] & 0xff);
 	}
 	
-	buf[col+1] = 0;
-	cuf[col+1] = 0;
-	Coords.X = 0;
-	Coords.Y = row;
+{	COORD coords;
+	coords.X = 0;
+	coords.Y = row;
 			 
-	WriteConsoleOutputCharacter( g_ConsOut, buf, sclen, Coords, &n_out );
-{ int cc = WriteConsoleOutputAttribute( g_ConsOut, cuf, sclen, Coords, &n_out);
+	WriteConsoleOutputCharacter( g_ConsOut, buf, sclen, coords, &n_out );
+{ int cc = WriteConsoleOutputAttribute( g_ConsOut, cuf, sclen, coords, &n_out);
 #ifdef _DEBUG
 	if (cc == 0 || n_out != sclen)
 		adb(cc);
 #endif
-	return OK;
-}}
+}}}
 
 
 #if	FLABEL

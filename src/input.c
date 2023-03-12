@@ -156,7 +156,7 @@ int  ctlxe(int f, int n)
 { int col = getccol();
 //g_slastkey = lastkey;
 
-	if (col >= macro_start_col && curwp->w_dotp->l_used > 0)
+	if (col >= macro_start_col && lused(curwp->w_dotp->l_dcr) > 0)
 	{
 		if (macro_start_col >= 0)
 			curwp->w_doto = getgoal(macro_start_col, curwp->w_dotp);
@@ -294,7 +294,7 @@ int  USE_FAST_CALL mlyesno(const char * prompt)
 														/* get the response */
 { int c = getkey();   			/* was getcmd(); lets us check for anything that might */
 													  /* generate a 'y' or 'Y' in case use screws up */
-  if (c == abortc)
+  if (c == g_abortc)
     return ABORT;
 
 #if	FRENCH
@@ -357,94 +357,69 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 													/* command containing the current name to complete */
 													/* ptr to position of next character to insert */
 {
-	int iter = -1;   							/* was there a completion at all? */
-					            	/* start attempting completions one character at a time */
-  for ( ; cpos < NSTRING; ++cpos)
-  { if (wh == CMP_FILENAME)
-    {   
-//    strcpy(&name[cpos], "*");
-			name[cpos] = '*';
-			name[cpos+1] = 0;
-   /* mbwrite2("MSD_INIT:",name); */
-      msd_init(name,
-               MSD_DIRY|MSD_REPEAT|MSD_STAY|MSD_HIDFILE|MSD_SYSFILE|MSD_USEPATH);
+  if (wh == CMP_FILENAME)
+	{ strcpy(name+cpos, "*");
+    msd_init(name,
+             MSD_DIRY|MSD_REPEAT|MSD_STAY|MSD_HIDFILE|MSD_SYSFILE|MSD_USEPATH|MSD_MATCHED);
+	}
 
-    }
-  {	int match = 1;
-    int curbind = 0;
-    BUFFER *bp = bheadp;                		/* trial buffer to complete */
+{	int best = 255;
+	const Char * eny;
+  int curbind = 0;
+  BUFFER *bp = bheadp;                		/* trial buffer to complete */
                                                   /* Then the iterators */
-    while (bp != NULL)
-		{	int i;																	/* index into strings */
-    	const Char * eny;
-      if (wh == CMP_BUFFER)
-      {        
+  while (bp != NULL)
+	{	int i;																	/* index into strings */
+		char ch;
+
+    if (wh == CMP_BUFFER)
+    {        
         eny = bp->b_bname;
         bp = bp->b_next;
-      }
-      else 
-      {	if (wh == CMP_COMMAND)
-      	 
-        	eny = names[++curbind - 1].n_name; /* trial command to complete */
-      
-      	else /* if (wh == CMP_FILENAME) */
-      
-      	  eny = msd_nfile();
-
-	      if (eny == NULL)
-        	break;
-      }
-   /* mbwrite(eny); */
-
-      for (i = -1; ++i < cpos; )
-      {
-#if S_MSDOS == 0
-        if (name[i] != eny[i])
-#else
-				if (name[i] == '/' && eny[i] == '\\')
-					continue;	
-        if (((name[i] ^ eny[i]) & ~0x20) != 0)
-#endif
-          break;
-			}
-                                                        /* if it is a match */
-      if (i == cpos)
-      {               				/* if this is the first match, simply record it */
-        if (--match >= 0)
-        { name[i] = eny[i];// lwr(eny[i]);
-//     	  if (wh == CMP_FILENAME)
-          	name[i+1] = 0;
-        }
-                                        /* if there's a difference, stop here */
-#if S_MSDOS == 0
-        else if (name[i] != eny[i])
-#else
-        else if (((name[i] ^ eny[i]) & ~0x20) != 0)
-#endif
-          goto fin;
-      }
-    } /* while over entries */
-                                               /* with no match, we are done */
-    ++iter;
-    if (match > 0)
-    { if (iter <= 0)      		/* beep if we never matched */
-    	  tcapbeep();
-      break;
     }
-                              /* if we have completed all the way... go back */
-    if (name[cpos] == 0)
-      break;
-                          /* remember we matched, and complete one character */
-    mlout(name[cpos]);
-    TTflush();
-  }} /* for (cpos) */
+    else 
+    { if (wh == CMP_COMMAND)
+       
+        eny = names[++curbind - 1].n_name; /* trial command to complete */
+    
+      else /* if (wh == CMP_FILENAME) */
+    
+        eny = msd_nfile();
 
-fin:
-#if S_WIN32
-	(void)msd_tidy();
+      if (eny == NULL)
+        break;
+    }
+ /* mbwrite(eny); */
+                     /* start attempting completions one character at a time */
+    for (i = -1; (ch = eny[++i]); )
+    {
+    	if (name[i] == 0 || name[i] == '*')
+    	{ name[i] = ch;
+    		name[i+1] = 0;
+    	}
+#if S_MSDOS == 0
+      if (name[i] != ch)
+#else
+      if (name[i] == '/' && ch == '\\')
+        continue; 
+      if (((name[i] ^ ch) & ~0x20) != 0)
 #endif
+        break;
+    }
+
+    if (i >= cpos && i < best)
+    	best = i;
+  } // loop
+
+	if (best < 255)
+	{ name[best] = 0;
+		mlputs(0, name+cpos);
+		TTflush();
+		return best;
+	}
+
   return cpos;
-}
+}}
 
 static int USE_FAST_CALL redrawln(int clamp, char buf[])
 
@@ -485,7 +460,7 @@ int g_gs_keyct;
 
 static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
-{ char mybuf[HICHAR];
+{ char mybuf[NSTRING+2];
   char * autostr = "";
   int woffs = curwp->w_doto;
 	int cc = TRUE;
@@ -550,7 +525,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       break;
     }
 
-    if (ch == abortc)
+    if (ch == g_abortc)
     {	cc = ctrlg(FALSE, 0);    /* ABORT, Abort any kb macro */
     	break;
     }
@@ -558,18 +533,17 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     key_ct += 1;
 
 		if (ch >= (ALTD | '1') && ch <= (ALTD | '3'))
-    { ch = (ch & 0x7f) - '2';
+    { ch = (ch & 0x7f) - '1';
 			redo = 3;
-      autostr = strpcpy(mybuf, g_ll.lastline[g_last_cmd], HICHAR-2);
-		{ int cix = strlen(autostr);
+      autostr = strcpy(mybuf, g_ll.lastline[g_last_cmd]);
+		{ int cix_ = strlen(autostr);
+			int cix = cix_;
       mybuf[cix+1] = 0;
       mybuf[cix+2] = 0;
       for (; --cix > 0;)
       	if (mybuf[cix] <= ' ')
        	  mybuf[cix] = 0;
-      if (ch >= 0)
-      	autostr += strlen(autostr)+1;
-      if (ch > 0)
+      while (--ch >= 0)
        	autostr += strlen(autostr)+1;
 			continue;
     }}
@@ -623,10 +597,10 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     { char * homedir = getenv("HOME");
       buf[cpos] = 0;
       if (cpos == 1 && homedir != NULL)
-      { strpcpy(&mybuf[0], homedir, HICHAR-2);
+      { strpcpy(&mybuf[0], homedir, NSTRING-2);
       }
       else
-      { homeusr(strpcpy(&mybuf[0], buf, HICHAR-2));
+      { homeusr(strpcpy(&mybuf[0], buf, NSTRING-2));
       }
       buf[0] = 0;
       cpos = 0;
@@ -636,7 +610,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       continue;
     }               
 #endif
-    if      (c==0x7F || c==0x08)         /* rubout/erase */
+    if (c==0x7F || c==0x08)         /* rubout/erase */
     { if (cpos > 0)
       { int tpos;
 				redo = 3;
@@ -678,8 +652,8 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       fulllen = cpos;
       buf[cpos] = 0;
     }}
-    else if ((c <= 'Z'-'@' && c != 'I'-'@' || c == (ALTD | 'S')) && c != quotec)
-    { switch(c)
+    else if ((c <= 'Z'-'@' && c != 'I'-'@' || c == (ALTD | 'S')) && c != QUOTEC)
+    { switch (c)
       {	case 'B'-'@':
     			autostr = getkill();
 				when 'N'-'@':
@@ -689,14 +663,16 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 				case ALTD | 'S':
 					if (pd_patmatch != NULL)
 						autostr = pd_patmatch;
+				when 0:										// All illegal CTRL.s mapped to /
+					autostr = "/"; 
 				otherwise
 					autostr = mybuf;
-		      woffs = getwtxt(c, &mybuf[0], HICHAR-3-cpos, woffs);
+		      woffs = getwtxt(c, &mybuf[0], NSTRING-3-cpos, woffs);
 			}
     }
     else 
     { int tpos;
-      if (c == quotec)
+      if (c == QUOTEC)
       	ch = getkey();     /* get a character from the user */
       
 getliteral:

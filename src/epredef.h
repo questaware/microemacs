@@ -28,46 +28,58 @@ extern PD_VAR predefvars[];
 #define EVGMODE 	 24
 #define	EVHARDTAB	 25
 #define	EVHLIGHT1  26
-#define	EVHLIGHT2  27
-#define	EVHLIGHT3  28
-#define	EVHLIGHT4  29
-#define EVHJUMP		 30
-#define EVINCLD		 31
-#define EVKEYCT		 32
-#define EVKILL     33
-#define EVLANG     34
-#define EVLASTDIR	 35
-#define EVLASTKEY  36
-#define EVLASTMESG 37
-#define EVLINE     38
-#define EVMATCH    39
-#define EVMSFLAG   40
-#define EVPAGELEN  41
-#define EVPAGEWIDTH 42
-#define EVPALETTE  43
-#define EVPENDING  44
-#define EVPOPUP    45
-#define EVREADHK   46
-#define	EVREGION	 47
-#define EVREPLACE  48
-#define EVSEARCH   49
-#define EVSEED     50
-#define EVSSAVE    51
-#define EVSTATUS	 52
-#define EVUARG		 53
-#define EVVERSION	 54
-#define EVWINNEW	 55
-#define EVWINTITLE 56
-#define EVWLINE 	 57
-#define EVWORK		 58
-#define EVWRAPHK	 59
-#define	EVWRITEHK	 60
+#define	EVHLIGHT10 27
+#define	EVHLIGHT11 28
+#define	EVHLIGHT12 29
+#define	EVHLIGHT13 30
+#define	EVHLIGHT14 31
+#define	EVHLIGHT15 32
+#define	EVHLIGHT16 33
+#define	EVHLIGHT2  34
+#define	EVHLIGHT3  35
+#define	EVHLIGHT4  36
+#define	EVHLIGHT5  37
+#define	EVHLIGHT6  38
+#define	EVHLIGHT7  39
+#define	EVHLIGHT8  40
+#define	EVHLIGHT9  41
+#define EVHJUMP		 42
+#define EVINCLD		 43
+#define EVKEYCT		 44
+#define EVKILL     45
+#define EVLANG     46
+#define EVLASTDIR	 47
+#define EVLASTKEY  48
+#define EVLASTMESG 49
+#define EVLINE     50
+#define EVMATCH    51
+#define EVMSFLAG   52
+#define EVPAGELEN  53
+#define EVPAGEWIDTH 54
+#define EVPALETTE  55
+#define EVPENDING  56
+#define EVPOPUP    57
+#define EVREADHK   58
+#define	EVREGION	 59
+#define EVREPLACE  60
+#define EVSEARCH   61
+#define EVSEED     62
+#define EVSSAVE    63
+#define EVSTATUS	 64
+#define EVUARG		 65
+#define EVVERSION	 66
+#define EVWINNEW	 67
+#define EVWINTITLE 68
+#define EVWLINE 	 69
+#define EVWORK		 70
+#define EVWRAPHK	 71
+#define	EVWRITEHK	 72
 #if 0
-#define EVXPOS		 61
-#define EVYPOS		 62
-#define EVZCMD		 63
+#define EVXPOS		 73
+#define EVYPOS		 74
+#define EVZCMD		 75
 #else
-#define EVZCMD		 61
+#define EVZCMD		 73
 #endif
 
 #define pd_gacount  predefvars[EVACOUNT].i
@@ -79,37 +91,35 @@ extern PD_VAR predefvars[];
 #define pd_col1ch   predefvars[EVCOL1CH].i
 #define pd_col2ch   predefvars[EVCOL2CH].i
 #define pd_lastkey  predefvars[EVLASTKEY].i
-#define seed       predefvars[EVSEED].i
-#define g_gmode	   predefvars[EVGMODE].i
-#define g_univct   predefvars[EVUARG].i
-#define pd_gflags  predefvars[EVGFLAGS].i
-#define pd_xpos	   predefvars[EVXPOS].i		// For mouse
-#define pd_ypos	   predefvars[EVYPOS].i
-#define pd_keyct   predefvars[EVKEYCT].i
-#define pd_tabsize predefvars[EVHARDTAB].i
-#define pd_hjump	 predefvars[EVHJUMP].i
+#define pd_seed     predefvars[EVSEED].i
+#define g_gmode	    predefvars[EVGMODE].i
+#define g_univct    predefvars[EVUARG].i
+#define pd_gflags   predefvars[EVGFLAGS].i
+#define pd_xpos	    predefvars[EVXPOS].i		// For mouse
+#define pd_ypos	    predefvars[EVYPOS].i
+#define pd_keyct    predefvars[EVKEYCT].i
+#define pd_tabsize  predefvars[EVHARDTAB].i
+#define pd_hjump	  predefvars[EVHJUMP].i
 #define pd_cmt_colour predefvars[EVCMTCOL].i
 #define pd_macbug	    predefvars[EVDEBUG].i
 #define pd_cmdstatus  predefvars[EVSTATUS].i
-#define pd_got_msg predefvars[EVCFNAME].i /* stolen */
-#define diagflag   predefvars[EVDIAGFLAG].i
-#define pd_discmd	 predefvars[EVDISCMD].i /* 0 : nowt, -1 record only */
-#define g_disinp	 predefvars[EVDISINP].i
-#define pd_fcol		 predefvars[EVFCOL].i
-#define pd_ssave   predefvars[EVSSAVE].i
+#define pd_got_msg  predefvars[EVCFNAME].i /* stolen */
+#define diagflag    predefvars[EVDIAGFLAG].i
+#define pd_discmd	  predefvars[EVDISCMD].i /* 0 : nowt, -1 record only */
+#define g_disinp	  predefvars[EVDISINP].i
+#define pd_fcol		  predefvars[EVFCOL].i
+#define pd_ssave    predefvars[EVSSAVE].i
 #define pd_incldirs predefvars[EVINCLD].p
-#define mouseflag  predefvars[EVMSFLAG].i
-#define pd_predef  predefvars[EVLINE].i /* stolen */
-#define pd_sgarbf  predefvars[EVBUFHOOK].i
-#define pd_palstr  predefvars[EVPALETTE].p
-#define pd_pat		 predefvars[EVSEARCH].p
-#define pd_hlight1 predefvars[EVHLIGHT1].p
-#define pd_hlight2 predefvars[EVHLIGHT2].p
-#define pd_hlight3 predefvars[EVHLIGHT3].p
-#define pd_hlight4 predefvars[EVHLIGHT4].p
+#define mouseflag   predefvars[EVMSFLAG].i
+#define pd_predef   predefvars[EVLINE].i /* stolen */
+#define pd_sgarbf   predefvars[EVBUFHOOK].i
+#define pd_palstr   predefvars[EVPALETTE].p
+#define pd_pat		  predefvars[EVSEARCH].p
+#define pd_hlight1  predefvars[EVHLIGHT1].p
+#define pd_hlight2  predefvars[EVHLIGHT2].p
 #define pd_file_prof predefvars[EVFILEPROF].p
 #define pd_patmatch  predefvars[EVMATCH].p
-#define pd_winnew	 predefvars[EVWINNEW].i
+#define pd_winnew	  predefvars[EVWINNEW].i
 
 #define pd_kbdrd   predefvars[EVCBUFNAME].i
 #define pd_kbdrep  predefvars[EVCMODE].i
@@ -118,13 +128,13 @@ extern PD_VAR predefvars[];
 
 #if 0
 					/* overloading variables */
-X#define xxx	  predefvars[EVREADHK]
+X#define xxx	       predefvars[EVREADHK]
 X#define g_execlevel predefvars[EVCMDHK]
-X#define abortc    predefvars[EVKILL]
+X#define g_abortc    predefvars[EVKILL]
 X#define g_prefix    predefvars[EVLASTDIR]
-X#define prenum    predefvars[EVLASTMESG]
-X#define cryptflag predefvars[EVVERSION]
-X#define gs_term   predefvars[EVRAM]
+X#define prenum      predefvars[EVLASTMESG]
+X#define cryptflag   predefvars[EVVERSION]
+X#define gs_term     predefvars[EVRAM]
 
 #endif
 

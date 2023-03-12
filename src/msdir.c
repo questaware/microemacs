@@ -246,28 +246,34 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 
 { Char ch;
   short pe;
-  short pe_last_sl = 0;
+//short got_star = 0;
+  short pe_last_sl = -1;
 
 // msd_relpath = msd_path;
 												/* msd_path often == diry */
   for ( pe = -1; ++pe < FILENAMESZ && (msd_path[pe] = (ch = diry[pe])) != 0; )
-  {	if (ch == '\\' || ch == '/')
+  {//if (ch == '*')
+   //  got_star = 1;
+    if (ch == '\\' || ch == '/')
     { msd_path[pe] = USE_DIR ? '\\' : '/';
       pe_last_sl = pe + 1;
     }
   } 
 #if USE_DIR
 {	char cmd[NFILEN+40];
-	int offs = (props & MSD_SEARCH) ? 2 : 0;
-	strcpy(strcpy(cmd,"dir /b /t:a /od /s ")+16+offs, msd_path);
+	int offs = (props & MSD_SEARCH) ? 3 : 0;
+	strcpy(strcpy(cmd,"dir /ah/a /b/tw/od /s ")+19+offs, msd_path);
 
-	if (pe_last_sl > 0)
+	if (pe_last_sl >= 0)		// && (props & MSD_USEPATH)
 		msd_path[pe_last_sl] = 0;
+	if (!(props & MSD_MATCHED))
+		msd_path[0] = 0;
 {	BUFFER * sbp = curbp;
  	BUFFER * bp = bfind(cmd, 1, 0);
 	curbp = bp;
 {	int rc = pipefilter('=');
-	zotbuf(bp);
+	if (bp != curbp)
+		zotbuf(bp);
 	curbp->b_flag &= ~BFCHG;
 	msd_buffer = curbp;
 	msd_curr = &msd_buffer->b_baseline;
@@ -561,21 +567,19 @@ Char * msd_nfile()
 {
 #if USE_DIR
 	msd_curr = lforw(msd_curr);
-	if (msd_curr->l_props & L_IS_HD)
+	if (l_is_hd(msd_curr))
 		return msd_tidy();
 
 { int pe = 0;
-	if (msd_props & MSD_DIRY)
-	{	int ix;
-		for ( ix = strlen(msd_path); --ix > 0; )
-			if (msd_path[ix] == '\\')
-			{ msd_path[ix] = '/';
-				if (pe == 0)
-					pe = ix + 1;
-			}
-	}
+	int ix;
+	for ( ix = strlen(msd_path); --ix > 0; )
+		if (msd_path[ix] == '\\' || msd_path[ix] == '/')
+		{ msd_path[ix] = '/';
+			if (pe == 0)
+				pe = ix + 1;
+		}
 
-	strpcpy(msd_path+pe, msd_curr->l_text, msd_curr->l_used+1);
+	strpcpy(msd_path+pe, msd_curr->l_text, lused(msd_curr->l_dcr)+1);
 
 	return msd_path;
 }

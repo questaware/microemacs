@@ -41,21 +41,20 @@
 
 extern char * getenv();
 
-extern int g_overmode;			/* from line.c */
+extern int g_overmode;		/* from line.c */
 
-																	/* initialized global definitions */
-int g_macargs = TRUE;		/* take values from command arguments */
+COORD g_coords; 					/* location of HW cursor	*/
+
+													/* initialized global definitions */
+int g_macargs = TRUE;		  /* take values from command arguments */
 
 #if S_WIN32
-short g_colours = 7;		/* (backgrnd (black)) * 16 + foreground (white) */
+short g_colours = 7;		  /* (backgrnd (black)) * 16 + foreground (white) */
 #else
 short g_colours = 0x70;		/* (backgrnd (black)) * 16 + foreground (white) */
 #endif
 
-int ttrow = 0; 					/* Row location of HW cursor	*/
-int ttcol = 0; 					/* Column location of HW cursor */
-
-int abortc = CTRL | 'G';	/* current abort command char	*/
+int g_abortc = CTRL | 'G';	/* current abort command char	*/
 
 static
 int g_prefix = 0;	/* currently pending prefix bits */
@@ -65,16 +64,16 @@ int g_prefix = 0;	/* currently pending prefix bits */
 //int g_newest = 0;       /* choose newest file */
 
 #if WRAP_MEM
- Int envram = 0l;		/* # of bytes current in use by malloc */
+ Int envram = 0l;					/* # of bytes current in use by malloc */
 #endif
 
 const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
 
 //char palstr[49] = "";		/* palette string		*/
-char lastmesg[NCOL+2] = ""; 	/* last message posted		*/
+char lastmesg[NCOL+2] = ""; 	 /* last message posted		*/
 int(Pascal *lastfnc)(int, int);/* last function executed	*/
-int eexitflag = FALSE;	/* EMACS exit flag		*/
-int eexitval = 0; 	/* and the exit return value	*/
+int eexitflag = FALSE;		/* EMACS exit flag		*/
+//int eexitval = 0; 			/* and the exit return value	*/
 
 
 /* uninitialized global definitions */
@@ -300,6 +299,11 @@ void Pascal dcline(int argc, char * argv[])
   tcapkopen();    /* open the keyboard */
   tcaprev(FALSE);
 
+#if S_WIN32
+	(void)_getcwd(lastmesg, sizeof(lastmesg));
+	setconsoletitle(lastmesg);
+#endif
+
 	curbp = firstbp;
 	swbuffer(firstbp);
 
@@ -330,11 +334,11 @@ void Pascal dcline(int argc, char * argv[])
 	
 	(void)gotoline(TRUE, gline);
  
-	if (genflag & 2)
-		(void)forwhunt(FALSE, 0);
+//if (genflag & 2)
 
   g_gmode &= ~MDCRYPT;
 	g_macargs = FALSE;
+	(void)forwhunt(FALSE, 0);
 }}
 
 
@@ -414,7 +418,7 @@ int main(int argc, char * argv[])
 #if S_LINUX
 	stdin_close();
 #endif
- 	return eexitval;
+ 	return g_thisflag;
 }}
 
 #if CLEAN
@@ -488,8 +492,7 @@ ret:
 	g_lastflag = g_thisflag;
 	g_thisflag = 0;
 
-{ int status = FALSE;
-	KEYTAB *key = getbind(c); /* key entry to execute */
+{ KEYTAB * key = getbind(c); /* key entry to execute */
 /*loglog3("L %x T %x c %d", lastbind==NULL ? 0 : lastbind->k_code,key->k_code,keyct);*/
 
 	if (key != g_lastbind)
@@ -499,7 +502,8 @@ ret:
 
 	pd_keyct += 1;
 					 
-	if		 (key->k_code != 0) /* if keystroke is bound to a function..do it*/
+{ int status = key->k_code;
+	if (status) 				/* if keystroke is bound to a function..do it*/
 	{
 		status = execkey(key, f, n);			// f is 0 or any other value
 	}
@@ -545,7 +549,7 @@ ret:
 		}
 	}
 	return status;
-}}
+}}}
 
 #if S_WIN32
 #define PFXX META
@@ -668,23 +672,23 @@ Pascal quit(int f, int n)
 { int status = TRUE;
 																/* Argument forces it.	*/
 	if (! f )
+	{ n = GOOD;
 	{ int got = lastbuffer(-1, 0);
 
 		if (got != 0)
 			status = mlyesno(TEXT104);
 										/* "Modified buffers exist. Leave anyway" */
-	}
+	}}
 
 	if (status > 0)
 	{
 #if FILOCK
 		if (lockrel() != TRUE)
-		{ f = 1;
-			n = 1;
+		{ n = 1;
 		}
 #endif
-		eexitval = f ? n : GOOD;
-		eexitflag = TRUE; /* flag a program exit */
+		eexitflag = status; 			/* flag a program exit */
+		g_thisflag = n;
 #if S_MSDOS
 //	ttrow = 0;
 #endif

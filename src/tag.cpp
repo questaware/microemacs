@@ -437,7 +437,7 @@ findTag(int f, int n)
     }
     else
     {	char * ss = curwp->w_dotp->l_text;
-		int  ll   = curwp->w_dotp->l_used;
+		int  ll   = llength(curwp->w_dotp);
         int  offs = curwp->w_doto;
         middle = offs > 0 && ss[offs - 1] == ':';
 												/* Go to the start of the word.*/
@@ -455,7 +455,7 @@ findTag(int f, int n)
 //      while (--len >= 0 && tag[len] == ':')
 //       	tag[len] = 0;
 
-		if ((g_clring & BCFOR) || gtusr("uctags") != NULL)
+		if (g_clring & BCFOR)
         	mkul(1, tag);
     }}
 

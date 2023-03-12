@@ -175,13 +175,15 @@ FILE * ffwopen(int mode, char * fn)
  * and the "nbuf" is its length, less the free newline. Return the status.
  * Check only at the newline.
  */
+/* Write a line to the already opened file. The "buf" points to the buffer,
+ * and the "nbuf" is its length, less the free newline. Return the status.
+ * Check only at the newline.
+ */
 int Pascal ffputline(FILE * op, char buf[], int nbuf)
 	
 {	int cc;
-#if S_WIN32
-#define crypt (curbp->b_flag & MDCRYPT)
-#else
-	int crypt = CRYPT == 0 ? 0 : (curbp->b_flag & MDCRYPT);
+	int crypt = CRYPT == 0 ? 0 : curbp->b_flag & MDCRYPT;
+#if S_WIN32 == 0
 	if (crypt == 0)
   	cc = fwrite(&buf[0], 1, nbuf, op);
 	else
@@ -214,7 +216,7 @@ int Pascal ffputline(FILE * op, char buf[], int nbuf)
  * at the end of the file that don't have a newline present. Check for I/O
  * errors too. Return status.
  */
-Cc Pascal ffgetline(int * len_ref)
+int Pascal ffgetline()
 	
 { static 
    int g_flen;
@@ -237,12 +239,11 @@ Cc Pascal ffgetline(int * len_ref)
 	    } 
 //  }
 	  if (++i >= flen)
-	  { if (flen+NSTRING+1 > 0xfffe)
-	      return FIOMEM;
-
-	  { char * tmpline = (char*)malloc(flen+NSTRING+1);
+	  {														/* lines longer than 16Mb get truncated */
+	  	char * tmpline = (char*)malloc(flen+NSTRING+1);
 	    if (tmpline == NULL)
 	      return FIOMEM;
+
 	    if (g_fline != null)
 	    { memcpy(tmpline, g_fline, flen);
 	      free(g_fline);
@@ -250,15 +251,14 @@ Cc Pascal ffgetline(int * len_ref)
 	    g_fline = tmpline;
 	    flen += NSTRING;
 			g_flen = flen;
-	  }}
+	  }
 	  g_fline[i] = c;
 	} while (c >= 0 && c != '\n');
 
-	*len_ref = i;
 	g_fline[i] = 0;
 											/* test for any errors that may have occured */
 	if (c < 0)
-	{ if (ferror(g_ffp))
+	{ if (!feof(g_ffp))
 	  { mlwrite(TEXT158);
 						/* "File read error" */
 	    return FIOERR;
@@ -266,7 +266,7 @@ Cc Pascal ffgetline(int * len_ref)
 	  return FIOEOF;
 	}
 
-	return FIOSUC;
+	return i;
 }}
 
 #endif
@@ -300,7 +300,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
       break;
 
     if      (ch == '*')
-      search_type = MSD_DIRY;
+      search_type = MSD_DIRY | MSD_MATCHED;
     else if (ch == '.' && s[0] == '.' && s[1] == '.' && s[2] != '/')
     {	search_type = (tgt - t) - 1;
     	--t;

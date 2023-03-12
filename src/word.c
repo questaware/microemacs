@@ -36,6 +36,8 @@ int Pascal inword()
 { return isword(thischar());
 }
 
+#if FLUFF
+
 /* Word wrap on n-spaces. Back-over whatever precedes the point on the current
  * line and stop on the first word-break or the beginning of the line. If we
  * reach the beginning of the line, jump back to the end of the word and start
@@ -47,8 +49,7 @@ int Pascal inword()
 int Pascal wrapword(int f, int n)
 
 { 					             /* backup from the <NL> 1 char */
-	if (!forwbychar(-1))
-	  return FALSE;
+	(void)forwbychar(-1);
               				   /* back up until we aren't in a word,
               				      make sure there is a break in the line */
 { int	cnt = 0;
@@ -61,25 +62,27 @@ int Pascal wrapword(int f, int n)
                   		  /* if we make it to the beginning, start a new line */
 	  if (curwp->w_doto == 0)
 	  { gotoeol(FALSE, 0);
-	    return lnewline();
+	    return lnewline(1);
 	  }
 	}
             					  /* delete the forward white space */
-	if (!forwdel(0, 1) || !lnewline())
+	if (!forwdel(0, 1) || !lnewline(1))
 	  return FALSE;
           						  /* and past the first word */
 	while (--cnt >= 0)
 	  if (forwbychar(1) == FALSE)
 	    return FALSE;
+#if 0
                 			  /* make sure the display is not horizontally scrolled */
 	if (curwp->w_fcol != 0)
 	{ curwp->w_fcol = 0;
 	  curwp->w_flag |= WFHARD | WFMOVE | WFMODE;
 	}
-
+#endif
 	return TRUE;
 }}
 
+#endif
 
 static int  g_f_size;
 
@@ -92,34 +95,6 @@ int Pascal backword(int notused, int n)
 
 { // if (n < 0 || 1)
   return nextword(-n, -n);
-#if 0
-{ int f_size = -1;
-  
-  while (--n >= 0)
-  { int ch;
-  	while (TRUE)													// Skip spaces and usually A_LEND
-    { if (forwbychar(-1) == FALSE)
-        return FALSE;
-      f_size += 1;
-      ch = thischar();
-      if (isword(ch)) // !isspace(ch) && ch != A_LEND)
-				break;
-    }
-
-//  if (n <= 0 && g_ignore >= 0)
-//   	break;
-	  																			// skip non spaces
-    for ( ; is_word(ch)/*!is_space(ch) && ch != A_LEND */ ; ch = thischar())
-    { if (forwbychar(-1) == FALSE)
-			  return TRUE;
-      f_size += 1;
-		}
-  } 
-
-  g_f_size = f_size;
-  return forwbychar(1);
-}
-#endif
 }
 
 
@@ -141,26 +116,26 @@ int Pascal nextword(int notused, int n)
 	}
 
 { int f_size = -mask;
-  int prev_ch = -1;
 
   while (--n >= 0)
 	{	if (dir < 0)
 			if (forwbychar(dir) == FALSE)
 				return FALSE;
 			
-  { int ch = thischar();
+  {	int prev_is_sp = -1;
+    int ch = thischar();
 		int state = isword(ch) ^ mask;
 		int iter = 1 + state;
 
   	while (--iter >= 0)
 		{	while (state == (isword(ch) ^ mask))
-		  { if      (!isspace(ch))
-		  	{ if (!mask && isspace(prev_ch))
+		  { if      (ch > ' ')
+		  	{ if (!mask && prev_is_sp > 0)
 		  			break;
 		  	}
-		  	else if (mask && prev_ch >= 0 && !isspace(prev_ch))
+		  	else if (mask && prev_is_sp > 0)
 		  		break;
-	    	prev_ch = ch;
+	    	prev_is_sp = ch <= ' ';
 	      ch = nextch((Lpos_t*)curwp, dir);
 				if (ch < 0)
 				{	if (dir < 0)
@@ -179,34 +154,47 @@ int Pascal nextword(int notused, int n)
 }}
 
 
-static int Pascal ccaseword(int n, int low)
+static int USE_FAST_CALL ccaseword(int n, int low)
 
-{	if (low != 3 && rdonly())
+{	if (low >= 0 && rdonly())
 		return FALSE;
 
   while (--n >= 0)
-  { int lo = low;
-    while (!inword())
-      if (forwbychar(1) == FALSE)
-        return FALSE;
+  { int iter = 1;
+//  while (!inword())
+//    if (forwbychar(1) == FALSE)
+//      return FALSE;
 
     while (TRUE)
     { int ch = thischar();
-			if (!isword(ch))
-				break;
-			if (isalpha(ch) && lo < 3)
-			{ if (lo == 0 && (ch & 0x20) == 0 ||
-						           (ch & 0x20))
+    	int is = isword(ch);
+    	if (is)
+    	{ if (iter)
+    		{ iter = 0;
+    			goto next;
+    		}
+    	}
+    	else
+    	{ if (iter)
+    			goto next;
+				else
+					break;
+    	}
+//		if (!isword(ch))
+//			break;
+			if (isalpha(ch) && low >= 0)
+			{ if (low == 0 && (ch & 0x20) == 0 ||
+						            (ch & 0x20))
 
+	      { if (low == 2)
+  	      	low = -1;
 //    if (lo == 0 && !islower(ch) ||
 //        lo < 3  &&  islower(ch))
-	      { lputc(curwp->w_dotp,curwp->w_doto, chcaseunsafe(ch));
+	        lputc(curwp->w_dotp,curwp->w_doto, chcaseunsafe(ch));
   	      lchange(WFEDIT);
     	  }
 			}
-      if (lo == 2)
-        lo = 3;  
-      if (forwbychar(1) == FALSE)
+next: if (forwbychar(1) == FALSE)
         return FALSE;
 		}
 	}
@@ -252,7 +240,7 @@ int Pascal capword(int f, int n)
 int Pascal endword(int notused, int n)
 
 { return n < 0 ? nextword(n, n)
-	  			     : ccaseword(n, 3);
+	  			     : ccaseword(n, -1);
 }
 
 /*
@@ -272,12 +260,13 @@ Pascal delfword(int notused, int n)
 
 	if (n == 0)
 	  return TRUE;
+
+	g_thisflag = CFKILL;			/* this command is a kill */
+        
 								      /* Clear the kill buffer if last command wasn't a kill */
 	if ((g_lastflag & CFKILL) == 0)
 	  kdelete(0, 0);
 
-	g_thisflag |= CFKILL;	/* this command is a kill */
-        
 //g_ignore = 256;
   (void)nextword(n, n);
 //g_ignore = A_LEND;
@@ -349,18 +338,18 @@ Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 
 	while (1)
 	{	eop = curwp->w_dotp;
-		if (eop->l_props & L_IS_HD)
+		if (l_is_hd(eop))
 			break;
 		if (inc > 0)
 		{ if ((n -= 1) < 0)
 				break;
 		}
 		else
-			if (eop->l_used == 0 || eop->l_text[0] <= ' ')
+			if (lused(eop->l_dcr) == 0 || eop->l_text[0] <= ' ')
 				if ((n += 1) > 0)
 					break;
 
-	  psize += eop->l_used + 1;
+	  psize += lused(eop->l_dcr) + 1;
 		forwbyline(1);
 	}
 
@@ -372,7 +361,7 @@ Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 	  return FALSE;
 
 	while (bop != eop)
-	{ int lsize = bop->l_used + 1;
+	{ int lsize = lused(bop->l_dcr) + 1;
 		char sep = 0;
 		char * txtptr = bop->l_text-1;
 		if (txtptr[1] <= ' ' && pp[-1] != '\n')
@@ -402,7 +391,7 @@ Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 {	int back = pp - (para + 2);
   int cc = linstr(reform(para+2));
 	free(para);
-	lnewline();											/* add the last newline to our paragraph */
+	lnewline(1);											/* add the last newline to our paragraph */
 																				/* reposition us to the same place */
 	forwbychar(-back);
 	return cc; 
@@ -491,23 +480,24 @@ int Pascal wordcount(int notused, int n)
 
 int USE_FAST_CALL getwtxt(int wh, char * buf, int lim, int from)
 	  														/* wh : B, F, G, K, N, S, W else whole line */
-{	wh -= 'W'-'@';
-
-{ int offs = wh == 0 || wh == 'K'-'W' ? from : 0;
-	int lct = llength(curwp->w_dotp) - offs;
-  if (lct > lim)
-    lct = lim;
-
 { char * t = buf;
-  int	ct = 0;
-  while (--lct >= 0)
-  { int c = lgetc(curwp->w_dotp, offs);
-    if (! isword(c) && ct > 0 && wh == 0)
-      break;
-    *t++ = c;
-    ++offs;
-    ++ct;
-  }
+
+	wh -= 'W'-'@';
+{ int offs = wh == 0 || wh == 'K'-'W' ? from : 0;
+	  
+	int lct = llength(curwp->w_dotp) - offs;
+	if (lct > lim)
+	  lct = lim;
+
+{ int	ct = 0;
+	while (--lct >= 0)
+	{ int c = lgetc(curwp->w_dotp, offs);
+	  if (! isword(c) && ct > 0 && wh == 0)
+	    break;
+	  *t++ = c;
+	  ++offs;
+	  ++ct;
+	}
 
   *t = 0;
 

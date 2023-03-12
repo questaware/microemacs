@@ -20,12 +20,13 @@ extern /*const*/ char TEXT23[];
 
 #ifdef IN_RANDOM_C
 
-static
-const char cname [][9] = {		/* names of colors		*/
-	"BLACK", "RED", "GREEN", "YELLOW", "BLUE",
-	"MAGENTA", "CYAN", "GREY",
-	"GRAY", "LRED", "LGREEN", "LYELLOW", "LBLUE",
-	"LMAGENTA", "LCYAN", "WHITE"};
+const char attrnames [][9] = {		
+ "VW ",    "WRAP ", "OVER ",	"Aa ",	  "RE",     // names of modes */
+ "// ",    "MS ",   "CRYPT ", "ASAVE ", "CHGD", "INVS",
+	"BLACK", "RED",     "GREEN", "YELLOW", 					// names of colors */
+	"BLUE",  "MAGENTA", "CYAN",  "GREY",
+	"GRAY",  "LRED",    "LGREEN","LYELLOW", 
+	"LBLUE", "LMAGENTA","LCYAN", "WHITE"};
 
 #define NCOLORS 16
 

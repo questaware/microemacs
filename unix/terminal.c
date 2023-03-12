@@ -287,25 +287,25 @@ void putpad(const char * str)		/* cheaper version */
 
 /**********************************************************************/
 
-static Map_t keymap = mk_const_map(T_DOMCHAR0+6, 0, keytbl, 0);
-static Map_t capmap = mk_const_map(T_DOMCHAR0+6, 0, captbl, 0);
+
+Map_t g_keymap = mk_const_map(T_DOMCHAR0+6, 0, keytbl, 0);
+Map_t g_capmap = mk_const_map(T_DOMCHAR0+6, 0, captbl, 0);
+
 
 int Pascal use_named_str(name, str)
 	Char *   name;
 	Char *   str;
 {
   if (name != null)
-  { keymap.srch_key = name;
-    capmap.srch_key = name;
-  { Vint ix = binary_const(&keymap, keytbl);
+  { Vint ix = binary_const(2, name);
     if (ix >= OK)
       strpcpy(keytbl[ix].p_seq, str, sizeof(keytbl[0].p_seq));
 
-    ix = binary_const(&capmap, captbl);
+    ix = binary_const(3,name);
     if (ix >= OK)
       strpcpy(captbl[ix].p_seq, str, sizeof(captbl[0].p_seq));
-  }}
-  
+  }
+
  /* strcat(&kseq[K_ED][0], kseq[K_SGR0]); */
 
 	        /* kseq[K_IND][0] != 0 && kseq[K_RI][0] != 0 || 

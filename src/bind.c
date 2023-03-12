@@ -460,7 +460,7 @@ int Pascal USE_FAST_CALL addnewbind(int c, int (Pascal *func)(int, int))
   ktp->k_code   = c;
   ktp->k_ptr.fp = func;
 	if (func == ctrlg)					/* if the function is a unique prefix key */
-	 	abortc = c;								/* reset the appropriate global prefix variable*/
+	 	g_abortc = c;								/* reset the appropriate global prefix variable*/
 
   return TRUE;
 }}
@@ -552,8 +552,8 @@ unsigned int Pascal stock(char * keyname)
   	}
 	}
 
-  if (c & (CTRL|CTLX|META))
-    mkul(1, keyname);								/* Make sure it's upper case */
+//if (c & (CTRL|CTLX|META))
+  mkul(1, keyname);								/* Make sure it's upper case */
 
   return c | *keyname & 255;
 }
@@ -747,7 +747,7 @@ int Pascal buildlist(const char * mstring)
 		}
 #if 0
 	{ BUFFER * BP; 								/* add blank line between key and macro lists */
-		lnewline();
+		linsert(1, '\n');
 									 							/* scan buffers for macros and their bindings*/
 		for (bp = bheadp; bp != NULL; bp = bp->b_next)
 		{																					/* add in the command name */
@@ -1047,21 +1047,18 @@ const char *Pascal getfname(int keycode)
   return "";
 }
 
-static
-Map_t namemap = mk_const_map(T_DOMSTR, 0, names, 1);	//-1: last entry not wanted
+Map_t g_namemap = mk_const_map(T_DOMSTR, 0, names, 1);	//-1: last entry not wanted
 
 						/* fncmatch:	match fname to a function in the names table and return
 													any match or NULL if none
 						*/
 int (Pascal *Pascal USE_FAST_CALL fncmatch(char * fname))(int, int)
 	/* char *fname;	** name to attempt to match */
-{		
-	namemap.srch_key = fname;
-	
-{ int last_fnum = binary_const(&namemap, names);
+		
+{ int last_fnum = binary_const(-1, fname);
 
 	return last_fnum < 0 ? NULL : names[last_fnum].n_func;
-}}
+}
 
 
 					/* execute a function bound to a key */
@@ -1125,8 +1122,8 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 #define DESC_TO_FILE 0
 #if DESC_TO_FILE
 {	BUFFER *bp = bufflink("pjsout", (g_macargs > 0) | 64);
-	if (bp != NULL)
-	{	swbuffer(bp);
+	if (swbuffer(bp) > 0)
+	{	
 		gotoeob(0,0);
 		while (pd_lastkey > 32)
 		{ mlerase();
@@ -1136,8 +1133,7 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 			const char * ptr = getfname(c);				/* find the right ->function */
 			mlwrite("\001 %d %s %s", pd_lastkey, cmdstr(&outseq[0], c),
 																			 *ptr != 0 ? ptr  TEXT14);
-			strcat(lastmesg,"\n");
-			linstr(lastmesg);
+			linstr(strcat(lastmesg,"\n"));
 		}}
 	}
 }

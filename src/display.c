@@ -54,11 +54,11 @@ typedef struct	VIDEO
 } VIDEO;
 
 #define VFCHG 0x0001	/* Changed flag 		*/
-#define VFEXT 0x0002	/* extended (beyond column 80)	*/
-#define VFREV 0x0004	/* reverse video status 	*//* contig these 2*/
-#define VFREQ 0x0008	/* reverse video request	*/
-#define VFCOL 0x0010	/* color change requested OBSOLETE */
-#define VFCMT 0x0020	/* starts in comment		*/
+#define VFCMT 0x0002	/* starts in comment*/
+#define VFEXT 0x0004	/* extended (beyond column 80)	*/ 
+#define VFREV 0x0008	/* reverse video status 	*//* contig these 2*/
+#define VFREQ 0x0010	/* reverse video request	*/
+#define VFCOL 0x0020	/* color change requested OBSOLETE */
 #define VFML	0x0040	/* is a modeline		*/
 
 
@@ -84,10 +84,7 @@ static VIDEO	 **vscreen; 	/* Virtual screen. */
 #define MEMCT 2
 #endif
 
-const char mdname[NUMMODES][8] = {		/* name of modes		*/
- "WRAP ", "CMODE ", "MS ", "Aa ",	"VW ",
- "OVER ", "RE ", "CRYPT ", "ASAVE ","//","CHGD", "INVS"
- };
+extern const char attrnames [][9];
 
 //static int g_currow;	/* Cursor row			*/
 //static int g_curcol;	/* Cursor column		*/
@@ -124,10 +121,10 @@ unsigned short USE_FAST_CALL refresh_colour(int row, int col)
       else if (wh & 0x80)
         attr = line_attr;
 #if 0
-      if (wh & 1)
-				attr |= COMMON_LVB_UNDERSCORE;
 			if (wh & 2)
 			  attr |= FOREGROUND_INTENSITY;
+      if (wh & 1)
+				attr |= COMMON_LVB_UNDERSCORE;
 #endif
     }
 
@@ -344,28 +341,27 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 {	VIDEO *vp = vscreen[row];
 	short * tgt = &vp->v_text[-1];
-	char * high[] = {"","","","",};
+	int is_ml = ((char*)tgt)[1] & VFML;
 	int len = llength(lp); 		/* an upper limit */
   unsigned char * str = (unsigned char *)&lp->l_text[-1];
-	unsigned char s_props = *str;												/* layout dependent */
-	*str = 0;																						/* restored below */
-	if ((vp->v_flag & VFML) == 0)
-		memcpy(&high[0], &pd_hlight1, sizeof(char*)*4);
-
-	if (cmt_chrom)
-		cmt_chrom = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
+//unsigned char s_flags = *str;												/* layout dependent */
+//*str = 0;																						/* restored below */
 
 { // const char c_beg_cmt[16] = "`/`///`/(/`///`/";
 	// const char c_sec_cmt[16] = " *#***#***#***#*";
  	Short  clring = g_clring;
-	int mode = clring == 0 || cmt_chrom == 0 || (vp->v_flag & VFML)
-								 		? -1 : s_props & VFCMT;
-	int chrom_nxt = 0;
+	int mode = clring == 0 ? 0 : lp->l_dcr & VFCMT;
+	if (cmt_chrom == 0)
+		mode = 0;
+	else
+		cmt_chrom = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
+
 //int beg_cmt = c_beg_cmt[clring & 15];
 //int sec_cmt = c_sec_cmt[clring & 15];
 	
-	if ((clring & BCD) && (s_props & VFCMT) ||
-			(clring & BCFOR) && toupper(str[1]) == 'C' && len > 0)
+{	int chrom_nxt = 0;
+	if (!is_ml && ((clring & BCD)   && mode ||
+		   					 (clring & BCFOR) && toupper(str[1]) == 'C' && len > 0))
 		chrom_nxt = cmt_chrom;
 
 //int chrom_in_peril = false;
@@ -373,7 +369,8 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 {	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
 	int  markuplen = 1;
 	char markupterm = 0;
-	int highix[] = {0,0,0,0,};
+	int hix[16];
+	const char** high = ((char**)&pd_hlight1);
 //int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
 	char duple = curbp->b_langprops & BCPAS 				? ')' :
 							 curbp->b_langprops &(BCCOMT+BCSQL) ? '/' : 0;
@@ -381,70 +378,54 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	if (tabsize < 0)
 		tabsize = - tabsize;
 
+	memset(hix, 0, sizeof(hix));
+
 	while (--len >= 0)
 	{	int chrom = chrom_nxt;
-		chrom_nxt = CHR_0;
 		if (vtc >= term.t_ncol)
 		{ tgt[term.t_ncol] = (short)(chrom + '$');
 			break;
 		}
 		
-	{ int wix = 0;
-	  int tgtix = 0;
-	  int c = *++str;
+		chrom_nxt = CHR_0;
+	{ int c = *++str;
 		if (c == 0)
-		{ highix[0] = 0;
-			highix[1] = 0;
-			highix[2] = 0;
-			highix[3] = 0;
-		}
+			;
+		else if (is_ml)
+			goto nop;
 		else
-		{ if (c != high[0][(++highix[0])])
-				highix[0] = (c == high[0][1]);
-			else
-			{ if (high[0][1+highix[0]] == 0 && vtc-highix[0]+2 > 0)
-				{ tgtix = vtc-highix[0]+2;
+		{	if	(c == '\t') 
+			{ c = ' ';
+				if (((vtc + 1 + col) % tabsize) != 0)
+				{ --str;
+					++len;
 				}
 			}
-			if (c != high[1][(++highix[1])])
-				highix[1] = (c == high[1][1]);
-			else
-			{ if (high[1][1+highix[1]] == 0 && vtc-highix[1]+2 > 0)
-				{ tgtix = vtc-highix[1]+2;
-					wix = 1;
+		{ int wix;
+			for (wix = sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
+			{ hix[wix] += 1;
+			  if (c == high[wix][hix[wix]])
+				{ if (high[wix][1+hix[wix]] == 0)
+						break;
+					if (high[wix][1+hix[wix]] == ' ' && 
+					    high[wix][2+hix[wix]] == 0   && (len * (str[1] - ' ') <= 0))
+						break;					
 				}
+				else
+					hix[wix] = (c == high[wix][1]);
 			}
-			if (c != high[2][(++highix[2])])
-				highix[2] = (c == high[2][1]);
-			else
-			{ if (high[2][1+highix[2]] == 0 && vtc-highix[2]+2 > 0)
-				{ tgtix = vtc-highix[2]+2;
-					wix = 2;
-				}
-			}
-			if (c != high[3][(++highix[3])])
-				highix[3] = (c == high[3][1]);
-			else
-			{ if (high[3][1+highix[3]] == 0 && vtc-highix[3]+2 > 0)
-				{ tgtix = vtc-highix[3]+2;
-					wix = 3;
-				}
-			}
-			if (tgtix > 0)
-			{ tgt[tgtix] |= palcol(high[wix][0]-'1') | CHR_NEW;
-				highix[wix] = 0;
-				chrom_nxt = mode>0 && mode & (Q_IN_CMT+Q_IN_EOL) ? cmt_chrom : CHR_OLD;
-			}
-		}
 
-		if			(c == '\t') 
-		{ c = ' ';
-			if (((vtc + 1 + col) % tabsize) != 0)
-			{ --str;
-				++len;
+			if (wix >= 0
+			 && (wix == 0 || (mode & (Q_IN_CMT+Q_IN_EOL+Q_IN_STR)) == 0)) // 1st or ! in cmt
+			{ int tgtix = vtc-hix[wix]+2;
+				if (tgtix > 0)
+			  	tgt[tgtix] |= palcol(high[wix][0]-'1') | CHR_NEW;
+//			memset(hix, 0, sizeof(hix));
+				hix[wix] = 0;
+				chrom_nxt = CHR_OLD;
 			}
-		}
-		else if (c < 0x20 || c == 0x7F)
+		}}
+		if      (c < 0x20 || c == 0x7F)
 		{ if (c <= pd_col2ch && c - pd_col1ch >= 0)
 			{ 
 				chrom_nxt = palcol(c - pd_col1ch); /* this is manual colouring */
@@ -457,7 +438,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			}
 		}
 		else if (c < '0')
-		{ if			(mode < 0 || (mode & Q_IN_EOL))
+		{ if			(mode & (Q_IN_EOL+Q_IS_NEG))
 				;
 			else if ((clring & BCML) && (c == '*' || c == '_') && str[-1] != c &&
 			         ((str[-1] > ' ' || len > 0 && str[1] > ' ')))
@@ -528,6 +509,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 //	}
 //	if (chrom_on > 0)
 //		chrom_in_peril = true;
+nop:
 		if (++vtc > 0)
 			tgt[vtc] = c | chrom;
 	}}
@@ -551,9 +533,9 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			tgt[vtc] = ' ';
 	}
 
-	lp->l_props = s_props;
+//lp->l_text[-1] = s_flags;
 	return vp;
-}}}}}
+}}}}}}
 
 
 /************************** Modeline stuff *************************/
@@ -588,17 +570,7 @@ void Pascal modeline(WINDOW * wp)
 	  char c[NLINE+24]; /* buffer for mode line */
 	}   tline;
 
-
-	tline.lc.l_used = term.t_ncol;
-
-#if S_MSDOS
-	n = wp == curwp ? 0x5f : /* 0xcdm 173 :  */
-#else
-	n = wp == curwp ? '='  :
-#endif
-										'-';
-	memset(&tline.lc.l_text[0], n, NLINE);
-
+	wp->w_flag &= ~WFMODE;
 	row = wp->w_toprow+wp->w_ntrows;		/* Location. */
 
 #if _DEBUG
@@ -616,7 +588,20 @@ void Pascal modeline(WINDOW * wp)
 	vscreen[row]->v_flag |= VFCHG | VFREQ | VFCOL | VFML;/* Redraw next time*/
 #endif
 
-	wp->w_flag &= ~WFMODE;
+#if S_MSDOS
+	n = wp == curwp ? 0x5f : /* 0xcdm 173 :  */
+#else
+	n = wp == curwp ? '='  :
+#endif
+										'-';
+	memset(&tline.lc.l_text[0], n, NLINE);
+
+	if (n != '-')
+	{ char * s = int_asc((int)wp->w_line_no);
+																			/* take up some spaces */
+		strcpy(&tline.lc.l_text[4], &s[strlen(s)-6]);
+	} 												/* are we horizontally scrolled? */
+
 { BUFFER *bp = wp->w_bufp;
 	int i = bp->b_flag;
 	if (i & BFTRUNC)
@@ -630,11 +615,6 @@ void Pascal modeline(WINDOW * wp)
 		tline.lc.l_text[3] = '>';
 	}
 
-	if (wp == curwp)
-	{ char * s = int_asc((int)wp->w_line_no);
-																			/* take up some spaces */
-		strcpy(&tline.lc.l_text[4], &s[strlen(s)-6]);
-	} 												/* are we horizontally scrolled? */
 #if S_MSDOS == 0
 	g_lastfcol = wp->w_fcol;
 #endif
@@ -648,7 +628,7 @@ void Pascal modeline(WINDOW * wp)
   int	modeset = wp->w_bufp->b_flag >> NUMFLAGS-1;
 	for (i = -1; ++i < NUMMODES - 2; ) /* add in mode flags */
 	{ if ((modeset = modeset >> 1) & 1) 
-			strcat(&tline.lc.l_text[10], mdname[i]);
+			strcat(&tline.lc.l_text[10], attrnames[i]);
 	}
 	cpix = strlen(tline.lc.l_text);
 	if (tline.lc.l_text[cpix-1] == ' ')
@@ -658,32 +638,37 @@ void Pascal modeline(WINDOW * wp)
   tline.lc.l_text[cpix+1] = n;
   cpix += 4;
 
-{ const char * s = bp->b_fname;
-
-	if (s != NULL)	/* File name. */
+{ const char * fname = bp->b_fname;
+	if (fname != NULL)	/* File name. */
 	{
-		const char * fn = s;
-		for (s = &s[strlen(s)]; --s >= fn && *s != '/'; )
+		const char * fn;
+		int fnlen = strlen(fname);
+  	if (fnlen > NLINE - 4 - cpix)
+		  fnlen = NLINE - 4 - cpix;
+
+		for (fn = &fname[fnlen]; --fn >= fname && *fn != '/'; )
 			;
 						
-		if (strcmp(s+1,bp->b_bname) != 0)
-			s = NULL;
-
-		cpix += strlen(strpcpy(&tline.lc.l_text[cpix], fn, NLINE - 4 - cpix))+1;
+		++fnlen;
+		strpcpy(&tline.lc.l_text[cpix], fname, fnlen);
+		cpix += fnlen;
 		tline.lc.l_text[cpix-1] = ' ';
+
+		if (strcmp(fn+1,bp->b_bname) == 0)
+			goto no_bn;
 	}
 
-	if (s == NULL)
-	{ tline.lc.l_text[cpix] = '@';
-		strpcpy(&tline.lc.l_text[cpix+1], bp->b_bname, NLINE - 1 - cpix);
-		tline.lc.l_text[strlen(tline.lc.l_text)] = ' ';
-	}
+	tline.lc.l_text[cpix] = '@';
+	strpcpy(&tline.lc.l_text[cpix+1], bp->b_bname, NLINE - 1 - cpix);
+	tline.lc.l_text[strlen(tline.lc.l_text)] = ' ';
 
+no_bn:
 {	int numbuf = lastbuffer(0,0);
+	tline.lc.l_dcr = term.t_ncol << (SPARE_SZ+2);
 	if (numbuf > 9)
-		tline.lc.l_text[tline.lc.l_used-3] = '0' + numbuf / 10;
-	tline.lc.l_text[tline.lc.l_used-2] = '0' + numbuf % 10;
-	
+		tline.lc.l_text[term.t_ncol-3] = '0' + numbuf / 10;
+	tline.lc.l_text[term.t_ncol-2] = '0' + numbuf % 10;
+
 //tline.lc.l_text[tline.lc.l_used] = 0;
 	
 	(void)vtmove(row, 0, 0, &tline.lc); 	/* Seek to correct line. */
@@ -702,11 +687,11 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 																/* wh : < 0 => de-extend logic
 																				= 0 => only w_dotp
 																				> 0 =? all */
-{ LINE *lp = wp->w_linep;
+{	int color = window_bgfg(wp);
+	LINE *lp = wp->w_linep;
 	int	sline = wp->w_toprow - 1;
 	int	zline = sline + wp->w_ntrows;
 			
-	int color = window_bgfg(wp);
 //int cmt_clr = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
 
 #if MEMMAP == 0
@@ -737,9 +722,9 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 
 			vp->v_color = color;
 			vp->v_flag &= ~(VFREQ | VFML);
-			vp->v_flag |= VFCHG | (lp->l_props & Q_IN_CMT);
+			vp->v_flag |= VFCHG | (lp->l_dcr & Q_IN_CMT);
 		}
-		if ((lp->l_props & L_IS_HD) == 0)/* if we are not at the end */
+		if (!l_is_hd(lp))/* if we are not at the end */
 			lp = lforw(lp);
 	}
 }
@@ -815,7 +800,6 @@ static void Pascal pscroll(int dir, int stt, int lenm1)
 static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN */
 	 
 { int n = 1;
-	int lenm1 = wp->w_ntrows-1;
 
 	if (set & WFTXTD)
 	{ 
@@ -825,7 +809,8 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
 		n = 0;
 	}
 
-{	int stt = wp->w_toprow;
+{	int lenm1 = wp->w_ntrows-1;
+	int stt = wp->w_toprow;
 	int src = stt+1-n;
 	int tgt = stt+n;
 
@@ -871,16 +856,16 @@ void Pascal updline()
 #endif
 										0;
 	g_up_lp = wp->w_dotp;
-{	int row = wp->w_toprow;
+{	int fcol = wp->w_fcol; // < pd_fcol ? pd_fcol : wp->w_fcol;
+	int row = wp->w_toprow;
  	LINE * lp;
 
 	for (lp = wp->w_linep; 
-			 lp != g_up_lp && row < term.t_nrowm1 - 1;
+			 lp != g_up_lp && row + 1 < term.t_nrowm1;
 			 lp = lforw(lp))
-		++row;
+		row = row + 1;
 
-{	int fcol = wp->w_fcol; // < pd_fcol ? pd_fcol : wp->w_fcol;
-	int col = getccol() - fcol;
+{	int col = getccol() - fcol;
 	int diff = (col + 1 - pd_hjump);
 				
 	if (diff < 0 && pd_hjump > 0)
@@ -1012,11 +997,12 @@ void Pascal updline()
 static 
 int Pascal reframe(WINDOW * wp)
 
-{	int nlines = wp->w_ntrows;
+{	LINE * top = wp->w_linep;
+	LINE *lp = top;			 /* search pointer */
+	int nlines = wp->w_ntrows;
 	int centre = wp->w_force;
   int flags = wp->w_flag;
-	LINE * top = wp->w_linep;
-	LINE *lp = top;			 /* search pointer */
+	wp->w_force = 0;
 												/* if not a requested reframe, check for a needed one */
 	if ((flags & WFFORCE) == 0)
 	{ int i;
@@ -1025,18 +1011,19 @@ int Pascal reframe(WINDOW * wp)
 			if (lp == wp->w_dotp)
 				goto nop_here;
 																/* if we are at the end of the file, reframe */
-			if (lp->l_props & L_IS_HD)
+			if (l_is_hd(lp))
 				break;
 				
 			lp = lforw(lp);						/* on to the next line */
 		}
+
 		if	((flags & WFHARD) == 0)
 		{ if		  (wp->w_dotp == lp)
 			{ lp = lforw(top);
 				flags |= WFTXTD;
 				goto ret;
 			}
-			else if ((wp->w_dotp->l_props & L_IS_HD) == 0 &&
+			else if (!l_is_hd(wp->w_dotp) &&
 							 lforw(wp->w_dotp) == top)
 			{ lp = wp->w_dotp;
 				flags |= WFTXTU;
@@ -1052,11 +1039,11 @@ int Pascal reframe(WINDOW * wp)
 			rp = lp;
 			
 			while (lp != wp->w_dotp && rp != wp->w_dotp)
-			{ if			((lp->l_props & L_IS_HD) == 0)
-				lp = lforw(lp);
-				else if (rp->l_props & L_IS_HD)
+			{ if			(!l_is_hd(lp))
+					lp = lforw(lp);
+				else if (l_is_hd(rp))
 					break;
-				if ((rp->l_props & L_IS_HD) == 0)
+				if (!l_is_hd(rp))
 					rp = lback(rp);
 
 				if (--clamp == 0)
@@ -1078,7 +1065,7 @@ int Pascal reframe(WINDOW * wp)
 		centre = nlines >> 1;
 																			/* backup to new line at top of window */
 	for (lp = wp->w_dotp; 
-			 ((lp = lback(lp))->l_props & L_IS_HD) == 0 && --centre > 0; )
+			 !l_is_hd((lp = lback(lp))) && --centre > 0; )
 		;
 
 						 /* and reset the current line at top of window */
@@ -1088,7 +1075,6 @@ int Pascal reframe(WINDOW * wp)
 ret:
 	wp->w_linep = lp;
 nop_here:
-	wp->w_force = 0;
 
 	return flags;
 }
@@ -1357,21 +1343,22 @@ void Pascal mlputs(int wid, const char * s)
 
 int mlwrite(const char * fmt, ...)
 {
-#define fmtch '%'
+#define FMTCH '%'
 
- va_list ap;
- va_start(ap, fmt);
+	va_list ap;
+ 	va_start(ap, fmt);
 
+{ int s_discmd = pd_discmd;
 	if      (fmt[0] == '%' && fmt[1] == '!')			/* force display */
 		fmt += 2;
-	else if (pd_discmd == 0)
+	else if (s_discmd == 0)
 		return 0;
 
 {	int  ch;
-	int  s_discmd = pd_discmd++;
-	Bool popup = false;
+	int popup = 0;
 //--g_cursor_on;
 
+	pd_discmd = 1;
 	if (*fmt != '\001')
 	{ --fmt;
 #if COLOR && 0
@@ -1382,17 +1369,18 @@ int mlwrite(const char * fmt, ...)
 	}
 
 	while ((ch = *++fmt) != 0)
-	{ if (ch != fmtch)
+	{ if (ch != FMTCH)
 			mlout((char)ch);
 		else 
-		{	int width = 0;
+		{	char * sp = NULL;
+			int width = 0;
 			while (((unsigned)(ch = *++fmt - '0')) <= 9)
 				width = width * 10 + ch;
 		{ int radix = 10;
-			char * sp = NULL;
 //		int v = get_arg(int,ap);
 			switch (ch+'0')
 			{  case '>':  pd_discmd = -1;
+				 when 'p':  popup = 1;
 				 when 'b':	(void)tcapbeep();
 #if MEMMAP == 0
 				 when 'w':  TTflush();
@@ -1408,26 +1396,25 @@ int mlwrite(const char * fmt, ...)
 										  sp[sl-1] = sp[sl-2];
 										  sp[sl-2] = '.';
 										}
-				 when 'p':  popup = true;
-				 when 's':  sp = get_arg(char *, ap);
+										goto mlp;
+				 case 's':  sp = get_arg(char *, ap);
+
+mlp:								mlputs(width, sp);
 				 when 'c':  mlout((char)get_arg(int,ap));
 //			 otherwise	mlout((char)(ch+'0'));
 			}
-			if (sp != NULL)
-				mlputs(width, sp);
 		}}
 	}
 	TTflush();
 
+{ int scol = ttcol;
 	pd_got_msg = TRUE;
 	if (pd_discmd < 0)
 	{ (void)linstr(lastmesg);
-		loglog1("mlw %s", fmtstr);
 	}
 #if MEMMAP
 	else
-	{ int scol = ttcol;
-		mlputs(term.t_ncol-ttcol,NULL);
+	{	mlputs(term.t_ncol-scol,NULL);
 		tcapmove(ttrow, scol);
 //	memset(&vscreen[term.t_nrowm1]->v_text[ttcol], 0, (term.t_ncol-ttcol)*2);
 	}
@@ -1435,9 +1422,7 @@ int mlwrite(const char * fmt, ...)
 	strpcpy(g_cmd_line, lastmesg, sizeof(lastmesg));
 #endif
 
-	loglog1("mlw %s", lastmesg);
-
-	if (popup)
+	if (popup > 0)
 #if MEMMAP
 		mbwrite(lastmesg);
 #else
@@ -1446,8 +1431,8 @@ int mlwrite(const char * fmt, ...)
 
 	pd_discmd = s_discmd;
 //++g_cursor_on;
-	return ttcol;															/* Number of characters */
-}}
+	return scol;															/* Number of characters */
+}}}}
 
 
 #if 0
@@ -1477,11 +1462,9 @@ void Pascal mlforce(const char * s)
 void Pascal mlerase()
 
 {	
-	mlwrite("");
+  mlwrite("");
 #if MEMMAP == 0
 	g_cmd_line[0] = 0;
 #endif
 	pd_got_msg = FALSE;
 }
-
-

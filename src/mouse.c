@@ -333,7 +333,7 @@ LINE *Pascal mouseline(WINDOW * wp, int row)
 		return(NULL);
 	for (lp = wp->w_linep; row--; lp = lforw(lp))
 	{
-		if (lp->l_props & L_IS_HD) /* Hit the end. */
+		if (l_is_hd(lp)) /* Hit the end. */
 			return NULL;
 	}
 

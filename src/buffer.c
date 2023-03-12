@@ -50,10 +50,7 @@ void Pascal customise_buf(BUFFER * bp)
 		const char *fn;
 		for ( fn = bp->b_bname - 1; *++fn != 0; )
       if (*fn == '.')
-       	pat = fn;
- 
-    if (strcmp(".e2", pat) == 0)
-    	bp->b_mode |= BCRYPT2;
+      	pat = fn;
 
 		if (pd_file_prof != NULL)
     {	
@@ -85,6 +82,8 @@ void Pascal customise_buf(BUFFER * bp)
       }}}
 		}
     bp->b_tabsize = tabsize;
+		if (pat[1] == 'e' && pat[2] == '2')
+			bp->b_mode |= BCRYPT2;
 }
 
 
@@ -116,8 +115,8 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 #if NFILEN < 2 * NBUFN + 30
   error error
 #endif
-	fname_[0] = 'A';
-	fname_[1] = 'B';
+//fname_[0] = 'A';
+//fname_[1] = 'B';
 { Fdcr_t fdcr = {NULL};
   char bname[NFILEN];
 //#define text (&bname[NBUFN+1])
@@ -190,7 +189,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 				}
 	    }
 	    
-	    bp->b_flag &= ~BFACTIVE;
+//    bp->b_flag &= ~BFACTIVE;
 	    repl_bfname(bp, fn);
 	    customise_buf(bp);
 	  }
@@ -293,7 +292,6 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 {	short sign = n <= 0 ? -1 : 1;
   short thislu = curbp->b_luct * sign;
 	int count = 0;
-//int remain = -1;
 
 #if _DEBUG
   scan_buf_lu();
@@ -309,7 +307,7 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 					++count;
 				else
 				{	if (bp->b_flag & BFCHG)
-						return 1;
+						return swbuffer(bp);
 				}
 	
 			{ int lu = bp->b_luct * sign;
@@ -385,7 +383,7 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 { char * fn = bp->b_fname;
 	if (fn != null)
 	{
-#if S_WIN32
+#if S_WIN32 && 0
 		setconsoletitle(fn);
 #endif
 		if (!(flag & BFACTIVE))		/* not active yet*/
@@ -425,9 +423,9 @@ static void init_buf(BUFFER * bp)
 	bp->b_wlinep	 = lp;
 	bp->b_baseline.l_fp = (Lineptr)lp;
 	bp->b_baseline.l_bp = (Lineptr)lp;
-  bp->b_baseline.l_props = L_IS_HD;
+  bp->b_baseline.l_dcr = 0;
 	bp->b_flag &= ~BFCHG; 		/* Not changed		*/
-	memset(&bp->b_doto, 0, sizeof(int)*2 + sizeof(bp->mrks));	
+	memset(&bp->b_doto, 0, sizeof(int)*2 + sizeof(bp->b_mrks));	
 //bp->b_remote = NULL;
 /*bp->b_fcol = 0;*/
 }
@@ -453,7 +451,7 @@ int Pascal bclear(BUFFER * bp)
 		return s;
 
 	for (nlp = lforw(&bp->b_baseline); 
-			((lp = nlp)->l_props & L_IS_HD) == 0; )
+			!l_is_hd((lp = nlp)); )
 	{ nlp = lforw(lp);
 		free((char*)lp);
 	}
@@ -478,7 +476,7 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 
 {	extern BUFFER * g_dobuf;
 
-	if (window_ct(bp) > 0 || bp == g_dobuf)					/* Error if on screen.	*/
+	if (window_ct(bp) != NULL || bp == g_dobuf)					/* Error if on screen.	*/
 	{ mlwrite(TEXT28);
 					/* "Buffer displayed" */
 		return FALSE;
@@ -519,7 +517,8 @@ int Pascal dropbuffer(int f, int n)
 	if (bp == NULL)
 		return ABORT;
 
-{	int ct = window_ct(bp);
+  window_ct(bp);
+{	int ct = bp->b_window_ct;
 	if (ct > 1)
 	{	(void)delwind(0,0);
 		return FALSE;
@@ -567,11 +566,12 @@ X
 static
 void Pascal fmt_modecodes(char * t, int mode)
 	
-{ int c = NUMMODES-2; 																	/* ignore CHGD, INVS */
-	static const char modecode[NUMMODES-2] = "WCSEVOMYA"; /* letters for modes */
+{ static const char modecode[9] = "VWOa*/MCA"; /* letters for modes */
+	int c = 9;
+	int mask = MDASAVE << 1;
 
 	while (--c >= 0)
-		t[c] = mode & (1 << c) ? modecode[c] : '.';
+		t[c] = mode & (mask >>= 1) ? modecode[c] : '.';
 }
 
 /*	List all of the active buffers.  First update the special
@@ -587,10 +587,10 @@ int Pascal listbuffers(int iflag, int n)
 		 
 {	openwindbuf("*List");
 
-{	Char line[15+NUMMODES-2+80] = "Global Modes  ..........\n"
-																"ACT 	Modes 		Size  Buffer			File\n";
+{	Char line[15+NUMMODES-2+80] = "Global Modes:  .........\n"
+														 "Actual	Modes   Size  Buffer       File\n";
 												/* build line to report global mode settings */
-	fmt_modecodes(&line[14], g_gmode);
+	fmt_modecodes(&line[15], g_gmode);
 
 	if (linstr(line) == FALSE)
 		return FALSE;
@@ -602,13 +602,13 @@ int Pascal listbuffers(int iflag, int n)
 	{ if ((bp->b_flag & BFINVS) && (iflag == 0))
 			continue;
 
-		line[NUMMODES-2] = 0;
+		line[9] = 0;
 		fmt_modecodes(line, bp->b_flag);
 
 		--avail;
 	{ Int	nbytes = 0L;													/* Count bytes in buf.	*/
 		LINE * lp;
-		for (lp = &bp->b_baseline; ((lp=lforw(lp))->l_props & L_IS_HD) == 0; )
+		for (lp = &bp->b_baseline; !l_is_hd((lp=lforw(lp))); )
  /* for (lp = bp->b_baseline; (lp = lforw(lp)) != bp->b_baseline; ) */
 			nbytes += (Int)llength(lp)+1L;
 

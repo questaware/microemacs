@@ -1,3 +1,5 @@
+set $exbhook execute-macro-22
+
 set $discmd 0
 set $col1ch 1
 set $col2ch 8
@@ -319,10 +321,40 @@ btk execute-macro-21 ^XV
 	set $highpat2 ""
 	set $highpat3 ""
 	set $highpat4 ""
+	set $highpat5 ""
+	set $highpat6 ""
+	set $highpat7 ""
+	set $highpat8 ""
+	set $highpat9 ""
+	set $highpat10 ""
+	set $highpat11 ""
+	set $highpat12 ""
+	set $highpat13 ""
+	set $highpat14 ""
+	set $highpat15 ""
+	set $highpat16 ""
+;	set %ri &rig $cbufname 3
+;	set %oo @&cat "Buffhook " %ri
 	!if &seq &rig $cbufname 3 ".py"
-		set $highpat2 "4 def "
-    set $highpat3 "4 if "
-		set $highpat4 "4else:"
+    set $highpat2 "4 if "
+		set $highpat3 "4 else "
+		set $highpat4 "4 else:"
+		set $highpat5 "4 elif "
+		set $highpat6 "4 def "
+		set $highpat7 "4 while "
+		set $highpat8 "4 break "
+		set $highpat9 "4 try:"
+		set $highpat10 "4 except:"
+		set $highpat11 "4 except "
+	!endif
+	!if &or &seq &rig $cbufname 2 ".c" &seq &rig $cbufname 4 ".cpp"
+    set $highpat2 "4 if "
+		set $highpat3 "4 else "
+		set $highpat4 "4 while "
+		set $highpat5 "4 for "
+		set $highpat6 "4 return "
+		set $highpat7 "4 break;"
+		set $highpat8 "4 continue;"
 	!endif
 !endm
 

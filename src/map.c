@@ -6,39 +6,13 @@
 
 #define LENINC 4096
 
-#if 0
-																	  
-Map mk_map(Map c, Format_t format, Vint len)
-														// len in bytes
-{
-  if (FOFFS_MAP != fieldoffs(Map, c))
-    return null;
 
-  if (c == null)
-    c = (Map)mallocz(FOFFS_MAP+1+len);
-  
-  if (c != null)
-  { c->max_len  = len;
-  	c->format   = format;
-  
-//  c->curr_len = 0;
-//  c->curr_mult = 0;
-//  c->c[0] = 0;
-    c->last_ix = -1;
-  }
-  return c;
-}
+static Vint compare(const Byte * key, Map map, Key tgt)
 
-#endif
-
-
-static Vint compare(Map map, Key tgt)
-
-{ const Char * key = map->srch_key;
-
+{ 
   switch (map->format.key_type)
   { when T_DOMSTR:  /* printf("Comparing %s %s\n", map->srch_key, tgt->domstr);*/
-                    return  strcmp(key, tgt->domstr);
+                    return  strcmp((Char*)key, tgt->domstr);
 #ifndef MINIMAP
     when T_DOMCHAR0:return  1;  /* never matches */
     case T_DOMINT1: return  (Char)key - tgt->domint1;
@@ -50,9 +24,9 @@ static Vint compare(Map map, Key tgt)
                     key -= T_DOMCHAR0;
 						   /* printf("Compare %s %s\n", map->srch_key, tgt->domchararr);*/
   		  				    for (ix = T_DOMCHAR0-1;  ++ix < map->format.key_type; )
-							      { Char tch = tgt->domchararr[ix-T_DOMCHAR0];
+							      { Byte tch = tgt->domchararr[ix-T_DOMCHAR0];
 											if (key[ix] != tch)
-                				return (Byte)key[ix] - (Byte)tch;
+                				return key[ix] - tch;
 		      		        if (tch == 0)
     		  		          break;
       			      	}
@@ -69,23 +43,39 @@ Vint bin_unit_len;		/* secondary result */
 
 #endif
 
+extern Map_t g_namemap;
+extern Map_t g_fnamemap;
+extern Map_t g_evmap;
+
+#ifndef S_WIN32
+extern Map_t g_keymap;
+extern Map_t g_capmap;
+#endif
 				/* +ve => found */
 				/* -ve => before index (minus one based!) */
-Vint binary(Map map, Byte * table)
+Vint binary(int wh, const char * key)
 
-{ Byte * keyfld = &table[map->format.key_offs];
+{ Map map =	wh <  0 ? &g_namemap  :
+						wh == 0 ? &g_fnamemap :
+#ifndef S_WIN32
+						wh == 2 ? &g_keymap   :
+						wh == 3 ?	&g_capmap   :
+#endif
+											&g_evmap;
+//map->srch_key = key;
+	Byte * table = map->table;
+  Byte * keyfld = &table[map->format.key_offs];
   Vint low = 0;		/* search limit is entire list */
 	Vint uppp1 = map->curr_mult;
-#if DO_SRIAL
+#ifndef MINIMAP
   if (map->format.key_type == T_DOMCHAR0)		/* not binary */
   {
-#ifndef MINIMAP
   	bin_unit_len = 1;
-#endif
+
     if (uppp1 <= 0)
       return -1;
     while (true)
-    { Byte * src = (Byte*)map->srch_key;
+    { Byte * src = (Byte*)key;
       Vint comp = 0;
       Vint slow = low;
 
@@ -105,14 +95,10 @@ Vint binary(Map map, Byte * table)
   }
   else
 #endif
-	{
-#ifndef MINIMAP
-  	bin_unit_len = map->format.eny_len;
-#endif
-    while (uppp1 > low)
+	{	while (uppp1 > low)
     { Vint i = (low + uppp1) >> 1;			/* get the midpoint! */
 
-      Vint comp = compare(map, (Key)&keyfld[map->format.eny_len*i]);
+      Vint comp = compare(key, map, (Key)&keyfld[map->format.eny_len*i]);
       if (comp == 0)
         return i;
       if (comp < 0)
@@ -141,12 +127,12 @@ Cc map_add_(Map * map_ref, Byte * rec)
 { Map map = *map_ref;
   Char * key = &rec[map->format.key_offs];
   Byte kt = map->format.key_type;
-  map->srch_key = kt  >  T_DOMSTR ?  key                :
+  key = kt  >  T_DOMSTR ?  key                :
   		  kt == T_DOMINT1 ? (Char*)key[0]	: /* warning OK */
   		  kt == T_DOMINT2 ? (Char*)*(Short*)key : /* warning OK */
   		  kt == T_DOMINT3 ? 0            	:
   		  		    *(Char**)key;
-{ Vint ix = - binary(map, map->c) * bin_unit_len;
+{ Vint ix = - binary(map, key, map->c) * bin_unit_len;
   if (ix <= OK)
   { map->last_ix = -ix;
     return HALTED;
@@ -173,7 +159,7 @@ Cc map_add_(Map * map_ref, Byte * rec)
     memmove(&map->c[ix+map->format.eny_len], &(*map_ref)->c[ix], len);
 
   map->curr_len += map->format.eny_len;
-#if DO_SRIAL
+#ifndef MINIMAP
   map->curr_mult += 1;
 #endif
   update_map(map);
@@ -191,13 +177,12 @@ Byte * map_find_(Map map, Byte * table, void * key)
 { Vint ix = map->last_ix;
   Byte * eny = &table[ix];
 
-  map->srch_key = key;
   if (key == null && map->format.key_type >= T_DOMSTR)
-    map->srch_key = "";
+    key = "";
   
   if (! in_range(ix,0, map->curr_len-1) || 
-      compare(map, (Key)&eny[map->format.key_offs]) != OK)
-  { ix = binary(map, table) * bin_unit_len;
+      compare(key, map, (Key)&eny[map->format.key_offs]) != OK)
+  { ix = binary(map, key, table) * bin_unit_len;
     if (ix < OK)
     { map->last_ix = -(ix +  bin_unit_len);
       return null;
@@ -218,7 +203,7 @@ void map_remove_last_(Map * map_ref, Byte * table)
   	        &table[map->last_ix+map->format.eny_len], 
     	      map->curr_len-map->last_ix);
   map->curr_len -= map->format.eny_len;
-#if DO_SRIAL
+#ifndef MINIMAP
   map->curr_mult -= 1;
 #endif
   update_map(map);
@@ -250,8 +235,8 @@ Byte * map_next_(Mapstrm strm, Byte * table)
 { Map map = strm->map;
   Vint bigsz = map->format.key_type - T_DOMCHAR0;
 
-  map->srch_key = map->format.key_type < T_DOMCHAR0
-                      ? strm->key.domstr : &strm->key.domchararr[0];
+//map->srch_key = map->format.key_type < T_DOMCHAR0
+//                     ? strm->key.domstr : &strm->key.domchararr[0];
 
   if (strm->update_ct == map->update_ct
       /* && ! (compare(map, (Key)&eny[map->format.key_offs]) != OK and

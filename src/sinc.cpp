@@ -118,8 +118,7 @@ char * Pascal skipspaces(char * s, char * limstr)
   int ix;
   char ch;
   
-  for (ix = -1; ++ix < lim && ((ch=s[ix]) == 'L'-'@' ||
-                                 ch == ' ' || ch == '\t');)
+  for (ix = -1; ++ix < lim && ((ch=s[ix]) <= ' ');)
     ;
     
   return &s[ix];
@@ -449,7 +448,7 @@ void USE_FAST_CALL Sinc::bufappline(int indent, const char * str)
 
 { int    sz = strlen(str);
 	if (Sinc::g_outbuffer)
-	{	LINE * inslp = mk_line(null, indent+sz, indent+sz);
+	{	LINE * inslp = mk_line(str, indent+sz, 0);
 	   
 		if (inslp != NULL)
 		{	ibefore(Sinc::g_outbuffer->b_baseline.l_fp, inslp);
@@ -469,7 +468,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
 #if AM_ME
     if (lp == Sinc::basel)
 #else
-    if (lp->l_props & L_IS_HD)
+    if (l_is_hd(lp))
 #endif
     { word_ct = 0;
       break;
@@ -497,16 +496,16 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
 #if AM_ME
     if (lp == Sinc::basel)
 #else
-    if (lp->l_props & L_IS_HD)
+    if (l_is_hd(lp))
 #endif
       break;
       
     int directive = 0;
 
     char * cpstt = &lp->linetext[0];
-    char * cplim = cpstt+lp->linelength;	/* exclusive */
+    char * cplim = cpstt+lused(lp->l_dcr);	/* exclusive */
     const char * cp;
-    loglog3("%d %d %s", paren_dpth, lp->linelength, cpstt);
+    loglog3("%d %d %s", paren_dpth, lused(lp->l_dcr), cpstt);
     if (in_esc)
     { if (cplim[-1] != '\\')
         in_esc = false;
@@ -612,7 +611,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
         else					/* not a letter */
         { const char * t;
           state &= ~M_IN_W;
-          if (isspace(ch) || ch == ']')						// [xxx] is invisible
+          if (ch <= ' ' || ch == ']')						// [xxx] is invisible
             continue;
 //        tok_ct += 1;
           if      (ch == '*' || ch == '&')
@@ -977,16 +976,16 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
     
   bp->b_flag |= MDSRCHC;
 
-  for (rcc = 0; /*Sinc::*/best_nest > 0 && (lp->l_props & L_IS_HD) == 0;
+  for (rcc = 0; /*Sinc::*/best_nest > 0 && !l_is_hd(lp);
                 lp = prev)
 #endif
-  {	int cplen = lp->l_used;
+  {	int cplen = lused(lp->l_dcr);
     prev = meLineGetPrev(lp);
       
 #if AM_ME  
     --lnno;
 #endif
-    if (/*prev->length > 0 && */ prev->linetext[prev->linelength-1] == CHQ_ESC)
+    if (/*prev->length > 0 && */ prev->linetext[lused(prev->l_dcr)-1] == CHQ_ESC)
       continue;
 
     if (cplen == 0)
@@ -1129,7 +1128,7 @@ scan:
 	          					 	   if (rc)
 		          					   { int off = wp->w_doto;
 	  	        					   	 LINE * tlp = wp->w_dotp;
-  	  	      					 	   const char * lim = &tlp->l_text[tlp->l_used - 1];
+  	  	      					 	   const char * lim = &tlp->l_text[lused(tlp->l_dcr) - 1];
         	  					 	   	 int wh = strxct_mtch(0, &tlp->l_text[off], lim);
           					 	   
     	      					 	   	 if (wh == 4 || wh == 5)		// "C", namespace
@@ -1214,7 +1213,7 @@ scan:
 												  break;
 												}
 								        wh = strxct_mtch(0, wd,
-													 							 &wd[wp->wLine->linelength - wp->wOffset]);
+													 							 &wd[lused(wp->wLine->l_dcr) - wp->wOffset]);
 								        if (!in_range(wh, 0, 4))	// all to "C"
 												  continue;
 
@@ -1302,7 +1301,7 @@ scan:
 											  	loglog3("Found %d bn %d %s", rcc, best_nest, cpstt);
 												{ char * tp; 
 //			   								char buff[50]; 
-												  for (tp = cp; --tp > cpstt+1 && isspace(*tp); )
+												  for (tp = cp; --tp > cpstt+1 && *tp <= ' '; )
 												    ;
 //			   								sprintf(buff, "BN %d %20.20s", best_nest, tp); mbwrite(buff);
 											  	if (tp[0] == ':' && tp[-1] == ':')
@@ -1405,11 +1404,10 @@ int Pascal searchIncls(int f, int n)
   LINE * lp = curwp->w_dotp;
 #endif
 	int from_wh = 0;
-  int s_lpu = lp->linelength;
 
   if (Sinc::g_outbuffer == NULL)
   { int ix = curwp->wOffset;
-    while (--ix > 0 && isspace(lp->linetext[ix]))
+    while (--ix > 0 && lp->linetext[ix] <= ' ')
       ;
 
     Sinc::good_class = 0;
@@ -1436,7 +1434,6 @@ int Pascal searchIncls(int f, int n)
 
   /* namelist = null;*/
   /* srchdpth = 0;*/
-  lp->linelength = curwp->wOffset;	/*we dont need an Me 0 terminator here*/
   
   setmark(-1,-1);
 
@@ -1477,8 +1474,6 @@ int Pascal searchIncls(int f, int n)
       curwp->w_flag &= ~(WFFORCE|WFMODE|WFHARD);	     /* stay put */
     }
  #endif
-
-    lp->linelength = s_lpu;
   }
 
   for ( lp = (meLine*)Sinc::namelist; lp != null; lp = (meLine*)Sinc::namelist)
