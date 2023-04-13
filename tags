@@ -1062,7 +1062,7 @@ ctoec	./src/input.c
 ctrlg	./src/input.c
 cursor_on_off	./unix/terminal.c
 cursor_on_off	./wincon/msemacs.c
-customise_buf	./src/file.c
+customise_buf	./src/buffer.c
 cwd_	./src/fileio.c
 dcline	./src/main.c
 deblank	./src/random.c

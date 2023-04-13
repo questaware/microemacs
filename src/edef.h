@@ -126,9 +126,10 @@ extern char nulls[];
 #define	MDASAVE	 0x1000		/* auto-save mode		*/
 #define MDDIR    0x2000		/* this file is a directory	*/
 #define BFACTIVE 0x4000		/* this buffer is active */
+#define BCRYPT2	 0x8000
 
 #define BSOFTTAB 0x01			/* not in use */
-#define BCRYPT2	 0x02
+//#define BCRYPT2	 0x02
 
 				/* language properties */
 #define BCCOMT  0x01		/* c style comments */
@@ -180,7 +181,7 @@ extern char nulls[];
 typedef struct	LINE {
 	struct LINE * l_fp;		/* Link to the next line	*/
 	struct LINE * l_bp;		/* Link to the previous line	*/
-	int 	        l_dcr; 	/* Used(22) spare(6) incomment(1) header(1) */
+	int 	        l_dcr; 	/* Used(24) spare(6) incomment(1) header(1) */
 	char	        l_text[8]; /* A bunch of characters.	*/
 }	LINE;
 
@@ -246,6 +247,12 @@ typedef struct	WINDOW
 
 typedef char * CRYPTKEY;
 
+//typedef struct
+//{ CRYPTKEY  		b_key;
+//	short   			b_color;		/* current colors		*/
+//	short	  			b_flag; 		/* Flags and modes  */
+//} BATTRS;
+
 /* Text is kept in buffers. A buffer header, described below, exists for every
  * buffer in the system. The buffers are kept in a big list, so that commands
  * that search for a buffer by name can find the buffer header. There is a
@@ -256,28 +263,22 @@ typedef char * CRYPTKEY;
  * have not been read in yet. These get read in at "use buffer" time.
  */
 typedef struct	BUFFER
-{	struct	LINE *b_dotp;		  /* Link to "." LINE structure	*/
+{	struct LINE *	b_dotp;		  /* Link to "." LINE structure	*/
 	int	  				b_doto; 		/* offset of "."; isomorphism to MARK ends */
 	int 					b_window_ct;/* valid only after window_ct() */
-  struct  MARKS b_mrks;
-	struct	LINE *b_wlinep;		/* top LINE in last window */
-	struct	BUFFER *b_next; 	/* next BUFFER		*/   /* isomorphism ends */
-	struct	LINE  b_baseline;	/* the header LINE	*/
-	struct	LINE *b_narlims[2];/*narrowed top, bottom text */
-	short	  			b_flag; 		/* Flags and modes  */
-	short   			b_luct;			/* last use count		*/ 
-	char    			b_langprops;/* type of language of contents */
-  signed char		b_spare; 		/* Spare */
-	unsigned char b_mode;	    /* Flags and modes (extra) */
+  struct MARKS  b_mrks;
+	struct LINE * b_wlinep;		/* top LINE in last window */
+	struct BUFFER *b_next; 	/* next BUFFER		*/   /* isomorphism ends */
+	struct LINE   b_baseline;	/* the header LINE	*/
+	struct LINE * b_narlims[2];/*narrowed top, bottom text */
 	signed char 	b_tabsize;	/* size of hard tab		*/
-#if	CRYPT
-	CRYPTKEY  b_key;
-#endif
+	CRYPTKEY  		b_key;
+	short   			b_color;		/* current colors		*/
+	short	  			b_flag; 		/* Flags and modes  */
+	char    			b_langprops;			/* type of language of contents */
+	short   			b_luct;			/* last use count		*/ 
 	char *    b_fname;					/* malloc'd and owned by BUFFER */
 	char *	  b_remote;					/* remote command 		*/
-#if	COLOR
-	short   	b_color;					/* current colors		*/
-#endif
 	char	    b_bname[6]; 			/* Buffer name	(or bigger than this)	*/
 }	BUFFER;
 				/* for compatibility: */
@@ -297,9 +298,9 @@ typedef struct	WUFFER
  */
 typedef struct	{
 	struct	LINE *r_linep;		/* Origin LINE address. 	*/
-	short	r_offset;		/* Origin LINE offset.		*/
+	int		r_offset;		/* Origin LINE offset.		*/
 	long	r_size; 		/* Length in characters.	*/
-	int	r_lines;		/* number of lines in the buffer*/
+	int		r_lines;		/* number of lines in the buffer*/
 }	REGION;
 
 /* The editor communicates with the display using a high level interface. A
@@ -415,13 +416,15 @@ extern int g_got_search;
 
 
 /* initialized global external declarations */
-NOSHARE extern short g_colours;		/* backgrnd (black*16) + foreground (white) */
+//NOSHARE extern BATTRS g_bat;		/* backgrnd (black*16) + foreground (white) */
+NOSHARE extern char * g_bat_b_key;
+NOSHARE extern short  g_bat_b_color;
 
 NOSHARE extern int g_numcmd;			/* number of bindable functions */
 NOSHARE extern int g_nosharebuffs;/* disallow different files in same buffer*/
 
 NOSHARE extern int   g_macargs;		/* take values from command arguments */
-NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
+//NOSHARE extern CRYPTKEY g_ekey;		/* global encryption key	*/
 NOSHARE extern char golabel[];		/* current line to go to	*/
 extern const char mdname[NUMMODES][8];		/* text names of modes		*/
 extern const NBIND names[];				/* name to function table	*/

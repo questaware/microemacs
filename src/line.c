@@ -35,7 +35,7 @@ LINE *Pascal mk_line(const char * src, int used, int extra_cmt)
 			mbwrite("Neg Used");
 #endif
 
-		lp->l_dcr = (used << (SPARE_SZ+2)) + extra_cmt + 1;
+		lp->l_dcr = (used << (SPARE_SZ+2)) + extra_cmt | 1;
 		memcpy(lgets(lp, 0), src, used);
 	}
 	return lp;
@@ -150,7 +150,7 @@ int Pascal lchange(int flag)
 
   if (g_inhibit_scan <= 0)
 	{	int all = 0;
-		init_paren("", 0);
+		init_paren("\000", 0);
 
   {	LINE * lp = curwp->w_dotp;
 		int ct = g_header_scan + 6;     								/* just 6 more */
@@ -228,10 +228,10 @@ static int Pascal ldelnewline()
  */
 int Pascal USE_FAST_CALL lnewline(int wh)
 
-{ int    doto = curwp->w_doto;   /* offset of "."        */
-  LINE * lp = curwp->w_dotp;   /* Get the address and  */
-	int    in_cmt = lp->l_dcr & Q_IN_CMT;
-	int    used = lused(lp->l_dcr); 
+{ LINE * lp = curwp->w_dotp;   /* Get the address and  */
+  int    l_dcr = lp->l_dcr;
+	int    in_cmt = l_dcr & (Q_IN_CMT + 1);
+	int    used = lused(l_dcr); 
 	if (wh == 0)													// ldelnewline
 	{	
 		if (used > 0)
@@ -252,12 +252,12 @@ int Pascal USE_FAST_CALL lnewline(int wh)
 	  lfree(used,lp);
 	}
 	else
-	{	int nsz = used - doto;
-		if (!l_is_hd(lp))
+	{	curwp->w_line_no += 1;
+	{	int doto = curwp->w_doto;   /* offset of "."        */
+		int nsz = used - doto;
+	 	if (l_dcr)
 		{ lp->l_dcr = (doto << (SPARE_SZ+2))
-		  					 + (((nsz << 2) + lp->l_dcr) & SPARE_MASK) + in_cmt + 1;	
-
-			curwp->w_line_no += 1;
+		  					 + (((nsz << 2) + l_dcr) & SPARE_MASK) + in_cmt;	
 		}
 		while (--wh >= 0)
 		{	LINE * inslp = mk_line(&lp->l_text[doto], nsz, EXPANSION_SZ*4+in_cmt);
@@ -266,10 +266,10 @@ int Pascal USE_FAST_CALL lnewline(int wh)
 		
 		  rpl_all(2, 0, doto, lp, inslp);
 																						/* trim line and update spare */
-		  ibefore(lforw(lp), inslp);
+		  ibefore(!l_dcr ? lp : lforw(lp), inslp);
 		  nsz = 0;
 		}
-  }
+  }}
   return lchange(WFHARD);
 }
 
@@ -330,7 +330,6 @@ int Pascal linsert(int ins, char c)
 
 {	int doto = curwp->w_doto;
   LINE * lp = curwp->w_dotp;		/* Current line */
-  LINE * newlp = lp;
 	int used = lused(lp->l_dcr);
 
 	if ( doto < used  && g_overmode >= ins &&
@@ -338,14 +337,14 @@ int Pascal linsert(int ins, char c)
 			(unsigned short)doto % tabsize == (tabsize - 1)))
 	{	lp->l_text[doto] = c;
 	  curwp->w_doto = doto + 1;
-  	ins = 0;
   }
 	else
-  {	if (ins * 4 <= (lp->l_dcr & (((1 << SPARE_SZ)-1) << 2)))
+  {	LINE * newlp = lp;
+  	if (ins * 4 <= (lp->l_dcr & (((1 << SPARE_SZ)-1) << 2)))
 	  {	lp->l_dcr += (ins << (SPARE_SZ+2)) - (ins * 4);		// more used less spare
 	  }
 	  else
-	  { newlp = mk_line(&lp->l_text[0], used + ins, EXPANSION_SZ*4+(lp->l_dcr & Q_IN_CMT));
+	  {	newlp = mk_line(&lp->l_text[0], used + ins, EXPANSION_SZ*4+(lp->l_dcr & Q_IN_CMT));
 	    if (newlp == NULL)
 	      return FALSE;
 	  }
@@ -356,13 +355,13 @@ int Pascal linsert(int ins, char c)
 
 	  memset(&newlp->l_text[doto],c,ins);
 	  rpl_all(1, ins, doto, lp, newlp);
-	}
 
-  if (lp != newlp)
-	{	ibefore(lp, newlp);				/* Link in */
-		if (!l_is_hd(lp))					/* remove lp */
-	   	lfree(0, lp);						/* No mark points to lp */
-  }
+	  if (lp != newlp)
+		{	ibefore(lp, newlp);				/* Link in */
+			if (!l_is_hd(lp))					/* remove lp */
+	   		lfree(0, lp);						/* No mark points to lp */
+  	}
+	}
 
   return lchange(WFEDIT);
 }}}
@@ -387,7 +386,7 @@ int Pascal linstr(const char * instr)
 {	int status = TRUE;
 
 	if (*instr != 0)
-	{ g_header_scan = 1;
+	{ //g_header_scan = 1;
 	  g_inhibit_scan -= 1;
 	  
 	  while (*instr)
@@ -427,6 +426,7 @@ int Pascal istring(int f, int n)	/* ask for and insert a string into the
 	return status;
 }
 
+#if FLUFF
 
 int Pascal ovstring(int f, int n_) /* ask for and overwite a string into the current
 			       buffer at the current point */
@@ -436,6 +436,8 @@ int Pascal ovstring(int f, int n_) /* ask for and overwite a string into the cur
   g_overmode = false;
   return cc;
 }}
+
+#endif
 
 int kinsert_n;		/* parameter to kinsert, used in region.c */
 
@@ -451,7 +453,7 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
 {	if (rdonly())
 		return FALSE;
 
-  --g_overmode;
+//--g_overmode;
 //++g_inhibit_scan;
 
 { int res = TRUE;
@@ -461,22 +463,21 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
   while (n > 0)
   { int  doto = curwp->w_doto;
     LINE * dotp = curwp->w_dotp;
-    res = dotp->l_dcr;
-    if (res == 0)					   /* Hit end of buffer.   */
+    int l_dcr = dotp->l_dcr;
+    if (l_dcr == 0)					   /* Hit end of buffer.   */
       break;
 
-  { int dcr = dotp->l_dcr;
-  	int used = lused(dcr);
+  {	int used = lused(l_dcr);
     int chunk = used - doto;  /* Size of chunk.       */
     if (chunk > n)
       chunk = n;
     if (chunk <= 0)           /* End of line, merge.  */
-    { if (lnewline(0) == FALSE
+    { --n;
+    	if (lnewline(chunk) == FALSE
        || tokill && kinsert('\n') == FALSE)
       { res = FALSE;
         break;
       }
-      --n;
       continue;
     }
 
@@ -492,13 +493,13 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
           res = ABORT;
     }
 
-    memmove(&dotp->l_text[doto], &dotp->l_text[doto+chunk],
-    				  used-(doto+chunk));
-
-	{ int spare = (dcr & SPARE_MASK) + (chunk << 2);	// increase spare
+	{ int spare = (l_dcr & (SPARE_MASK)) + (chunk << 2);	// increase spare
     if (spare > SPARE_MASK)
 			spare = SPARE_MASK;
-    dotp->l_dcr = (used - chunk) << (SPARE_SZ+2) | spare + 1;
+    dotp->l_dcr = (used - chunk) << (SPARE_SZ+2) | spare | (l_dcr & 3);
+    
+    memmove(&dotp->l_text[doto], &dotp->l_text[doto+chunk],
+    				  used-chunk-doto);
   }}}
 
 #if S_WIN32
@@ -506,7 +507,7 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
     ClipSet(0);
 #endif
   lchange(WFEDIT);
-  ++g_overmode;
+//++g_overmode;
 //--g_inhibit_scan;
   return res;
 }}

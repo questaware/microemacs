@@ -42,16 +42,31 @@ const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL,
 #endif
 const char * suftag  = "cpfqPm";
 
+static
+void Pascal init_buf(BUFFER * bp)
+
+{		LINE * lp = &bp->b_baseline;
+		bp->b_dotp		 = lp;
+		bp->b_wlinep	 = lp;
+		bp->b_baseline.l_fp = (Lineptr)lp;
+		bp->b_baseline.l_bp = (Lineptr)lp;
+  	bp->b_baseline.l_dcr = 0;
+		bp->b_flag &= ~BFCHG; 		/* Not changed		*/
+		memset(&bp->b_doto, 0, sizeof(int)*2 + sizeof(bp->b_mrks));
+}
+
+static
 void Pascal customise_buf(BUFFER * bp)
 
-{		int tabsize = pd_tabsize;
-		int zero = 0;
+{		int zero = 0;
 	  const char * pat = (char*)&zero;
 		const char *fn;
 		for ( fn = bp->b_bname - 1; *++fn != 0; )
       if (*fn == '.')
       	pat = fn;
 
+		init_buf(bp);
+{		int tabsize = pd_tabsize;
 		if (pd_file_prof != NULL)
     {	
     	char * pr = pd_file_prof - 1;
@@ -82,9 +97,86 @@ void Pascal customise_buf(BUFFER * bp)
       }}}
 		}
     bp->b_tabsize = tabsize;
+		bp->b_flag = BFACTIVE | g_gflag;
+		bp->b_color = g_bat_b_color;
+
+    if (bp->b_key != NULL)
+   		bp->b_flag |= MDCRYPT;
 		if (pat[1] == 'e' && pat[2] == '2')
-			bp->b_mode |= BCRYPT2;
-}
+			bp->b_flag |= BCRYPT2;
+}}
+
+
+
+int g_bfindmade;
+
+/* Find a buffer, by name.
+ * If the buffer is not found and the cflag & 1 is TRUE, create it. 
+ */
+BUFFER *Pascal bfind(char * bname, int cflag)
+										/* name of buffer to find */
+										/* cflag   1: create it 2: make buffer name unique */
+{	int cc = -1;
+                      			/* find the place in the list to insert this buffer */
+	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_next);
+
+//if (cflag & 2)
+//	unqname(bname);                     /* dont conflict with other buffers */
+
+	for (; sb->b_next != NULL; sb = sb->b_next) 
+	{ cc = strcmp(sb->b_next->b_bname, bname);
+		if (cc < 0)
+			continue;
+
+		if (cc > 0)
+			break;
+		if (!(cflag & 2))
+			break;
+		cc = 1;					// Case greater than existing, need unique : dont return NULL
+	{	
+#if 0
+		char *sp = strlast(bname+1, '.') - 1;
+#else
+		char *sp, *sp_ = null;
+		for (sp = bname; *++sp; )
+		  if (*sp == '.')
+				sp_ = sp;
+		if (sp_ != NULL)
+			sp = sp_;
+		--sp;
+#endif
+		if (in_range(*sp, '0','8') || 
+		    in_range((*sp & 0xdf), 'A','Y'))
+		  *sp += 1;
+		else
+			*sp = 'Z';
+	}}
+	
+	g_bfindmade = cc;
+	
+	if (cc == 0)
+		return sb->b_next;
+
+	if (!(cflag & 3))
+		return null;
+
+{	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+10); //can grow by 2
+	if (bp != NULL)
+	{	strcpy(bp->b_bname, bname);
+		bp->b_tabsize = 8;				/* Cannot be 0 */
+		bp->b_next = sb->b_next;    /* insert it */
+		sb->b_next = bp;
+																				/* and set up the other buffer fields */
+	/*bp->b_flag |= BFACTIVE; ** very doubtful !!! */
+	//bp->b_flag = g_gflag;
+	//bp->b_color = g_bat_b_color;
+
+// 	init_buf(bp);
+	 	customise_buf(bp);
+	 	bp->b_flag &= ~BFACTIVE;
+	}
+	return bp;
+}}
 
 
 
@@ -117,6 +209,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 #endif
 //fname_[0] = 'A';
 //fname_[1] = 'B';
+	create |= (g_macargs > 0);
 { Fdcr_t fdcr = {NULL};
   char bname[NFILEN];
 //#define text (&bname[NBUFN+1])
@@ -159,7 +252,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
     { makename(bname, fn); 		/* New buffer name.	*/
 
       while (TRUE)
-      { bp = bfind(bname, create, 0);
+      { bp = bfind(bname, create);
 				if (bp == NULL)
 				{ if (create & 1)
 				  { mlwrite(TEXT137);
@@ -169,7 +262,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 	  			create |= 3;
 				} 
 				else
-      	{	create |= 2;
+      	{	create |= 3;
 				  if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
 	          break;
 #if 0
@@ -183,7 +276,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 				      continue;
 
 				    makename(bname, fn);	/* restore it */
-				    create |= 1;		    			/* It already exists but this causes */
+				    create |= 1;		    	/* It already exists but this causes */
 				  }         				      /* a quit the next time around	     */
 #endif
 				}
@@ -191,7 +284,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 	    
 //    bp->b_flag &= ~BFACTIVE;
 	    repl_bfname(bp, fn);
-	    customise_buf(bp);
+//    customise_buf(bp);
 	  }
 	  if (bp_first == NULL)
 	    bp_first = bp;
@@ -365,6 +458,7 @@ int Pascal topluct()	/* calculate top luct */
 
 #endif
 
+
 int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 	
 {	if (bp == NULL)
@@ -375,33 +469,35 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 	curbp = bp; 			/* Switch. */
 	bp->b_luct = ++g_top_luct;
 
-{	int flag = bp->b_flag;
-  bp->b_flag |= BFACTIVE;			/* code added */
+{	int active = bp->b_flag & BFACTIVE;
 
-	g_clring = (bp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS+BCML));
+	if (!active)		/* not active yet*/
+	{ 
+ 		customise_buf(bp);
+ 	}
 
-{ char * fn = bp->b_fname;
-	if (fn != null)
-	{
+	g_clring = (bp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS+BCML));		
+
+	if (!active)		/* not active yet*/
+	{ char * fn = bp->b_fname;
+		if (fn != null)
+		{
 #if S_WIN32 && 0
-		setconsoletitle(fn);
+			setconsoletitle(fn);
 #endif
-		if (!(flag & BFACTIVE))		/* not active yet*/
-		{ 
 			readin(fn, FILE_LOCK);
 		}
 	}
 
-	leavewind(0, NULL);
+{ WINDOW * cwp = leavewind(0, NULL);
+	cwp->w_bufp	= bp;
+	*(WUFFER*)cwp = *(WUFFER*)bp;
+											
 	upwind(TRUE);
-{	WINDOW *wp = curwp;
-	wp->w_bufp	= bp;
-	*(WUFFER*)wp = *(WUFFER*)bp;
-											/* let a user macro get hold of things...if he wants */
-	setcline();
-	execkey(&bufhook, FALSE, 1);
+	setcline();							
+	execkey(&bufhook, FALSE, 1);	/* let a user macro get hold of things */
 	return TRUE;
-}}}}
+}}}
 
 
 /* Attach a buffer to a window. 
@@ -412,22 +508,6 @@ int Pascal usebuffer(int f, int n)
 							/* "Use buffer" */
 
 	return swbuffer(bp);
-}
-
-
-
-static void init_buf(BUFFER * bp)
-
-{	LINE * lp = &bp->b_baseline;
-	bp->b_dotp		 = lp;
-	bp->b_wlinep	 = lp;
-	bp->b_baseline.l_fp = (Lineptr)lp;
-	bp->b_baseline.l_bp = (Lineptr)lp;
-  bp->b_baseline.l_dcr = 0;
-	bp->b_flag &= ~BFCHG; 		/* Not changed		*/
-	memset(&bp->b_doto, 0, sizeof(int)*2 + sizeof(bp->b_mrks));	
-//bp->b_remote = NULL;
-/*bp->b_fcol = 0;*/
 }
 
 
@@ -458,7 +538,7 @@ int Pascal bclear(BUFFER * bp)
 
 /*loglog1("Rebaseline %x", lp); */
 
-	init_buf(bp);
+  init_buf(bp);
 
 { WINDOW * wp;
 	for (wp = wheadp; wp != NULL; wp = wp->w_next)
@@ -590,7 +670,7 @@ int Pascal listbuffers(int iflag, int n)
 {	Char line[15+NUMMODES-2+80] = "Global Modes:  .........\n"
 														 "Actual	Modes   Size  Buffer       File\n";
 												/* build line to report global mode settings */
-	fmt_modecodes(&line[15], g_gmode);
+	fmt_modecodes(&line[15], g_gflag);
 
 	if (linstr(line) == FALSE)
 		return FALSE;
@@ -629,78 +709,6 @@ int Pascal listbuffers(int iflag, int n)
 	return gotobob(0,0);
 }}}
 
-
-
-int g_bfindmade;
-
-/* Find a buffer, by name.
- * If the buffer is not found and the cflag & 1 is TRUE, create it. 
- * The "bflag" is the settings for the flags in buffer.
- */
-BUFFER *Pascal bfind(char * bname,
-										 int cflag, int bflag)
-				/* name of buffer to find */
-				/* cflag   1: create it 2: make buffer name unique */
-				/* bit settings for a new buffer */
-{	int cc = -1;
-                      			/* find the place in the list to insert this buffer */
-	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_next);
-
-//if (cflag & 2)
-//	unqname(bname);                     /* dont conflict with other buffers */
-
-	for (; sb->b_next != NULL; sb = sb->b_next) 
-	{ cc = strcmp(sb->b_next->b_bname, bname);
-		if (cc < 0)
-			continue;
-
-		if (cc > 0)
-			break;
-		if ((cflag & 2) == 0)
-			break;
-		cc = 1;
-	{	
-#if 0
-		char *sp = strlast(bname+1, '.') - 1;
-#else
-		char *sp, *sp_ = null;
-		for (sp = bname; *++sp; )
-		  if (*sp == '.')
-				sp_ = sp;
-		if (sp_ != NULL)
-			sp = sp_;
-		--sp;
-#endif
-		if (in_range(*sp, '0','8') || 
-		    in_range((*sp & 0xdf), 'A','Y'))
-		  *sp += 1;
-		else
-			*sp = 'Z';
-	}}
-	
-	g_bfindmade = cc;
-	
-	if (cc == 0)
-		return sb->b_next;
-
-	if (!(cflag & 1))
-		return null;
-
-{	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+10); //can grow by 2
-	if (bp != NULL)
-	{	strcpy(bp->b_bname, bname);
-		bp->b_next = sb->b_next;    /* insert it */
-		sb->b_next = bp;
-																				/* and set up the other buffer fields */
-	/*bp->b_flag |= BFACTIVE; ** very doubtful !!! */
-		bp->b_flag = bflag | g_gmode;
-		bp->b_color = g_colours;
-
-		init_buf(bp);
-  	customise_buf(bp);
-	}
-	return bp;
-}}
 
 #if 0
 

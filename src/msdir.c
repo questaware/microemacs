@@ -185,7 +185,7 @@ Cc match_fn_re_ic(Char * tlt,
 #endif
 
 
-staticc Char   msd_path_[NFILEN+4] = "?/";
+Char   msd_path_[NFILEN+4] = "?/";
 #define msd_path ((char*)&msd_path_[2])	/* printed path to current file */
 #define msd_relpath msd_path
 
@@ -211,12 +211,12 @@ staticc Vint    msd_iter;		/* FIRST then NEXT */
 #endif
 
 #else
+														// USE_DIR
+Char   msd_path_[NFILEN+40];
+#define msd_path (msd_path_+22)
 
-static BUFFER * msd_buffer;
 //static short  msd_isrel;
-
 static LINE * msd_curr;
-static Char   msd_path[NFILEN+4];
 
 #endif
 
@@ -233,54 +233,65 @@ staticc int   msd_nlink[MAX_TREE+1];		/* stack of number of dirs */
 
 /* CODE BEGINS HERE */
 
+#if USE_DIR
+
+static int USE_FAST_CALL scan_fn(char new_sl)
+
+{	int pe;
+	int last_sl = -1;
+  char ch;
+	for (pe = -1; (ch = msd_path[++pe]) != 0; )
+		if (ch == '\\' || ch == '/')
+		{	msd_path[pe] = new_sl;
+		  last_sl = pe;
+		}
+
+	return last_sl;
+}
+
+#endif
+
 		/* do a wild card directory search (for file name completion) */
 
 Cc msd_init(Char const *  diry,	/* must not be "" */
 						int     props)	/* msdos props + top bits set => repeat first file */
 { 
 //msd_attrs = 0;
-#if USE_DIR == 0
-	msd_props = props;
-  msd_iter = DOS_FFILE;
-#endif
 
-{ Char ch;
-  short pe;
-//short got_star = 0;
-  short pe_last_sl = -1;
-
-// msd_relpath = msd_path;
-												/* msd_path often == diry */
-  for ( pe = -1; ++pe < FILENAMESZ && (msd_path[pe] = (ch = diry[pe])) != 0; )
-  {//if (ch == '*')
-   //  got_star = 1;
-    if (ch == '\\' || ch == '/')
-    { msd_path[pe] = USE_DIR ? '\\' : '/';
-      pe_last_sl = pe + 1;
-    }
-  } 
 #if USE_DIR
-{	char cmd[NFILEN+40];
-	int offs = (props & MSD_SEARCH) ? 3 : 0;
-	strcpy(strcpy(cmd,"dir /ah/a /b/tw/od /s ")+19+offs, msd_path);
+	memcpy(msd_path_, "dir /ah/a /b/tw/od /s ", 22);
 
-	if (pe_last_sl >= 0)		// && (props & MSD_USEPATH)
-		msd_path[pe_last_sl] = 0;
-	if (!(props & MSD_MATCHED))
-		msd_path[0] = 0;
+	strpcpy(msd_path, diry, FILENAMESZ);
+	if (!(props & MSD_SEARCH))
+		msd_path_[20] = 'b';
+	else
+		strcat(msd_path,"\\");
+
+  (void)scan_fn('\\');
+
+//if (pe_last_sl >= 0)		// && (props & MSD_USEPATH)
+//	msd_path[pe_last_sl] = 0;
+//if (!(props & MSD_MATCHED))
+//	msd_path[0] = 0;
+
 {	BUFFER * sbp = curbp;
- 	BUFFER * bp = bfind(cmd, 1, 0);
-	curbp = bp;
-{	int rc = pipefilter('=');
-	if (bp != curbp)
-		zotbuf(bp);
-	curbp->b_flag &= ~BFCHG;
-	msd_buffer = curbp;
-	msd_curr = &msd_buffer->b_baseline;
+	int rc = pipefilter('=');
+	if (curbp != sbp)
+	{	if (rc)
+		{ curbp->b_flag &= ~BFCHG;
+			msd_curr = &curbp->b_baseline;
+		}
+		else 
+			zotbuf(curbp);
+	}
+
 	curbp = sbp;
 	return rc - 1;
-}}}
+}
 #else
+	msd_props = props;
+  msd_iter = DOS_FFILE;
+
 	msd_pat[0] = 0;							/* extract pattern, and cut back */
   if (props & MSD_USEPATH)
   { pe = pe_last_sl;
@@ -295,7 +306,6 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
   g_pathend = pe;
 
   loglog2("PATH %s PAT  %s", msd_path, msd_pat);
-
 {	  
 #if   S_WIN32
 	const char * const stars = "./*.*";
@@ -336,7 +346,7 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 }
   return OK;
 #endif
-}}
+}
 
 
 
@@ -549,16 +559,6 @@ static Bool extract_fn()
   return true;
 }
 
-#else
-
-Char * msd_tidy()
-
-{ if (msd_buffer)
-		zotbuf(msd_buffer);
-
-	return (Char*) msd_buffer = NULL;
-}
-
 #endif
 
 
@@ -568,18 +568,15 @@ Char * msd_nfile()
 #if USE_DIR
 	msd_curr = lforw(msd_curr);
 	if (l_is_hd(msd_curr))
-		return msd_tidy();
+	{ BUFFER * bp = (BUFFER*)(((char*)msd_curr) - sizeof(WUFFER) - sizeof(BUFFER*));
+		zotbuf(bp);
 
-{ int pe = 0;
-	int ix;
-	for ( ix = strlen(msd_path); --ix > 0; )
-		if (msd_path[ix] == '\\' || msd_path[ix] == '/')
-		{ msd_path[ix] = '/';
-			if (pe == 0)
-				pe = ix + 1;
-		}
+		return NULL;
+	}
 
-	strpcpy(msd_path+pe, msd_curr->l_text, lused(msd_curr->l_dcr)+1);
+{	int last_sl = scan_fn('/');
+
+	strpcpy(msd_path+last_sl+1, msd_curr->l_text, lused(msd_curr->l_dcr)+1);
 
 	return msd_path;
 }

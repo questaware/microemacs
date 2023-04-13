@@ -133,8 +133,9 @@ int Pascal nextword(int notused, int n)
 		  	{ if (!mask && prev_is_sp > 0)
 		  			break;
 		  	}
-		  	else if (mask && prev_is_sp > 0)
+		  	else if (mask && prev_is_sp == 0)
 		  		break;
+
 	    	prev_is_sp = ch <= ' ';
 	      ch = nextch((Lpos_t*)curwp, dir);
 				if (ch < 0)
@@ -167,7 +168,7 @@ static int USE_FAST_CALL ccaseword(int n, int low)
 
     while (TRUE)
     { int ch = thischar();
-    	int is = isword(ch);
+    	char is = isword(ch);
     	if (is)
     	{ if (iter)
     		{ iter = 0;
@@ -338,20 +339,23 @@ Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 
 	while (1)
 	{	eop = curwp->w_dotp;
-		if (l_is_hd(eop))
+	{ int l_dcr = eop->l_dcr;
+		if (l_dcr == 0)
 			break;
+
+    l_dcr = lused(l_dcr);
 		if (inc > 0)
 		{ if ((n -= 1) < 0)
 				break;
 		}
 		else
-			if (lused(eop->l_dcr) == 0 || eop->l_text[0] <= ' ')
+			if (l_dcr == 0 || eop->l_text[0] <= ' ')
 				if ((n += 1) > 0)
 					break;
 
-	  psize += lused(eop->l_dcr) + 1;
+	  psize += l_dcr + 1;
 		forwbyline(1);
-	}
+	}}
 
 	rest_l_offs(&s);
 
@@ -409,8 +413,10 @@ Pascal killpara(int f, int n)/* delete n paragraphs starting with the current on
 	{	           /* mark out the end and beginning of the para to delete */
 		gotoeop(FALSE, 1);
 							 /* set the mark here */
-		curwp->mrks.c[0].markp = curwp->w_dotp;
-		curwp->mrks.c[0].marko = curwp->w_doto;
+		*(long long *)&curwp->mrks.c[0].markp = 
+		  *(long long *)&curwp->w_dotp;
+//	curwp->mrks.c[0].markp = curwp->w_dotp;
+//	curwp->mrks.c[0].marko = curwp->w_doto;
 				     /* go to the beginning of the paragraph */
 		gotobop(FALSE, 1);
 		curwp->w_doto = 0;	/* force us to the beginning of line */
@@ -433,22 +439,22 @@ Pascal killpara(int f, int n)/* delete n paragraphs starting with the current on
 
 int Pascal wordcount(int notused, int n)
 
-{	Int nchars = 0;
+{	Int in_wd = FALSE;
+	Int nchars = 0;
 	Int nwords = 0;
 	Int nlines = 1;
 
 	REGION * r = getregion();
 	if (r != NULL)
-	{	Int size = r->r_size;
-		LINE *lp = 	 r->r_linep;
+	{	LINE *lp = 	 r->r_linep;
 		int offset = r->r_offset;
+		Int size = r->r_size;
 								/* count up things */
-		int in_wd = FALSE;
 	  
 	  nchars = size;
 		
 		while (--size >= 0)
-		{	char ch;										/* get the current character */
+		{	int ch;										/* get the current character */
 			++offset;
 			if (offset <= llength(lp))	/* end of line */
 			 	ch = lgetc(lp, offset);
@@ -460,8 +466,7 @@ int Pascal wordcount(int notused, int n)
 			}
 			
 			if (isword(ch))
-			{ if (!in_wd)
-			    ++nwords;
+			{ nwords += 1 ^ in_wd;
 			  in_wd = TRUE;
 			}
 			else 
@@ -491,7 +496,7 @@ int USE_FAST_CALL getwtxt(int wh, char * buf, int lim, int from)
 
 { int	ct = 0;
 	while (--lct >= 0)
-	{ int c = lgetc(curwp->w_dotp, offs);
+	{ char c = lgetc(curwp->w_dotp, offs);
 	  if (! isword(c) && ct > 0 && wh == 0)
 	    break;
 	  *t++ = c;

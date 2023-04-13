@@ -73,7 +73,7 @@
   *Invocation Arguments*
   Flags may be interleaved with file names
       -b**name**  Name the buffer **name**. 
-              Useful to override file suffix attributes
+              Useful to override file suffix attributes and change the effect of $fileprof
       -e      Process error.rc after the startup file
       -m      Show failing macros in a visible buffer
       -i{%$}  var value   Set variable with value before startup
@@ -84,7 +84,7 @@
       -/ pattern  Same but also search
       -v      Open files in view mode
               viewflag = TRUE;
-      -w#     exit the editor after # seconds inactivity (default 900)
+      -w{#}   exit the editor after # seconds inactivity (default 900)
       -x      Keep ^M characters in files being editted/viewed
       -z      select the newset file matching the pattern
       @filename  Name of the startup file; can be relative to emacs diry.
@@ -137,11 +137,11 @@
   *Tabs*
   The variable $hardtab is stored in each buffer and specifies the distance 
   between tab stops; < 0 => expansion to spaces before inserting in the buffer.
-  The variable $fileprof specifies $hardtab for file suffixes (starting .).
-  The syntax is **suffix** = [^][**type**]#
+  The variable $fileprof contains a sequence of file profiles.
+	Each file profile has syntax .**suffix** = [^][**type**]#
   The presence of a ^ signifies that the mode of operation is not AbC
   The **type** is one of cpfqPm signifying C/C++,perl,Fortran,SQL,Pascal,markup.
-  The number # is the tab size.
+  The number # is the tab size $hardtab.
   Example : set $fileprof ".sql=^q4.h=c2.c=c2.cpp=c2.py=-2"
 
   *The File Names*
@@ -152,6 +152,9 @@
  file not so starting.
  ...file means find the first file so called under this directory;
  This is found using the command ffg if installed.
+ ^file means find the first files so called above the directory;
+ file can include directories;
+ on windows command line this is represented "^file (The trailing " can be omitted)
 
   *Completion*
   The system can (partially) complete certain names; it does this by

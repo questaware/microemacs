@@ -171,8 +171,7 @@ const char * const g_envars[] = {
 	"fcol",				/* first displayed column in curent window */
 	"fileprof",		/* profiles for file types */
 	"fillcol",		/* current fill column */
-	"gflags",			/* global internal emacs flags */
-	"gmode",			/* global modes */
+	"gmode",			/* global modes (buffer flags )*/
 	"hardtab",		/* current hard tab size */
 	"highpat1",		/* highlighting string */
 	"highpat10",		/* highlighting string */
@@ -257,7 +256,6 @@ FALSE, /* EVCWLINE */		  /* */
 0,     /* EVFCOL */		    /* The left hand offset on the screen */
 0,     /* EVFILEPROF */	  /* The profiles of file types */
 72,    /* EVFILLCOL */		/* longest line for wordwrap */
-0,     /* EVGFLAGS */		  /* global control flag */
 0,     /* EVGMODE */ 		  /* global editor mode */
 8,     /* EVHARDTAB */		/* default tab size */
 0,     /* EVHIGHLIGHT */	/* not in use */
@@ -345,12 +343,19 @@ const char * USE_FAST_CALL ltos(int val)	/* numeric logical to string logical */
 
 int Pascal USE_FAST_CALL trimstr(int from, char * s)/* trim whitespace off string */
 										/* string to trim */
-{	char *sp = &s[from];
+{
+#if 1
+	while (--from >= 0 && s[from] <= ' ')
+		s[from] = 0;
+	return from + 1;
+#else
+  char *sp = &s[from];
         
 	while (--sp >= s && *sp <= ' ')
 	  *sp = 0;
 	  
 	return sp - s + 1;
+#endif
 }
 
 char *Pascal mkul(int wh, char * str)	/* make a string lower or upper case */
@@ -1071,7 +1076,7 @@ char *Pascal getval(char * tgt, char * tok)
 						return cc < 0 ? getvalnull : tgt;
 		      }
 	  case TOKBUF:															/* buffer contents fetch */
-					{ BUFFER * bp = bfind(getval(tgt, tokp1), FALSE, 0);
+					{ BUFFER * bp = bfind(getval(tgt, tokp1), FALSE);
 						if (bp == NULL)
 						  return getvalnull;
 						  

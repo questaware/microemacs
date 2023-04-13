@@ -60,8 +60,7 @@ void Pascal  openwind(WINDOW * wp)
 }
 
 
-
-void Pascal leavewind(int dec, WINDOW * wp_)
+WINDOW * USE_FAST_CALL leavewind(int dec, WINDOW * wp_)
 	
 { WINDOW * wp = wp_ == NULL ? curwp : wp_;
   BUFFER * bp = wp->w_bufp;
@@ -70,7 +69,9 @@ void Pascal leavewind(int dec, WINDOW * wp_)
 
 	if (dec)
 		free((char *)wp);
+
 /*bp->b_fcol	 = wp->w_fcol;*/
+	return wp;
 }
 
 extern int g_top_luct;
@@ -81,7 +82,7 @@ void openwindbuf(char * bname)
   if (splitwind(FALSE, 1) == FALSE)
     return;
 					        
-{	BUFFER * bp = bfind(bname, TRUE, 0);		/* and get a buffer for it */
+{	BUFFER * bp = bfind(bname, TRUE);		/* and get a buffer for it */
   if (bp == NULL)
     return;
 
@@ -89,10 +90,10 @@ void openwindbuf(char * bname)
 
   if (bclear(bp))
   { bp->b_flag &= ~MDVIEW;
-    bp->b_flag |= BFACTIVE;
+//  bp->b_flag |= BFACTIVE;
 		bp->b_luct = ++g_top_luct;
-    leavewind(0, NULL);
-    openwind(curwp);
+    
+    openwind(leavewind(0, NULL));
   }
 }}
 
@@ -122,13 +123,11 @@ int Pascal refresh(int f, int n)
  */
 int Pascal nextwind(int f, int n)
 
-{
-	WINDOW *wp;
-
-	leavewind(0, NULL);
+{ WINDOW *wp = leavewind(0, NULL);		// curwp
+  wp->w_flag |= WFMODE;		/* Mode line is updated */
 
 	if (! f)
-	{ wp = curwp->w_next;
+	{ wp = wp->w_next;
 		if (wp == NULL)
 	    wp = wheadp;
 	}
@@ -145,7 +144,6 @@ int Pascal nextwind(int f, int n)
 	      wp = wheadp;
 	  }
 	}
-  curwp->w_flag |= WFMODE;		/* Mode line is updated */
 	curwp = wp;
 	curbp = wp->w_bufp;
 	upmode();
@@ -181,9 +179,9 @@ int Pascal getwpos()
        lp != curwp->w_dotp;
        lp = lforw(lp))
   { if (l_is_hd(lp))
-      return -2;
+      return -2;				// An error
     if (--sline <= 0)
-      return -1;
+	    return -1;
   }
 
   return curwp->w_ntrows - sline;
@@ -228,16 +226,15 @@ int Pascal mvupwind(int notused, int n)
 		else
 #endif
     { LINE * lp = curwp->w_linep;
-      LINE * p = &curwp->w_bufp->b_baseline;
       int i = n;
 
       if (i < 0)
       { --i;
-        while (lp != p && ++i < 0)
+        while (!l_is_hd(lp) && ++i < 0)
           lp = lforw(lp);
       }
       else
-      { p = lforw(p);
+      { LINE * p = lforw(&curwp->w_bufp->b_baseline);
         ++i;
         while (lp != p && --i > 0)
           lp = lback(lp);
@@ -314,6 +311,7 @@ int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 														   					
 		nwp->w_ntrows += 1 + cwp->w_ntrows;
 		nwp->w_flag |= WFHARD | WFMODE;				/* update all lines */
+
 		leavewind(1,NULL);
 
 		curwp = nwp;
@@ -351,7 +349,7 @@ int Pascal delwind(int notused, int n)
 Split the current window.  A window smaller than 3 lines cannot be
 split.	(Two line windows can be split when mode lines are disabled) An
 argument of 1 forces the cursor into the upper window, an argument of
-two forces the cursor to the lower window.  The only other error that
+-1 forces the cursor to the lower window.  The only other error that
 is possible is a "malloc" failure allocating the structure for the new
 window.  Bound to "C-X 2". 
 */
@@ -377,7 +375,7 @@ int Pascal splitwind(int f, int n)
 
 	ntrd = getwpos() - 1 - ntru;
 
-	if (f == FALSE ? ntrd <= 0 : n == 1)
+	if (f == FALSE ? ntrd <= 0 : n > 0)
 	{ 					     									/* Old is upper window. */
 	  wp->w_toprow += ntru+1;
 	  wp->w_ntrows = ntrl;

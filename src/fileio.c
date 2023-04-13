@@ -229,15 +229,11 @@ int Pascal ffgetline()
 											
 	do
 	{ c = getc(g_ffp);		    /* if it's longer, get more room */
-//  if (c <= 'Z'- '@')
-//  { if (c == 'Z'- '@')
-//		  continue;
-	    if (c == '\r')
-	    { g_crlfflag = MDMS;
-	      if (!is_opt('X'))
-	        continue;
-	    } 
-//  }
+	  if (c == '\r')
+	  { g_crlfflag = MDMS;
+	    if (!is_opt('X'))
+	      continue;
+	  } 
 	  if (++i >= flen)
 	  {														/* lines longer than 16Mb get truncated */
 	  	char * tmpline = (char*)malloc(flen+NSTRING+1);
@@ -301,10 +297,10 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 
     if      (ch == '*')
       search_type = MSD_DIRY | MSD_MATCHED;
-    else if (ch == '.' && s[0] == '.' && s[1] == '.' && s[2] != '/')
+    else if (ch == '.' && s[0] == '.' && s[1] == '.')
     {	search_type = (tgt - t) - 1;
     	--t;
-    	s += 2;
+    	s += 2 + (s[2] == '/');
     }
     else if (ch == '/' || ch == '\\')
     {	t[0] = '/';

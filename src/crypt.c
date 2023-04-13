@@ -251,7 +251,7 @@ int Pascal setekey(CRYPTKEY * key_ref)
 		mlerase();									/* clear it off the bottom line */
 		if (cc > FALSE)
 		{	if (mykey[stt] == 0)
-				strpcpy(mykey+stt, g_ekey, NPAT-15);
+				strpcpy(mykey+stt, g_bat_b_key, NPAT-15);
 			else
 			{ extern int g_chars_since_ctrl;
 
@@ -287,7 +287,7 @@ int Pascal setuekey(int f, int n)/* reset encryption key of current buffer */
 void Pascal resetkey(CRYPTKEY * key_ref)	/* reset the encryption key if needed */
 
 {	if (!got_key(key_ref))
-    *key_ref = g_ekey;
+    *key_ref = g_bat_b_key;
   if (setekey(key_ref) > FALSE)
   { char * key = strdup(*key_ref);
     int sl  = strlen(key);

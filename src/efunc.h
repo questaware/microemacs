@@ -195,8 +195,8 @@ const NBIND names[] =
 	{"nop",									nullproc},
 #if FLUFF
 	{"open-line",						openline},
-#endif
 	{"overwrite-string",		ovstring},
+#endif
 	{"pipe-command",				pipecmd},
 	{"previous-window",			prevwind},
 	{"print",								writemsg},

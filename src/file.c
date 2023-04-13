@@ -88,13 +88,25 @@ int Pascal insfile(int f, int n)
   									readin(NULL, FILE_LOCK+FILE_REST+FILE_INS);
 }
 
-static
 BUFFER * Pascal bufflkup(const char * filename)
 {
 //const char tagf[] = "/../../../../../tags";
-  char fname[NFILEN+5*3];
+  char fname[NFILEN+5*3+1];
 
   if (filename[0] == '^')
+#if 1
+	{	strcpy(strcpy(fname, TAGFNAME)+15, filename+1);
+	{	int e = 15+3;
+		while ((e -= 3) >= 0 && !fexist(fname+e))
+			;
+		if (e < 0)
+    {	mlwrite(TEXT79);
+    	return NULL;
+    }
+
+		filename = fname+e;
+	}}
+#else
 	{	int totop = NFILEN+5*3 - 1;
 		fname[totop] = 0;
 	{ int sl = strlen(strpcpy(fname,filename+1,NFILEN));
@@ -118,8 +130,8 @@ BUFFER * Pascal bufflkup(const char * filename)
 
 		filename = (const char *)fname;
 	}}}
-
-  return bufflink(filename,g_macargs > 0);
+#endif
+  return bufflink(filename, TRUE);
 }
 
 
@@ -244,13 +256,11 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 	 //	mbwrite(diag_p);
 	
 		if (bp == NULL)
-			bp = bufflink(cmd+clen, (g_macargs > 0));
+			bp = bufflink(cmd+clen, 0);
 		if (bp != NULL)
 		{ cmd[-1] = 1;
 		  bp->b_remote = strdup(fullcmd);											  // allow leak
 	    bp->b_key = props & Q_INHERIT ? curbp->b_key : NULL;
-	    if (bp->b_key != NULL)
-    		bp->b_flag |= MDCRYPT;
 	  }
 
 //	memset(&fullcmd[strlen(cmdnm)],'*', pwlen);
@@ -374,10 +384,10 @@ int Pascal readin(char const * fname, int props)
   	if (rc <= FALSE)			/* Changes not discarded */
   	  return rc;
 
-  	bp->b_flag &= ~(BFINVS|BFCHG);
+// 	bp->b_flag &= ~(BFINVS|BFCHG);
   	fname = repl_bfname(bp, fname);
-  	if (fname == null)
-  	  return ABORT;
+	 	if (fname == null)
+	 	  return ABORT;
 
   			/* let a user macro get hold of things...if he wants */
   	execkey(&readhook, FALSE, 1);
@@ -473,17 +483,17 @@ int Pascal readin(char const * fname, int props)
 }}
 out:
 //readin_lines = nline;
-	bp->b_doto = 0;
-
 	if (ins)
 	{    /* advance to the next line and mark the window for changes */
 	/*curwp->mrks.c[0].markp = lforw(curwp->mrks.c[0].markp);
 	  bp->mrks = curwp->mrks;*/
 /*	curwp->w_dotp = lforw(curwp->w_dotp); */
+		bp->b_doto = 0;
 	  bp->b_flag |= BFCHG;			/* we have changed	*/
 	  bp->b_flag &= ~BFINVS;		/* and are not temporary*/
 	  bp->b_wlinep = curwp->w_linep;
 	  bp->b_dotp = curwp->w_dotp;
+
 	/*bp->b_fcol = curwp->w_fcol;*/
 	  curwp->w_flag |= WFHARD | WFMODE;
 	}
@@ -512,7 +522,7 @@ out:
 #if	CRYPT
 	if (bp->b_flag & MDCRYPT)
 	{
-#if S_WIN32
+#if S_WIN32 && 0
 		MySetCoMo();
 #endif
 	 	resetkey(&bp->b_key);													/* set up for decryption */
@@ -527,7 +537,8 @@ out:
 		if (clamp < 0)
 		{	
 			ucrypt(lp->l_text, len);
-			if (bp->b_mode & BCRYPT2)
+//		if (bp->b_flag & BCRYPT2)
+			if (bp->b_flag < 0)
 				double_crypt(lp->l_text, len);
 		}
 #endif
@@ -536,7 +547,7 @@ out:
                    lp->l_text[0] == '-' && lp->l_text[1] == '-')
 					      && lp->l_text[2] == 't' && lp->l_text[3] == 'a'
 								&& lp->l_text[4] == 'b' && lp->l_text[5] == ' ')
-	  { int tabw = atoi(lp->l_text+6);
+	  { int tabw = lp->l_text[6] - '0';
 	    if (tabw != 0)
 	      bp->b_tabsize = tabw;
 	  }
@@ -692,7 +703,7 @@ int Pascal writeout(const char * fn)
 	char tname[NSTRING];	/* temporary file name */
 	BUFFER * bp = curbp;
 
-	if (bp->b_mode & BCRYPT2)
+	if (bp->b_flag < 0) // BCRYPT2
 	{ mlwrite(TEXT223);
 		return FALSE;
 	}
@@ -820,7 +831,7 @@ int Pascal fetchfile(int f, int n)
 {	int len = lused(lp->l_dcr) > 2*NFILEN ? 2*NFILEN : lused(lp->l_dcr);
 	char cmdline[2*NFILEN+1];
 	((char*)memcpy(cmdline, (char*)lp->l_text, len))[len] = 0;
-	if (curbp->b_mode & BCRYPT2)
+	if (curbp->b_flag < 0) // BCRYPT2
 		double_crypt(cmdline, len);
 
 //mbwrite(cmd);

@@ -40,18 +40,6 @@ void USE_FAST_CALL setcp(int v)
 void init_wincon()
 
 {
-#if 0
-  SC_CHAR buf[129];
-	HINSTANCE hInstance = GetModuleHandle(NULL);	 // Grab An Instance For Window
-	GetModuleFileName(hInstance, buf, sizeof(buf)-1);
-
-#if VS_CHAR8
-#else
-	(void)wchar_to_char(buf);
-#endif
-	flook_init(argv[0]);
-#endif
-
 //Sleep(1000*8);
 																							// reduces memory but slows startup
 	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
@@ -373,7 +361,7 @@ void Pascal tcapopen()
   int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+1;
 
   newdims(pwid, plen);
-	setMyConsoleIP();
+  setMyConsoleIP();
 }
 
 

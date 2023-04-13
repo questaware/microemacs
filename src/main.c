@@ -48,10 +48,12 @@ COORD g_coords; 					/* location of HW cursor	*/
 													/* initialized global definitions */
 int g_macargs = TRUE;		  /* take values from command arguments */
 
+//BATTRS g_bat;
+char * g_bat_b_key;
 #if S_WIN32
-short g_colours = 7;		  /* (backgrnd (black)) * 16 + foreground (white) */
+ short	g_bat_b_color = 7;		  /* (backgrnd (black)) * 16 + foreground (white) */
 #else
-short g_colours = 0x70;		/* (backgrnd (black)) * 16 + foreground (white) */
+ short g_bat_b_color = 0x70;		/* (backgrnd (black)) * 16 + foreground (white) */
 #endif
 
 int g_abortc = CTRL | 'G';	/* current abort command char	*/
@@ -107,8 +109,6 @@ KEYTAB hooks[6];
  char outline[NSTRING];	/* global string to hold debug line text */
 #endif
 
-char *g_ekey = NULL;		/* global encryption key	*/
-
 /*	make VMS happy...	*/
 
 #if	S_VMS
@@ -120,8 +120,6 @@ char *g_ekey = NULL;		/* global encryption key	*/
 
 
 extern int g_timeout_secs;
-
-char * g_invokenm;
 
 int g_opts = 0;
 
@@ -153,7 +151,9 @@ void Pascal dcline(int argc, char * argv[])
 	for (carg = argc; --carg > 0; )
 		clean_arg(argv[carg]);
 #endif
+#if S_MSDOS == 0
 	flook_init(argv[0]);
+#endif
 																						/* Parse a command line */
 	for (carg = argc; --carg > 0; )
 	{ char * filev = argv[argc-carg];
@@ -174,8 +174,8 @@ void Pascal dcline(int argc, char * argv[])
 #if CRYPT 				
 				when 'k': //if (nopipe)									/* -k<key> for code key */
 									{	if (filev[2] != 0)
-											g_ekey = strdup(filev+2);	//visible from command line
-										g_gmode |= MDCRYPT;
+											g_bat_b_key = strdup(filev+2);	//visible from command line
+										g_gflag |= MDCRYPT;
 									}
 #endif						
 				when 'b': def_bname = filev+2;
@@ -210,21 +210,18 @@ void Pascal dcline(int argc, char * argv[])
 		else if (filev[0]== '@')
 			startfile = &filev[1];
 		else																	/* Process an input file */
-		{ int ignore = 2;
-			char * s;
+		{ char * s;
 			char ch;
 		  
-  		for ( s = (filev); (ch = *++s) != 0; )
-  		{
-  			if (ch == '@')
-  				ignore = 255;
-
-  		  if (--ignore <= 0 && ch == ':')
-  		  { *s = 0;
-  				gline = atoi(s+1);
-  				break;
-  		  }
-			}
+			if (filev[1])
+	  		for ( s = (filev+1); (ch = *++s) != 0; )
+	  		{
+	  		  if (ch == ':')
+	  		  { *s = 0;
+	  				gline = atoi(s+1);
+	  				break;
+	  		  }
+				}
 
 		  if (is_opt('P'))									// look along path
 		  { char * s = (char *)flook(0, filev);
@@ -232,7 +229,8 @@ void Pascal dcline(int argc, char * argv[])
 					filev = s;
 		  }
 
-		  bp = bufflink(filev,TRUE/*|(genflag & 16)*/); /* setup buffer for file */
+			bp = bufflkup(filev);
+//	  bp = bufflink(filev,TRUE/*|(genflag & 16)*/); /* setup buffer for file */
 		  if (bp != NULL)
 			{ if (genflag & 1)
 				{ --genflag;
@@ -252,10 +250,10 @@ void Pascal dcline(int argc, char * argv[])
 	} // loop
 
 	if (firstbp == null)
-	{	firstbp = bfind(def_bname, TRUE, 0);
+	{	firstbp = bfind(def_bname, TRUE);
 		if  (nopipe == 0)
 		{ 
-			firstbp->b_flag |= g_gmode;
+			firstbp->b_flag |= g_gflag;
 			firstbp->b_fname = strdup("-");
 		}
 	}
@@ -285,13 +283,14 @@ void Pascal dcline(int argc, char * argv[])
 			gline = -cc;
 		}
 	}
+#if 0
 																								/* we now have the .rc file */
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
-	{ bp->b_flag |= g_gmode;
-		bp->b_color = g_colours;
+	{ bp->b_flag |= g_gflag;
+		bp->b_color = g_bat_b_color;
 	  customise_buf(bp);
 	}
-
+#endif
 #if S_WIN32 == 0
   tcapepage();
 #endif
@@ -336,7 +335,7 @@ void Pascal dcline(int argc, char * argv[])
  
 //if (genflag & 2)
 
-  g_gmode &= ~MDCRYPT;
+  g_gflag &= ~MDCRYPT;
 	g_macargs = FALSE;
 	(void)forwhunt(FALSE, 0);
 }}
@@ -366,6 +365,7 @@ int main(int argc, char * argv[])
 #if S_WIN32
 	init_wincon();
 #endif
+
 #if defined(_DEBUG) || LOGGING_ON
 	log_init("emacs.log", 300000, 0);
 	loglog("***************Started***************");

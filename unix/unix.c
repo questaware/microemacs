@@ -740,13 +740,12 @@ char * searchfile(char * result, Fdcr fdcr)
 { FILE * ip = (FILE*)fdcr->ip;
 	if (ip == NULL)
 	{ char buf[NFILEN+20];
-		char * basename = result+strlen(result)+1;	
-		char * cmd = concat(buf, "ffg -/ ", basename, " ", result, NULL);
-		FILE * ip = popen(cmd, "r");
+//	char * basename = result+strlen(result)+1;	
+		char * cmd = concat(buf, "ffg -/ ", /* basename, " ", */ result, NULL);
+		fdcr->ip = popen(cmd, "r");
+		if (fdcr->ip == NULL)
+			return NULL;
 	}
-	fdcr->ip = ip;
-	if (ip == NULL)
-		return NULL;
 
 { char * fname = fgets(result, NFILEN, ip);
 	if (fname == NULL)

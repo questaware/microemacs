@@ -28,9 +28,10 @@ REGION * Pascal getregion()
 	  return NULL;
 	}
 
-{	int wh = 0;
-	int _lines = 0;
-	int _size = (int)curwp->mrks.c[0].marko - curwp->w_doto;
+{	int lines = 1;
+	int wh = 1;
+	int offset = curwp->w_doto;
+	int _size = (int)curwp->mrks.c[0].marko - offset;
 	int bsize = -_size;
 
 	g_region.r_linep = curwp->w_dotp;
@@ -39,22 +40,20 @@ REGION * Pascal getregion()
 
 	while (true)
 	{
-		_lines += 1;
+		lines -= 1;
 
 		if (blp == mark_line)
 		{	g_region.r_linep = blp;
 			_size = bsize;
-			wh = 1;
+			if (_size > 0 || lines < 0)
+				offset = (int)curwp->mrks.c[0].marko;
 			break;
 		}
 
-		if (wh >= 0)
+		if (wh > 0)
 		{	blp = lback(blp);
-			bsize += llength(blp) + 1;
-			if (l_is_hd(blp))
-			{	wh = -1;
-			  --bsize;
-			}
+			wh = blp->l_dcr & 1;
+			bsize += llength(blp) + wh;
 		}
 
 		if (flp == mark_line)
@@ -66,9 +65,9 @@ REGION * Pascal getregion()
 		}
 	}
 
-	g_region.r_lines = _lines;
-	g_region.r_size = _size;
-	g_region.r_offset = wh <= 0 ? curwp->w_doto : curwp->mrks.c[0].marko;
+	g_region.r_lines = -lines;
+	g_region.r_size = _size > 0 ? _size : -_size;		// case: markp == w_dotp 
+	g_region.r_offset = offset;
 
 	return &g_region;
 }}}
@@ -90,8 +89,12 @@ int Pascal reglines(Bool ask)
 		return 10000000;
 	}}
 											  						/* place us at the beginning of the region */
+#if 0
   curwp->w_dotp = r->r_linep;
   curwp->w_doto = r->r_offset;
+#else
+  memcpy(curwp, r, sizeof(LINE*) + sizeof(int));
+#endif
 
 	return r->r_lines;
 }
@@ -106,16 +109,14 @@ int Pascal killregion(int f, int n)
 {	if (rdonly())
 	  return FALSE;
 
-{	int s = reglines(FALSE);
-	if (s == 0)
-	  return FALSE;
+  (void)reglines(FALSE);
 
 /*if ((g_lastflag&CFKILL) == 0)		** This is a kill type	**
     kdelete() */;								/* command, so do magic */
 	g_thisflag = CFKILL;					/* kill buffer stuff.	*/
 	kinsert_n = chk_k_range(n);
 	return ldelchrs(g_region.r_size, TRUE);
-}}
+}
 
 /*	Narrow-to-region (^X-<) makes all but the current region in
 	the current buffer invisable and unchangable
@@ -130,8 +131,8 @@ int Pascal narrow(int f, int n)
 		return FALSE;
 	}
 									       /* find the boundries of the current region */
-{ int	status = reglines(FALSE);
-	if (status <= 1)
+{ int	lines = reglines(FALSE);
+	if (lines == 0)
 	{ mlwrite(TEXT72); /* "%%Must narrow at least 1 full line" */
 		return FALSE;
 	}

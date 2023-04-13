@@ -76,7 +76,7 @@ BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 		  return NULL;
 	}
 					/* find the pointer to that buffer */
-	return bfind(ebuffer, create, n <= 0 ? 0 : BFINVS);
+	return bfind(ebuffer, create);
 }
 
 /* namedcmd:	execute a named command even if it is not bound */
@@ -169,8 +169,7 @@ int Pascal docmd(char * cline)
 																		 : (*fnc)(f, n);			/* call the function */
 		}
 		else													/* find the pointer to that buffer */
-		{	ebuffer[0] = '[';														
-		{ BUFFER *bp = bfind(strcat(ebuffer, "]"), FALSE, 0); 
+		{ BUFFER *bp = bfind(tkn, FALSE); 
 		  if (bp == NULL) 
 			{ mlwrite(TEXT16);
 							/* "[No such Function]" */
@@ -178,7 +177,7 @@ int Pascal docmd(char * cline)
 			}
 			else 												/* execute the buffer */
 				cc = dobuf(bp,n);
-		}}
+		}
 		pd_cmdstatus = cc;						/* save the status */
 		lastfnc = fnc;
 	}
@@ -328,6 +327,7 @@ static int USE_FAST_CALL common_return(BUFFER * bp)
 	  return FALSE;
 	}
 														/* and make sure it is empty */
+	bp->b_flag |= BFINVS;
 	g_bstore = bp;
 	bclear(bp);
 	return TRUE;
@@ -368,7 +368,7 @@ int Pascal storeproc(int f, int n)
 								/* "Procedure name: " */
 	return cc <= FALSE ? cc
 																							/* set up the new macro buffer */
-				 						 : common_return(bfind(strcat(bname, "]"), TRUE, BFINVS));
+				 						 : common_return(bfind(strcat(bname, "]"), TRUE));
 }}
 
 #endif
@@ -862,9 +862,8 @@ dinput:
 
 					                        /* execute the startup file */
 Cc Pascal startup(const char * sfname)
-	/*  sfname   ** name of startup file ("" if default) */
-{ BUFFER *dfb = NULL;
-	Cc cc = -32000;
+			/*  sfname   ** name of startup file ("" if default) */
+{ Cc cc = -32000;
 	const char *fspec = flook(0, sfname);			/* look up the path for the file */
 	
 	if (fspec == NULL)
@@ -882,7 +881,7 @@ Cc Pascal startup(const char * sfname)
 
 	  makename(bname, fspec); 		/* derive the name of the buffer */
 
-		dfb = bfind(bname, 3, 0);
+	{	BUFFER * dfb = bfind(bname, 3);
   	if (dfb != NULL) 			   		/* get the needed buffer */
 		{ curbp = dfb;			      		/* make this one current */
 		  curbp->b_flag = MDVIEW;			/* mark the buffer as read only */
@@ -897,7 +896,7 @@ Cc Pascal startup(const char * sfname)
 		            		  	/* not displayed, remove the unneeded buffer and exit */
 		  	zotbuf(dfb);
 		}
-	}}
+	}}}
 
   return cc;
 }

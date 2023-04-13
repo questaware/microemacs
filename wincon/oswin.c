@@ -161,7 +161,7 @@ int flagerr(const char *str)  //display detailed error info
   FormatMessage(
               FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
               NULL,
-              GetLastError(),
+              ec,
               MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
               (LPTSTR) &msg,
               0,
@@ -188,6 +188,15 @@ static int g_got_ctrl = false;
 #endif
 
 
+int Pascal iskboard()
+
+{	BY_HANDLE_FILE_INFORMATION fileinfo;
+	g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
+{	DWORD rc = GetFileInformationByHandle(g_ConsIn, &fileinfo);
+	return !rc;
+}}
+
+
 void setMyConsoleIP()
 
 {// int clamp = 2;
@@ -197,41 +206,59 @@ void setMyConsoleIP()
 //}
 
 //while (--clamp >= 0)
-	{ g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
-	  if (g_ConsIn < 0)					                    /* INVALID_HANDLE_VALUE */
-  	  flagerr("Piperr");
-
-	{ Cc rc = SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);	// Allowed to fail
+	{ Cc rc = SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),
+													 ENABLE_WINDOW_INPUT);// Allowed to fail
 		if (rc)
 			return;
 #if _DEBUG
 	  flagerr("Ewi");
 #endif
 //	millisleep(50);
-	}}
+	}
 }
 
 
-int Pascal iskboard()
+static HANDLE Create(const char * fname)
 
-{	BY_HANDLE_FILE_INFORMATION fileinfo;
-	DWORD rc = GetFileInformationByHandle(GetStdHandle( STD_INPUT_HANDLE ), &fileinfo);
-	return !rc;
-}
+{ SECURITY_ATTRIBUTES sa;
+  sa.lpSecurityDescriptor = NULL;
+  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sa.bInheritHandle = TRUE;         //allow inheritable handles
+  
+{	DWORD share = GENERIC_READ | GENERIC_WRITE;
+	int open_create = OPEN_EXISTING;
+	int fattr = FILE_SHARE_READ|FILE_SHARE_WRITE |
+							FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS;
 
+	HANDLE res = CreateFile(fname == NULL ? "nul" : fname,
+										      share, 1, &sa,
+											    open_create,fattr,NULL);
+//if (res < 0)
+//	res =  (int)CreateFile(fname == NULL ? "nul" : fname,
+//											   share, rw+1, &sa,
+//												 open_create,fattr|FILE_FLAG_BACKUP_SEMANTICS,NULL);
+										
+//mlwrite("%pCreate %d %s -> %x", rw, fname, res);
+	return res;
+}}
 
 void Pascal MySetCoMo()
 
-{ SECURITY_ATTRIBUTES sa;
+{ HANDLE h;
+#if 0
+  SECURITY_ATTRIBUTES sa;
   sa.nLength = sizeof(SECURITY_ATTRIBUTES);
   sa.bInheritHandle = TRUE;         //allow inheritable handles
   sa.lpSecurityDescriptor = NULL;
-{	HANDLE h = CreateFile("CONIN$",
-                        GENERIC_READ | GENERIC_WRITE,
-                        FILE_SHARE_READ | FILE_SHARE_WRITE,
-                        &sa,
-                        OPEN_EXISTING,
-                        0, NULL); // ignored
+  h = CreateFile("CONIN$",
+                 GENERIC_READ, // | GENERIC_WRITE,
+                 FILE_SHARE_READ, //  | FILE_SHARE_WRITE,
+                 &sa,
+                 OPEN_EXISTING,
+                 0, NULL); // ignored
+#else
+  h = Create("CONIN$");
+#endif
 	if (!SetStdHandle(STD_INPUT_HANDLE, h))
     flagerr("SCCFSHErr");
 
@@ -252,7 +279,7 @@ void Pascal MySetCoMo()
 }}
 #endif
 //g_origwin = GetForegroundWindow();
-}}
+}
 
 
 /*
@@ -418,10 +445,10 @@ int ttgetc()
 		while (++ix < got)
     {	INPUT_RECORD * r = &rec[ix];
 			if      (r->EventType == KEY_EVENT && r->Event.KeyEvent.bKeyDown)
-	    {	int ctrl = 0;
-				int keystate = r->Event.KeyEvent.dwControlKeyState;
-	      if (keystate & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) 
-				{	ctrl |= CTRL;
+			{	int keystate = r->Event.KeyEvent.dwControlKeyState;
+	      int ctrl = keystate & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED);
+	      if (ctrl)
+				{	ctrl = CTRL;
 					g_chars_since_ctrl = 0;
 				}
 	
@@ -583,55 +610,28 @@ again:
 
 
 
-static HANDLE Create(const char * fname, int rw)
-
-{ SECURITY_ATTRIBUTES sa;
-  sa.lpSecurityDescriptor = NULL;
-  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-  sa.bInheritHandle = TRUE;         //allow inheritable handles
-  
-{ int open_create = OPEN_EXISTING - rw;
-	int fattr = (FILE_ATTRIBUTE_NORMAL << rw)|FILE_FLAG_BACKUP_SEMANTICS;
-	DWORD share = GENERIC_WRITE*(2-rw);
-	
-	int res =  (int)CreateFile(fname == NULL ? "nul" : fname,
-												     share, rw+1, &sa,
-													   open_create,fattr,NULL);
-//if (res < 0)
-//	res =  (int)CreateFile(fname == NULL ? "nul" : fname,
-//											   share, rw+1, &sa,
-//												 open_create,fattr|FILE_FLAG_BACKUP_SEMANTICS,NULL);
-										
-//mlwrite("%pCreate %d %s -> %x", rw, fname, res);
-	return res;
-}}
-
-
 int Pascal name_mode(const char * s)
 
 {	char filen[NFILEN+1];
 	char * t;
-  strpcpy(filen, s, NFILEN+1);
-
-	for (t = filen-1; *++t != 0; )
+	for (t = strpcpy(filen, s, NFILEN+1)-1; *++t != 0; )
 		if (*t == '/')
 			*t = '\\';
 
 {	BY_HANDLE_FILE_INFORMATION fileinfo;
-	int res = 0;
-  int myfile = Create(filen, FILE_SHARE_READ-1);
+	int res = 0x04;
+  int myfile = Create(filen);
 	if (myfile < 0)
-  	return 0;
-
-  if (GetFileInformationByHandle((HANDLE)myfile, &fileinfo))
-	{ res = fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
+		return 0;
+	if (GetFileInformationByHandle((HANDLE)myfile, &fileinfo))
+	{ res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
 	  if (fileinfo.nNumberOfLinks > 1)
 	  	res |= FILE_ATTRIBUTE_NORMAL;
 	}
 	
   CloseHandle((HANDLE)myfile);
 
-	return res | 0x04;
+	return res;
 }}
 
 
@@ -660,6 +660,13 @@ error error
 #define WL_SHOWW	 0x2000
 #define WL_NOIHAND 0x4000
 
+typedef struct 
+{	STARTUPINFO si;
+  SECURITY_ATTRIBUTES sa;
+  HANDLE write_stdin;							// pipe handles
+  HANDLE read_stdout;
+} SiSa;
+
 static																						/* flags: above */
 Cc WinLaunch(int flags,
 						 const char *cmd,
@@ -668,7 +675,6 @@ Cc WinLaunch(int flags,
 						)
 { char buff[512];           //i/o buffer
 	const char * app = NULL;
-	char * ca = NULL;
 	int quote = 0;
 
 	const char * s = cmd;
@@ -691,7 +697,6 @@ Cc WinLaunch(int flags,
 	while ((app = flook('P', buff)) == NULL && --ct > 0)
 		strcat(buff, ".exe");
 			
-	ca = (char*)cmd;								// ignore buff
 	if (app != NULL)
 		app = NULL;
 	else
@@ -700,14 +705,14 @@ Cc WinLaunch(int flags,
 			if (app == NULL)
 				app = "cmd.exe";
 	
-			if (ca != NULL)														/* Create the command line */
+			if (cmd != NULL)														/* Create the command line */
+			{	if (strlen(cmd)+5 >= sizeof(buff))
+					return -1;
 			{	char * dd = strcpy(buff," /c \"")+5;
 				char ch;
 			//char prev = 'A';
-				if (strlen(ca)+5 >= sizeof(buff))
-					return -1;
 	
-				for (; (ch = *ca++); /* prev = ch */)
+				for (; (ch = *cmd++); /* prev = ch */)
 				{// if (ch == '/' && 										// &&!(flags & LAUNCH_LEAVENAMES)
 				 //	  (in_range(toupper(prev), 'A','Z')
 				 // || in_range(prev, '0', '9')
@@ -721,98 +726,94 @@ Cc WinLaunch(int flags,
 	
 				*dd = '"';
 				dd[1] = 0;
-				ca = buff;
-			}
+				cmd = buff;
+			}}
 		}
 	}
 
-{ STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-  SECURITY_ATTRIBUTES sa;
-  HANDLE write_stdin = 0;							// pipe handles
-  HANDLE read_stdout = 0;
+{	PROCESS_INFORMATION pi;
+	SiSa sisa;
 	Cc wcc = OK;
-	pi.hProcess = 0;
-  sa.lpSecurityDescriptor = NULL;
-  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-  sa.bInheritHandle = TRUE;         //allow inheritable handles
+//pi.hProcess = 0;
+	memset(&sisa, 0, sizeof(sisa));
+	sisa.si.cb = sizeof(sisa.si);
+//sisa.sa.lpSecurityDescriptor = NULL;
+  sisa.sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  sisa.sa.bInheritHandle = TRUE;         //allow inheritable handles
 
   pd_sgarbf = TRUE;
 	upwind(TRUE);
 //memset(&pi, 0, sizeof(pi));
-	memset(&si, 0, sizeof(si));
-	si.cb = sizeof(si);
 
 //if (flags & WL_SHOWW)
-//{ si.dwFlags |= STARTF_USESHOWWINDOW;
-//  si.wShowWindow = SW_SHOWNORMAL;
+//{ sisa.si.dwFlags |= STARTF_USESHOWWINDOW;
+//  sisa.si.wShowWindow = SW_SHOWNORMAL;
 //}
 							  
 	if (!(flags & WL_SPAWN))
 	{ if ((flags & WL_NOIHAND) == 0)
-//		si.hStdInput = Create(infile,FILE_SHARE_READ-1);
-      si.hStdInput = Create(infile, 0);
+//		sisa.si.hStdInput = Create(infile,FILE_SHARE_READ-1);
+      sisa.si.hStdInput = Create(infile);
 //      	 == NULL ? "nul" : infile,
-//                                GENERIC_READ,FILE_SHARE_READ,&sa,
+//                                GENERIC_READ,FILE_SHARE_READ,&sisa.sa,
 //                                OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 		if (outfile != NULL)
-    { si.hStdOutput = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sa,
-                                    CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
+    { sisa.si.hStdOutput = CreateFile(outfile,GENERIC_WRITE,FILE_SHARE_WRITE,&sisa.sa,
+                                      CREATE_ALWAYS,FILE_ATTRIBUTE_TEMPORARY,NULL);
 #if _DEBUG
-			if (si.hStdOutput <= 0)
+			if (sisa.si.hStdOutput <= 0)
 				mbwrite("CFOut Failed");
 #endif
 		}
-		si.dwFlags |= STARTF_USESTDHANDLES;
+		sisa.si.dwFlags |= STARTF_USESTDHANDLES;
 	}
 	else
-	{	if      (!CreatePipe(&read_stdout,&si.hStdOutput,&sa,0)) //create stdout pipe
+	{	if      (!CreatePipe(&sisa.read_stdout,&sisa.si.hStdOutput,&sisa.sa,0)) //create stdout
 	  	wcc = -1000;
 		else if ((ipstr != NULL || infile != NULL)
-		  		&& !CreatePipe(&si.hStdInput,&write_stdin,&sa,0))   //create stdin pipe
+		  		&& !CreatePipe(&sisa.si.hStdInput,&sisa.write_stdin,&sisa.sa,0))  //create stdin
 			wcc = -2000;
 		else
 		{ // mbwrite("Created WSO");
 // 		GetStartupInfo(&si);      //set startupinfo for the spawned process
-			si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-		  si.wShowWindow = SW_HIDE;
-//	  si.lpTitle = "Emsub";
-//	  si.hStdInput = g_ConsIn;
+			sisa.si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+		  sisa.si.wShowWindow = SW_HIDE;
+//	  sisa.si.lpTitle = "Emsub";
+//	  sisa.si.hStdInput = g_ConsIn;
 	  }
 	  flags |= WL_IHAND;
 	}
 
-	if (si.hStdOutput > 0)
+	if (sisa.si.hStdOutput > 0)
 #if 1
-		si.hStdError = si.hStdOutput;
+		sisa.si.hStdError = sisa.si.hStdOutput;
 #else
 	{	HANDLE cur_proc = GetCurrentProcess();
 									 
-		BOOL s = DuplicateHandle(cur_proc,si.hStdOutput,
-														 cur_proc,&si.hStdError,0,TRUE,
+		BOOL s = DuplicateHandle(cur_proc,sisa.si.hStdOutput,
+														 cur_proc,&sisa.si.hStdError,0,TRUE,
 														 DUPLICATE_SAME_ACCESS) ;
 	}
 #endif	  
 
 //mbwrite(app == NULL ? "<no app>" : app);
 //mbwrite(ca == NULL ? "<no args>" : ca);
-//mbwrite(int_asc((int)si.hStdOutput));
+//mbwrite(int_asc((int)sisa.si.hStdOutput));
 
 {	DWORD exit = STILL_ACTIVE;  			//process exit code
   DWORD bread = 0, bwrote = 0;  		//bytes read/written
   DWORD avail;  										//bytes available
-  int got_ip = 0;
 //int sct = 6;
  	int sentz = 0;
 
 	if      (wcc != OK)
 		wcc += flagerr("CreatePipe");
   else if (!CreateProcess(app,					//spawn the child process
-                    			(char*)ca,
+                    			(char*)cmd,
                     			NULL,NULL,
 													(flags & WL_IHAND),
                 					flags & (WL_CNPG+WL_CNC),
-                    			NULL,NULL,&si,&pi))
+                    			NULL,NULL,&sisa.si,&pi))
 		wcc = -3000 + flagerr("CreateProcess");
   else
 	{	CloseHandle(pi.hThread);
@@ -852,9 +853,11 @@ Cc WinLaunch(int flags,
 	  	FILE * op = outfile == NULL ? NULL_OP : fopen(outfile, "w");
 		{	int append_nl = 1;
 	  	int std_delay = 5;
+		  int got_ip = 0;
 	  	int delay = 0;
+	  	Cc cc;
 #if _DEBUG			
-			if (read_stdout == 0)
+			if (sisa.read_stdout == 0)
 			{ mbwrite("Int Err");
 				return -1;
 			}
@@ -862,15 +865,15 @@ Cc WinLaunch(int flags,
 		  while (TRUE)															      //main program loop
 		  {	(void)millisleep(delay);											//check for data on stdout
 		  	delay = std_delay;
-		  {	Cc cc = PeekNamedPipe(read_stdout,buff,2,&bread,&avail,NULL);
+		  	cc = PeekNamedPipe(sisa.read_stdout,buff,2,&bread,&avail,NULL);
+#if _DEBUG			
 			  if (!cc)
 		  	 	flagerr("PNP");
+#endif
 				if (bread == 0)
 		  	{ cc = GetExitCodeProcess(pi.hProcess,&exit); //while process exists
-				  if 			(!cc)
-				  {	flagerr("GECP");
-				   	break;
-				  }
+				  if (!cc)
+				  	break;
 	  			if (exit != STILL_ACTIVE)
 	  				break;
 	  		}
@@ -879,11 +882,10 @@ Cc WinLaunch(int flags,
 	  			buff[bread] = 0;
 //	  		mbwrite(buff);
 	    	  while (done < avail)
-	    	  {	cc = ReadFile(read_stdout,buff+done,1023-done,&bread,NULL);
+	    	  {	cc = ReadFile(sisa.read_stdout,buff+done,1023-done,&bread,NULL);
 					  if (cc == 0)
-	  				{	flagerr("PNP");
 	    	 			break;
-	    	 		}
+
 	    		  done += bread;
 	    		  buff[done] = 0;
 	    	 		if (bread == 0)
@@ -943,8 +945,8 @@ Cc WinLaunch(int flags,
 				 	sentz = 4000 / 50;			// Wait 4 seconds
 				}
 
-		    cc = WriteFile(write_stdin,l.buf+bwrote,sl,&bwrote,NULL); //send to stdin
-		    if (cc == 0)
+		  { Cc cc_ = WriteFile(sisa.write_stdin,l.buf+bwrote,sl,&bwrote,NULL);//send to stdin
+		    if (cc_ == 0)
 			  	wcc = -4000 + flagerr("WriteFile");
 			  else
 		   	{	if (sl - bwrote > 0)
@@ -960,6 +962,9 @@ Cc WinLaunch(int flags,
 				l.i[2] = 0;
 	    	//delay = STD_DELAY;
 	    }}}
+	    if (!cc)
+				flagerr("PIP");
+
 			if (ip_ != NULL)
 				fclose(ip_);
 			if (op != NULL_OP)
@@ -980,11 +985,11 @@ Cc WinLaunch(int flags,
 	  CloseHandle(pi.hProcess);
 	}
 
-  CloseHandle(si.hStdInput);
-  CloseHandle(si.hStdOutput);
-//CloseHandle(si.hStdError);
-  CloseHandle(read_stdout);
-  CloseHandle(write_stdin);
+  CloseHandle(sisa.si.hStdInput);
+  CloseHandle(sisa.si.hStdOutput);
+//CloseHandle(sisa.si.hStdError);
+  CloseHandle(sisa.read_stdout);
+  CloseHandle(sisa.write_stdin);
 	setMyConsoleIP();
 
   return wcc != OK ? wcc :
@@ -1012,6 +1017,8 @@ int ttsystem(const char * cmd, const char * data)
 	return cc;
 }
 
+extern Char msd_path_[NFILEN+40];
+
 	/* Pipe a one line command into a window
 	 */
 int pipefilter(char wh)
@@ -1039,7 +1046,7 @@ int pipefilter(char wh)
 	else
 #endif
 	if (wh == '='-'<')
-		strcpy(line, curbp->b_bname);
+		strcpy(line, msd_path_);
 	else
 	{ extern int g_last_cmd;
 	  prompt[1] = 0;
@@ -1113,7 +1120,7 @@ int pipefilter(char wh)
 	close(fid);
 */
 	if (wh >= '<'-'<')   /* <  =  @ */
-	{ BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), TRUE, 0);
+	{ BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), TRUE);
 		if (bp == NULL)
 			return FALSE;
 /*	
@@ -1197,9 +1204,9 @@ char * searchfile(char * result, Fdcr fdcr)
 { FILE * ip = (FILE*)fdcr->ip;
 	if (ip == NULL)
 	{ char buf[NFILEN+20];
-		char * basename = result+strlen(result)+1;
+//	char * basename = result+strlen(result)+1;
 		
-		char * cmd = concat(buf, "ffg -/ ", basename, " ", result, NULL);
+		char * cmd = concat(buf, "ffg -/ ", /* basename, " ", */ result, NULL);
 
 		char * fnam2 = mkTempCommName('o', fdcr->name);
 		Cc cc = WinLaunch(WL_IHAND+WL_HOLD+WL_SHELL,

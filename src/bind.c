@@ -20,7 +20,6 @@
 #include	"logmsg.h"
 
 extern char *getenv();
-char * g_invokenm;
 
 #if 0
 
@@ -369,7 +368,7 @@ int  getcmd()
 
 
 									/* This function looks a key binding up in the binding table */
-KEYTAB * Pascal getbind(int c)
+KEYTAB * getbind(int c)
 				/* key to find what is bound to it */
 {	// if (c < 0)
 	//	return &hooks[-c];
@@ -618,10 +617,10 @@ Pascal unbindkey(int f, int n)
   }
 {
 #if NBINDS
-  KEYTAB * ktp = getbind(0) - 1;		/* get pointer to end of table */
+  KEYTAB * ktp = getbind(0);			/* get pointer to end of table */
 			           										/* copy the last entry to the current one */
-  *sktp = *ktp;
-  ktp->k_code = 0;										/* null out the last one */
+  *sktp = ktp[-1];
+  ktp[-1].k_code = 0;										/* null out the last one */
 
 #else
   if (in_range(sktp - keytab, 0, upper_index(keytab)))
@@ -648,7 +647,7 @@ int Pascal macrotokey(int f, int n)
 																     /* build the response string for later */
 	strcat(outseq, &bufn[1]);
 	bufn[0] = '[';
-{	BUFFER *kmacro = bfind(strcat(bufn, "]"), FALSE, 0);
+{	BUFFER *kmacro = bfind(strcat(bufn, "]"), FALSE);
 	if (kmacro == NULL)
 	{ mlwrite(TEXT130);
 					/* "Macro not defined" */
@@ -736,8 +735,7 @@ int Pascal buildlist(const char * mstring)
   openwindbuf(TEXT21);
 			  
   if (mstring == NULL)
-  { if (linstr(bltbl) <= FALSE)
-      cc = FALSE;
+  { cc = linstr(bltbl);
   }
   else    
   {	for (nptr = &names[0]-1; (++nptr)->n_func != NULL; )
@@ -745,21 +743,6 @@ int Pascal buildlist(const char * mstring)
 			if (append_keys(nptr->n_name, nptr->n_func, mstring) < 0)
 				break;
 		}
-#if 0
-	{ BUFFER * BP; 								/* add blank line between key and macro lists */
-		linsert(1, '\n');
-									 							/* scan buffers for macros and their bindings*/
-		for (bp = bheadp; bp != NULL; bp = bp->b_next)
-		{																					/* add in the command name */
-		  if (bp->b_bname[0] != '[')							/* is this buffer a macro? */
-		    continue;
-
-		{	NBIND t = {bp->b_bname, ((*)(int, int))bp};
-			if (append_keys(&t, mstring) < 0)
-				break;
-		}}
-	}
-#endif
   }
 
   (void)mkdes();
@@ -767,43 +750,27 @@ int Pascal buildlist(const char * mstring)
 }
 
 static char * g_fspec;
-static int   g_fspec_len;
+//static int   g_fspec_len;
 
+
+#if S_MSDOS == 0
+#define HOMEPATH "HOME"
+static
+ char * g_invokenm;
+#else
+#define HOMEPATH "HOMEPATH"
+#endif
+
+
+#if S_MSDOS == 0
 
 void Pascal flook_init(char * cmd)
 
 { 
-#if S_MSDOS == 0
-	char * c = strdup(cmd);
-#define HOMEPATH "HOME"
-#else
-#define HOMEPATH "HOMEPATH"
-	char * c = malloc(1050);
-	int len = GetModuleFileName(0, c, 1049);
-#if 0
-	int clen = strlen(cmd);
-	char * c = strcpy(malloc(clen+5),cmd);
-
-  if (c[0] == '"')
-  { ++c;
-    c[--clen] = 0;
-  }
-
-	if (clen-4 >= 0 && strcmp(c+clen-4, ".exe") == 0)
-		c[clen-4] = 0;
-	c = strcat(c,".exe");
-#endif
-#endif
-	g_invokenm = c;
-#if S_MSDOS && 0
-  for (; *c != 0; ++c)
-    if (*c == '\\')
-      *c = '/';
-#endif
-
-//g_fspec_len = NFILEN;
-//g_fspec = malloc(g_fspec_len+1);
+	g_invokenm = strdup(cmd);
 }
+
+#endif
 
 
 /*!********************************************************
@@ -901,10 +868,10 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 			dir += 2;
   
 	{ int sl = strlen(dir) + strlen(file) + 127;
-		if (sl > g_fspec_len)
-		{	g_fspec_len = sl;
+//	if (sl > g_fspec_len)
+//	{	g_fspec_len = sl;
 			(void)remallocstr(&g_fspec, NULL, sl);
-		}
+//	}
 
 // 	mlwrite("Fex_file %s %s%p\n", file, dir);
 
@@ -952,17 +919,15 @@ const char * Pascal flook(char wh, const char * fname)
 		return !fexist(fname) ? NULL : fname;
 
 	switch (wh)
-	{ case 'I':
-		case 'P':
-			if (wh == 'P')
-				path = getenv("PATH");
-			else
-	    {	path = curbp->b_fname;
-	    	if ((res = fex_file(0, &path, fname)))
-	      	return res;
-			  path = pd_incldirs;
-	    }
-	
+	{	case 'P':
+			path = getenv("PATH");
+			if (0)
+	  case 'I':
+	  { path = curbp->b_fname;
+	    if ((res = fex_file(0, &path, fname)))
+	     	return res;
+			 path = pd_incldirs;
+	  }
 			if (path != NULL)
 			{	for (--path; *++path != 0;)
 			  { if ((res = fex_file(1, &path, fname)))
@@ -975,12 +940,16 @@ const char * Pascal flook(char wh, const char * fname)
 			path = getenv(HOMEPATH);
 	    if ((res = fex_file(1, &path, fname)))
 	      return res;
+	  {
 #if S_WIN32
-			path = g_invokenm;
+			char invokenm[514];
+			(void)GetModuleFileName(0, invokenm, 512);
+			path = invokenm;
 #else
 			path = flook('P', g_invokenm);
 #endif
 		 	return fex_file(0, &path, fname);
+		}
 	}
 
 	return NULL;	/* no such luck */
@@ -1009,7 +978,8 @@ char *Pascal flooknear(knfname, name)
 	char *knfname;		/* known file name */
 	char *name;				/* file to look for */
 { 
-	strpcpy(&g_fspec[0], knfname, g_fspec_len);
+	(void)remallocstr(&g_fspec, knfname, 0);
+//strpcpy(&g_fspec[0], knfname, g_fspec_len);
 { Char * t = &g_fspec[strlen(g_fspec)]
   while (t > g_fspec && * t != DIRSEPCHR && *t != '/')
     --t;
@@ -1095,7 +1065,7 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 	       char *fname = (char*)flook(0, emacshlp);
 
 	BUFFER *bp;
-	if (fname == NULL || (bp = bufflink(fname, (g_macargs > 0) | 64)) == NULL)
+	if (fname == NULL || (bp = bufflink(fname, 64)) == NULL)
 	{ mlwrite(TEXT12);
 					/* "[Help file missing]" */
 	  return FALSE;
@@ -1121,7 +1091,7 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 			  /* ": describe-key " */
 #define DESC_TO_FILE 0
 #if DESC_TO_FILE
-{	BUFFER *bp = bufflink("pjsout", (g_macargs > 0) | 64);
+{	BUFFER *bp = bufflink("pjsout", 64);
 	if (swbuffer(bp) > 0)
 	{	
 		gotoeob(0,0);

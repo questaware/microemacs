@@ -781,5 +781,5 @@ BUFFER * getcbuf(int createflag, BUFFER * bp, const char *prompt)
 {				
   char *sp = complete(prompt, bp ? bp->b_bname : "main", CMP_BUFFER);
 
-  return sp == NULL ? NULL : bfind(sp, createflag, 0);
+  return sp == NULL ? NULL : bfind(sp, createflag);
 }

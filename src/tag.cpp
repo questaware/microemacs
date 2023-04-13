@@ -427,19 +427,19 @@ findTag(int f, int n)
 #if NPAT+22 > 1024
  error error
 #endif
-    Bool middle = false;
+    Bool middle = 1;
 					    	/* If we are not in a word get a word from the user.*/
     if ((n & 0x02) || !inword())
     {											/*---	Get user word. */
     	int cc = mltreply("Tag? ", tag, sizeof(tag)-1);
-    	if (cc != true)
+    	if (cc <= FALSE)
             return -1;
     }
     else
     {	char * ss = curwp->w_dotp->l_text;
 		int  ll   = llength(curwp->w_dotp);
         int  offs = curwp->w_doto;
-        middle = offs > 0 && ss[offs - 1] == ':';
+        middle = ss[offs - 1] - ':';			// preceding byte is zero
 												/* Go to the start of the word.*/
         while (--offs >= 0 && (ss[offs] == ':' || isword(ss[offs])))
             ;
@@ -467,21 +467,22 @@ findTag(int f, int n)
 			;
 		if (ch != 0)
 		{	*s = 0;
-			if (s[1] == ':' && middle)
+			if (s[1] == ':' && middle == 0)
 				res = Tag::findTagExec(s+2);
-			if (res != true) 
+			if (res != TRUE)
 				res = Tag::findTagExec(tag);
 		}
 	}
-	if (res == true)
-		return true;
+//	if (res == TRUE)
+//		return TRUE;
 
-	if (res > 0)
+	if (res > TRUE)
 	{	MLWRITE((res & 3) == 0 ? TEXT142 : /* "[no tag file]" */
 				res & 1  	   ? TEXT160 : /* "No More Tags" */ 
 						   		 TEXT161, tag); /* "[tag %s not in tagfiles]" */
+		return FALSE;
 	}
-	return false;
+	return TRUE;
 }}
 
 #if STANDALONE

@@ -446,9 +446,9 @@ int Pascal Sinc::strxct_mtch(int stt, const char * src_,
 
 void USE_FAST_CALL Sinc::bufappline(int indent, const char * str)
 
-{ int    sz = strlen(str);
+{ int  sz = strlen(str);
 	if (Sinc::g_outbuffer)
-	{	LINE * inslp = mk_line(str, indent+sz, 0);
+	{	LINE * inslp = mk_line(str, indent+sz, 1);
 	   
 		if (inslp != NULL)
 		{	ibefore(Sinc::g_outbuffer->b_baseline.l_fp, inslp);
@@ -480,9 +480,9 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
   int  rp_line = -1;		/* line containing a () */
   init_paren("[", -1);
 { bool in_esc = false;		/* line after \ */
-  int  paren_dpth = 0;
-  int  brace_dpth = 0;		/* relevant only to structures */
-  int  paren_nm = 0;
+  int  paren_dpth = 0;		/* always >= 0 */
+  int  brace_dpth = 0;		/* always >= 0, relevant only to structures */
+  int  paren_nm = 0;			/* always >= 0 */
 //int  brace_nm;
 //int  tok_ct = 0;
 
@@ -582,7 +582,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
 							
 	      	      loglog4("Z %x rp_l %d l_left %d wc %d", state,rp_line,lines_left,word_ct);
 	             
-		      			if (paren_dpth > 0 && from_w_good_cl) /* p (^here) */
+		      			if (paren_dpth * from_w_good_cl) /* p (^here) */
 		      			{ loglog1("pdrej %20.20s", cp);
 				        	return F_NF;
 	    			  	}
@@ -645,7 +645,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
                   return F_CLASS;
                 }
               }
-				      if ((state & M_IN_SCT)==0 && paren_dpth==1)
+				      if ((state & M_IN_SCT) == 0 && paren_dpth > 0)
                 state |= M_NEED_BODY;
             }
             if (word_ct > 0)
@@ -656,7 +656,7 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
 	    			{ loglog("ANM0");
 				      return F_NF;
 	    			}
-	    		  if (paren_dpth!=0  && obrace_dpth < 0 &&
+	    		  if (paren_dpth * obrace_dpth < 0 &&
 	        			sparen_nc != 0 &&
 	       			 (state & (M_GOT_NM+M_IN_DCL+M_NO_BODY)) == (M_GOT_NM+M_IN_DCL))
 	      		{	state |= M_NEED_BODY;
@@ -693,8 +693,8 @@ int Sinc::doit_forward(meLine * lp, char * cp_, short from_w_good_cl)
 								  state |= M_NEED_B2;
 								}
 	      			}
-	      			if (paren_dpth < 0)
-	        			paren_dpth = 0;
+				      if (paren_dpth < 0)
+				      	paren_dpth = 0;
 	    			}
 	  			}
 	  			else if (ch == ';' || ch == '}'/* rbrace */)
@@ -972,7 +972,7 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
 
   loglog3("cwp %x lp %x ? %x", wp, save.curline, 0);
   if (fname[0] == 0)
-  	lp = save.curline;
+  	lp = lback(save.curline);
     
   bp->b_flag |= MDSRCHC;
 
@@ -980,7 +980,7 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
                 lp = prev)
 #endif
   {	int cplen = lused(lp->l_dcr);
-    prev = meLineGetPrev(lp);
+    prev = lback(lp);
       
 #if AM_ME  
     --lnno;
@@ -1010,7 +1010,7 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
         if (ch == 'd')
         { if (strxct_mtch(-1, cp, cplim+1) >= 0 && Sinc::g_outbuffer == NULL)
 				  { cand.curline = lp;
-				    cand.curoff = cp - &lp->linetext[0];
+				    cand.curoff = cp - cpstt;
 				    set_cand_lnno(lnno);  
 				    rcc = 100;
 				    /*Sinc::*/best_nest = -1;
@@ -1218,7 +1218,7 @@ scan:
 												  continue;
 
 												ct = 0;			/* end of looping */
-								        if      (wh == 5)	/* "C" */
+								        if      (wh == 4)	/* "C" */
 												  ;
 												else if (wh == 3)	/* enum */
 												{ if (from_wh & 1)/* field */
@@ -1256,9 +1256,9 @@ scan:
                     { word_ct += 1;
       	              if      (ch != *target ||
       	            					 strxct_mtch(-1, cp, cplim + 1) < 0)
-				                 ; 		 							   /* unique code point for match */ 
+				                ; 		 							   /* unique code point for match */ 
 								      else if (Sinc::g_outbuffer != NULL)	/* word matched */
-		  					       ;
+		  					        ;
 						   	      else if (srch_exact > 0 /* && fname[0] != 0 */)
 		      						{
 #if AM_ME
@@ -1435,7 +1435,7 @@ int Pascal searchIncls(int f, int n)
   /* namelist = null;*/
   /* srchdpth = 0;*/
   
-  setmark(-1,-1);
+  setmark(-1,-1);		// set the highest mark
 
   int cc = Sinc::srchdeffile(0, from_wh, "");
 
@@ -1493,28 +1493,24 @@ int Pascal getIncls(int f, int n)
 	if (at_end == 0)
 		curwp->w_dotp = curwp->w_dotp->l_bp;
 	
-  BUFFER * bp = bfind(strcpy(bi_nm, "file incls"), TRUE, 0);
+  BUFFER * bp = bfind(strcpy(bi_nm, "file incls"), TRUE);
   if (bp == NULL)
     return 0;
 
-  if (bp->b_fname == NULL)
-    bp->b_fname = strdup(bi_nm+5) ;
+  bp->b_fname = strdup(bi_nm+5);	// allow the leakage
 
-{ int cc = bclear(bp);
-  if (cc > FALSE)
-	{	Sinc::g_outbuffer = bp;
+	Sinc::g_outbuffer = bp;
 
-	  cc = searchIncls(f, n);
-	  if (bp->b_baseline.l_fp == &bp->b_baseline)
-	  	linstr(TEXT79);		/* "Not found" */
+{	Cc cc = searchIncls(f, n);
+  if (bp->b_baseline.l_fp == &bp->b_baseline)
+  	linstr(TEXT79);		/* "Not found" */
 
-	  bp->b_flag |= BFACTIVE;			/* code added */
-	  swbuffer(bp);
+  bp->b_flag |= BFACTIVE;			/* code added */
+  swbuffer(bp);
 
-	  Sinc::g_outbuffer = NULL;
-	  if (at_end == 0)
-			curwp->w_dotp = curwp->w_dotp->l_fp;
-	}
+  Sinc::g_outbuffer = NULL;
+  gotobob(0,0);
+
   return cc;
 }}
 

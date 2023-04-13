@@ -237,6 +237,7 @@ int Pascal gotoeob(int notused, int n)
 int Pascal forwline(int notused, int n_)
 							/* if we are on the last line as we start....fail the command */
 { int n = n_;
+  LINE * lp = curwp->w_dotp;
   LINE * lim = &curbp->b_baseline;
 //int inc = 0;
 
@@ -247,30 +248,28 @@ int Pascal forwline(int notused, int n_)
 //	inc = 1;
   }
 
-{	static int g_curgoal;
-
-  LINE * dlp = curwp->w_dotp;
-  if (dlp == lim)
+  if (lp == lim)
     return FALSE;
 																/* move the point down */
-  for (; dlp != lim && n != 0; )
+  for (; lp != lim && n != 0; )
     if (n < 0)
     {	++n;
-    	dlp = lback(dlp);
+    	lp = lback(lp);
     }
     else
 		{	--n;
-    	dlp = lforw(dlp);
+    	lp = lforw(lp);
     }
-																/* if the last command was not a line move,
+
+{	static int g_curgoal;					/* if the last command was not a line move,
 																	 reset the goal column */
-	if (pd_keyct == 1 || 1)
+	if (pd_keyct == 1)
 	{
     g_curgoal = getccol();
 	}
 
-  curwp->w_dotp  = dlp;							/* Can be b_baseline meaning at end */
-  curwp->w_doto  = getgoal(g_curgoal, dlp);
+  curwp->w_doto  = getgoal(g_curgoal, lp);
+  curwp->w_dotp  = lp;							/* Can be b_baseline meaning at end */
   curwp->w_flag |= WFMOVE;
   curwp->w_line_no += n_ - n;
 
@@ -318,10 +317,7 @@ int Pascal gotoeop(int notused, int n)  /* go forword to end of current paragrap
     { if (llength(ln) == 0 ||
 				  (suc = lgetc(ln, 0)) == '\t' || suc == ' ')
 				break;
-			if (dir > 0)
-				ln = lforw(ln);
-			else
-				ln = lback(ln);
+			ln = lmove(ln, (dir >> 1) & 1);
     }
 
     wp->w_dotp = ln;
@@ -335,8 +331,8 @@ int Pascal gotoeop(int notused, int n)  /* go forword to end of current paragrap
     while (forwchar(FALSE, -dir) && !inword())
       ;
 
-    if (dir > 0)	        
-      wp->w_doto = llength(wp->w_dotp);	/* and to the EOL */
+    if (dir > 0)
+	    gotoeol(0,0);
   }}
 
   return TRUE;

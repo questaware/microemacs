@@ -835,7 +835,7 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
 int Pascal window_bgfg(WINDOW * wp)
 
 { BUFFER * bp = wp->w_bufp;
-  int clr = bp == NULL ? g_colours : bp->b_color;
+  int clr = bp == NULL ? g_bat_b_color : bp->b_color;
   
 	return (trans((clr >> 4) & 0xf)<< 4) | trans(clr & 0xf);
 
