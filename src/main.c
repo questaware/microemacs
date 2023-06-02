@@ -141,7 +141,17 @@ void Pascal dcline(int argc, char * argv[])
 	int genflag = 0;
 	const char * def_bname = "main";
 	int	carg;
-	int nopipe = iskboard();
+
+#if S_MSDOS == 0
+  vtinit(0,0);
+  tcap_init();
+#endif
+	varinit();		/* user variables */
+#if DIACRIT
+	initchars();		/* character set definitions */
+#endif
+
+{	int nopipe = tcapopen();	 	/* open the screen */
 #if S_WIN32 == 0
   g_nopipe = nopipe;
 #endif
@@ -229,7 +239,7 @@ void Pascal dcline(int argc, char * argv[])
 					filev = s;
 		  }
 
-			bp = bufflkup(filev);
+			bp = bufflink(filev,3);	// was bufflkup
 //	  bp = bufflink(filev,TRUE/*|(genflag & 16)*/); /* setup buffer for file */
 		  if (bp != NULL)
 			{ if (genflag & 1)
@@ -338,7 +348,7 @@ void Pascal dcline(int argc, char * argv[])
   g_gflag &= ~MDCRYPT;
 	g_macargs = FALSE;
 	(void)forwhunt(FALSE, 0);
-}}
+}}}
 
 
 /*	This is the primary entry point that is used by command line
@@ -373,17 +383,6 @@ int main(int argc, char * argv[])
 	wheadp =
 	 curwp = (WINDOW *)mallocz(sizeof(WINDOW)); /* First window	*/
 
-//char ch  = ttgetc();
-	tcapopen(); 	/* open the screen */
-#if S_MSDOS == 0
-  vtinit(0,0);
-  tcap_init();
-#endif
-	varinit();		/* user variables */
-#if DIACRIT
-	initchars();		/* character set definitions */
-#endif
-
 {	KEYTAB * hpp;
 	for (hpp = &hooks[6]; --hpp >= &hooks[0]; )
 	  hpp->k_ptr.fp = nullproc;
@@ -395,7 +394,7 @@ int main(int argc, char * argv[])
 	{ g_lastflag = 0; 								/* Fake last flags.*/
 
 																	/* execute the "command" macro, normally null*/
-		execkey(&cmdhook, FALSE, 1);	/* used to push/pop lastflag */
+		execwrap(2);  // cmdhook	** used to push/pop lastflag **
 				
 		update(FALSE);		/* Fix up the screen	*/
 
@@ -529,7 +528,7 @@ ret:
 			 */
 			if (c == ' ' && (curbp->b_flag & (MDVIEW | MDWRAP)) == MDWRAP
 									 && getccol() > pd_fillcol)
-				execkey(&wraphook, FALSE, 1);
+				execwrap(1); // &wraphook
 	
 			g_overmode = curbp->b_flag & MDOVER;
 			status = linsert(n, (char)c); 	/* do the insertion */
@@ -597,6 +596,8 @@ void Pascal editloop(int c)
 			n = g_univct;
 		}
 	}
+
+	loglog2("EL %x %c", c,c);
 																						/* do META-# processing if needed */
 	if ((c & PFXX) && in_range((c & 0xff), '-', '9')
 								 && getbind(c)->k_code == 0)
@@ -752,8 +753,9 @@ int Pascal uniarg(int f, int n) /* set META prefixing pending */
 { char buff[8+2];
 
 	if (g_macargs > 0)
-	{ if (mlreply("", &buff[0], 8) <= FALSE)
-			return ABORT;
+	{ Cc cc = mlreply("", &buff[0], 8);
+		if (cc <= FALSE)
+			return cc;
 						
 		n = atoi(buff);
 	}

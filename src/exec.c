@@ -70,52 +70,13 @@ BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 	}
 	else /* n is 0 or -1 */
 	{																				/* find buffer user wants to execute */
-		int cc = mlreply(n ? TEXT115 : TEXT117, &ebuffer[-n], NBUFN);
-											/* "Execute procedure: " */
+		int cc = mlreply(TEXT117, &ebuffer[-n], NBUFN);
+											/* "Execute buffer: " */
 		if (cc <= FALSE)
 		  return NULL;
 	}
 					/* find the pointer to that buffer */
 	return bfind(ebuffer, create);
-}
-
-/* namedcmd:	execute a named command even if it is not bound */
-
-int Pascal namedcmd(int f, int n)
-	  /* command arguments [passed through to command executed] */
-{
-	int (Pascal *kfunc)(int, int);/* ptr to the function to execute */
-	int scle = g_macargs;
-	int cc;
-
-	if (! scle)
-																	/* prompt the user to type a named command */
-	  kfunc = getname(0);						/* and get the function name to execute */
-	else
-	{	char ebuffer[40];
-																						/* grab token and advance past */
-	  (void)token(ebuffer, sizeof(ebuffer));
-							     /* evaluate it */
-	{ char * fnm = getval(ebuffer, ebuffer);
-	  if (fnm == g_logm[2])
-	    return FALSE;
-																								/* and look it up */
-	  kfunc = fncmatch(fnm);
-	}}
-
-	if (kfunc != NULL)
-	{ // g_macargs = FALSE;
-																												/* call the function */
-		cc = in_range((int)kfunc, 1, 40) ? execporb(-(int)kfunc, n)
-																		 : (*kfunc)(f, n);
-	  // g_macargs = scle;
-	}
-	else
-	{ mlwrite(TEXT16);
-					/* "[No such function]" */
-	  cc = FALSE;
-	}
-	return cc;
 }
 
 /*	docmd:	take a passed string as a command line and translate
@@ -165,7 +126,7 @@ int Pascal docmd(char * cline)
 	{	fnc = fncmatch(tkn);					/* and match the token to see if it exists */
 		if (fnc != NULL)
 		{ 
-			cc = in_range((int)fnc, 1, 40) ? execporb(-(int)fnc, n)
+			cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
 																		 : (*fnc)(f, n);			/* call the function */
 		}
 		else													/* find the pointer to that buffer */
@@ -188,7 +149,47 @@ int Pascal docmd(char * cline)
 }}}}
 
 
+/* namedcmd:	execute a named command even if it is not bound */
+
+int Pascal namedcmd(int f, int n)
+	  /* command arguments [passed through to command executed] */
+{
+	int (Pascal *kfunc)(int, int);/* ptr to the function to execute */
+	int scle = g_macargs;
+	int cc;
+
+	if (! scle)
+																	/* prompt the user to type a named command */
+	  kfunc = getname(0);						/* and get the function name to execute */
+	else
+	{	char ebuffer[40];
+																						/* grab token and advance past */
+	  (void)token(ebuffer, sizeof(ebuffer));
+							     /* evaluate it */
+	{ char * fnm = getval(ebuffer, ebuffer);
+	  if (fnm == g_logm[2])
+	    return FALSE;
+																								/* and look it up */
+	  kfunc = fncmatch(fnm);
+	}}
+
+	if (kfunc != NULL)
+	{ // g_macargs = FALSE;
+																												/* call the function */
+		cc = in_range((int)kfunc, 1, 40) ? execporb((int)kfunc, n)
+																		 : (*kfunc)(f, n);
+	  // g_macargs = scle;
+	}
+	else
+	{ mlwrite(TEXT16);
+					/* "[No such function]" */
+	  cc = FALSE;
+	}
+	return cc;
+}
+
 #if FLUFF || DEBUGM
+
 /*	execcmd:	Execute a command line command to be typed in
 			by the user					*/
 int Pascal execcmd(int f, int n)
@@ -231,7 +232,7 @@ char *Pascal token(char * tok, int size)
 	      when 'b': c = 'H' - '@';  
 	    }
 	  else if (c == '~')
-	  	leading = 0;
+	  	leading = -1;
 	  else if (c == quotef)									/* check for the end of the token */
 	  	break;
 	  else if (c == ' ' || c == '\t')
@@ -323,14 +324,13 @@ int Pascal nextarg(const char * prompt, char * buffer, int size)
 static int USE_FAST_CALL common_return(BUFFER * bp)
 	
 {	if (bp == NULL)
-	{ mlwrite(TEXT113);				/*	"Can not create macro" */
+	{ mlwrite(TEXT99);				/*	out of memory */
 	  return FALSE;
 	}
 														/* and make sure it is empty */
 	bp->b_flag |= BFINVS;
 	g_bstore = bp;
-	bclear(bp);
-	return TRUE;
+	return bclear(bp);
 }
 
 /*	storemac:	Set up a macro buffer and flag to store all
@@ -350,37 +350,13 @@ int Pascal storemac(int f, int n)
 	return common_return(bmfind(TRUE, n));	/*set up the new macro buffer */
 }
 
-#if	NMDPROC
-/*	storeproc:	Set up a procedure buffer and flag to store all
-			executed command lines there			*/
-
-int Pascal storeproc(int f, int n)
-	/* int n;		** macro number to use */
-{
-	char bname[NBUFN];		/* name of buffer to use */
-			/* a numeric argument means its a numbered macro */
-	if (f != FALSE)
-	  return storemac(f, n);
-
-	bname[0] = '[';
-																							/* get the name of the procedure */
-{	int cc = mlreply(TEXT114, &bname[1], NBUFN-2);
-								/* "Procedure name: " */
-	return cc <= FALSE ? cc
-																							/* set up the new macro buffer */
-				 						 : common_return(bfind(strcat(bname, "]"), TRUE));
-}}
-
-#endif
-
 
 int Pascal execporb(int isp, int n)
-										 /* isp; ** must be -ve, 0, 1 */
-{	BUFFER * bp = bmfind(FALSE, -isp);
+										 /* isp; ** must be 0, or 1 to 40 */
+{	BUFFER * bp = bmfind(FALSE, isp);
 	if (bp == NULL) 
-	{ mlwrite(isp < 0 ? TEXT130 : TEXT116);
+	{ mlwrite(TEXT130);
 										/* "Macro not defined" */
-										/* "No such procedure" */
 		return FALSE;
 	}
 					/* and now execute it as asked */
@@ -393,14 +369,6 @@ int Pascal execbuf(int f, int n)
 	/* int f, n;	** default flag and numeric arg */
 { 
   return execporb(0,n);
-}
-
-
-/*	execproc:	Execute a procedure				*/
-
-int Pascal execproc(int f, int n)
-	/* int f, n;	** default flag and numeric arg */
-{ return execporb(1,n);
 }
 
 
@@ -503,8 +471,9 @@ int Pascal dobuf(BUFFER * bp, int iter)
 			if (eline[0] != '!')
 				continue;
 	  
-			if (eline[1] == 'w' && eline[2] == 'h' ||
-					eline[1] == 'b' && eline[2] == 'r')
+		{ char ch = eline[1] - 'w';
+			if (ch == 0				  && eline[2] == 'h' ||
+					ch == 'b' - 'w' && eline[2] == 'r')
 			{ 
 #if LIM_WHILE
 				WHBLOCK * whtemp = topwh <= 0 ? NULL : &whiles[topwh--];
@@ -513,10 +482,10 @@ int Pascal dobuf(BUFFER * bp, int iter)
 #endif
 		 		if (whtemp == NULL ||
 	     															/* "%%!BREAK outside of any !WHILE loop" */
-	         (scan == NULL && (eline[1] - 'w') != 0))
+	         (scan == NULL && ch != 0))
 					goto failexit;
 
-		    whtemp->w_break = (eline[1] - 'w');
+		    whtemp->w_break = ch;
 		    whtemp->w_begin = lp;
 	  	  whtemp->w_next = scan;
 //  	  scan->w_end = 0;
@@ -537,7 +506,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 		 			whlist->w_next = whtemp;
 	    	} while (whlist->w_break);
 	  	}
-		} /* for */
+		}} /* for */
 
 		if (scan != NULL)
 	  { freewhile(scan);
@@ -883,8 +852,10 @@ Cc Pascal startup(const char * sfname)
 
 	{	BUFFER * dfb = bfind(bname, 3);
   	if (dfb != NULL) 			   		/* get the needed buffer */
-		{ curbp = dfb;			      		/* make this one current */
-		  curbp->b_flag = MDVIEW;			/* mark the buffer as read only */
+		{ BUFFER *scb = curbp;	   		
+  	  dfb->b_flag = MDVIEW;
+			curbp = dfb;			      		/* make this one current */
+//	  curbp->b_flag = MDVIEW;			/* mark the buffer as read only */
 						                  		/* and try to read in the file to execute */
 		  cc = readin(fspec, 0);
 									/* go execute it! */
@@ -895,6 +866,8 @@ Cc Pascal startup(const char * sfname)
 			    window_ct(dfb) == NULL)
 		            		  	/* not displayed, remove the unneeded buffer and exit */
 		  	zotbuf(dfb);
+
+			curbp = scb;								/* restore the current buffer */
 		}
 	}}}
 
@@ -906,16 +879,16 @@ Cc Pascal startup(const char * sfname)
 int Pascal execfile(int f, int n)	/* execute a series of commands in a file */
 	/* int f, n;	** default flag and numeric arg to pass on to file */
 { 
+
+#if 1
   char ebuffer[65];
 	Cc cc = mlreply(TEXT129, ebuffer, sizeof(ebuffer)-1);
 /*			      "File to execute: " */
 
 					   /* look up the path for the file */
 	if (cc > FALSE)
-	{ BUFFER *scb = curbp;	   		
 		cc = startup(ebuffer);
-		curbp = scb;								/* restore the current buffer */
-	}
 	return cc;
+#endif
 }
 

@@ -213,6 +213,12 @@ staticc Vint    msd_iter;		/* FIRST then NEXT */
 #else
 														// USE_DIR
 Char   msd_path_[NFILEN+40];
+ 
+ 
+ 
+ 
+ 
+ 
 #define msd_path (msd_path_+22)
 
 //static short  msd_isrel;
@@ -238,12 +244,12 @@ staticc int   msd_nlink[MAX_TREE+1];		/* stack of number of dirs */
 static int USE_FAST_CALL scan_fn(char new_sl)
 
 {	int pe;
-	int last_sl = -1;
+	int last_sl = 0;
   char ch;
 	for (pe = -1; (ch = msd_path[++pe]) != 0; )
 		if (ch == '\\' || ch == '/')
-		{	msd_path[pe] = new_sl;
-		  last_sl = pe;
+		{ last_sl = pe+1;
+			msd_path[last_sl-1] = new_sl;
 		}
 
 	return last_sl;
@@ -259,13 +265,11 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 //msd_attrs = 0;
 
 #if USE_DIR
-	memcpy(msd_path_, "dir /ah/a /b/tw/od /s ", 22);
-
-	strpcpy(msd_path, diry, FILENAMESZ);
+	strcat(strcpy(msd_path_, "dir /ah/a /b/tw/od /s "),diry);
 	if (!(props & MSD_SEARCH))
 		msd_path_[20] = 'b';
-	else
-		strcat(msd_path,"\\");
+	if (!(props & MSD_MATCHED))
+		strcat(msd_path_, "\\");
 
   (void)scan_fn('\\');
 
@@ -576,7 +580,7 @@ Char * msd_nfile()
 
 {	int last_sl = scan_fn('/');
 
-	strpcpy(msd_path+last_sl+1, msd_curr->l_text, lused(msd_curr->l_dcr)+1);
+	strpcpy(msd_path+last_sl, msd_curr->l_text, lused(msd_curr->l_dcr)+1);
 
 	return msd_path;
 }

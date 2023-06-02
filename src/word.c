@@ -54,8 +54,7 @@ int Pascal wrapword(int f, int n)
               				      make sure there is a break in the line */
 { int	cnt = 0;
   int c;
-	while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) != ' ')
-				&& (c != '\t'))
+	while (((c = lgetc(curwp->w_dotp, curwp->w_doto)) > ' '))
 	{ ++cnt;
 	  if (!forwbychar(-1))
 	    return FALSE;
@@ -108,20 +107,51 @@ int Pascal nextword(int notused, int n)
 //if (n < 0)
 //  return backword(f, -n);
 	int dir = 1;
-	int mask = 0;
 	if (n < 0)
 	{ n = -n;
 		dir = -1;
-		mask = 1;
 	}
 
-{ int f_size = -mask;
+{	int mask = (dir >> 1) & 1;
+	int f_size = -mask;
 
   while (--n >= 0)
-	{	if (dir < 0)
+	{	int prev_is_sp = dir;
+		int iter;
+		mask = (dir >> 1) & 1;
+		if (mask)
+		{	++f_size;
+			(void)forwbychar(dir);
+		}
+#if 1
+		for (iter = 2; --iter >= 0; )
+		{ mask ^= 1;
+
+		  while (1)
+			{ int ch = thischar();
+				int state = isword(ch);
+				if (state ^ mask)
+					break;
+				ch -= ' ';
+				if (ch > 0  && iter < dir && prev_is_sp <= 0) // stage 2
+					break;
+
+				if (ch <= 0 && iter > dir && prev_is_sp >  0)	// stage 1
+					break;
+
+				prev_is_sp = ch;
+				f_size += 1;
+				if (forwbychar(dir))
+					continue;
+				mask = 0;
+				goto endlp;
+			}
+		}
+#else
+		if (dir < 0)
 			if (forwbychar(dir) == FALSE)
-				return FALSE;
-			
+				return FALSE;	
+
   {	int prev_is_sp = -1;
     int ch = thischar();
 		int state = isword(ch) ^ mask;
@@ -148,10 +178,13 @@ int Pascal nextword(int notused, int n)
 			}
 			state = !state;
   	}
-  }}
+  }
+#endif
+  }
 
+endlp:
 	g_f_size = f_size;
-	return forwbychar(-dir);
+	return forwbychar(mask);
 }}
 
 
@@ -170,13 +203,11 @@ static int USE_FAST_CALL ccaseword(int n, int low)
     { int ch = thischar();
     	char is = isword(ch);
     	if (is)
-    	{ if (iter)
-    		{ iter = 0;
+    	{ if (--iter == 0)
     			goto next;
-    		}
     	}
     	else
-    	{ if (iter)
+    	{ if (iter > 0)
     			goto next;
 				else
 					break;
@@ -252,15 +283,15 @@ int Pascal endword(int notused, int n)
  */
 Pascal delfword(int notused, int n)
 
-{	Lpos_t save = *(Lpos_t*)&curwp->w_dotp;
-
-	if (rdonly())
+{	if (rdonly())
 	  return FALSE;
 
 	kinsert_n = 0;
 
 	if (n == 0)
 	  return TRUE;
+
+{	Lpos_t save = *(Lpos_t*)&curwp->w_dotp;
 
 	g_thisflag = CFKILL;			/* this command is a kill */
         
@@ -276,7 +307,7 @@ Pascal delfword(int notused, int n)
 	  rest_l_offs(&save);
 
 	return ldelchrs(g_f_size, TRUE);
-}
+}}
 
 /*
  * Kill backwards by "n" words. Move backwards by the desired number of words,
@@ -361,7 +392,7 @@ Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 
 {	char * para = (char*)mallocz(psize);			/* grab all text into a temporary */
 	char * pp = para+1;
-	if (pp == NULL)
+	if (para == NULL)
 	  return FALSE;
 
 	while (bop != eop)
@@ -392,12 +423,12 @@ Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 	*pp = 0;									/* truncate the last space */
 
 					    /* insert the reformatted paragraph back into the current buffer */
-{	int back = pp - (para + 2);
+{	int back = para - pp - 2;
   int cc = linstr(reform(para+2));
 	free(para);
 	lnewline(1);											/* add the last newline to our paragraph */
 																				/* reposition us to the same place */
-	forwbychar(-back);
+	forwbychar(back);
 	return cc; 
 }}}}}
 
@@ -441,7 +472,7 @@ int Pascal wordcount(int notused, int n)
 
 {	Int in_wd = FALSE;
 	Int nchars = 0;
-	Int nwords = 0;
+	Int nwords = 1;
 	Int nlines = 1;
 
 	REGION * r = getregion();
@@ -477,34 +508,8 @@ int Pascal wordcount(int notused, int n)
 	mlwrite(TEXT100,
 					/* "Words %D Chars %D Lines %d Avg chars/word %f" */
 					nwords, nchars, nlines, 
-					nwords <= 0 ? 0 : (int)((100L * nchars) / nwords));
+					(int)((100L * nchars) / nwords));
 	return TRUE;
 }
 
 #endif
-
-int USE_FAST_CALL getwtxt(int wh, char * buf, int lim, int from)
-	  														/* wh : B, F, G, K, N, S, W else whole line */
-{ char * t = buf;
-
-	wh -= 'W'-'@';
-{ int offs = wh == 0 || wh == 'K'-'W' ? from : 0;
-	  
-	int lct = llength(curwp->w_dotp) - offs;
-	if (lct > lim)
-	  lct = lim;
-
-{ int	ct = 0;
-	while (--lct >= 0)
-	{ char c = lgetc(curwp->w_dotp, offs);
-	  if (! isword(c) && ct > 0 && wh == 0)
-	    break;
-	  *t++ = c;
-	  ++offs;
-	  ++ct;
-	}
-
-  *t = 0;
-
-  return offs;
-}}}

@@ -218,7 +218,6 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 	  fseek(fp, seq, 0);
 
   { int got = get_to_newline();
-//  Tag::g_LastStart = pos;					/* point after newline */
 	if (got)
     { pos += got;
       fd_cc = strcmp(key, tagline);
@@ -248,7 +247,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 	  if (got == 0)
 	  	break;
 	  fd_cc = strcmp(key, tagline);
-	  if 	  (fd_cc > 0)				/* forward */
+	  if (fd_cc > 0)					/* forward */
 	  { start = pos;
 		continue;
 	  }
@@ -262,20 +261,22 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 		}
 	  }
 	  if (seq < 0)
-	  { pos -= LOOK_BACK;
+	  { int g;
+	    pos -= LOOK_BACK;
 		if (pos < 0)
 		  pos = 0;
 		while (1)
 		{ fseek(fp, pos, 0);
 		  pos += get_to_newline();
-	  	{ int g = get_to_newline();
+	  	  g = get_to_newline();
 	  	  fd_cc = strcmp(key, tagline);
 	  	  if (g == 0 || fd_cc <= 0)
 	  	  	break;
-		}}
+		}
+	  	pos += g;
 	  }
 	  break;							/* at 0 or before target */
-    }}
+    }} /* while */
   }}}
 
   Tag::g_LastStart = pos;					/* point after newline */
@@ -431,7 +432,7 @@ findTag(int f, int n)
 					    	/* If we are not in a word get a word from the user.*/
     if ((n & 0x02) || !inword())
     {											/*---	Get user word. */
-    	int cc = mltreply("Tag? ", tag, sizeof(tag)-1);
+    	int cc = mlreply("Tag? ", tag, sizeof(tag)-1);
     	if (cc <= FALSE)
             return -1;
     }

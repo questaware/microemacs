@@ -105,7 +105,7 @@ int Pascal get_char()
 
 		update(FALSE);										/* Pretty up the screen 				*/
 
-		g_isb.cmd_reexecute = -1; 				/* Say we're in real mode again */
+//	g_isb.cmd_reexecute = -1; 				/* Say we're in real mode again */
 		if (++g_isb.cmd_offset >= CMDBUFLEN)
 		{// mlwrite(TEXT166);
 		 // 		/* " too long" */
@@ -272,7 +272,7 @@ int Pascal fisearch(int f, int n)
 						/* Initialize starting conditions */
 		is->cmd_reexecute = -1;						/* We're not re-executing (yet?)	*/
 		is->cmd_offset = 0; 							/* Start at the beginning of the buff */
-		is->cmd_buff[0] = '\0';						/* Init the command buffer		 */
+//	is->cmd_buff[0] = '\0';						/* Init the command buffer		 */
 	/*strpcpy(pat_save, pat, NPAT);			 * Save the old pattern string */
 
 { 	int srchres;
@@ -298,7 +298,7 @@ int Pascal fisearch(int f, int n)
 
 int Pascal risearch(int f, int n)
 
-{ return fisearch(f, n ^ 0x80000000);
+{ return fisearch(0, n ^ 0x80000000);
 }
 
 #endif

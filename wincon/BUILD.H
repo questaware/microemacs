@@ -122,7 +122,7 @@
 				
 #define NSTRING 1026		/* size for general strings */
 #define NBINDS	220			/* max # of bound keys		*/
-#define NFILEN  256			/* Maximum file name (inc dirs) */
+#define NFILEN  512			/* Maximum file name (inc dirs) */
 #define NBUFN		 32			/* # of bytes, buffer name */
 #define NLINE		160			/* # of bytes, input line	*/
 #define NKBDM		255			/* # of strokes, keyboard macro */
@@ -152,5 +152,20 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #include "../src/base.h"
 
 #define atoi atol
+
+
+//#if _MSC_VER < 1900
+#undef VS_CHAR8
+#define VS_CHAR8 1
+//#endif 
+
+#if VS_CHAR8
+#define SC_CHAR char
+#define SC_WORD WORD
+
+#else
+#define SC_CHAR wchar_t
+#define SC_WORD DWORD
+#endif
 
 #endif /* BUILDINC */

@@ -23,46 +23,46 @@ extern char *getenv();
 
 #if 0
 
-static int Pascal cbuf1(int f, int n)  { return execporb(-1,n); }
-static int Pascal cbuf2(int f, int n)  { return execporb(-2,n); }
-static int Pascal cbuf3(int f, int n)  { return execporb(-3,n); }
-static int Pascal cbuf4(int f, int n)  { return execporb(-4,n); }
-static int Pascal cbuf5(int f, int n)  { return execporb(-5,n); }
-static int Pascal cbuf6(int f, int n)  { return execporb(-6,n); }
-static int Pascal cbuf7(int f, int n)  { return execporb(-7,n); }
-static int Pascal cbuf8(int f, int n)	 { return execporb(-8,n); }
-static int Pascal cbuf9(int f, int n)  { return execporb(-9,n); }
-static int Pascal cbuf10(int f, int n) { return execporb(-10,n); }
-static int Pascal cbuf11(int f, int n) { return execporb(-11,n); }
-static int Pascal cbuf12(int f, int n) { return execporb(-12,n); }
-static int Pascal cbuf13(int f, int n) { return execporb(-13,n); }
-static int Pascal cbuf14(int f, int n) { return execporb(-14,n); }
-static int Pascal cbuf15(int f, int n) { return execporb(-15,n); }
-static int Pascal cbuf16(int f, int n) { return execporb(-16,n); }
-static int Pascal cbuf17(int f, int n) { return execporb(-17,n); }
-static int Pascal cbuf18(int f, int n) { return execporb(-18,n); }
-static int Pascal cbuf19(int f, int n) { return execporb(-19,n); }
-static int Pascal cbuf20(int f, int n) { return execporb(-20,n); }
-static int Pascal cbuf21(int f, int n) { return execporb(-21,n); }
-static int Pascal cbuf22(int f, int n) { return execporb(-22,n); }
-static int Pascal cbuf23(int f, int n) { return execporb(-23,n); }
-static int Pascal cbuf24(int f, int n) { return execporb(-24,n); }
-static int Pascal cbuf25(int f, int n) { return execporb(-25,n); }
-static int Pascal cbuf26(int f, int n) { return execporb(-26,n); }
-static int Pascal cbuf27(int f, int n) { return execporb(-27,n); }
-static int Pascal cbuf28(int f, int n) { return execporb(-28,n); }
-static int Pascal cbuf29(int f, int n) { return execporb(-29,n); }
-static int Pascal cbuf30(int f, int n) { return execporb(-30,n); }
-static int Pascal cbuf31(int f, int n) { return execporb(-31,n); }
-static int Pascal cbuf32(int f, int n) { return execporb(-32,n); }
-static int Pascal cbuf33(int f, int n) { return execporb(-33,n); }
-static int Pascal cbuf34(int f, int n) { return execporb(-34,n); }
-static int Pascal cbuf35(int f, int n) { return execporb(-35,n); }
-static int Pascal cbuf36(int f, int n) { return execporb(-36,n); }
-static int Pascal cbuf37(int f, int n) { return execporb(-37,n); }
-static int Pascal cbuf38(int f, int n) { return execporb(-38,n); }
-static int Pascal cbuf39(int f, int n) { return execporb(-38,n); }
-static int Pascal cbuf40(int f, int n) { return execporb(-38,n); }
+static int Pascal cbuf1(int f, int n)  { return execporb(1,n); }
+static int Pascal cbuf2(int f, int n)  { return execporb(2,n); }
+static int Pascal cbuf3(int f, int n)  { return execporb(3,n); }
+static int Pascal cbuf4(int f, int n)  { return execporb(4,n); }
+static int Pascal cbuf5(int f, int n)  { return execporb(5,n); }
+static int Pascal cbuf6(int f, int n)  { return execporb(6,n); }
+static int Pascal cbuf7(int f, int n)  { return execporb(7,n); }
+static int Pascal cbuf8(int f, int n)	 { return execporb(8,n); }
+static int Pascal cbuf9(int f, int n)  { return execporb(9,n); }
+static int Pascal cbuf10(int f, int n) { return execporb(10,n); }
+static int Pascal cbuf11(int f, int n) { return execporb(11,n); }
+static int Pascal cbuf12(int f, int n) { return execporb(12,n); }
+static int Pascal cbuf13(int f, int n) { return execporb(13,n); }
+static int Pascal cbuf14(int f, int n) { return execporb(14,n); }
+static int Pascal cbuf15(int f, int n) { return execporb(15,n); }
+static int Pascal cbuf16(int f, int n) { return execporb(16,n); }
+static int Pascal cbuf17(int f, int n) { return execporb(17,n); }
+static int Pascal cbuf18(int f, int n) { return execporb(18,n); }
+static int Pascal cbuf19(int f, int n) { return execporb(19,n); }
+static int Pascal cbuf20(int f, int n) { return execporb(20,n); }
+static int Pascal cbuf21(int f, int n) { return execporb(21,n); }
+static int Pascal cbuf22(int f, int n) { return execporb(22,n); }
+static int Pascal cbuf23(int f, int n) { return execporb(23,n); }
+static int Pascal cbuf24(int f, int n) { return execporb(24,n); }
+static int Pascal cbuf25(int f, int n) { return execporb(25,n); }
+static int Pascal cbuf26(int f, int n) { return execporb(26,n); }
+static int Pascal cbuf27(int f, int n) { return execporb(27,n); }
+static int Pascal cbuf28(int f, int n) { return execporb(28,n); }
+static int Pascal cbuf29(int f, int n) { return execporb(29,n); }
+static int Pascal cbuf30(int f, int n) { return execporb(30,n); }
+static int Pascal cbuf31(int f, int n) { return execporb(31,n); }
+static int Pascal cbuf32(int f, int n) { return execporb(32,n); }
+static int Pascal cbuf33(int f, int n) { return execporb(33,n); }
+static int Pascal cbuf34(int f, int n) { return execporb(34,n); }
+static int Pascal cbuf35(int f, int n) { return execporb(35,n); }
+static int Pascal cbuf36(int f, int n) { return execporb(36,n); }
+static int Pascal cbuf37(int f, int n) { return execporb(37,n); }
+static int Pascal cbuf38(int f, int n) { return execporb(38,n); }
+static int Pascal cbuf39(int f, int n) { return execporb(39,n); }
+static int Pascal cbuf40(int f, int n) { return execporb(40,n); }
 
 #endif
 
@@ -225,9 +225,6 @@ bind-to-key filter-buffer ^X|
 
 #if WORDPRO
 	{META|CTRL|'C', BINDFNC, wordcount},
-#endif
-#if NMDPROC
-	{META|CTRL|'E', BINDFNC, execproc},
 #endif
 	{META|CTRL|'G', BINDFNC, gotomark},
 	{META|CTRL|'H', BINDFNC, delbword},
@@ -494,13 +491,11 @@ char * Pascal cmdstr(char * t, int c)
     if (c & viskeys[i].code)
     { ((short*)ptr)[0] = *(short *)&viskeys[i].key;
 
-      ptr += 2;
-      if (i == 0)
-        ptr -= 1;
+      ptr += 1 + (i != 0);
     }
 					/* and output the final sequence */
-	ptr[0] = c & 255;	/* strip the prefixes */
-	ptr[1] = 0;
+  ptr[0] = c & 255;
+  ptr[1] = 0;
 	return t;
 }
 
@@ -566,14 +561,14 @@ int Pascal getechockey(int mode)
 								/* check to see if we are executing a command line */
 	int c;
 	if (g_macargs <= 0)
-		c = mode & 1 ? getkey() : getcmd();
+		c = mode ? getkey() : getcmd();
 	else
 	{ macarg(tok);	/* get the next token */
 	  c = stock(tok);
 	}
 																	/* change it to something printable */
-  if ((mode & 2) == 0)
-  	mlwrite("\001 %s",cmdstr(&outseq[0], c));	// can be overwritten!
+  if (!mode)
+  	mlwrite("\001 %s",cmdstr(&outseq[1], c));	// can be overwritten!
 
   return c;
 }
@@ -592,7 +587,7 @@ int Pascal bindtokey(int f, int n)
 	  return FALSE;
 	}
 
-{	int c = getechockey((kfunc == ctrlg));
+{	int c = getechockey(FALSE);
 
 	return addnewbind(c, kfunc); /* search the table to see if it exists */
 }}
@@ -680,7 +675,7 @@ int Pascal append_keys(const char * name, Emacs_cmd * addr, const char * filt)
   { ktp = getbind(c);
     if (ktp->k_ptr.fp == addr)
     {																		/* pad out some spaces */
-      mlwrite("%>%25s%s\n", name, cmdstr(&outseq[0], ktp->k_code));
+      mlwrite("%>%25s%s\n", name, cmdstr(&outseq[1], ktp->k_code));
       name = "";											 	/* and clear the line */
     }
   }
@@ -695,34 +690,28 @@ int Pascal append_keys(const char * name, Emacs_cmd * addr, const char * filt)
 	   bring up a fake buffer and list the key bindings
 	   into it with view mode
 	*/
+
 int Pascal desbind(int f, int n)
 
-#if	APROP
 {
-  return buildlist("");
+  return buildlist(1);
 }
 
+#if	APROP
 
 int Pascal apro(int f, int n)	/*Apropos (List functions that match a substring)*/
 
-{ char mstring[NSTRING];	/* string to match cmd names to */
-
-   mstring[0] = 0;
-{  int cc = mlreply(TEXT20, mstring, NSTRING - 1);
-/*			 "Apropos string: " */
-   return cc < 0 ? cc : buildlist(mstring);
-}}
-#else
-{ return OK;
+{   return buildlist(-1);
 }
+
 #endif
 																    	 /* build a binding list(limited or full)*/
-int Pascal buildlist(const char * mstring)  
-											/* 1 => full list */
-										    							/* match string if a partial list */
-{ const NBIND *nptr;	/* pointer into the name binding table */
-  int cc = TRUE;
+int Pascal buildlist(int wh)
+											/* 0 => linstr, -1 => filter, 1 => dont filter */
+{ openwindbuf(TEXT21);
 
+	if (wh == 0)
+  { 
 #define bltbl "^B	kill_buffer contents\n" \
               "^F	Complete a filename\n" \
 				      "^G	Abort\n"\
@@ -732,21 +721,27 @@ int Pascal buildlist(const char * mstring)
 				      "^W	Chars to eow\n"\
 				      "Arrows	Previous\n"\
 				      ".*^$[\\	Magic\n"
-  openwindbuf(TEXT21);
-			  
-  if (mstring == NULL)
-  { cc = linstr(bltbl);
+  	(void)linstr(bltbl);
   }
-  else    
-  {	for (nptr = &names[0]-1; (++nptr)->n_func != NULL; )
+  else
+ 	{ char mstring[NSTRING];	/* string to match cmd names to */
+	  mstring[0] = 0;
+    if (wh < 0)
+		{ int cc =  mlreply(TEXT20, mstring, NSTRING - 1);
+/*			 "Apropos string: " */
+			if (cc < 0)
+				return cc;
+  	}
+			  
+  {	const NBIND *nptr;	/* pointer into the name binding table */
+  	for (nptr = &names[0]-1; (++nptr)->n_func != NULL; )
 		{
 			if (append_keys(nptr->n_name, nptr->n_func, mstring) < 0)
 				break;
 		}
-  }
+  }}
 
-  (void)mkdes();
-  return cc;
+  return mkdes();
 }
 
 static char * g_fspec;
@@ -808,7 +803,19 @@ int Pascal fexist(const char * fname)	/* does <fname> exist on disk? */
 }
 
 #endif
- 
+
+#if 0
+static 
+int USE_FAST_CALL find_sl(const char * s, int tix)
+
+{ while (--tix >= 0 && s[tix] != '/' && s[tix] != '\\')	/* strip back to / */
+    ;
+    
+  return tix;
+}
+#endif
+
+
 /* replace the last entry in dir by file */
 /* t can equal dir */
 
@@ -817,7 +824,7 @@ char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 { if (dir == NULL || file[0] == '/' || file[0] == '\\')
     dir = file;
 	else
-  if (dir[0]=='.' && dir[1]=='/' && dir[2]=='.' && dir[3]=='.' && dir[4]=='/')
+  if (*strmatch("./../", dir) == 0)
     dir += 2;
 
 { int tix = -1;
@@ -831,12 +838,13 @@ char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 			break;
 
 		while (1)
-    { while (--tix >= 0 && t[tix] != '/' && t[tix] != '\\')	/* strip back to / */
+    {
+	   	while (--tix >= 0 && t[tix] != '/' && t[tix] != '\\')	/* strip back to / */
 	      ;
 
 	    if (tix > 0)
 	    { if (t[tix-1] != '.' &&
-	          file[0] == '.'  && file[1] == '.' && file[2] == '/')
+	          *strmatch("../", file) == 0)
 	      { for (file = &file[2]; *++file == '/';)		/* strip forward to non / */
 	          ;
 	        continue;
@@ -879,9 +887,7 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 			;
 			
 		*ref_dir = dir + ix - (ch == 0);
-	{	char * diry = strpcpy(g_fspec, dir, ix + 1);
-		if (app)
-			strcat(diry,DIRSEPSTR);
+	{	char * diry = strcat(strpcpy(g_fspec, dir, ix + 1),DIRSEPSTR+app);
 // 	mbwrite(diry);
   {	char * pc = pathcat(g_fspec, sl-1, diry, file);
 // 	mlwrite("%pAfter %s", pc);
@@ -924,13 +930,13 @@ const char * Pascal flook(char wh, const char * fname)
 			if (0)
 	  case 'I':
 	  { path = curbp->b_fname;
-	    if ((res = fex_file(0, &path, fname)))
+	    if ((res = fex_file(1, &path, fname)))
 	     	return res;
 			 path = pd_incldirs;
 	  }
 			if (path != NULL)
 			{	for (--path; *++path != 0;)
-			  { if ((res = fex_file(1, &path, fname)))
+			  { if ((res = fex_file(0, &path, fname)))
 			      return res;
 				}
 			}
@@ -938,7 +944,7 @@ const char * Pascal flook(char wh, const char * fname)
 			return NULL;
 		otherwise
 			path = getenv(HOMEPATH);
-	    if ((res = fex_file(1, &path, fname)))
+	    if ((res = fex_file(0, &path, fname)))
 	      return res;
 	  {
 #if S_WIN32
@@ -948,7 +954,7 @@ const char * Pascal flook(char wh, const char * fname)
 #else
 			path = flook('P', g_invokenm);
 #endif
-		 	return fex_file(0, &path, fname);
+		 	return fex_file(1, &path, fname);
 		}
 	}
 
@@ -978,15 +984,19 @@ char *Pascal flooknear(knfname, name)
 	char *knfname;		/* known file name */
 	char *name;				/* file to look for */
 { 
-	(void)remallocstr(&g_fspec, knfname, 0);
+	char * t = remallocstr(&g_fspec, knfname, 0);
 //strpcpy(&g_fspec[0], knfname, g_fspec_len);
-{ Char * t = &g_fspec[strlen(g_fspec)]
-  while (t > g_fspec && * t != DIRSEPCHR && *t != '/')
-    --t;
-  strpcpy(&t[0], name, NFILEN - (t - g_fspec));
-  
-  return fexist(g_fspec) ? g_fspec : NULL;
-}}
+	int tix;
+	int lix = 0;
+	char ch;
+	for (tix = -1; (ch = t[++ix]) != 0; )
+		if (ch == DIRSEPCHR || ch == '/')
+		  lix = tix;
+
+  strpcpy(&t[lix], name, NFILEN - lix);
+
+  return fexist(t) ? t : NULL;
+}
 
 #endif
 
@@ -1037,8 +1047,13 @@ int Pascal execkey(KEYTAB * key, int f, int n)
 {	return key->k_code == 0 			? TRUE :
   			 key->k_type != BINDFNC ? dobuf(key->k_ptr.buf,n) :
 		  	 in_range((int)(key->k_ptr.fp), 1,40) 
-				  											? execporb(-(int)(key->k_ptr.fp),n)
+				  											? execporb((int)(key->k_ptr.fp),n)
 		  													: (*(key->k_ptr.fp))(f, n);
+}
+
+int execwrap(int wh)
+
+{ return execkey(&hooks[wh], FALSE, 1);
 }
 
 #if 0
@@ -1076,9 +1091,9 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 	  return FALSE;
 #endif
 		    /* make this window in VIEW mode, update all mode lines */
-	curbp->b_flag |= MDVIEW;
-	curbp->b_fname = strdup("HELP");  // allow the leakage
-	upmode();
+	bp->b_flag |= MDVIEW;
+	bp->b_fname = strdup("HELP");  // allow the leakage
+//upmode();
 	return TRUE;
 }
 
@@ -1108,12 +1123,12 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 	}
 }
 #else
-{	int	c = getechockey(2);
+{	int	c = getechockey(0);
 
 	const char * ptr = getfname(c);				/* find the right ->function */
 																				/* change it to something printable */
-	mlwrite("\001 %d %s %s", pd_lastkey, cmdstr(&outseq[0], c),
-																			*ptr != 0 ? ptr : TEXT14);
+	mlwrite("\001 %d %s", pd_lastkey, // cmdstr(&outseq[0], c),
+																		*ptr != 0 ? ptr : TEXT14);
 																										/*"Not Bound" */
 }
 #endif

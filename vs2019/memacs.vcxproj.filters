@@ -96,9 +96,6 @@
     <ClCompile Include="..\src\word.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\wincon\msemacs.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\wincon\msexec.c">
       <Filter>Source Files</Filter>
     </ClCompile>

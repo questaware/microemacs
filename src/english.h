@@ -5,28 +5,36 @@
 */
 
 #ifdef	maindef
-/*const*/ char TEXT8[] = "%b[Aborted]";
+  const   char TEXT8[] = "%b[Aborted]";
 /*const*/ char TEXT79[] = "Not found";
-/*const*/ char TEXT94[] = "[TABLE OVERFLOW]";
-/*const*/ char TEXT99[] = "[OUT OF MEMORY]";
+  const   char TEXT94[] = "[TABLE OVERFLOW]";
 /*const*/ char TEXT23[] = "Out of range";
+ 
+const char TEXTS_[] = "[OUT OF MEMORY]\000Read \000Inserted \000I/O ERROR, ";
+
 #else
-extern /*const*/ char TEXT8[];
+extern   const   char TEXT8[];
 extern /*const*/ char TEXT79[];
-extern /*const*/ char TEXT94[];
-extern /*const*/ char TEXT99[];
+extern   const   char TEXT94[];
 extern /*const*/ char TEXT23[];
+extern   const   char TEXTS_[];
 #endif
+
+#define TEXT99 TEXTS_
+#define	TEXT140_O 16
+#define	TEXT154_O 22
+#define	TEXT141_O 32
+
 
 #ifdef IN_RANDOM_C
 
-const char attrnames [][9] = {		
- "VW ",    "WRAP ", "OVER ",	"Aa ",	  "RE",     // names of modes */
+const char attrnames [][8] = {		
+ "VW ",    "WRAP ", "OVER ",	"Aa ",	  "RE ",     // names of modes */
  "// ",    "MS ",   "CRYPT ", "ASAVE ", "CHGD", "INVS",
 	"BLACK", "RED",     "GREEN", "YELLOW", 					// names of colors */
 	"BLUE",  "MAGENTA", "CYAN",  "GREY",
 	"GRAY",  "LRED",    "LGREEN","LYELLOW", 
-	"LBLUE", "LMAGENTA","LCYAN", "WHITE"};
+	"LBLUE", "LMAGNTA",	"LCYAN", "WHITE"};
 
 #define NCOLORS 16
 
@@ -65,8 +73,8 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT31	"         Global Modes"
 #define	TEXT32	"Discard changes"
 #define	TEXT33	"Encryption Key: "
-#define	TEXT34
-#define	TEXT35
+#define	TEXT34	"Cant find THEN"
+#define	TEXT35	"%bType Char"
 #define	TEXT36	"LOCK ERROR -- "
 #define	TEXT37	"checking for existence of %s\n"
 #define	TEXT38	"making directory %s\n"
@@ -109,10 +117,10 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT76	"No mark set in this window"
 #define	TEXT77	"Bug:lost mark"
 #define	TEXT78	"No pattern set"
-#define	TEXT80	"Search"
-#define	TEXT81	"Reverse search"
-#define	TEXT82  "Replace"
-#define	TEXT83	"Query replace"
+#define	TEXT80	"Reverse Search"
+#define	TEXT80_O 8
+#define	TEXT82  "Query Replace"
+#define	TEXT82_O 6
 #define	TEXT84  "with"
 #define	TEXT85  "[Not Found] %s"
 #define	TEXT86  "Earliest Visited"
@@ -162,8 +170,6 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT137	"Cannot create buffer"
 #define	TEXT138	"[New file]"
 #define	TEXT139	"[Reading file]"
-#define	TEXT140	"Read "
-#define	TEXT141	"I/O ERROR, "
 #define	TEXT142	"[no tag file]"
 #define	TEXT143	" line"
 #define	TEXT144	"Write file: "
@@ -176,7 +182,6 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT151	"Name: "
 #define	TEXT152	"[No such file]"
 #define	TEXT153	"[Inserting file]"
-#define	TEXT154	"Inserted "
 #define	TEXT155	"Cannot write file"
 #define	TEXT156	"Error closing file"
 #define	TEXT157	"Write I/O error"

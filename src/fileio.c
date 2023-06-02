@@ -45,21 +45,9 @@
 
 char * g_fline = NULL;			/* dynamic return line */
 
-FILE *g_ffp;		/* File pointer, all functions. */
+// FILE *g_ffp;		/* File pointer, all functions. */
 
 int g_crlfflag;
-
-					/* returns old input */
-
-#if S_WIN32 == 0
-
-int Pascal iskboard()
-
-{ struct stat stat_;
-  return fstat(0 , &stat_) != 0 ? 0 : (stat_.st_mode & S_IFCHR);
-}
-
-#endif
 
 #if S_VMS == 0
 
@@ -69,18 +57,18 @@ struct termios  g_savetty;
 #endif
 
 																			/* Open a file for reading. */
-int Pascal ffropen(const char * fn)
+FILE* Pascal ffropen(const char * fn)
 
 { 		      					/* g_fline private to ffropen, ffclose, ffgetline */
   g_crlfflag = 0;
 
-  if (fn != NULL && !(fn[0] == '-' && fn[1] == 0))
-		g_ffp = fopen(fn, "rb");
+  if (!(fn[0] == '-' && fn[1] == 0))
+		return fopen(fn, "rb");
   else
   { int pipefd = dup(0);
-    if (pipefd < 0)
-      return 0;
-    g_ffp = fdopen(pipefd, "rb");
+//  if (pipefd < 0)
+//    return NULL;
+  { FILE * res = fdopen(pipefd, "rb");
 
     fclose(stdin);
  
@@ -120,9 +108,8 @@ int Pascal ffropen(const char * fn)
 	      adb(89);
 	  }}
 #endif
-  }}
-
-  return g_ffp == NULL ? -1 : FIOSUC;
+		return res;
+  }}}
 }
 
 
@@ -216,7 +203,7 @@ int Pascal ffputline(FILE * op, char buf[], int nbuf)
  * at the end of the file that don't have a newline present. Check for I/O
  * errors too. Return status.
  */
-int Pascal ffgetline()
+int Pascal ffgetline(FILE * ffp)
 	
 { static 
    int g_flen;
@@ -224,11 +211,21 @@ int Pascal ffgetline()
   if (flen > NSTRING)		/* dump g_fline if it ended up too big */
 	  flen = 0;
 
-{	int c; 							/* current character read */
-	int i = -1; 				/* current index into g_fline */
+{	int i = -1; 				/* current index into g_fline */
+	char * line = g_fline;
+  int c; 							/* current character read */
 											
 	do
-	{ c = getc(g_ffp);		    /* if it's longer, get more room */
+	{ c = getc(ffp);		    /* if it's longer, get more room */
+											/* test for any errors that may have occured */
+		if (c < 0)
+		{ if (!feof(ffp))
+		  { mlwrite(TEXT158);
+							/* "File read error" */
+		    return FIOERR;
+		  }
+		  return FIOEOF;
+		}
 	  if (c == '\r')
 	  { g_crlfflag = MDMS;
 	    if (!is_opt('X'))
@@ -236,31 +233,27 @@ int Pascal ffgetline()
 	  } 
 	  if (++i >= flen)
 	  {														/* lines longer than 16Mb get truncated */
-	  	char * tmpline = (char*)malloc(flen+NSTRING+1);
-	    if (tmpline == NULL)
+	    flen += NSTRING;
+			/*line = */remallocstr(&line, line, flen);
+			if (line == NULL)
 	      return FIOMEM;
 
-	    if (g_fline != null)
-	    { memcpy(tmpline, g_fline, flen);
-	      free(g_fline);
-	    }
-	    g_fline = tmpline;
-	    flen += NSTRING;
+			g_fline = line;
 			g_flen = flen;
-	  }
-	  g_fline[i] = c;
-	} while (c >= 0 && c != '\n');
+//  	char * tmpline = (char*)malloc(flen+NSTRING+1);
+//  	if (tmpline == NULL)
+//      return FIOMEM;
 
-	g_fline[i] = 0;
-											/* test for any errors that may have occured */
-	if (c < 0)
-	{ if (!feof(g_ffp))
-	  { mlwrite(TEXT158);
-						/* "File read error" */
-	    return FIOERR;
+//    if (line != null)
+//    { memcpy(tmpline, line, flen);
+//      free(line);
+//    }
+//    line = tmpline;
 	  }
-	  return FIOEOF;
-	}
+	  line[i] = c;
+	} while (c != '\n');
+
+//line[i] = 0;
 
 	return i;
 }}
@@ -268,12 +261,15 @@ int Pascal ffgetline()
 #endif
 
 //extern char * getcwd(char*, int);
+// +ve : MSD_DIRY | MSD_MATCHED
+// 0 	 : "..."
+// -ve : ordinary
 
 int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	
 { int search_type = 0;
   const char * s = src;
-  			char * t;
+  			int tix;
   			char ch;
   
   if (*s == '.' && s[1] == '/')
@@ -283,7 +279,7 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
    	*tgt++ = '.';
    	*tgt++ = '/';
   }
-
+#if 0
   t = tgt-1;
 
 	tgt[NFILEN-2] = 0;
@@ -321,28 +317,66 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 			}
     }}
   }
+#else
+  tix = -1;
 
+	tgt[NFILEN-2] = 0;
+
+  while (tix < NFILEN-2)
+  { ch = *s++;
+    tgt[++tix] = ch;
+
+    if (ch == 0)
+      break;
+
+    if      (ch == '*')
+      search_type = MSD_DIRY | MSD_MATCHED;
+    else if (ch == '.' && s[0] == '.' && s[1] == '.')
+    {	search_type = -(tix + 1);
+    	--tix;
+    	s += 2 + (s[2] == '/');
+    }
+    else if (ch == '/' || ch == '\\')
+    {	tgt[tix] = '/';
+    { int dif = (tix - 3);
+      if (dif >= 0)
+      { if (tgt[tix-1] == '.')
+      	{ if (tgt[tix-2] == '/')			// "/./"
+	        { tix -= 2;
+	          continue;
+	        }
+      		if (dif > 0 && tgt[tix-2] == '.' && tgt[tix-4] != '.' && tgt[tix-3] == '/') // "x/../"
+	        { tix -= 4;
+	        	for (; --tix >= 0 && tgt[tix] != '/'; )
+	            ;
+	          continue;
+	        }
+      	} 
+			}
+    }}
+  }
+#endif
 { const char * cwd_ = getcwd(tmp, NFILEN);
   if (cwd_ == null)
     cwd_ = "/";
 	
 { const Char * cw = &cwd_[strlen(cwd_)];
-  int num_dirs = 0;
+	int num_dirs = 0;
   int root = 0;
-  t = tgt;
+	char * t = tgt;
 
   while (strcmp_right(t, "../") == 0)
-  { t += 3;						  											 /* target forward */
+  { t += 3;						  											 			/* target forward */
 		++num_dirs;
 
-    while (!(root = (--cw < cwd_)) && *cw != DIRSEPCHAR)	 /* cwd backward */
+	  while (!(root = (--cw < cwd_)) && *cw != DIRSEPCHAR) /* cwd backward */
       ;
       
 		if (root)
 			break;
 	}
 
-	if (num_dirs > 0)
+  if (num_dirs > 0)
 	{	int deduct = -1;
 		for (; --num_dirs >= 0; )
 		{	const Char * ncw;
@@ -356,18 +390,18 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 	    
 			deduct += 3;
 			++t;
-			while (*++cw != 0 && *cw != DIRSEPCHAR)
+			while ((ch = *++cw) != 0 && ch != DIRSEPCHAR)
 				++t;
 		}
 
 		if (deduct >= 0)
-		{ char * tt = tgt - 1;
-			char * s;
+		{ char * s = tgt + deduct;
+			char * tt = tgt - 1;
 			char ch;
 			if (root)
 				*++tt = '/';
 				
-			for (s = tgt + deduct; ((ch = *++s) == '.' || ch == '/'); )
+			for (; ((ch = *++s) == '.' || ch == '/'); )
 				*++tt = ch;
 
 			if (*t == '/')
@@ -382,10 +416,10 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 
 #if S_MSDOS == 0
 
-int Pascal ffisdiry()
+int Pascal ffisdiry(FILE * ffp)
 
 { struct stat fstat_;
-  return fstat(fileno(g_ffp), &fstat_) == OK && (fstat_.st_mode & 040000) != 0;
+  return fstat(fileno(ffp), &fstat_) == OK && (fstat_.st_mode & 040000) != 0;
 }
 
 #endif

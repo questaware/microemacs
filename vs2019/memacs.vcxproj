@@ -176,7 +176,6 @@
     <ClCompile Include="..\src\tag.cpp" />
     <ClCompile Include="..\src\window.c" />
     <ClCompile Include="..\src\word.c" />
-    <ClCompile Include="..\wincon\msemacs.c" />
     <ClCompile Include="..\wincon\msexec.c" />
     <ClCompile Include="..\wincon\oswin.c" />
     <ClCompile Include="..\wincon\winpipe.c" />

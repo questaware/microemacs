@@ -281,6 +281,7 @@ goto-line                M-G
 goto-mark                M-^G
 goto-matching-fence      M-^F Goto a matching bracket, parenthesis, etc
                               If arg = 0 and on left brace use a right brace.
+                              If arg = 0 and on #else go to #endif.
                               If arg < 0 same but repeatedly.
                               So ESC - ^T does this.
                          ^T
@@ -657,4 +658,9 @@ In Unix EMACS uses the command infocmp to read the keyboard codes.
   MONAMIC, RINT, "tri",   /* trim whitespace off the end of a string */
   MONAMIC, RINT, "upp",   /* uppercase string */
   TRINAMIC,RINT, "xla",   /* XLATE character string translation */
+
+For use with Windows 10 it is recommended to configure the window properties as 
+
+Terminal > Cursor Shape > Solid Box
+Terminal > Cursor Color > <Red>
 

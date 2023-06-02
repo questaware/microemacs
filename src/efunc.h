@@ -57,9 +57,6 @@ const NBIND names[] =
 #if	AEDIT
 	{"detab-region",				detab},
 #endif
-#if	DEBUGM
-	{"display",							dispvar},
-#endif
 	{"drop-buffer",					dropbuffer},
 	{"end-macro",						ctlxrp},
 	{"end-of-file",					gotoeob},
@@ -117,11 +114,7 @@ const NBIND names[] =
 	{"execute-macro-7",	(Command)7},
 	{"execute-macro-8",	(Command)8},
 	{"execute-macro-9",	(Command)9},
-
 	{"execute-named-command",	namedcmd},
-#if	NMDPROC
-	{"execute-procedure",		execproc},
-#endif
 	{"exit-emacs",					quit},
 	{"fetch-file",					fetchfile},
 #if	WORDPRO
@@ -214,9 +207,6 @@ const NBIND names[] =
 #if	ISRCH
 	{irsrchm,								risearch},
 #endif
-#if	NMDPROC
-	{"run",									execproc},
-#endif
 	{"save-file",						filesave},
 //{"save-window",					savewnd},
 	{"scroll-next-down",		nextdown},
@@ -236,9 +226,6 @@ const NBIND names[] =
 	{"source",							execfile},
 	{"split-current-window",splitwind},
 	{"store-macro",					storemac},
-#if	NMDPROC
-	{"store-procedure",			storeproc},
-#endif
 #if	S_BSD
 	{"suspend-emacs",				bktoshell},
 #endif
@@ -258,7 +245,6 @@ const NBIND names[] =
 	{"wrap-word",						wrapword},
 #endif
 	{"write-file",					filewrite},
-	{"write-message",				writemsg},
 	{"yank",								yank},
 	{NULL,			NULL}
 };

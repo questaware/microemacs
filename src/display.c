@@ -50,7 +50,7 @@ TERM		term		= {
 typedef struct	VIDEO
 { unsigned char v_color;
 	unsigned char v_flag; 	/* Flags, must never be '/' */
-	short v_text[6];		/* Screen data. */
+	short				v_text[6];		/* Screen data. */
 } VIDEO;
 
 #define VFCHG 0x0001	/* Changed flag 		*/
@@ -84,7 +84,7 @@ static VIDEO	 **vscreen; 	/* Virtual screen. */
 #define MEMCT 2
 #endif
 
-extern const char attrnames [][9];
+extern const char attrnames [][8];
 
 //static int g_currow;	/* Cursor row			*/
 //static int g_curcol;	/* Cursor column		*/
@@ -402,7 +402,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 				}
 			}
 		{ int wix;
-			for (wix = sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
+			for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
 			{ hix[wix] += 1;
 			  if (c == high[wix][hix[wix]])
 				{ if (high[wix][1+hix[wix]] == 0)
@@ -625,7 +625,7 @@ void Pascal modeline(WINDOW * wp)
 					/* display the modes */
 	
 { int cpix;
-  int	modeset = wp->w_bufp->b_flag >> NUMFLAGS-1;
+  int	modeset = wp->w_bufp->b_flag >> (NUMFLAGS-1);
 	for (i = -1; ++i < NUMMODES - 2; ) /* add in mode flags */
 	{ if ((modeset = modeset >> 1) & 1) 
 			strcat(&tline.lc.l_text[10], attrnames[i]);
@@ -664,10 +664,15 @@ void Pascal modeline(WINDOW * wp)
 
 no_bn:
 {	int numbuf = lastbuffer(0,0);
-	tline.lc.l_dcr = term.t_ncol << (SPARE_SZ+2);
+	int numm = numbuf >> 16;
+	numbuf &= 0xff;
 	if (numbuf > 9)
 		tline.lc.l_text[term.t_ncol-3] = '0' + numbuf / 10;
+	else if (numm)
+		tline.lc.l_text[term.t_ncol-3] = ' ';
+	
 	tline.lc.l_text[term.t_ncol-2] = '0' + numbuf % 10;
+	tline.lc.l_dcr = term.t_ncol << (SPARE_SZ+2);
 
 //tline.lc.l_text[tline.lc.l_used] = 0;
 	
@@ -799,25 +804,31 @@ static void Pascal pscroll(int dir, int stt, int lenm1)
 
 static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN */
 	 
-{ int n = 1;
+{ int n = set & WFTXTU;
 
-	if (set & WFTXTD)
-	{ 
 #if MEMMAP == 0
-		ttrow -= 2;								/* a trick */
+	ttrow -= 2 * n;								/* a trick */
 #endif
-		n = 0;
-	}
 
 {	int lenm1 = wp->w_ntrows-1;
 	int stt = wp->w_toprow;
-	int src = stt+1-n;
-	int tgt = stt+n;
-
 	VIDEO * vp = vscreen[stt+n*lenm1];
+
+#if 0
+	memmove(&vscreen[stt+n], &vscreen[stt+(n^1)], lenm1 * sizeof(VIDEO*));
+#else
+	int dec = n * 2 - 1;
+	int tgt = stt + n * lenm1 + dec;
+
+	while (1)
+	{	tgt -= dec;
+		if ((unsigned)tgt > (unsigned)lenm1)
+			break;
+		vscreen[tgt] = vscreen[tgt - dec];
+	} 
+#endif
 	vp->v_flag = VFCHG;
-	memmove(&vscreen[tgt], &vscreen[src], lenm1 * sizeof(VIDEO*));
-	vscreen[stt + (n ^ 1) * lenm1] = vp;
+	vscreen[tgt + dec] = vp;
 
 #if MEMMAP == 0
 	n = n * 2 - 1;
@@ -1277,22 +1288,22 @@ void Pascal updateline(int row)
 
 /* ################## end of window based routines #################### */
 
-void Pascal upmode()	/* update all the mode lines */
+int Pascal upmode()	/* update all the mode lines */
 
-{ orwindmode(WFMODE);
+{ return orwindmode(WFMODE);
 }
 
 
 #if MEMMAP
-void Pascal upwind_()	/* force hard updates on all windows */
+int Pascal upwind_()	/* force hard updates on all windows */
 #else
-void Pascal upwind(int garbage)	/* force hard updates on all windows */
+int Pascal upwind(int garbage)	/* force hard updates on all windows */
 #endif
 { 
 #if MEMMAP == 0
 	pd_sgarbf |= garbage;
 #endif
-	orwindmode(WFMODE | WFHARD); //  | WFMOVE);
+	return orwindmode(WFMODE | WFHARD); //  | WFMOVE);
 }
 
 /* Write a message into the message line. Keep track of the physical cursor
@@ -1351,7 +1362,7 @@ int mlwrite(const char * fmt, ...)
 { int s_discmd = pd_discmd;
 	if      (fmt[0] == '%' && fmt[1] == '!')			/* force display */
 		fmt += 2;
-	else if (s_discmd == 0)
+	else if (s_discmd <= 0)
 		return 0;
 
 {	int  ch;

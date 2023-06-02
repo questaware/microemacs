@@ -153,15 +153,15 @@ int Pascal lchange(int flag)
 		init_paren("\000", 0);
 
   {	LINE * lp = curwp->w_dotp;
-		int ct = g_header_scan + 6;     								/* just 6 more */
+		int ct = g_header_scan + 24;     							/* just 24 more */
+		int ct_ = ct + 6;
 		while (!l_is_hd(lp) && --ct >= 0)
 		  lp = lback(lp);
 
 		g_paren.in_mode = (lp->l_dcr & Q_IN_CMT);
 		g_header_scan = 0; // ct + 6;
-		ct = 24;
 
-    while (--ct > 0)
+    while (--ct_ > 0)
 		{ int mode = scan_par_line(lp);
 		  lp = lforw(lp);
 	  	if (l_is_hd(lp))
@@ -351,8 +351,16 @@ int Pascal linsert(int ins, char c)
 
 //  line_openclose(newlp, lp, ins, (Int)lp->l_used-doto);
   	if (used - doto > 0)
+  	{
+#if 1
    		memmove(&newlp->l_text[doto+ins],&lp->l_text[doto],used-doto);
-
+#else
+			int offs = used - doto;
+			while (--offs >= 0)
+			{ newlp->l_text[doto+ins+offs] = lp->l_text[doto+offs];
+			}
+#endif
+		}
 	  memset(&newlp->l_text[doto],c,ins);
 	  rpl_all(1, ins, doto, lp, newlp);
 
@@ -365,6 +373,24 @@ int Pascal linsert(int ins, char c)
 
   return lchange(WFEDIT);
 }}}
+
+
+#if _MSC_VER < 1600 && 0
+
+_CRTIMP void *  __cdecl memmove(void * tgt, const void * src, size_t len)
+
+{ char * t = (char*)tgt;
+	char * s = (char*)src;
+  if      (t <= s)
+	{	while (--len >= 0)
+			*t++ = *s++;
+	}
+	else if (len > 0)
+		  mbwrite("Gotcha");
+	return tgt;
+}
+
+#endif
 
 #if FLUFF
 
@@ -410,7 +436,7 @@ int Pascal istring(int f, int n)	/* ask for and insert a string into the
 																	   current buffer at the current point */
 { char tstring[NPAT+1];	/* string to add */
 
-	int status = mltreply(stoi_msg[g_overmode & 1], tstring, NPAT);
+	int status = mlreply(stoi_msg[g_overmode & 1], tstring, NPAT);
 											/* "String to insert<META>: " */
 											/* "String to overwrite<META>: " */
 	if (status > FALSE)
@@ -564,7 +590,7 @@ Pascal doregion(int wh, char * t)
 	      return cc;
     }
   }
-	else if (wh > 1 && rdonly())	/* disallow this command if */
+	else if (--wh > 0 && rdonly())	/* disallow this command if */
 	  return FALSE;		        		/* we are in read only mode */
   else
 	{ REGION * ion = getregion();
@@ -589,11 +615,11 @@ Pascal doregion(int wh, char * t)
 	      loffs = -1;
 	      ch = '\n';
 	    } 
-	    if      (wh == 0)
+	    if      (wh < 0)		// was 0
 	    { if (--space >= 0)
 	        *t++ = ch;
 	    }
-	    else if (wh == 1) 
+	    else if (wh == 0)		// was 1
 	    { ch = kinsert(ch);
 	      if (ch <= FALSE)
 	        return ch;
@@ -615,7 +641,7 @@ Pascal doregion(int wh, char * t)
 */
 const char *Pascal getreg(char * t)
 
-{ return doregion(0,t) <= FALSE ? g_logm[2] : t;
+{ return doregion(1,t) <= FALSE ? g_logm[2] : t;
 }
 
 
@@ -649,7 +675,7 @@ int copyword(int f, int n)
  */
 Pascal lowerregion(int f, int n)
 
-{ return doregion(2 + 0, NULL);
+{ return doregion(2 + 1, NULL);
 }
 
 /* Upper case region. Zap all of the lower
@@ -661,7 +687,7 @@ Pascal lowerregion(int f, int n)
  */
 int Pascal upperregion(int f, int n)
 
-{ return doregion(0x20, NULL);
+{ return doregion(0x20 + 1, NULL);
 }
 
 

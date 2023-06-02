@@ -9,6 +9,10 @@
 #include	"etype.h"
 #include	"elang.h"
 
+#if S_WIN32
+#include <windows.h>
+#endif
+
 #if	CRYPT
 
 #if 0

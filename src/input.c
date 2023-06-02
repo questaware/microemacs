@@ -194,7 +194,9 @@ int  ctrlg(int f, int n)
 */
 int  tgetc()
 
-{	int kbdrd = pd_kbdrd;					/* if we are playing a keyboard macro back, */
+{ int reskey;
+
+	int kbdrd = pd_kbdrd;					/* if we are playing a keyboard macro back, */
 
   if (kbdrd > 0)
   {    								/* if there is some left... */
@@ -205,41 +207,43 @@ int  tgetc()
           break;
       }
       pd_kbdrd = kbdrd;
-			pd_lastkey = (int)g_kbdm[kbdrd-2];
-      return pd_lastkey;
+			reskey = (int)g_kbdm[kbdrd-2];
+			goto retlbl;
     }
-					/* at the end of last repetition? */
+							/* at the end of last repetition? */
     pd_kbdrd = 0;							/* mode STOP; */
 //#if _DEBUG
 //	if (g_exec_level)
 //		mbwrite("g_exec_level not 0");
 //#endif
 //	g_exec_level = 0;					/* weak code ! */
-//	pd_lastkey = g_slastkey;
+//	reskey = g_slastkey;
 		g_ll = g_sll;
     save_state(1);
 #if VISMAC == 0
     update(FALSE);		/* force a screen update after all is done */
 #endif
-  }
+ }
 
-  pd_lastkey = ttgetc();	   			/* fetch a char from the terminal driver */
-													  	 
-  if (g_kbdwr > 0)								/* record it for $lastkey */
-  {//char buf[30];
-    if (g_kbdwr > NKBDM)					/* don't overrun the buffer */
-      tcapbeep();
-		else
-    	g_kbdm[++g_kbdwr-2] = pd_lastkey;
+	reskey = ttgetc();	   			/* fetch a char from the terminal driver */
+	loglog2("TTGETC %x %c", reskey, reskey);
+											  	 
+ if (g_kbdwr > 0)								/* record it for $lastkey */
+	{//char buf[30];
+  	if (g_kbdwr > NKBDM)					/* don't overrun the buffer */
+    	tcapbeep();
+	else
+	  	g_kbdm[++g_kbdwr-2] = reskey;
 #if _DEBUG && 0
 	{ char buf[40];
-	  sprintf(buf,"Rec at %d %x",g_kbdwr-2, pd_lastkey);
-	  mbwrite(buf);
+  	sprintf(buf,"Rec at %d %x",g_kbdwr-2, reskey);
+ 		mbwrite(buf);
 	}
 #endif
   }
 
-  return pd_lastkey;
+retlbl:
+  return pd_lastkey = reskey;
 }
 
 /*	getkey: Get one keystroke. The only prefixs legal here
@@ -359,11 +363,13 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 {
   if (wh == CMP_FILENAME)
 	{ strcpy(name+cpos, "*");
-    msd_init(name,
-             MSD_DIRY|MSD_REPEAT|MSD_STAY|MSD_HIDFILE|MSD_SYSFILE|MSD_USEPATH|MSD_MATCHED);
+    if (msd_init(name,
+        		     MSD_DIRY|MSD_REPEAT|MSD_STAY|MSD_HIDFILE|MSD_SYSFILE|MSD_USEPATH|MSD_MATCHED)
+	         != OK)
+			return cpos;
 	}
 
-{	int best = 255;
+{	int best = -1;
 	const Char * eny;
   int curbind = 0;
   BUFFER *bp = bheadp;                		/* trial buffer to complete */
@@ -407,11 +413,11 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
         break;
     }
 
-    if (i >= cpos && i < best)
+    if (i >= cpos && i < (unsigned)best)
     	best = i;
   } // loop
 
-	if (best < 255)
+	if (best > 0)
 	{ name[best] = 0;
 		mlputs(0, name+cpos);
 		TTflush();
@@ -433,7 +439,7 @@ static int USE_FAST_CALL redrawln(int clamp, char buf[])
   {
     if (c == '\r')
     { len -= 4;
-    // if (g_disinp > 0)
+    //if (g_disinp > 0)
         mlputs(0, "<CR>");		/* put out <CR> for <ret> */
     }  
     else
@@ -452,6 +458,32 @@ static int USE_FAST_CALL redrawln(int clamp, char buf[])
     ttcol -= 1;
   }*/
   return clamp - len;
+}}
+
+static
+int USE_FAST_CALL getwtxt(int lim, int from, int wh, char * buf)
+	  														/* wh+('W'-'@') : B, F, G, K, N, S, W else whole line */
+{ int offs = wh == 0 || wh == 'K'-'W' ? from : 0;
+	LINE * lp = curwp->w_dotp;
+	  
+	int lct = llength(lp) - offs;
+	if (lct > lim)
+	  lct = lim;
+
+{ char * t = buf;
+  int	ct = 0;
+	while (--lct >= 0)
+	{ char c = lgetc(lp, offs);
+	  if (! isword(c) && ct > 0 && wh == 0)
+	  	break;
+	  *t++ = c;
+	  ++offs;
+	  ++ct;
+	}
+
+  *t = 0;
+
+  return wh == 0 ? offs : from;
 }}
 
 int g_chars_since_ctrl;
@@ -527,6 +559,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 
     if (ch == g_abortc)
     {	cc = ctrlg(FALSE, 0);    /* ABORT, Abort any kb macro */
+    	buf[0] = 0;
     	break;
     }
 
@@ -560,12 +593,12 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 							   	  else if (gs_type < 0)			// include the prompt
 								    { fulllen += promptlen;
 								    	promptlen = 0;
-								   		cpos = 0;
-											tcapmove(255, 0);
+//							   		cpos = 0;
+//										tcapmove(255, 0);
 											strpcpy(buf, lastmesg, nbuf);
-								      continue;
-								     }
-								   }
+//							      continue;
+								    }
+								  }
         	
         when ('P'):
         case ('N'):														// up or down arrows
@@ -620,7 +653,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       }
     }
     else if (c == 'A'-'@')
-    { (void)buildlist(null);			// cc = TRUE
+    { (void)buildlist(0);			// cc = TRUE
     	break;
     }
 #if 0
@@ -667,7 +700,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 					autostr = "/"; 
 				otherwise
 					autostr = mybuf;
-		      woffs = getwtxt(c, &mybuf[0], NSTRING-3-cpos, woffs);
+		      woffs = getwtxt(NSTRING-3-cpos, woffs, c - ('W'-'@'), &mybuf[0]);
 			}
     }
     else 
@@ -740,17 +773,18 @@ char * complete(const char * prompt, char * defval, int type)
 				/* maximum length of input field */
 
 						 /* if executing a command line get the next arg and match it */
-{ if (g_macargs > 0)
-    return macarg(gs_buf) <= FALSE ? NULL : gs_buf;
+{ char * buf = gs_buf;
+	if (g_macargs > 0)
+    return macarg(buf) <= FALSE ? NULL : buf;
 
 { int plen = ! prompt ? 0
 											: mlwrite(defval ? "%s[%s]: " :
 																			   "%s: ",   prompt, defval);
 	flush_typah();
-{	int cc = getstr(gs_buf, NFILEN, plen, type);
+{	int cc = getstr(buf, NFILEN, plen, type);
 
-  return cc < 0				          	? NULL   : 
-         defval && gs_buf[0] == 0 ? strpcpy(gs_buf,defval,NFILEN) : gs_buf;
+  return cc < 0				         ? NULL   : 
+         defval && buf[0] == 0 ? strcpy(buf,defval) : buf;
 }}}
 
 	/* get a command name from the command line. Command completion means

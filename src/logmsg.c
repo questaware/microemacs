@@ -11,6 +11,7 @@
 #include   <limits.h>
 
 #include   "estruct.h"
+#include   "base.h"
 /*#define logmsgh				* stop inclusion of prototype */
 #include   "logmsg.h"
 
@@ -111,11 +112,11 @@ static void log_restart( logfile, filename, max_size )
 
         fclose( *logfile );
 
-        eprintf( cmd, "move %s.bak %s.BAK", filename, filename_ );
+        sprintf( cmd, "move %s.bak %s.BAK", filename, filename_ );
         if ( ttsystem( cmd , "" ) < 0 )
   	      fprintf( stderr, "system(%d): %s\n", errno, cmd );
 
-        eprintf( cmd, "move %s %s.bak", filename, filename_ );
+        sprintf( cmd, "move %s %s.bak", filename, filename_ );
         if ( ttsystem( cmd , "" ) < 0 )
   	{     fprintf( stderr, "system(%d): %s\n", errno, cmd );
   	      log_max_file = INT_MAX;

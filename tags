@@ -1658,7 +1658,7 @@ tcapkclose	./wincon/estruct.h
 tcapkopen	./unix/terminal.c
 tcapmove	./wincon/msemacs.c
 tcapopen	./unix/terminal.c
-tcapopen	./wincon/msemacs.c
+tcapopen	./wincon/oswin.c
 tcaprev	./mtgdi/estruct.h
 tcaprev	./wincon/estruct.h
 tcapsetfgbg	./unix/terminal.c

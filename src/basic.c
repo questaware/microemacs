@@ -77,11 +77,11 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	LINE * lp = lpos->curline;
   int	off = lpos->curoff;
 	char c = '\n';
-	if (dir == 0)
-		dir = 1;
 
-  if (dir > 0)
-  { while (--dir >= 0)
+  if (dir >= 0)
+	{	if (dir == 0)
+			dir = 1;
+  	while (--dir >= 0)
   	{ if (off < llength(lp)) 	    	/* if at EOL */
 	      c = lgetc(lp, off++);				/* get the char */
 	    else
@@ -89,7 +89,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	      adj += 1;
 	      lp = lforw(lp);	/* skip to next line */
 	      if (l_is_hd(lp))
-	      	break;
+	      	return -1;
 			}
     }
   }
@@ -101,21 +101,18 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	    else
 			{	adj -= 1;
 				lp = lback(lp);
-	      if (l_is_hd(lp))
-	      	break;
 	      off = llength(lp);
+	      if (l_is_hd(lp))
+	      	return -1;
 	    }
 		}
   }
-{ int res = dir >= 0 ? -1 : c & 0xff;
-  if (res >= 0)
-  {	lpos->curline = lp;
-  	lpos->curoff = off;
-		lpos->line_no += adj;
-  }
+	lpos->curline = lp;
+ 	lpos->curoff = off;
+	lpos->line_no += adj;
 
-  return res;
-}}
+  return c & 0xff;
+}
 
 
 int Pascal forwchar(int notused, int n)
@@ -127,7 +124,7 @@ int Pascal forwchar(int notused, int n)
 //if (n < 0 && wp->w_doto == 0)
 // 	lp = lback(lp);
   return /* (lp->l_props & L_IS_HD) ? FALSE : */
-  															 nextch((Lpos_t*)wp, n) >= 0;
+  			 n == 0 ? TRUE : nextch((Lpos_t*)wp, n) >= 0;
 //}
 #else
 	if (n < 0)
@@ -199,9 +196,9 @@ int Pascal gotoline(int f, int n)	/* move to a particular line.
   	int cc = mlreply(TEXT7, arg, sizeof(arg)-1);
 									/* "Line to GOTO: " */
     if (cc <= FALSE)
-    { mlwrite(TEXT8);
-						/* "[Aborted]" */
-      return cc;
+    { // mlwrite(TEXT8);
+			return ctrlg(0,0);			/* "[Aborted]" */
+      // return cc;
     }
 		
 		setmark(-1,-1);		/* set the last mark */

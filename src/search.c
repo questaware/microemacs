@@ -98,7 +98,7 @@ typedef struct
 } MC;
 
 static Bitmap * g_cclarray[NPAT / 16 /* say */ + 1];
-static int g_cclarr_ix = 0;
+static int g_cclarr_ix;
 
 static MC   g_pats[NPAT+2];
 
@@ -114,7 +114,7 @@ static MC   g_pats[NPAT+2];
  */
 static int Pascal cclmake(int patix, MC *  mcptr)
 	
-{ int to = g_cclarr_ix++;
+{ int to = ++g_cclarr_ix;
 	if (to >= sizeof(g_cclarray)/sizeof(Bitmap*))
 	  return ERR_OOMEM;
 
@@ -153,17 +153,17 @@ static int Pascal cclmake(int patix, MC *  mcptr)
 static
 int Pascal get_hex2(int * res_ref, const char * s)
 	
-{ char res = 0;
+{ int res = 0;
   int adv = -2;
   
   while (++adv <= 0)
-  { char chr = *s++ -'0';
-    if      (in_range(chr, 0, 9))
+  { signed char chr = *s++ -'0';
+  	if (chr < 0)
+  		break; 
+    if      (chr <= 9)
       ;
-    else if (in_range(chr, 'a' - '0', 'f' - '0'))
-      chr -= 'a' - '0' - 10;
-    else if (in_range(chr, 'A' - '0', 'F' - '0'))
-      chr -= 'A' - '0' - 10;
+    else if (in_range((chr | 0x30), 'a' - '0', 'f' - '0'))
+      chr = (chr | 0x30) - 0x30 + 9;
     else
       break;
     res = (res << 4) + chr;
@@ -184,9 +184,8 @@ static
 int Pascal mk_magic()
 
 {	int magic = curbp->b_flag;
-	int magical = FALSE;
 	int patix = -1;
-	g_cclarr_ix = 0;						/* reset magical. */
+	g_cclarr_ix = -1;						/* reset magical. */
 	g_pats[NPAT].mc_type = -1;	/* a barrier */
 
 {	MC * mcptr = g_pats;
@@ -211,32 +210,27 @@ int Pascal mk_magic()
 			if      (pchr == MC_ESC)		/* \ */
 				patix += get_hex2(&pchr, &pat[patix+1]);
 
-		  else if (pchr == MC_CLOSURE) /* * */
+		  else if (pchr == MC_CLOSURE && patix > 0) /* * */
 			{  													/* Does the closure symbol mean closure here?
 																	 * If so, back up to the previous element
 																	 * and indicate it is enclosed. */
-				if (magical)
-				{	(--mcptr)->mc_type |= CLOSURE;
-					magical = FALSE;
-					continue;
-				}
+				(--mcptr)->mc_type |= CLOSURE;
+				continue;
 			}
 			else if (pchr == MC_CCL)		/* [ */
-			{	magical = TRUE;
-		  	patix = cclmake(patix, mcptr);
+			{	patix = cclmake(patix, mcptr);
 				if (patix <= 0)
 					break;	  		
 				continue;
 			}		
 			else if (pchr == MC_ANY)		/* . */
-			{ magical = TRUE;
-			  mcptr->mc_type = LITCHAR | NOT_PAT;
-			  mcptr->lchar = '\n';
-				continue;
+			{ mcptr->mc_type = LITCHAR | NOT_PAT;
+//		  mcptr->lchar = '\n';
+			  pchr = '\n';
+//			continue;
 			}
 
-		mcptr->lchar   = pchr;
-		magical = pchr - '\n';
+		mcptr->lchar = pchr;
 	}}	/* End of while.*/
 
 		/* Set up the reverse array, if the status is good.  Please note
@@ -336,7 +330,7 @@ int Pascal readpattern(const char * prompt, char apat[])
 
 						  							/* Read a pattern.  Either we get one, or just
 			    									 * get the META charater and use the previous pat */ 
-{		Cc cc = mltreply(t, t, NPAT);
+{		Cc cc = mlreply(t, t, NPAT);
     if (cc >= FALSE)
     { if (cc > FALSE || g_gs_keyct > 0)
         strcpy(apat, tpat);
@@ -373,8 +367,7 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 	  if ((curwp->w_bufp->b_flag & MDSRCHC) == 0)
 	  	again |= 2;
 	
-		while ((cc = scanner(dir, again))
-						&& --n > 0)
+		while (--n >= 0 && (cc = scanner(dir, again)))
 		  again |= true;
 
 		if (cc <= 0)
@@ -451,7 +444,7 @@ int Pascal forwsearch(int f, int n)
 	 * search for the pattern for as long as n is positive
 	 * (n == 0 will go through once, which is just fine).
 	 */
-	int cc = readpattern(n >= 0 ? TEXT80 : TEXT81, &pat[0]);
+	int cc = readpattern(TEXT80 + (n >= 0 ? TEXT80_O : 0), &pat[0]);
 												             /* "Search" */
 	if (cc > FALSE)
 	  cc = hunt(n, FALSE);
@@ -467,9 +460,7 @@ int Pascal forwsearch(int f, int n)
  */
 int Pascal backsearch(int f, int n)
 
-{	if (n == 0)
-	  n = 1;
-
+{
 	return forwsearch(f, -n);
 }
 
@@ -763,7 +754,7 @@ int Pascal replaces(int kind, int f, int n)
 	else if (n < 0) 		  		/* Check for negative repetitions */
 	  return FALSE;
 														/* Ask the user for the text of a pattern. */
-	cc = readpattern(kind == FALSE ? TEXT82 : TEXT83, &pat[0]);
+	cc = readpattern(TEXT82 + (kind == FALSE ? TEXT82_O : 0), &pat[0]);
 																	/* "Replace" */
 																	/* "Query replace" */
 	if (cc <= FALSE)
@@ -774,17 +765,16 @@ int Pascal replaces(int kind, int f, int n)
 	if (cc < 0)
 	  return cc;
 															/* Find the length of the replacement string. */
-{ int inhib; 
 														  /* Set up flags so we can make sure not to do 
 														   * a recursive replace on the last line. */
+{	WINDOW * wp = curwp;
+  int orig_line_no = setcline();
+
+//orig.curline = lback(orig.curline);
   int numsub = 0;
   int lenold = 0;
   int lastins = 0;
-
 	Lpos_t last;		/* position of last replace */
-	int orig_line_no = setcline();
-
-//orig.curline = lback(orig.curline);
 	last.curline = NULL;
 																		/* Build query replace question string */
 											/* "Replace '" */
@@ -802,15 +792,15 @@ int Pascal replaces(int kind, int f, int n)
 												     * g_Dmatchlen is reset to the true length of
 												     * the matched string. */
 														/* Check if we are on the last line */
-	  if (l_is_hd(lforw(curwp->w_dotp)) &&
+	  if (l_is_hd(lforw(wp->w_dotp)) &&
         matchlen > 0 &&
 	      pat[matchlen - 1] == '\n')
 	    n = -1;
 #endif
 
 	  if (kind)			/* Check for query */
-	  {	if (getwpos() + 2 >= curwp->w_ntrows)
-			{ Lpos_t save = *(Lpos_t*)&curwp->w_dotp;
+	  {	if (getwpos() + 2 >= wp->w_ntrows)
+			{ Lpos_t save = *(Lpos_t*)&wp->w_dotp;
 			  forwbyline(2);
 			  rest_l_offs(&save);
 			}
@@ -822,20 +812,20 @@ qprompt:
 			cc = getkey();
    /* mlwrite("");			** and clear it */
 
-			switch (toupper(cc))		/* And respond appropriately */
-			{ case 'L':   n = -1;
+			switch (cc | 0x20)		/* And respond appropriately */
+			{ case 'l':   n = -1;
 #if	FRENCH
-		  	case 'O':			/* yes, substitute */
+		  	case 'o':			/* yes, substitute */
 #endif
-			  case 'Y':			/* yes, substitute */
+			  case 'y':			/* yes, substitute */
 			  case ' ':
 
 			  when '!':	kind = FALSE;	/* yes/stop asking */
 					
-			  when 'N':	forwbychar(1);	/* no, onword */
+			  when 'n':	forwbychar(1);	/* no, onword */
 					continue;
 
-			  when 'U':		   /* undo last and re-prompt */
+			  when 'u':		   /* undo last and re-prompt */
 					if (last.curline != NULL)
 			  	{ rest_l_offs(&last);			/* Restore old position. */
 					  last.curline = NULL;	   									
@@ -860,18 +850,16 @@ qprompt:
 //				if (orig.curoff >= orig.curline->l_used)
 //				  orig.curoff = 0;
 					gotoline(1,orig_line_no);
-//				curwp->w_flag |= WFMOVE;
+//				wp->w_flag |= WFMOVE;
 
-			  case CTRL|'G':
+			  case CTRL|'g':
 			  	mlwrite(TEXT89);  /* abort! and stay */
 								/* "Aborted!" */
 					return FALSE;
 			}       
 	  }	/* end of "if kind" */
 
-		inhib = last.curline == curwp->w_dotp;
-//	if (inhib)
-//		++g_inhibit_scan;
+	{ LINE * curl = wp->w_dotp;
 
 			   /* Delete the sucker, and insert its replacement. */
 		lenold = matchlen;
@@ -879,12 +867,12 @@ qprompt:
 	  if (lastins < 0)
 	    return FALSE;
 	  			  /* Save our position, since we may undo this*/
-		if (inhib)
+		if (last.curline == curl)
 		{ // --g_inhibit_scan;
-			if (last.curline != curwp->w_dotp)
+			if (last.curline != wp->w_dotp)
 				lchange(WFHARD);
 	  }
-	  last = *(Lpos_t*)&curwp->w_dotp;
+	  last = *(Lpos_t*)&wp->w_dotp;
 										  /* If we are not querying, check to make sure
 										   * that we didn't replace an empty string
 										   * (possible in MAGIC mode), because we'll
@@ -897,7 +885,7 @@ qprompt:
 						/* "Empty string replaced, stopping." */
 	    return FALSE;
 	  }
-	} // Loop
+	}} // Loop
 #if S_WIN32 == 0
 	update(TRUE);
 #endif						

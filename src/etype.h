@@ -8,16 +8,6 @@
 
 #if S_WIN32
 
-typedef union
-{ int pair;
-  struct
-  { short ct;
-  	short ix;
-  } both;
-} Pair;
-
-extern Pair g_eaten_pair;
-
 #define WinChar wchar_t
 #else
 #define WinChar void
@@ -56,6 +46,7 @@ char *Pascal bytecopy();
 char *Pascal envval();
 //void Pascal expandp(char *, char *, char *, int);
 //const char * USE_FAST_CALL fixnull(const char * s);
+int USE_FAST_CALL find_nch(int wh, int cix, LINE * lp);
 const char * Pascal flook(char, const char *);
 char * Pascal flookdown(char *, char *);
 char *Pascal flooknear();
@@ -94,6 +85,7 @@ int Pascal dispvar(int,int);
 int USE_FAST_CALL myeq(int, int);
 int Pascal ernd(void);
 int Pascal execkey(KEYTAB *, int, int);
+int        execwrap(int wh);
 int Pascal execporb(int isp, int n);
 #if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
  int Pascal fexist(const char *);
@@ -106,7 +98,6 @@ void Pascal flook_init(char *);
 int Pascal fisearch(int, int);
 int Pascal getkey();
 const char * gettmpfn(void);
-int USE_FAST_CALL getwtxt(int, char *, int, int);
 int Pascal gettyp(char *);
 int Pascal getwpos();
 void init_wincon();
@@ -136,7 +127,7 @@ int USE_FAST_CALL stol(char * s);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
 void tcapsetfgbg(int chrom);
-void Pascal tcapsetsize(int wid, int dpth, int clamp);
+void Pascal tcapsetsize(int wid, int dpth);
 int Pascal tgetc();
 int Pascal topluct();
 int Pascal uneat();
@@ -155,7 +146,7 @@ int Pascal bclear(BUFFER *);
 int Pascal bindtokey(int, int);
 void Pascal blankpage(void);
 int Pascal bktoshell(int, int);
-int Pascal buildlist(const char * mstring);
+int Pascal buildlist(int wh);
 int Pascal capword(int, int);
 int Pascal cex(int, int);
 int Pascal USE_FAST_CALL chk_k_range(int);
@@ -202,12 +193,12 @@ int Pascal execfile(int, int);
 int Pascal execproc(int, int);
 int Pascal fetchfile(int, int);
 short execprog();
-int Pascal ffisdiry();
+int Pascal ffisdiry(FILE *);
 FILE * ffwopen(int mode, char * fn);
 int Pascal ffclose();
-int Pascal ffgetline();
+int Pascal ffgetline(FILE *);
 int Pascal ffputline(FILE * op, char buf[], int nbuf);
-int Pascal ffropen(const char *);
+FILE* Pascal ffropen(const char *);
 int Pascal filefind(int, int);
 int Pascal filename(int, int);
 int Pascal fileread(int, int);
@@ -287,7 +278,6 @@ void Pascal mlputf(int);
 int Pascal mlputi(int);
 void Pascal mlputs(int, const char *);
 #define mlreply(a,b,c) nextarg(a,b,c)
-#define mltreply(a,b,c) nextarg(a,b,c)
 int Pascal USE_FAST_CALL mlyesno(const char *);
 void Pascal modeline(WINDOW *);
 int Pascal mouseoffset();
@@ -304,7 +294,7 @@ int Pascal namedcmd(int, int);
 int Pascal replace_file(const char * s);
 int Pascal narrow(int, int);
 int Pascal ins_newline(int, int);
-int Pascal newdims(int, int);
+int Pascal USE_FAST_CALL newdims(int, int);
 int Pascal nextarg(const char * prompt, char * buffer, int size);
 int Pascal nextbuffer(int, int);
 int Pascal nextch(Lpos_t * lpos, int dir);
@@ -382,7 +372,7 @@ extern char * Pascal strpcpy(char * tgt, const char * src, int mlen);
 char * Pascal strpcpypfx(char *, const char *, int, char);
 int Pascal swapmark(int, int);
 int Pascal USE_FAST_CALL swbuffer(BUFFER*);
-void Pascal tcapopen();
+int Pascal tcapopen();
 int Pascal toggmode(int, int);
 int Pascal togmod(int, int);
 int Pascal ttsystem(const char *, const char *);
@@ -417,7 +407,11 @@ int Pascal getboard();
 int Pascal egaopen();
 int Pascal egaclose();
 int Pascal fnclabel();
+#if S_WIN32
+#define thread_id() (int)GetCurrentProcess()
+#else
 long unsigned int thread_id(void);
+#endif
 #if FLUFF
 int Pascal twiddle(int,int);
 #endif
@@ -434,12 +428,12 @@ void Pascal updallwnd(int);
 int /*Pascal*/ update(int);
 int Pascal updone();
 void Pascal updupd(int);
-void Pascal upmode();
+int Pascal upmode();
 int Pascal upperregion(int, int);
 int Pascal upperword(int, int);
 int Pascal upscreen(int, int);
 #if S_MSDOS
-void Pascal upwind_(void);
+int Pascal upwind_(void);
 #define upwind(x) upwind_()
 #else
 void Pascal upwind(int garbage);
@@ -533,4 +527,3 @@ void Pascal SetParentFocus(void);
 #define FILE_REST 2
 #define FILE_LOCK 4
 #define FILE_NMSG 8
-

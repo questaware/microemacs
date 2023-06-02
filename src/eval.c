@@ -152,7 +152,7 @@ const char * const g_envars[] = {
 	"asave",			/* # of chars between auto-saves */
 	"bufhook",		/* enter buffer switch hook */
 	"cbflags",		/* current buffer flags */
-	"cbufname",		/* current buffer name */
+	"cbufname",		/* current buffer name (read only)*/
 	"cfname",		  /* current file name */
 	"cliplife",		/* life of data in clip board */
 	"cmdhook",		/* command loop hook */
@@ -344,29 +344,21 @@ const char * USE_FAST_CALL ltos(int val)	/* numeric logical to string logical */
 int Pascal USE_FAST_CALL trimstr(int from, char * s)/* trim whitespace off string */
 										/* string to trim */
 {
-#if 1
 	while (--from >= 0 && s[from] <= ' ')
 		s[from] = 0;
 	return from + 1;
-#else
-  char *sp = &s[from];
-        
-	while (--sp >= s && *sp <= ' ')
-	  *sp = 0;
-	  
-	return sp - s + 1;
-#endif
 }
 
 char *Pascal mkul(int wh, char * str)	/* make a string lower or upper case */
 				/* 0 => lower */
 				/* string to upper case */
-{
-	char *sp = str-1;
+{	int ix;
 	char ch;
 
-	for ( ;(ch = *++sp) != 0; )
-	  *sp = wh ? toupper(ch) : tolower(ch);
+	for ( ix = -1; (ch = str[++ix]) != 0; )
+	{ 
+	  str[ix] = wh ? toupper(ch) : tolower(ch);
+	}
 	return str;
 }
 
@@ -531,7 +523,7 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 	 switch (fnum)
 	 {case UFDIT:		return plinecpy(fname);
 	  when UFRIGHT: iarg2 -= strlen(arg1);
-				        	return iarg2 >= 0 ? arg1 : strcpy(arg1, &arg1[-iarg2]);
+				        	return strcpy(arg1, &arg1[-iarg2 < 0 ? 0 : -iarg2]);
 		when UFDIR:		return pathcat(arg1, NSTRING-1, arg1, arg2);
 		when UFIND:		return getval(arg1, arg1);
 
@@ -554,8 +546,9 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 
 		when UFGTCMD:	return cmdstr(&arg1[0], getcmd());
 		when UFBIND:  return getfname(stock(arg1));
-		when UFFIND:
-		case UFENV:		arg1 = fnum == UFFIND ? flook(0, arg1) : getenv(arg1);
+		when UFFIND:	arg1 = flook(0, arg1);
+									if (0)
+		case UFENV:			arg1 = getenv(arg1);
 									return arg1 == NULL ? "" : arg1;
 		when UFXLATE:
 		case UFMID:	 { char * arg3 = arg2 + strlen(arg2) + 1;
@@ -602,9 +595,9 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 	else
 	{switch (fnum)
    {case UFEQUAL:		iarg1 = iarg1 == iarg2;
-		when UFLESS:		iarg1 = -iarg1;
-		                iarg2 = -iarg2;
-		case UFGREATER: iarg1 = iarg1 > iarg2;
+		when UFLESS:		iarg1 = iarg1 < iarg2;
+										if (0)
+		case UFGREATER:  iarg1 = iarg1 > iarg2;
 
 		when UFSEQUAL:
 		case UFSGREAT:	
@@ -701,19 +694,19 @@ const char * USE_FAST_CALL gtenv(const char * vname)
 //  when EVFCOL:	   res = pd_fcol;
 
 	  when EVBUFHOOK:
-	  case EVEXBHOOK:  ++ix;
-	  case EVWRITEHK:  ++ix;
-	  case EVCMDHK:    ++ix;
-	  case EVWRAPHK:   ++ix;
-	  case EVREADHK:   ++ix;
-						   		   return getfname(-ix);
+	  case EVEXBHOOK:  --ix;
+	  case EVWRITEHK:  --ix;
+	  case EVCMDHK:    --ix;
+	  case EVWRAPHK:   --ix;
+	  case EVREADHK:   --ix;
+						   		   return getfname(ix);
 	  when EVVERSION:  return VERSION;
 	  when EVLANG:	   return LANGUAGE;
     when EVZCMD:     return g_ll.lastline[g_ll.ll_ix & MLIX];
 #if S_WIN32
 	  when EVWINTITLE: return null;	// getconsoletitle();
 #endif
-		when EVWORK:		 res = lastbuffer(0,0);
+		when EVWORK:		 res = lastbuffer(0,0) & 0xff;
 	  when EVPENDING:
 #if	GOTTYPAH
 									   res = typahead();
@@ -803,35 +796,6 @@ Pascal binary(key, tval, tlength)
 #endif
 
 
-static int Pascal findvar(char * var)      /* find a variables type and name */
-	
-{	int vtype;	/* type to return */
-
-fvar:	vtype = -1;
-	switch (var[0])
-	{ case '$':			/* check for legal enviromnent var */
-	      vtype = binary_const(1, &var[1])|(TKENV << 11);
-
-	  when '%':		  /* check for existing legal user variable */
-	  	  (void)gtusr(&var[1]);
-		    vtype = g_uv_vnum;
-		    if (vtype >= 0)
-		    {	strcpy(g_uv[vtype].u_name, &var[1]);
-//				v[vtype].u_value = NULL;
-					vtype |= TKVAR << 11;
-		    }				/* indirect operator? */
-	  when '&': 
-		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
-		    {			  /* grab token, and eval it */
-		      (void)token(var, NVSIZE+1);
-		      getval(&var[0], var);
-		      goto fvar;
-		    }
-	}
-	return vtype;
-}
-
-
 
 int Pascal setvar(int f, int n)	/* set a variable */
 	/* int n;	** numeric arg (can overide prompted value) */
@@ -891,8 +855,8 @@ static
 static
 int Pascal svar(int var, char * value)	/* set a variable */
 
-{	int cc = TRUE;
-	char ** varref;
+{	Cc cc = TRUE;
+  char ** varref;
   int vnum = var & 0x7ff;
 
   if (var - vnum == (TKVAR << 11))
@@ -901,7 +865,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
   }
 
 	if (value == null)
-		return cc;
+		return TRUE;
 
 { int val = atoi(value);
   int hookix = 0;		  /* set an environment variable */
@@ -919,8 +883,8 @@ int Pascal svar(int var, char * value)	/* set a variable */
 //	when EVUSESOFTTAB:curbp->b_mode &= ~BSOFTTAB;
 //									 if (val)
 //										 curbp->b_mode |= BSOFTTAB;
-	  when EVPAGELEN:	 cc = newdims(term.t_ncol, val);
-	  when EVPAGEWIDTH:cc = newdims(val, term.t_nrowm1+1);
+	  when EVPAGELEN:	 cc = newdims(0, val);
+	  when EVPAGEWIDTH:cc = newdims(val, 0);
 	  when EVCURCOL:	 cc = setccol(val);
 	  when EVCURLINE:	 cc = gotoline(TRUE, val);
 	  when EVCBFLAGS:	 lchange(WFMODE);
@@ -937,7 +901,6 @@ int Pascal svar(int var, char * value)	/* set a variable */
 			  						   curwp->w_flag |= WFMODE;
 		 	  						 }
 			  						 curbp->b_flag = hookix;
-	  when EVCBUFNAME: return FALSE;						// read only
 //	when EVSRES:	   cc = TTrez(value);
 
 	  when EVCURCHAR:	 ldelchrs(1, FALSE);		/* delete 1 char */
@@ -960,7 +923,8 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  when EVPOPUP:    mbwrite(value);
 				           //  upwind();
 	  when EVKILL:
-	  when EVLINE:	   return FALSE;						// read only
+		case EVCBUFNAME: 
+	  case EVLINE:	   return FALSE;						// read only
 	  when EVFCOL:	   if (val < 0)
 	                     val = curwp->w_doto;
 	                   pd_fcol = val;
@@ -993,7 +957,8 @@ int Pascal svar(int var, char * value)	/* set a variable */
                  	    curbp->b_tabsize = val;
 
 	                  upwind(TRUE);
-										goto storeint;
+//									goto storeint;
+										if (0)
     when EVHJUMP:   if (val > term.t_ncol - 1)
 				              val = term.t_ncol - 1;
     default:	      goto storeint;
@@ -1012,21 +977,76 @@ remalloc:
 
 
 
+#if 0
+
+static int Pascal findvar(char * var)      /* find a variables type and name */
+	
+{	int vix;	/* type to return */
+
+fvar:	vix = -1;
+	switch (var[0])
+	{ case '$':			/* check for legal enviromnent var */
+	      vix = binary_const(1, &var[1])|(TKENV << 11);
+
+	  when '%':		  /* check for existing legal user variable */
+	  	  (void)gtusr(&var[1]);
+		    vix = g_uv_vnum;
+		    if (vix >= 0)
+		    {	strcpy(g_uv[vix].u_name, &var[1]);
+//				v[vix].u_value = NULL;
+					vix |= TKVAR << 11;
+		    }				/* indirect operator? */
+	  when '&': 
+		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
+		    {			  /* grab token, and eval it */
+		      (void)token(var, NVSIZE+1);
+		      getval(&var[0], var);
+		      goto fvar;
+		    }
+	}
+	return vix;
+}
+
+#endif
+
+
 int Pascal set_var(char var[NVSIZE+1], char * value)	/* set a variable */
 					/* name of variable to fetch */
 					/* value to set variable to */
-{
-	int  vd = findvar(var);		/* variable num/type */
-	if (vd < 0)
+{	int vix;	/* type to return */
+
+fvar:	vix = -1;
+	switch (var[0])
+	{ case '$':			/* check for legal enviromnent var */
+	      vix = binary_const(1, &var[1])|(TKENV << 11);
+
+	  when '%':		  /* check for existing legal user variable */
+	  	  (void)gtusr(&var[1]);
+		    vix = g_uv_vnum;
+		    if (vix >= 0)
+		    {	strcpy(g_uv[vix].u_name, &var[1]);
+//				v[vix].u_value = NULL;
+					vix |= TKVAR << 11;
+		    }				/* indirect operator? */
+	  when '&': 
+		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
+		    {			  /* grab token, and eval it */
+		      (void)token(var, NVSIZE+1);
+		      getval(&var[0], var);
+		      goto fvar;
+		    }
+	}
+
+	if (vix < 0)
 	{ mlwrite(TEXT52, var);
 					/* "%%No such variable as '%s'" */
 	  return FALSE;
 	}
 
 #if DEBUGM == 0
-	return svar(vd, value);	/* and set the appropriate value */
+	return svar(vix, value);	/* and set the appropriate value */
 #else
-{	int cc = svar(vd, value);	/* and set the appropriate value */
+{	int cc = svar(vix, value);	/* and set the appropriate value */
 		/* if $debug == TRUE, every assignment will echo a statment to
 							that effect here. */
 	if (pd_macbug && (strcmp(var, "%track") != 0))
@@ -1175,13 +1195,14 @@ int Pascal desvars(int f, int n)
 { int uindex; // = curbp->b_tabsize;   /* index into uvar table */
         
   openwindbuf(TEXT56);
-  curbp->b_tabsize = 0;
+//curbp->b_tabsize = 0;
 	curbp->b_flag |= BFCHG;										/* Suppress the beep */
   
   --pd_discmd;
 				      												/* build the environment variable list */
   for (uindex = -1; ++uindex < NEVARS; )
     fmt_desv('$', g_envars[uindex], gtenv(g_envars[uindex]));
+
 
   lnewline(1);
 					    /* build the user variable list */
@@ -1212,7 +1233,7 @@ int Pascal desfunc(int f, int n)
 
 /*------------------------------------------------------------*/
 
-#if	DEBUGM
+#if	0
 
 int Pascal dispvar(int f, int n)	/* display a variable's value */
 	/* int n;		** numeric arg (can overide prompted value) */

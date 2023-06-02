@@ -93,40 +93,40 @@ extern char nulls[];
 #define CFCPCN	0x0002			/* Last command was C-P, C-N	*/
 
 
-#define WFFORCE 0x01		/* Window needs forced reframe	*/
-#define WFMOVE	0x02		/* Movement from line to line	*/
-#define WFEDIT	0x04		/* Editing within a line	*/
-#define WFHARD	0x08		/* Better to do a full display	*/
-#define WFMODE	0x10		/* Update mode line.		*/
-#define	WFCOLR	0x20		/* Needs a color change		*/
-#define	WFTXTD  0x40		/* Text down one line           */
-#define	WFTXTU  0x80		/* Text up one line             */
+#define	WFTXTU  0x01		/* Text up one line             */
+#define WFFORCE 0x02		/* Window needs forced reframe	*/
+#define WFMOVE	0x04		/* Movement from line to line	*/
+#define WFEDIT	0x08		/* Editing within a line	*/
+#define WFHARD	0x10		/* Better to do a full display	*/
+#define WFMODE	0x20		/* Update mode line.		*/
+#define	WFCOLR	0x40		/* Needs a color change		*/
+#define	WFTXTD  0x80		/* Text down one line           */
 #define	WFONLY 0x100		/* Not stored */
 
 
-#define NUMFLAGS  4
+#define NUMFLAGS  3
 
 #define BFINVS	0x01		/* Internal invisable buffer	*/
 #define BFCHG	  0x02		/* Changed since last write	*/
-#define	BFTRUNC	0x04		/* buffer was truncated when read */
-#define	BFNAROW	0x08		/* buffer has been narrowed	*/
+#define	BFNAROW	0x04		/* buffer has been narrowed	*/
 
 				/*	mode flags	*/
 #define	NUMMODES  11		/* # of defined modes	       */
 
-#define MDSTT    0x0010
-#define	MDVIEW	 0x0010		/* read-only buffer		*/
-#define MDWRAP	 0x0020		/* word wrap			*/
-#define MDOVER	 0x0040		/* overwrite mode		*/
-#define	MDIGCASE 0x0080		/* Exact matching for searches	*/
-#define MDMAGIC	 0x0100		/* regular expresions in search */
-#define MDSRCHC  0x0200   /* search comments also */
-#define	MDMS		 0x0400		/* File to have CRLF		*/
-#define	MDCRYPT	 0x0800		/* encrytion mode active	*/
-#define	MDASAVE	 0x1000		/* auto-save mode		*/
-#define MDDIR    0x2000		/* this file is a directory	*/
-#define BFACTIVE 0x4000		/* this buffer is active */
-#define BCRYPT2	 0x8000
+#define MDSTT    0x0008
+#define	MDVIEW	 0x0008		/* read-only buffer		*/
+#define MDWRAP	 0x0010		/* word wrap			*/
+#define MDOVER	 0x0020		/* overwrite mode		*/
+#define	MDIGCASE 0x0040		/* Exact matching for searches	*/
+#define MDMAGIC	 0x0080		/* regular expresions in search */
+#define MDSRCHC  0x0100   /* search comments also */
+#define	MDMS		 0x0200		/* File to have CRLF		*/
+#define	MDCRYPT	 0x0400		/* encrytion mode active	*/
+#define	MDASAVE	 0x0800		/* auto-save mode		*/
+#define MDDIR    0x1000		/* this file is a directory	*/
+#define BFACTIVE 0x2000		/* this buffer is active */
+#define BCRYPT2	 0x4000
+#define	BFTRUNC	 0x8000		/* buffer was truncated when read */
 
 #define BSOFTTAB 0x01			/* not in use */
 //#define BCRYPT2	 0x02
@@ -138,6 +138,7 @@ extern char nulls[];
 #define BCPAS   0x08		/* pascal style comments */
 #define BCFOR   0x10		/* fortran style comments */
 #define BCML    0x20    /* Markup language */
+#define BCSIMP  0x80		/* simple keyword */
 
 /*
  * Modes of working
@@ -182,7 +183,7 @@ typedef struct	LINE {
 	struct LINE * l_fp;		/* Link to the next line	*/
 	struct LINE * l_bp;		/* Link to the previous line	*/
 	int 	        l_dcr; 	/* Used(24) spare(6) incomment(1) header(1) */
-	char	        l_text[8]; /* A bunch of characters.	*/
+	char	        l_text[16]; /* A bunch of characters.	*/
 }	LINE;
 
 #define l_is_hd(lp) (!(lp->l_dcr))
@@ -366,15 +367,15 @@ typedef struct LL
 
 typedef struct Paren_s
 { 
+  char				  in_mode;
+  signed char   complex;
+  char          prev;
+  signed char   nest;
+  signed char   nestclamped;
   char          ch;
-  char          fence;
-  char          prev;			// must follow fence
-  char          complex;
-  char					lang;
-  signed char		sdir;
-  short         nest;
-  short		      nestclamped;
-  short         in_mode;
+  signed char		lang;
+  short					sdir;
+  short         fence;
 } Paren_t, *Paren;
 
 extern Paren_t g_paren;
@@ -522,6 +523,7 @@ NOSHARE extern TERM	term;		/* Terminal information.	*/
 #define BG(x) ((x)<<12)
 #define FG(x) ((x)<<8)
 
+#define Q_LOG_STR 3
 
 #define Q_IN_ESC   1
 #define Q_IN_CMT   2

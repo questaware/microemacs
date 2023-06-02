@@ -140,7 +140,7 @@ BOOL WINAPI MyHandlerRoutine(DWORD dwCtrlType)
   rec_.Event.KeyEvent.wVirtualScanCode = 0x20;
 
 { DWORD ct;
-  int rc = WriteConsoleInputA( g_ConsIn, &rec_, 1, &ct);
+  int rc = WriteConsoleInputA(GetStdHandle( STD_INPUT_HANDLE ), &rec_, 1, &ct);
 #if _DEBUG
   if (rc == 0 || ct != 1)
   { g_got_ctrl = true;
@@ -176,10 +176,415 @@ int flagerr(const char *str)  //display detailed error info
 }
 
 
-extern CONSOLE_SCREEN_BUFFER_INFO csbiInfo;  /* Orig Console information */
-extern CONSOLE_SCREEN_BUFFER_INFO csbiInfoO;  /* Orig Console information */
+static HANDLE  g_ConsOut;                   /* Handle to the console */
 
-static HANDLE g_ConsIn;
+CONSOLE_SCREEN_BUFFER_INFO g_csbi;   /* Console information */
+//CONSOLE_CURSOR_INFO        ccInfo;
+
+
+#define BG_GREY  (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE)
+#define FG_WHITE (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)
+
+#if 0
+
+long unsigned int thread_id(void)
+
+{ return (int)GetCurrentProcess(); // + 29 * GetCurrentThreadId();
+}
+
+#endif
+
+static UINT g_codepage;
+
+void USE_FAST_CALL setcp(int v)
+
+{ SetConsoleCP(v);
+  SetConsoleOutputCP(v);
+}
+
+void init_wincon()
+
+{
+//Sleep(1000*8);
+																							// reduces memory but slows startup
+	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
+
+//Sleep(1000*8);
+											      /* Get display screen information, clear the screen.*/
+{	HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
+	g_ConsOut = h;
+
+#if 0
+  if (SetConsoleMode(h, ENABLE_PROCESSED_OUTPUT) == 0)
+    flagerr("SCMO %d");
+#endif
+
+	GetConsoleScreenBufferInfo( h, &g_csbi );
+
+	SetConsoleTextAttribute(h, BG_GREY);
+		 
+//tcapepage();
+//SetConsoleTextAttribute(h, BG_GREY);
+	g_codepage = GetConsoleOutputCP();
+  setcp(1252);
+}}
+
+
+void Pascal tcapeeol()
+
+{ // COORD     Coords;
+  // Coords.Y = ttrow;
+  // Coords.X = ttcol;
+{ int sz = g_csbi.dwSize.X-ttcol;
+	DWORD     Dummy;
+  
+  FillConsoleOutputCharacter(g_ConsOut, ' ',sz,g_coords,&Dummy );
+}}
+
+/*
+void Pascal tcapepage()
+
+{ tcapbeeol(-1,0);
+}
+*/
+
+
+#if 1
+
+/* This function gets called just before we go back home to the command
+ * interpreter.
+ */
+void Pascal tcapclose(int lvl)
+
+{ setcp(g_codepage);
+/*CloseHandle(hConsoleIn);
+  hConsoleIn = NULL;  cannot do this */
+}
+
+#endif
+
+/*
+char * argv__[] = { "wincon", "tt", null};
+int argc__ = 2;
+*/
+//#if _MSC_VER < 1900
+#undef VS_CHAR8
+#define VS_CHAR8 1
+//#endif 
+
+#if VS_CHAR8
+#define SC_CHAR char
+#define SC_WORD WORD
+
+#else
+#define SC_CHAR wchar_t
+#define SC_WORD DWORD
+																					// Overwrites the source
+char * wchar_to_char(SC_CHAR * src)
+
+{ char * t = (char*)src-1;
+	SC_CHAR * s;
+	for (s = src-1; *++s != 0; )
+		*++t = *s;
+	*++t = 0;
+
+	return (char*)src;
+}
+
+wchar_t * char_to_wchar(char const * src, int sz, wchar_t * tgt)
+
+{ wchar_t * t = tgt -1;
+	char const * s;
+	for (s = src-1; *++s != 0 && --sz > 0; )
+		*++t = *s;
+	*++t = 0;
+
+	return tgt;
+}
+
+#endif
+
+
+void Pascal setconsoletitle(char * title)
+
+{
+#if VS_CHAR8 == 0
+	wchar_t buf[100];
+	swprintf(buf, 100, L"%S", title == null ? "" : title);
+  SetConsoleTitle(buf);
+#else
+  SetConsoleTitle(title);
+#endif
+}
+
+
+// char * Pascal getconsoletitle()
+
+// { return consoletitle;
+// }
+
+
+void Pascal tcapsetsize(int wid, int dpth)
+
+{
+#if 0
+	int decw = g_csbi.dwSize.X - wid;
+	int decd = g_csbi.dwSize.Y - dpth;
+	if (decd < 0)
+		decd = 0;
+	if (decw < 0)
+		decw = 0;
+	if (clamp*(decw + decd) > 0)			// Must be done twice
+	{ decw = g_csbi.dwSize.X - decw - 1;
+		if (decw < 0)
+			decw = -decw;
+		tcapsetsize(decw, g_csbi.dwSize.Y - decd - 1, 0);
+	}
+#endif
+{
+#if 0
+	int rc = Console.SetWindowSize(wid, dpth);
+  if (rc == 0)
+    flagerr("SCWI %d");
+#else
+ 	SMALL_RECT rect = { 0, 0, wid-1, dpth-1 };
+	COORD size;
+  size.X = wid;
+  size.Y = dpth;
+
+{ HANDLE h = g_ConsOut;
+  SetConsoleScreenBufferSize( h, size );// size);
+
+// GetConsoleMode(h, &mode);
+// mode &= ~ENABLE_WRAP_AT_EOL_OUTPUT;
+// HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
+// SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
+
+#if 0
+	GetConsoleScreenBufferInfo( h, &g_csbi);
+#endif
+																	// set the screen buffer to be big enough
+{ int rc = SetConsoleWindowInfo(h, 1, &rect);
+#if _DEBUG
+  if (rc == 0)
+    flagerr("SCWI %d");
+#endif
+  SetConsoleScreenBufferSize( h, size);
+}}
+#endif
+}}
+
+//		 int   g_cursor_on = 0;
+static COORD g_oldcur;
+static WORD  g_oldattr = BG_GREY;
+
+
+/*
+Bool Pascal cursor_on_off(Bool on)
+
+{ Bool res = g_cursor_on;
+  g_cursor_on = on;
+  return res;
+}*/
+
+
+void Pascal USE_FAST_CALL tcapmove(int row, int col)
+
+{ COORD  coords;
+	coords.X = col;
+
+	if (row > term.t_nrowm1)
+  { // tcapbeep();
+    row = term.t_nrowm1;
+  }
+
+	coords.Y = row;
+	
+{ HANDLE h = g_ConsOut;
+
+	if (row < term.t_nrowm1 && 0/* && g_cursor_on >= 0 */)
+  {	DWORD  Dummy;
+		WriteConsoleOutputAttribute( h, &g_oldattr, 1, g_oldcur, &Dummy );
+	  g_oldattr = refresh_colour(row, col);
+	  g_oldcur = coords;
+	{ WORD MyAttr = // row == term.t_nrowm1 ? BG_GREY :
+                  BACKGROUND_INTENSITY;
+                  // COMMON_LVB_REVERSE_VIDEO;
+
+	  WriteConsoleOutputAttribute( h, &MyAttr, 1, coords, &Dummy );	
+	}}
+	g_coords = coords;
+	SetConsoleCursorPosition( h, coords);
+}}
+
+
+
+#if 0
+
+void Pascal tcapscreg(row1, row2)
+     int row1, row2;
+{ 
+}
+
+
+static
+void Pascal ttscup(int maxx, int maxy)/* direction the window moves*/
+
+{ CHAR_INFO ci;
+	SMALL_RECT rect;
+//COORD doo;
+//doo.Y = 0; // -1 ???;
+//doo.X = 0;
+  rect.Top = 0;
+  rect.Left = 0;
+  rect.Right = maxx;
+  rect.Bottom = maxy + 1;
+  
+  ci.Char.AsciiChar = ' ';
+  ci.Attributes = BG_GREY;
+    
+{ int cc = ScrollConsoleScreenBufferA( g_ConsOut, &rect, null, *(COORD*)&rect, &ci);
+#if _DEBUG
+	if (cc == 0)
+    tcapbeep();
+#endif
+}}
+
+#endif
+
+//------------------------------------------------------------------------------
+
+void Pascal ttputc(unsigned char ch) /* put character at the current position in
+														   		      current colors */
+{	HANDLE cout = g_ConsOut;
+
+/*GetConsoleScreenBufferInfo( cout, &ccInfo );*/
+	GetConsoleScreenBufferInfo( cout, &g_csbi );
+
+{ COORD curpos = g_csbi.dwCursorPosition;
+  unsigned long  Dum;
+#if VS_CHAR8
+#define gch (char)ch
+#else
+	wchar_t gch = ch;
+#endif
+																		/* write char to screen with current attrs */
+  WriteConsoleOutputCharacter(cout, &gch,1, curpos, &Dum);
+
+/* ttcol = col;*/
+
+  if (ch == '\n' || ch == '\r')
+  {	curpos.X = 0;
+  	if (curpos.Y < g_csbi.dwSize.Y)
+    { ++curpos.Y;
+//   	ttscup(g_csbi.dwSize.X, g_csbi.dwSize.Y);	/* direction the window moves*/
+    }
+  }
+  else
+  { // if (ch != '\b')
+		++curpos.X;
+    { 
+#if 0
+      if (col >= g_csbi.dwSize.X)
+    	{
+#if _DEBUG
+        mlwrite("%pRow %d Col %d Lim %d", ttrow, col, g_csbi.dwSize.X);
+#endif
+				return;
+      }
+#endif
+    }
+#if 0
+    else
+	  {
+#if _DEBUG
+			mbwrite("Got BS");
+#endif
+    	col -= 2;
+      if (col < 0)
+        col = 0;
+    }
+#endif
+  }
+
+	g_csbi.dwCursorPosition = curpos;
+//ttrow = row;
+  SetConsoleCursorPosition( cout, curpos);
+}}
+
+
+
+int Pascal tcapbeep()
+
+{ Beep( 500, 250 /*millisecs*/);
+//mbwrite("BEEP\n");
+  return OK;
+}
+
+
+
+void Pascal scwrite(row, outstr, color)	/* write a line out */
+	int 	   row; 			/* row of screen */
+	short	  *outstr;		/* string to output (must be term.t_ncol long)*/
+	int 	   color;		 	/* background, foreground */
+{ 									/* build the attribute byte and setup the screen pointer */
+	SC_CHAR buf[NCOL];
+	WORD 		cuf[NCOL];
+	unsigned long n_out;
+	WORD attr = color;
+	const SC_WORD sclen = g_csbi.dwSize.X >= NCOL ? NCOL : g_csbi.dwSize.X;
+	int col;
+	
+	for (col = -1; ++col < sclen; )
+	{
+/* 0 : No special effect
+ * 1 : underline
+ * 2 : bold
+ * 4 : Use new foreground
+ * 8 : Use line foreground
+ * An attribute of 0 therefore means the attributes for the line/new foreground
+ */
+    int wh = outstr[col] & 0xf000;
+    if (wh != 0)
+    { wh = wh >> 12;
+      if      (wh & 4)
+      {	attr = color & 0xf0 | (outstr[col] >> 8) & 0xf;
+      	if (wh & 8)
+					attr |= COMMON_LVB_UNDERSCORE;
+      }
+      else if (wh & 8)
+        attr = color;
+
+      if (wh & 1)						// Cannot do underline so bold (which is faint!)
+				attr |= 0x8;
+    }
+		cuf[col] = attr;
+		buf[col] = (outstr[col] & 0xff);
+	}
+	
+{	COORD coords;
+	coords.X = 0;
+	coords.Y = row;
+			 
+	WriteConsoleOutputCharacter( g_ConsOut, buf, sclen, coords, &n_out );
+{ int cc = WriteConsoleOutputAttribute( g_ConsOut, cuf, sclen, coords, &n_out);
+#ifdef _DEBUG
+	if (cc == 0 || n_out != sclen)
+		adb(cc);
+#endif
+}}}
+
+
+#if	FLABEL
+int Pascal fnclabel(f, n)	/* label a function key */
+	int f,n;	/* default flag, numeric argument [unused] */
+{		/* on machines with no function keys...don't bother */
+  return TRUE;
+}
+#endif
+
+
+//static HANDLE g_ConsIn;
 //static HWND g_origwin = NULL;
 
 
@@ -187,17 +592,19 @@ static HANDLE g_ConsIn;
 static int g_got_ctrl = false;
 #endif
 
+#if 0
 
 int Pascal iskboard()
 
 {	BY_HANDLE_FILE_INFORMATION fileinfo;
-	g_ConsIn = GetStdHandle( STD_INPUT_HANDLE );
-{	DWORD rc = GetFileInformationByHandle(g_ConsIn, &fileinfo);
+	HANDLE h GetStdHandle( STD_INPUT_HANDLE );
+{	DWORD rc = GetFileInformationByHandle(h, &fileinfo);
 	return !rc;
 }}
 
+#endif
 
-void setMyConsoleIP()
+HANDLE setMyConsoleIP()
 
 {// int clamp = 2;
 
@@ -205,34 +612,35 @@ void setMyConsoleIP()
 //{ mlwrite("%pMode before %x", mode);
 //}
 
-//while (--clamp >= 0)
-	{ Cc rc = SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE),
-													 ENABLE_WINDOW_INPUT);// Allowed to fail
-		if (rc)
-			return;
+	HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+	//while (--clamp >= 0)
+	//{
+	
+	Cc rc = SetConsoleMode(h,ENABLE_WINDOW_INPUT);// Allowed to fail
 #if _DEBUG
+	if (!rc)
 	  flagerr("Ewi");
 #endif
 //	millisleep(50);
-	}
+	//}
+	return h;
 }
 
 
-static HANDLE Create(const char * fname)
+static HANDLE USE_FAST_CALL Create(int wr, const char * fname)
 
-{ SECURITY_ATTRIBUTES sa;
+{	DWORD share = GENERIC_READ | (GENERIC_WRITE*wr);
+	SECURITY_ATTRIBUTES sa;
   sa.lpSecurityDescriptor = NULL;
   sa.nLength = sizeof(SECURITY_ATTRIBUTES);
   sa.bInheritHandle = TRUE;         //allow inheritable handles
   
-{	DWORD share = GENERIC_READ | GENERIC_WRITE;
-	int open_create = OPEN_EXISTING;
-	int fattr = FILE_SHARE_READ|FILE_SHARE_WRITE |
-							FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS;
+{	int fattr = FILE_ATTRIBUTE_NORMAL|FILE_SHARE_READ|FILE_SHARE_WRITE |
+							FILE_FLAG_BACKUP_SEMANTICS;
 
 	HANDLE res = CreateFile(fname == NULL ? "nul" : fname,
 										      share, 1, &sa,
-											    open_create,fattr,NULL);
+											    OPEN_EXISTING,fattr,NULL);
 //if (res < 0)
 //	res =  (int)CreateFile(fname == NULL ? "nul" : fname,
 //											   share, rw+1, &sa,
@@ -244,29 +652,15 @@ static HANDLE Create(const char * fname)
 
 void Pascal MySetCoMo()
 
-{ HANDLE h;
-#if 0
-  SECURITY_ATTRIBUTES sa;
-  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-  sa.bInheritHandle = TRUE;         //allow inheritable handles
-  sa.lpSecurityDescriptor = NULL;
-  h = CreateFile("CONIN$",
-                 GENERIC_READ, // | GENERIC_WRITE,
-                 FILE_SHARE_READ, //  | FILE_SHARE_WRITE,
-                 &sa,
-                 OPEN_EXISTING,
-                 0, NULL); // ignored
-#else
-  h = Create("CONIN$");
-#endif
-	if (!SetStdHandle(STD_INPUT_HANDLE, h))
-    flagerr("SCCFSHErr");
+{
+	HANDLE h = Create(1, "CONIN$");
+	(void)SetStdHandle(STD_INPUT_HANDLE, h);
 
-	setMyConsoleIP();
+	(void)setMyConsoleIP();
 
 //SetConsoleCtrlHandler(MyHandlerRoutine, true);
 #if 0
-{ HWND mwh = GetForegroundWindow();
+{ HWNcd \gener\omicroD mwh = GetForegroundWindow();
   if (mwh == NULL)
     flagerr("MwHerr");
 
@@ -280,6 +674,21 @@ void Pascal MySetCoMo()
 #endif
 //g_origwin = GetForegroundWindow();
 }
+
+
+int Pascal tcapopen()
+
+{ int plen = g_csbi.srWindow.Bottom-g_csbi.srWindow.Top+1;
+  int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+2;	/* why 2 ? */
+
+  newdims(pwid, plen);
+
+{ HANDLE h = setMyConsoleIP();
+
+	BY_HANDLE_FILE_INFORMATION fileinfo;
+	DWORD rc = GetFileInformationByHandle(h, &fileinfo);
+	return !rc;
+}}
 
 
 /*
@@ -341,7 +750,16 @@ static const unsigned char scantokey[] =
 #define EAT_LOG 7
 #define EAT_SZ (1 << EAT_LOG)
 
-Pair g_eaten_pair;
+typedef union
+{ int pair;
+  struct
+  { short ct;
+  	short ix;
+  } both;
+} Pair;
+
+//Pair g_eaten_pair;
+int g_eaten_pair;
 
 static int g_eaten[EAT_SZ+4];	 /* four buffer entries */
 
@@ -349,13 +767,14 @@ static int g_eaten[EAT_SZ+4];	 /* four buffer entries */
 void Pascal reeat(int c)
 
 {																				/* save the char for later */
-	g_eaten[g_eaten_pair.both.ix + ++g_eaten_pair.both.ct] = c;
+	g_eaten_pair += (1 << 8);
+	g_eaten[(g_eaten_pair & 255) + (g_eaten_pair >> 8)] = c;
 }
 
 
 void flush_typah()
 
-{ g_eaten_pair.both.ct = 0;
+{ g_eaten_pair = 0;
 
 	while (_kbhit())
     (void)ttgetc();
@@ -368,9 +787,9 @@ void flush_typah()
  */
 int ttgetc()
 
-{ if (g_eaten_pair.both.ct > 0)
-	{ g_eaten_pair.both.ct -= 1;
-		return g_eaten[++g_eaten_pair.both.ix];
+{ if ((g_eaten_pair >> 8) > 0)
+	{ g_eaten_pair += 1 - 256;
+		return g_eaten[g_eaten_pair & (EAT_SZ-1)];
 	}
 
 #if MOUSE > 0
@@ -399,25 +818,21 @@ int ttgetc()
 		int86(0x33, &rg, &rg);
 	} /* while */
 #endif
-#if _DEBUG
-  if (g_ConsIn == 0)
-  	mbwrite("Int Err.7");
-#endif
-{	int totalwait = g_timeout_secs;
+{ HANDLE h = GetStdHandle( STD_INPUT_HANDLE );
+	int totalwait = g_timeout_secs;
  	DWORD lim = 1000;
 	int oix = -1;
+  static FILE * diags;
 
   while (1)
   { int need;
-  	INPUT_RECORD rec[32];
+  	INPUT_RECORD rec[EAT_SZ];
   	int got = 0;
-    int cc = WaitForSingleObject(g_ConsIn, lim);
+    int cc = WaitForSingleObject(h, lim);
     switch(cc)
 		{	case WAIT_OBJECT_0:
-							need = (EAT_SZ - 1 - oix) * 2;
-							if (need > 32)
-								need = 32;
-							cc = ReadConsoleInput(g_ConsIn,&rec[0],need,(DWORD*)&got);
+							need = (EAT_SZ - 1 - oix);
+							cc = ReadConsoleInput(h,&rec[0],need,(DWORD*)&got);
 							if (cc && got > 0)
 								break;	
 #if _DEBUG
@@ -440,10 +855,19 @@ int ttgetc()
 			default:if (lim != 0)
 								continue;
     }
-
+#define LOG_K 0
+#if LOG_K
+		if (diags == NULL)
+			diags = fopen("KEYS", "w");
+#endif		
 	{	int ix = -1;
 		while (++ix < got)
     {	INPUT_RECORD * r = &rec[ix];
+#if LOG_K
+			fprintf(diags, "EventType %d %x %x  %x\n", r->EventType, r->Event.KeyEvent.dwControlKeyState,
+																						 r->Event.KeyEvent.wVirtualKeyCode,
+																						 r->Event.KeyEvent.uChar.AsciiChar);
+#endif		
 			if      (r->EventType == KEY_EVENT && r->Event.KeyEvent.bKeyDown)
 			{	int keystate = r->Event.KeyEvent.dwControlKeyState;
 	      int ctrl = keystate & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED);
@@ -453,8 +877,8 @@ int ttgetc()
 				}
 	
 	    { int chr = r->Event.KeyEvent.wVirtualKeyCode;
-	      if (in_range(chr, 0x10, 0x12))
-	        continue;														/* shifting key only */
+	      if (in_range(chr, 0x10, 0x14))
+	        continue;														/* shifting or caps lock key only */
 	    
 	      if (keystate & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED))
 		 		  ctrl |= ALTD;
@@ -489,11 +913,10 @@ int ttgetc()
 
 		if (oix >= 0)
 		{
-#if LITTLEENDIAN
-			g_eaten_pair.pair = oix;
-#else
-			g_eaten_pair.pair = oix << 16;
-#endif
+			g_eaten_pair = oix  << 8;
+#if LOG_K
+			fprintf(diags, "Eaten %x\n", g_eaten[0]);
+#endif		
 			return g_eaten[0];
 		}
   }}
@@ -527,13 +950,8 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
  #define DIRY_CHAR DIRSEPCHAR
 #endif
 	char * td = gettmpfn();
-				 char c2[2];
-	c2[0] = c2[1] = 0;
-
-	if (td[strlen(td)-1] != DIRY_CHAR)
-		c2[0] = DIRY_CHAR;
 	
-{	char *ss = concat(filename,td,c2,"me",int_asc(_getpid()),NULL);
+{	char *ss = concat(filename,td,"/me"+(td[strlen(td)-1] == DIRY_CHAR),int_asc(_getpid()),NULL);
 	int tail = strlen(ss);
 	int iter; 
 	ss[tail] = suffix;
@@ -544,8 +962,7 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
 		if (!fexist(ss))
 			break;
 		
-		ss[tail-3] = 'A' + 24 - iter;				// File should not exist anyway
-		ss[tail-2] = '~';
+		ss[tail-2] = 'A' + 24 - iter;				// File should not exist anyway
 	}
 	return filename;
 }}
@@ -620,16 +1037,16 @@ int Pascal name_mode(const char * s)
 
 {	BY_HANDLE_FILE_INFORMATION fileinfo;
 	int res = 0x04;
-  int myfile = Create(filen);
-	if (myfile < 0)
+  HANDLE myfile = Create(0, filen);
+	if ((int)myfile < 0)
 		return 0;
-	if (GetFileInformationByHandle((HANDLE)myfile, &fileinfo))
+	if (GetFileInformationByHandle(myfile, &fileinfo))
 	{ res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
 	  if (fileinfo.nNumberOfLinks > 1)
 	  	res |= FILE_ATTRIBUTE_NORMAL;
 	}
 	
-  CloseHandle((HANDLE)myfile);
+  CloseHandle(myfile);
 
 	return res;
 }}
@@ -674,7 +1091,6 @@ Cc WinLaunch(int flags,
           	 // char *outErr
 						)
 { char buff[512];           //i/o buffer
-	const char * app = NULL;
 	int quote = 0;
 
 	const char * s = cmd;
@@ -687,17 +1103,17 @@ Cc WinLaunch(int flags,
   { char ch = *s++;
   	*++t = ch;
   	if (ch == quote || ch <= ' ')
-		{	*t = 0;
 			break;
-		}
   }
+  *t = 0;
 	
 { int ct = 2;
+	const char * app;
 		
 	while ((app = flook('P', buff)) == NULL && --ct > 0)
 		strcat(buff, ".exe");
 			
-	if (app != NULL)
+	if (ct > 0)
 		app = NULL;
 	else
 	{	if ((flags & WL_SHELL))					// use comspec
@@ -753,7 +1169,7 @@ Cc WinLaunch(int flags,
 	if (!(flags & WL_SPAWN))
 	{ if ((flags & WL_NOIHAND) == 0)
 //		sisa.si.hStdInput = Create(infile,FILE_SHARE_READ-1);
-      sisa.si.hStdInput = Create(infile);
+      sisa.si.hStdInput = Create(0, infile);
 //      	 == NULL ? "nul" : infile,
 //                                GENERIC_READ,FILE_SHARE_READ,&sisa.sa,
 //                                OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
@@ -851,7 +1267,7 @@ Cc WinLaunch(int flags,
 			FILE * ip_ = infile == NULL ? NULL  : fopen(infile, "r");
 			FILE * ip = ip_;
 	  	FILE * op = outfile == NULL ? NULL_OP : fopen(outfile, "w");
-		{	int append_nl = 1;
+			int append_nl = 1;
 	  	int std_delay = 5;
 		  int got_ip = 0;
 	  	int delay = 0;
@@ -929,7 +1345,7 @@ Cc WinLaunch(int flags,
 		      while ((*++ln = (ch=*++ipstr)) != 0 && ch != '\n')
 		        ;
 
-		      if (ch == 0 && ip == 0)
+		      if (ch == 0 && ip == NULL)
 		      {	*++ln = ch = '\n';
 		      	//mbwrite("Ends");
 		      }
@@ -952,8 +1368,8 @@ Cc WinLaunch(int flags,
 		   	{	if (sl - bwrote > 0)
 				  {	l.buf[sl] = 0;
 			  		strpcpy(l.buf, l.buf+bwrote, sizeof(l.buf));	// overlapping copy
+			  		bwrote = sl - bwrote;
 			  	}
-			  	bwrote = sl - bwrote;
 //		  	mlwrite("Sent %d",bread);
 //				mbwrite(lastmesg);
 				}		  
@@ -961,7 +1377,8 @@ Cc WinLaunch(int flags,
 				l.i[1] = 0;
 				l.i[2] = 0;
 	    	//delay = STD_DELAY;
-	    }}}
+	    }}} /* loop */
+	    
 	    if (!cc)
 				flagerr("PIP");
 
@@ -969,7 +1386,7 @@ Cc WinLaunch(int flags,
 				fclose(ip_);
 			if (op != NULL_OP)
 				fclose(op);
-		}}
+		}
 	}
 
 //printf("Exitted %d\n", exit);
@@ -990,7 +1407,7 @@ Cc WinLaunch(int flags,
 //CloseHandle(sisa.si.hStdError);
   CloseHandle(sisa.read_stdout);
   CloseHandle(sisa.write_stdin);
-	setMyConsoleIP();
+	(void)setMyConsoleIP();
 
   return wcc != OK ? wcc :
   			 sentz < 0 ? sentz  : (Cc)exit;
@@ -1057,7 +1474,7 @@ int pipefilter(char wh)
 		if (line[0] == '%' || line[0] == '\'')
 		{ char sch;
       int ix;
-			for (ix = 0; isalpha((sch = line[++ix])); )
+			for (ix = 0; (sch = line[++ix]) >= '0'; )
 				;
 
 			line[ix] = 0;
@@ -1072,15 +1489,16 @@ int pipefilter(char wh)
 
 {	char * fnam1 = NULL;
 
-	if (wh <= '#'-'<' || wh == '<'-'<') 			/* setup the proper file names */
+	if (wh == '#'-'<' || wh == '<'-'<') 			/* setup the proper file names */
 	{ 			
 		fnam1 = mkTempCommName('i', pipeInFile);
 
 		if (writeout(fnam1) <= FALSE)		/* write it out, checking for errors */
-		{ mlwrite(TEXT2);
+		{ // mlwrite(TEXT2);
 																			/* "[Cannot write filter file]" */
 			return FALSE;
 		}
+		curbp->b_flag |= BFCHG;
 		mlwrite(TEXT159);					/* "\001Wait ..." */
 	}
 

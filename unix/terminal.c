@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include	"estruct.h"
 #include	"build.h"
 #include	"edef.h"
@@ -472,7 +473,7 @@ void Pascal tcap_init()
 	read TERMCAP strings for function keys
 */
 
-void Pascal tcapopen()
+int Pascal tcapopen()
 
 { tcapscreg(0,term.t_nrowm1-2);   /* allow for modeline */
 
@@ -496,7 +497,10 @@ void Pascal tcapopen()
 //      use_named_str(null, null);
 	in_init();
 	see_alarm(0);
-}}
+
+{ struct stat stat_;
+  return fstat(0 , &stat_) != 0 ? 0 : (stat_.st_mode & S_IFCHR);
+}}}
 
 			/* This function gets called just before we go
 			 * back home to the command interpreter.	 */
@@ -526,7 +530,10 @@ void tcapclose(int lvl)
   		scbot = term.t_nrowm1;
 	}
   serialclose();
-}
+
+{ struct stat stat_;
+  return fstat(0 , &stat_) != 0 ? 0 : (stat_.st_mode & S_IFCHR);
+}}
 
 
 void tcapkopen()

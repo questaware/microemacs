@@ -66,6 +66,7 @@ void Pascal customise_buf(BUFFER * bp)
       	pat = fn;
 
 		init_buf(bp);
+
 {		int tabsize = pd_tabsize;
 		if (pd_file_prof != NULL)
     {	
@@ -97,7 +98,7 @@ void Pascal customise_buf(BUFFER * bp)
       }}}
 		}
     bp->b_tabsize = tabsize;
-		bp->b_flag = BFACTIVE | g_gflag;
+		bp->b_flag |= BFACTIVE | g_gflag;
 		bp->b_color = g_bat_b_color;
 
     if (bp->b_key != NULL)
@@ -179,30 +180,77 @@ BUFFER *Pascal bfind(char * bname, int cflag)
 }}
 
 
+#if 0
+
+BUFFER * Pascal bufflkup(const char * filename)
+{
+//const char tagf[] = "/../../../../../tags";
+  char fname[NFILEN+5*3+1];
+
+  if (filename[0] == '^')
+#if 1
+	{	strcpy(strcpy(fname, TAGFNAME)+15, filename+1);
+	{	int e = 15+3;
+		while ((e -= 3) >= 0 && !fexist(fname+e))
+			;
+		if (e < 0)
+    {	mlwrite(TEXT79);
+    	return NULL;
+    }
+
+		filename = fname+e;
+	}}
+#else
+	{	int totop = NFILEN+5*3 - 1;
+		fname[totop] = 0;
+	{ int sl = strlen(strpcpy(fname,filename+1,NFILEN));
+		while (--sl >= 0 && 
+					 fname[sl] != '/' && fname[sl] != '\\')
+			fname[--totop] = fname[sl];
+
+	{	Bool exist;
+	  int eix = 5*3 + 1;
+
+	  while (!(exist = fexist(fname)) && (eix -= 3) > 0)
+	  {
+				strcpy(fname+sl+1,TAGFNAME+eix);
+				strcpy(fname+strlen(fname)-TAGFNLEN, fname+totop);
+	  }
+
+	  if (!exist)
+    {	mlwrite(TEXT79);
+    	return NULL;
+    }
+
+		filename = (const char *)fname;
+	}}}
+#endif
+  return bufflink(filename, TRUE);
+}
+
+#endif
 
 BUFFER * Pascal bufflink(const char * filename, int create)
-												/* create: 1: create, MSD_DIRY=16: dont search, 
+												/* create: 1: create, 4: look up, MSD_DIRY=16: dont search, 
 																	 32:dont stay, 64: swbuffer, 128 no_share */
 { BUFFER * bp_first = NULL;
-  char fname_[NFILEN+4];
+  char fname_[NFILEN+5*3+4];
 #define fname (fname_+2)
   char * fn;
-#if 0
-  if 			(create & 32)
-    ;
-  else if (create & 16)
-  { for (; *fn != 0; ++fn)
-      if (*fn == '/')
-      { *fn = 0;
-        pat = fn+1;
-      }
-    fn = fname;
-    if (pat == null)
-    { pat = fn;
-      fn = "./";
+  char fnup[NFILEN+5*3+1];
+
+  if (filename[0] == '^' && (create & 4))
+	{	strcpy(strcpy(fnup, TAGFNAME)+15, filename+1);
+	{	int e = 15+3;
+		while ((e -= 3) >= 0 && !fexist(fnup+e))
+			;
+		if (e < 0)
+    {	mlwrite(TEXT79);
+    	return NULL;
     }
-  }
-#endif
+
+		filename = fnup+e;
+	}}
 
 #if NFILEN < 2 * NBUFN + 30
   error error
@@ -265,20 +313,6 @@ BUFFER * Pascal bufflink(const char * filename, int create)
       	{	create |= 3;
 				  if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
 	          break;
-#if 0
-				  else				/* old buffer name conflict code */
-				  { int cc = mlreply(concat(&text[0], TEXT136, bname, "):", null),
-								     							  bname, NBUFN);
-                                            /* "Buffer (" */
-				    if (cc < 0) 		  /* ^G to just quit	*/
-				      return bp_first;
-				    if (cc != FALSE) 		  /* CR to clobber it	*/
-				      continue;
-
-				    makename(bname, fn);	/* restore it */
-				    create |= 1;		    	/* It already exists but this causes */
-				  }         				      /* a quit the next time around	     */
-#endif
 				}
 	    }
 	    
@@ -397,7 +431,7 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 		for (bp = bheadp; bp != NULL; bp = bp->b_next)
 			if ((bp->b_flag & BFINVS) == 0)
 			{	if (f >= 0)
-					++count;
+					count += 1 + ((bp->b_flag & BFCHG) << 14);
 				else
 				{	if (bp->b_flag & BFCHG)
 						return swbuffer(bp);
@@ -407,12 +441,9 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 				if (lu == 0)
 					continue;
 	
-	      if (lu < thislu)
-				{	//++remain;
-					if (lu > toplu)
-	      	{	toplu = lu;
-	        	bestbp = bp;
-					}
+	      if (lu < thislu && lu > toplu)
+	      {	toplu = lu;
+	       	bestbp = bp;
 	      }
 	    }}
 	
@@ -426,20 +457,18 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 	
 		pd_winnew = 0;
 	
-	  if  (bestbp == NULL)
+	  if  (bestbp == NULL || bestbp == curbp)
 		  return 0;
 
-	  if (bestbp != curbp)
-	  {	int lu = bestbp->b_luct;
-			swbuffer(bestbp);
-		 	bestbp->b_luct = lu;
-	  }
+	{	int lu = bestbp->b_luct;
+		swbuffer(bestbp);
+	 	bestbp->b_luct = lu;
 	
 //  if (n > 0 && remain == 0)
 //		mbwrite(TEXT86);
 
 		return 1;
-	}
+	}}
 }
 
 #if 0
@@ -464,7 +493,7 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 {	if (bp == NULL)
 		return ABORT;
 		 /* let a user macro get hold of things...if he wants */
-	execkey(&exbhook, FALSE, 1);
+	execwrap(4);	 // exbhook
 
 	curbp = bp; 			/* Switch. */
 	bp->b_luct = ++g_top_luct;
@@ -472,7 +501,7 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 {	int active = bp->b_flag & BFACTIVE;
 
 	if (!active)		/* not active yet*/
-	{ 
+	{
  		customise_buf(bp);
  	}
 
@@ -481,22 +510,20 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 	if (!active)		/* not active yet*/
 	{ char * fn = bp->b_fname;
 		if (fn != null)
-		{
+		{	readin(fn, 0);
 #if S_WIN32 && 0
 			setconsoletitle(fn);
 #endif
-			readin(fn, FILE_LOCK);
 		}
 	}
 
 { WINDOW * cwp = leavewind(0, NULL);
 	cwp->w_bufp	= bp;
 	*(WUFFER*)cwp = *(WUFFER*)bp;
-											
-	upwind(TRUE);
+
 	setcline();							
-	execkey(&bufhook, FALSE, 1);	/* let a user macro get hold of things */
-	return TRUE;
+	execwrap(5); // bufhook      let a user macro get hold of things
+	return upwind(TRUE);
 }}}
 
 
