@@ -167,7 +167,7 @@ int flagerr(const char *str)  //display detailed error info
               0,
               NULL
                );
-  mlwrite("%p%s: %s\n",str,msg);
+  mlwrite("%p%s(%d): %s\n",str,ec,msg);
   LocalFree(msg);
 #else
   mlwrite("%p%s %d", str, ec);
@@ -353,23 +353,42 @@ void Pascal tcapsetsize(int wid, int dpth)
   size.Y = dpth;
 
 { HANDLE h = g_ConsOut;
+#if _DEBUG
+  if (h != GetStdHandle( STD_OUTPUT_HANDLE ))
+    mbwrite("Bad Hdl");
+#endif
   SetConsoleScreenBufferSize( h, size );// size);
 
+#if _DEBUG
+  if (h != GetStdHandle( STD_OUTPUT_HANDLE ))
+    mbwrite("Bad Hdl_");
+#endif
 // GetConsoleMode(h, &mode);
 // mode &= ~ENABLE_WRAP_AT_EOL_OUTPUT;
 // HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
 // SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 
-#if 0
-	GetConsoleScreenBufferInfo( h, &g_csbi);
+//SetFocus(h);								// Sometimes focus is lost?
+{ int rc;	
+#if _DEBUG && 0
+  mbwrite("Doing");
+	rc = GetConsoleScreenBufferInfo( h, &g_csbi);
+  if (rc == 0)
+    flagerr("GCSB %d");
+	if (g_csbi.dwSize.X != wid || g_csbi.dwSize.Y != dpth)
+		mlwrite("%p %d %d %d %d", g_csbi.dwSize.X, wid, g_csbi.dwSize.Y, dpth);
+#endif
+#if _DEBUG && 0
+	rc = SetConsoleScreenBufferSize( h, size);
+  if (rc == 0)
+    flagerr("SCSB %d");
 #endif
 																	// set the screen buffer to be big enough
-{ int rc = SetConsoleWindowInfo(h, 1, &rect);
-#if _DEBUG
+  rc = SetConsoleWindowInfo(h, 1, &rect);
+#if _DEBUG || 1
   if (rc == 0)
     flagerr("SCWI %d");
 #endif
-  SetConsoleScreenBufferSize( h, size);
 }}
 #endif
 }}
@@ -684,11 +703,12 @@ int Pascal tcapopen()
   newdims(pwid, plen);
 
 { HANDLE h = setMyConsoleIP();
+//SetFocus(h);								// Sometimes focus is lost
 
-	BY_HANDLE_FILE_INFORMATION fileinfo;
+{	BY_HANDLE_FILE_INFORMATION fileinfo;
 	DWORD rc = GetFileInformationByHandle(h, &fileinfo);
 	return !rc;
-}}
+}}}
 
 
 /*
@@ -906,7 +926,7 @@ int ttgetc()
 	    }
 		}
 		
-		if (lim != 0 && got == need && oix < EAT_SZ - 1)
+		if (lim != 0 /* && got == need */ && oix < EAT_SZ - 1)
 		{	lim = 0;
 			continue;
 		}
@@ -1110,7 +1130,7 @@ Cc WinLaunch(int flags,
 { int ct = 2;
 	const char * app;
 		
-	while ((app = flook('P', buff)) == NULL && --ct > 0)
+	while ((app = flook(Q_LOOKP, buff)) == NULL && --ct > 0)
 		strcat(buff, ".exe");
 			
 	if (ct > 0)
@@ -1577,8 +1597,7 @@ int pipefilter(char wh)
 		rc = readin(fnam2, FILE_NMSG);
 		bp->b_fname = sfn; 									/* restore name */
 		bp->b_flag |= BFCHG; 								/* flag it as changed */
-		if (wh == '#'-'<')
-			flush_typah();
+		flush_typah();
 	}
 																	/* get rid of the temporary files */
 	if (fnam1 != NULL)

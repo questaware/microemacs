@@ -900,10 +900,10 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 
 /*char * inclmod;			** initial mod to incldirs */
 
-/*	wh == I => 
+/*	wh == -1 =>
 	Look up the existence of a file in the directory of the buffer || 
 	along the include path in the INCLDIRS environment variable. 
-		wh == P => 
+		wh ==  1 => 
 	Look up the existence of a file along the normal $PATH
 		else 
 	Look first in the $HOME directory
@@ -913,7 +913,7 @@ const char * Pascal flook(char wh, const char * fname)
 
 { const char * path;	/* environmental PATH variable */
   const char * res;
-//char buf[100];
+#if 0
 			                  /* if we have an absolute path check only there! */
 	if (*fname == '\\' || *fname == '/' || 
 	   (*fname == '.' &&   (fname[1] == '/' ||
@@ -923,43 +923,39 @@ const char * Pascal flook(char wh, const char * fname)
 #endif
 	   )
 		return !fexist(fname) ? NULL : fname;
-
-	switch (wh)
-	{	case 'P':
-			path = getenv("PATH");
-			if (0)
-	  case 'I':
-	  { path = curbp->b_fname;
-	    if ((res = fex_file(1, &path, fname)))
-	     	return res;
-			 path = pd_incldirs;
-	  }
-			if (path != NULL)
-			{	for (--path; *++path != 0;)
-			  { if ((res = fex_file(0, &path, fname)))
-			      return res;
-				}
-			}
-
-			return NULL;
-		otherwise
-			path = getenv(HOMEPATH);
-	    if ((res = fex_file(0, &path, fname)))
-	      return res;
-	  {
-#if S_WIN32
-			char invokenm[514];
-			(void)GetModuleFileName(0, invokenm, 512);
-			path = invokenm;
-#else
-			path = flook('P', g_invokenm);
 #endif
-		 	return fex_file(1, &path, fname);
+
+	path = getenv(HOMEPATH);
+
+	if      (wh > 0)
+	{	
+		path = getenv("PATH");
+	}
+	else if (wh < 0)
+	{ path = curbp->b_fname;
+	  if ((res = fex_file(1, &path, fname)))
+	   	return res;
+		path = pd_incldirs;
+	}
+	if (path != NULL)
+	{	for (--path; *++path != 0;)
+	  { if ((res = fex_file(0, &path, fname)))
+	      return res;
 		}
 	}
 
-	return NULL;	/* no such luck */
-}
+	if (wh < 0)
+		return NULL;
+{
+#if S_WIN32
+	char invokenm[514];
+	(void)GetModuleFileName(0, invokenm, 512);
+	path = invokenm;
+#else
+	path = flook(Q_LOOKP, g_invokenm);
+#endif
+	return fex_file(1, &path, fname);
+}}
 
 #if 0
 
@@ -1077,7 +1073,7 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 		   into it with view mode			*/
 {
   static const char emacshlp[] = "microemacs.md";
-	       char *fname = (char*)flook(0, emacshlp);
+	       char *fname = (char*)flook(Q_LOOKH, emacshlp);
 
 	BUFFER *bp;
 	if (fname == NULL || (bp = bufflink(fname, 64)) == NULL)

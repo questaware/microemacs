@@ -369,7 +369,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 {	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
 	int  markuplen = 1;
 	char markupterm = 0;
-	int hix[16];
+	int hix[16] = {0};
 	const char** high = ((char**)&pd_hlight1);
 //int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
 	char duple = curbp->b_langprops & BCPAS 				? ')' :

@@ -55,6 +55,7 @@ void Pascal init_buf(BUFFER * bp)
 		memset(&bp->b_doto, 0, sizeof(int)*2 + sizeof(bp->b_mrks));
 }
 
+
 static
 void Pascal customise_buf(BUFFER * bp)
 
@@ -103,6 +104,7 @@ void Pascal customise_buf(BUFFER * bp)
 
     if (bp->b_key != NULL)
    		bp->b_flag |= MDCRYPT;
+
 		if (pat[1] == 'e' && pat[2] == '2')
 			bp->b_flag |= BCRYPT2;
 }}
@@ -240,7 +242,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
   char fnup[NFILEN+5*3+1];
 
   if (filename[0] == '^' && (create & 4))
-	{	strcpy(strcpy(fnup, TAGFNAME)+15, filename+1);
+	{	strcpy(strcpy(fnup, TAGFNAME)+15, filename+1+(filename[1] == '/'));
 	{	int e = 15+3;
 		while ((e -= 3) >= 0 && !fexist(fnup+e))
 			;

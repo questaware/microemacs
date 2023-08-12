@@ -344,8 +344,8 @@ int Pascal readpattern(const char * prompt, char apat[])
 /*
 int last_was_srch()
 
-{ return lastfnc == forwsearch || lastfnc == backsearch ||
-         lastfnc == backhunt   || lastfnc == forwhunt;
+{ return g_lastfnc == forwsearch || g_lastfnc == backsearch ||
+         g_lastfnc == backhunt   || g_lastfnc == forwhunt;
 }
 */ 
 

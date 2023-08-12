@@ -25,7 +25,8 @@ This makes the executable microemacs.
 
 **Installation**
 
-Put the executable, (macros/emacs.rc or macros/.emacsrc), src/emacs.md
+Put the executable, (macros/emacs.rc or macros/.emacsrc), src/emacs.md,
+and bat/ee.bat
 in a directory on the path.
 
 ###Examples <h3>
@@ -35,11 +36,10 @@ in a directory on the path.
  * e README.md
  * e guest@computer:shared/file.txt
  * e -b.mm README.md
+ * ee index
  * demote-buffer
  * fetch-file
  * word-search
  * goto-matching-fence
  * search-incls
  * find-tag
-
-

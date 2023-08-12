@@ -42,6 +42,8 @@
 extern char * getenv();
 
 extern int g_overmode;		/* from line.c */
+extern Bool g_key_;				/* from crypt.c */
+
 
 COORD g_coords; 					/* location of HW cursor	*/
 
@@ -73,8 +75,8 @@ const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
 
 //char palstr[49] = "";		/* palette string		*/
 char lastmesg[NCOL+2] = ""; 	 /* last message posted		*/
-int(Pascal *lastfnc)(int, int);/* last function executed	*/
-int eexitflag = FALSE;		/* EMACS exit flag		*/
+//int(Pascal *g_lastfnc)(int, int);/* last function executed	*/
+int g_eexitflag = FALSE;		/* EMACS exit flag		*/
 //int eexitval = 0; 			/* and the exit return value	*/
 
 
@@ -234,7 +236,7 @@ void Pascal dcline(int argc, char * argv[])
 				}
 
 		  if (is_opt('P'))									// look along path
-		  { char * s = (char *)flook(0, filev);
+		  { char * s = (char *)flook(Q_LOOKH, filev);
 				if (s != null)
 					filev = s;
 		  }
@@ -313,7 +315,7 @@ void Pascal dcline(int argc, char * argv[])
 	setconsoletitle(lastmesg);
 #endif
 
-	curbp = firstbp;
+//curbp = firstbp;
 	swbuffer(firstbp);
 
 	if (nopipe == 0)
@@ -402,10 +404,11 @@ int main(int argc, char * argv[])
 
 		editloop(c);
 	}}
-	while (!eexitflag);
+	while (!g_eexitflag);
 
 #if S_WIN32
-  ClipSet(-1);
+	if (g_key_)
+	  ClipSet(-1);
 //tcapbeeol(-1,0);
 	tcapmove(term.t_nrowm1, 0);
 #endif
@@ -688,7 +691,7 @@ Pascal quit(int f, int n)
 		{ n = 1;
 		}
 #endif
-		eexitflag = status; 			/* flag a program exit */
+		g_eexitflag = status; 			/* flag a program exit */
 		g_thisflag = n;
 #if S_MSDOS
 //	ttrow = 0;

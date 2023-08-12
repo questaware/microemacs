@@ -546,7 +546,7 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 
 		when UFGTCMD:	return cmdstr(&arg1[0], getcmd());
 		when UFBIND:  return getfname(stock(arg1));
-		when UFFIND:	arg1 = flook(0, arg1);
+		when UFFIND:	arg1 = flook(Q_LOOKH, arg1);
 									if (0)
 		case UFENV:			arg1 = getenv(arg1);
 									return arg1 == NULL ? "" : arg1;

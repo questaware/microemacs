@@ -138,7 +138,7 @@ int Pascal USE_FAST_CALL scan_paren(char ch)
   int dir =  g_paren.sdir;
 	int lang = g_paren.lang;
 	const char g_beg_cmt[16] = "\000/#///#/(/#///#/";
-	int beg_s1; // = '\'';
+	int beg_s1 = '\'';
 	int beg_cmt = g_beg_cmt[g_clring & 15];
 //int beg_cmt = g_clring & BCPAS ? '(' :
 //							g_clring & BCPRL && dir > 0 ? '#' :
@@ -361,7 +361,6 @@ int Pascal bufferposition(int f, int n)
 	LINE * tgt = curwp->w_dotp;
   LINE * lp = &curbp->b_baseline;						/* current line */
 															/* starting at the beginning of the buffer */
-#if 1
 	do
 	{ ++numlines;
 		numchars += llength(lp) + 1;
@@ -371,22 +370,7 @@ int Pascal bufferposition(int f, int n)
 			predchars = numchars + savepos;
 		}
 	} while (!l_is_hd(lp));
-#else
-	for (lp = &curbp->b_baseline; !l_is_hd((lp = lforw(lp))); )
-	{ ++numlines;
-		if (lp == tgt)		 /* record we are on the current line */
-		{ predlines = numlines;
-			predchars = numchars + savepos;
-		}
-																							/* on to the next line */
-		numchars += llength(lp) + 1;
-	}
-																					/* if at end of file, record it */
-	if (predlines <= 0)
-	{ predlines = numlines;
-		predchars = numchars;
-	}
-#endif														/* Get real column and end-of-line column. */
+
 {	int len = llength(tgt);
 
 	if (f >= 0)
@@ -1071,9 +1055,9 @@ int USE_FAST_CALL got_f_key(fdcr * fd, int tabsz, int fs_cmt)			// Fortran or SQ
 { char * lbl = fd->blk_type[0] == 'D' ? "DO" 	 :
 							 fd->blk_type[0] == 'L' ? "LOOP"  :
 							 fd->blk_type[0] == 'S' ? "SELECT": 
-							 fd->blk_type[0] == 'B' ? "BEGIN" : null;// Only val for s_cmt.
+						/* fd->blk_type[0] == 'B' ? */ "BEGIN"; // : null;// Only val for s_cmt.
 							 
-	if (lbl != null)
+	if (lbl[0] == fd->blk_type[0])
 	{	int rc;
 		if (! fs_cmt)
 		{	if (choffs > 0)												// at beginning of line

@@ -137,16 +137,17 @@ int g_header_scan = 0;
  */
 int Pascal lchange(int flag)
 
-{ if ((curbp->b_flag & BFCHG) == 0)	/* First change, so	*/
-	{	curbp->b_flag |= BFCHG;
+{ BUFFER * bp = curbp;
+  if ((bp->b_flag & BFCHG) == 0)	/* First change, so	*/
+	{	bp->b_flag |= BFCHG;
 	  curwp->w_flag |= WFMODE;
-  /*mbwrite(curbp->b_fname);*/
+  /*mbwrite(bp->b_fname);*/
     tcapbeep();
 //  flag = WFHARD;
   }
 												   /* make sure all the needed windows get this flag */ 
-  window_ct(curbp);
-  (void)orwindmode(curbp->b_window_ct > 1 ? WFHARD : flag);
+  window_ct(bp);
+  (void)orwindmode(bp->b_window_ct > 1 ? WFHARD : flag);
 
   if (g_inhibit_scan <= 0)
 	{	int all = 0;
@@ -580,11 +581,11 @@ Pascal doregion(int wh, char * t)
 		char ch;
 
 		while (offs >= 0 && 
-               ((ch = lp[offs]) == '_' || isalnum(ch)))
+               ((ch = ((char*)ln)[offs+fieldoffs(LINE*,l_text)]) == '_' || isalnum(ch)))
 			--offs;
 
     while (++offs < len && 
-               ((ch = lp[offs]) == '_' || isalnum(ch)))
+               ((ch = ((char*)ln)[offs+fieldoffs(LINE*,l_text)]) == '_' || isalnum(ch)))
     { int cc = kinsert(ch);
 	    if (cc <= FALSE)
 	      return cc;

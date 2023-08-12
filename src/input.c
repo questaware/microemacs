@@ -201,7 +201,7 @@ int  tgetc()
   if (kbdrd > 0)
   {    								/* if there is some left... */
     while (true) /* once only */				
-    { if (++kbdrd >= -g_kbdwr + 1)
+    { if (++kbdrd > -g_kbdwr)
       { kbdrd = 1;	/* reset the macro to the begining for the next rep */
         if (--pd_kbdrep <= 0)
           break;
@@ -216,23 +216,21 @@ int  tgetc()
 //	if (g_exec_level)
 //		mbwrite("g_exec_level not 0");
 //#endif
-//	g_exec_level = 0;					/* weak code ! */
-//	reskey = g_slastkey;
 		g_ll = g_sll;
     save_state(1);
 #if VISMAC == 0
     update(FALSE);		/* force a screen update after all is done */
 #endif
- }
+  }
 
 	reskey = ttgetc();	   			/* fetch a char from the terminal driver */
 	loglog2("TTGETC %x %c", reskey, reskey);
 											  	 
- if (g_kbdwr > 0)								/* record it for $lastkey */
+	if (g_kbdwr > 0)								/* record it for $lastkey */
 	{//char buf[30];
   	if (g_kbdwr > NKBDM)					/* don't overrun the buffer */
     	tcapbeep();
-	else
+		else
 	  	g_kbdm[++g_kbdwr-2] = reskey;
 #if _DEBUG && 0
 	{ char buf[40];

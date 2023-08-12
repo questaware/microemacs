@@ -460,9 +460,8 @@ const extern char g_logm[3][8];
 
 //NOSHARE extern char palstr[49];		/* palette string		*/
 NOSHARE extern char lastmesg[NCOL+2];	/* last message posted		*/
-NOSHARE extern int (Pascal *lastfnc)(int, int);/* last function executed */
-NOSHARE extern char *fline; 		/* dynamic return line */
-NOSHARE extern int  eexitflag;		/* EMACS exit flag */
+//NOSHARE extern int (Pascal *g_lastfnc)(int, int);/* last function executed */
+NOSHARE extern int  g_eexitflag;		/* EMACS exit flag */
 
 /* uninitialized global external declarations */
 
@@ -536,6 +535,10 @@ NOSHARE extern TERM	term;		/* Terminal information.	*/
 #define Q_IS_NEG 256
 
 #define QUOTEC ('Q' - '@')
+
+#define Q_LOOKP 1
+#define Q_LOOKI -1
+#define Q_LOOKH 0
 
 /*
 	This is the message which should be added to any "About MicroEMACS"

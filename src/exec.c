@@ -79,6 +79,34 @@ BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 	return bfind(ebuffer, create);
 }
 
+
+static Cc finddo(int f, int n, Command fnc, char * tkn)
+
+{	Cc cc;
+
+	if (fnc == NULL)
+		fnc = fncmatch(tkn);					/* match the token to see if it exists */
+
+	if (fnc != NULL)
+	{ 
+		cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
+																	 : (*fnc)(f, n);			/* call the function */
+	}
+	else													/* find the pointer to that buffer */
+	{ BUFFER *bp = bfind(tkn, FALSE); 
+	  if (bp == NULL) 
+		{ mlwrite(TEXT16);
+						/* "[No such Function]" */
+			cc = FALSE;
+		}
+		else 												/* execute the buffer */
+			cc = dobuf(bp,n);
+	}
+	
+	return cc;
+}
+
+
 /*	docmd:	take a passed string as a command line and translate
 		it to be executed as a command. This function will be
 		used by execute-command-line and by all source and
@@ -123,7 +151,10 @@ int Pascal docmd(char * cline)
 		}  
 
 	if (cc > FALSE)
-	{	fnc = fncmatch(tkn);					/* and match the token to see if it exists */
+	{	
+#if 1
+		cc = finddo(f,n,NULL,tkn);
+#else
 		if (fnc != NULL)
 		{ 
 			cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
@@ -139,8 +170,9 @@ int Pascal docmd(char * cline)
 			else 												/* execute the buffer */
 				cc = dobuf(bp,n);
 		}
+#endif
 		pd_cmdstatus = cc;						/* save the status */
-		lastfnc = fnc;
+//	g_lastfnc = fnc;
 	}
 	--g_macargs;										/* restore g_macargs flag */
 	g_execstr = s_execstr;
@@ -170,9 +202,12 @@ int Pascal namedcmd(int f, int n)
 	  if (fnm == g_logm[2])
 	    return FALSE;
 																								/* and look it up */
-	  kfunc = fncmatch(fnm);
+	  kfunc = NULL;
 	}}
 
+#if 1
+	cc = finddo(f,n,kfunc,"");
+#else
 	if (kfunc != NULL)
 	{ // g_macargs = FALSE;
 																												/* call the function */
@@ -185,6 +220,7 @@ int Pascal namedcmd(int f, int n)
 					/* "[No such function]" */
 	  cc = FALSE;
 	}
+#endif
 	return cc;
 }
 
@@ -528,7 +564,7 @@ failexit:
 			if (ebuf != smalleline)
 		    free(ebuf);
 
-	    if (eexitflag || cc <= FALSE ||
+	    if (g_eexitflag || cc <= FALSE ||
 				  l_is_hd((lp = lforw(lp))))
 				break;
 
@@ -833,7 +869,7 @@ dinput:
 Cc Pascal startup(const char * sfname)
 			/*  sfname   ** name of startup file ("" if default) */
 { Cc cc = -32000;
-	const char *fspec = flook(0, sfname);			/* look up the path for the file */
+	const char *fspec = flook(Q_LOOKH, sfname);			/* look up the path for the file */
 	
 	if (fspec == NULL)
 	{				  																/* complain if we are interactive */
@@ -846,11 +882,7 @@ Cc Pascal startup(const char * sfname)
 		mbwrite(fspec);
 #endif
 																						/* otherwise, execute it */
-	{ char bname[NBUFN];		/* name of buffer */
-
-	  makename(bname, fspec); 		/* derive the name of the buffer */
-
-	{	BUFFER * dfb = bfind(bname, 3);
+	{	BUFFER * dfb = bfind("\377", 3);
   	if (dfb != NULL) 			   		/* get the needed buffer */
 		{ BUFFER *scb = curbp;	   		
   	  dfb->b_flag = MDVIEW;
@@ -869,7 +901,7 @@ Cc Pascal startup(const char * sfname)
 
 			curbp = scb;								/* restore the current buffer */
 		}
-	}}}
+	}}
 
   return cc;
 }

@@ -611,7 +611,7 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
   BUFFER * bp = fname[0] == 0 ? origbp : NULL;
 
   while (bp == NULL)		      /* yuk, newfile writes curbp ! */
-  {	const char * fcp = (char*)flook('I', fname);
+  {	const char * fcp = (char*)flook(Q_LOOKI, fname);
   
     if (fcp != NULL)
     {	bp = bufflink(fcp, TRUE);

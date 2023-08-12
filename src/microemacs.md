@@ -90,6 +90,8 @@
       @filename  Name of the startup file; can be relative to emacs diry.
       filename   Filenames may be specified with patterns using *,?
                  Any file name may be **user**@**host**:**file**
+								 The prefix .../ or ... means files below the cwd
+								 The prefix ^/ or ^ means files up from cwd (not from cmd.exe)
                  The first filename may be followed by :**linenumber**
 
   *Fundamentals*
@@ -260,6 +262,8 @@ fetch-file                    The current line contains args <tab> password <tab
                               by the command cmd password $(TEMP)/fname args.
                               The remote passord must be typed again.
                               Only one save is allowed and obliterates keys.
+															If cryptography is used then on program exit the cut/paste
+															buffer is cleared.
 fill-paragraph           M-Q
 filter-buffer            ^X#  Write the buffer to a temp, execute a command
                          ^X\       reading the contents, read in the output.

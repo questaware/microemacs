@@ -62,6 +62,7 @@ src/evar.h
 src/exec.c
 src/file.c
 src/fileio.c
+src/fixctagsbug.cpp
 src/map.h
 src/input.c
 src/isearch.c

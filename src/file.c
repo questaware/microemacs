@@ -117,7 +117,7 @@ int Pascal filefind(int f, int n)
           
  *s = 0;
 
-{	BUFFER * bp = bufflink(fname,3); // was bufflkup
+{	BUFFER * bp = bufflink(fname,7); // was bufflkup
 	if (bp == NULL)
 	  return FALSE;
 
@@ -281,7 +281,7 @@ int Pascal readin(char const * fname, int props)
     { unsigned char ch;
     	char * ss = tbp->b_remote;
       if (ss == NULL || *ss == 0)
-        cc = -1;
+        --cc;
 
       while ((ch = *++ss) > 1)
       	;
@@ -343,10 +343,9 @@ int Pascal readin(char const * fname, int props)
 	if (ins)
 	{ 				                          /* back up a line and save the mark here */
 	/*if ((curwp->w_dotp->l_props & L_IS_HD) == 0) */
-	  { curwp->w_line_no -= 1;
-	    curwp->w_dotp    = lback(curwp->w_dotp);
-	  }
- 		nextline = lforw(curwp->w_dotp);
+	  curwp->w_line_no -= 1;
+ 		nextline = curwp->w_dotp;
+	  curwp->w_dotp    = lback(curwp->w_dotp);
 	  curwp->w_doto    = 0;
     g_paren.in_mode |= curwp->w_dotp->l_dcr & Q_IN_CMT;
 	/*curwp->mrks.c[0].markp = lback(curwp->w_dotp);
@@ -677,59 +676,60 @@ int Pascal writeout(const char * fn)
     						   /* Perform Safe Save..... */
               		 /* duplicate original file name, and find where to trunc it */
 //sp = makename(tname+NSTRING, fn);
-	strpcpy(tname, fn, NSTRING-30);		/* overwrite the makename */
 	for (nline = 4; --nline >= 0; )/* mk unique name using random numbers */
-	{ if (caution)
+	{	strpcpy(tname, fn, NSTRING-30);		/* overwrite the makename */
+		if (caution)
 			strcpy(&tname[makename(tname+NSTRING, fn)+1], int_asc(ernd()));
 		op = fopen(tname, S_WIN32 ? "wb" : caution == 0 ? "wb" : "wbx"); // why does wb not work?
 		if (op != NULL)
-			break;
+			goto good;
 	}
 
-	if (nline < 0)								/* if the open failed.. clean up and abort */
-		mlwrite(TEXT155);		/*	"Cannot open file for writing" */
-	else
-	{	mlwrite(TEXT103,fn);
+	mlwrite(TEXT155);		/*	"Cannot open file for writing" */
+	tcapkopen();						/// reopen the keyboard (Unix only)
+	return FALSE;
+good:		
+	mlwrite(TEXT103,fn);
 							/* "[Saving %s]\n" */
 
 												/* write the current buffer's lines to the disk file */
-		cc = OK;
-		nline = 0;					/* track the Number of lines		*/
-		for (lp = &bp->b_baseline;
-				!l_is_hd((lp = lforw(lp))); )
-		{ 
-		  cc = ffputline(op, &lp->l_text[0], llength(lp));
-			if (cc != FIOSUC)
-				break;
-			++nline;
-		}
-			
-		fclose(op);
-		upmode();		/* Update mode lines.	*/
+	cc = FIOSUC;
+	nline = 0;					/* track the Number of lines		*/
+	for (lp = &bp->b_baseline;
+			!l_is_hd((lp = lforw(lp))); )
+	{ 
+	  cc = ffputline(op, &lp->l_text[0], llength(lp));
+		if (cc < FIOSUC)
+			break;
+		++nline;
+	}
 		
-	{ extern char deltaf[];
-		#define mesg deltaf 
-//	mesg[0] = 0;		/* message buffer */
- 
-		if (caution)					/* erase original file */
-		{ int rc = unlink(fn);
-			if (rc == 0 && (rc = rename(tname, fn)) == 0)
-			{ // tname[0] = 0;
+	fclose(op);
+	upmode();		/* Update mode lines.	*/
+	
+{ extern char deltaf[];
+	#define mesg deltaf 
+//mesg[0] = 0;		/* message buffer */
 
-				if (! S_MSDOS && stat_.st_mode != MYUMASK)
-					chmod(fn, stat_.st_mode & 07777);
-			}
+	if (caution)					/* erase original file */
+	{ int rc = unlink(fn);
+		if (rc == 0 && (rc = rename(tname, fn)) == 0)
+		{ // tname[0] = 0;
+
+			if (! S_MSDOS && stat_.st_mode != MYUMASK)
+				chmod(fn, stat_.st_mode & 07777);
 		}
-//	repl_bfname(bp, fn);		// destroys fn
+	}
+//repl_bfname(bp, fn);		// destroys fn
 
-		bp->b_flag &= ~BFCHG;
-																						 /* report on status of file write */
-		io_message(strcpy(tname, TEXT149), nline);
+	bp->b_flag &= ~BFCHG;
+																					 /* report on status of file write */
+	io_message(strcpy(tname, TEXT149), nline);
 															/* "[Wrote 999 line" */
-	}}
+
 	tcapkopen();						/// reopen the keyboard (Unix only)
-	return op != NULL;
-}}
+	return cc + 1;
+}}}
 
 
 		/*	This command modifies the file name associated with the

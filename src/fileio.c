@@ -191,10 +191,9 @@ int Pascal ffputline(FILE * op, char buf[], int nbuf)
 	if (cc < 0)
 	{ mlwrite(TEXT157 "%x", cc);
 					/* "Write I/O error" */
-	  return FIOERR;
 	}
 
-	return FIOSUC;
+	return cc;
 }
 
 /*
