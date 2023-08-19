@@ -82,6 +82,24 @@ BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 
 static Cc finddo(int f, int n, Command fnc, char * tkn)
 
+#if 0
+{	if (fnc == NULL)
+		fnc = fncmatch(tkn);					/* match the token to see if it exists */
+
+{	Cc cc;
+	KEYTAB kt;
+	kt.k_code = 1;
+	kt.k_type = BINDFNC;
+	kt.k_ptr.fp = fnc;
+	
+	if (fnc == NULL)								/* find the pointer to that buffer */
+	{ kt.k_ptr.fp = bfind(tkn, FALSE); 
+		kt.k_type = BINDBUF;
+	}
+
+	return execkey(&kt, f, n);
+}}
+#else
 {	Cc cc;
 
 	if (fnc == NULL)
@@ -94,18 +112,12 @@ static Cc finddo(int f, int n, Command fnc, char * tkn)
 	}
 	else													/* find the pointer to that buffer */
 	{ BUFFER *bp = bfind(tkn, FALSE); 
-	  if (bp == NULL) 
-		{ mlwrite(TEXT16);
-						/* "[No such Function]" */
-			cc = FALSE;
-		}
-		else 												/* execute the buffer */
-			cc = dobuf(bp,n);
+		cc = dobuf(bp,n);
 	}
-	
+
 	return cc;
 }
-
+#endif
 
 /*	docmd:	take a passed string as a command line and translate
 		it to be executed as a command. This function will be
@@ -478,6 +490,11 @@ int Pascal dobuf(BUFFER * bp, int iter)
 #if _DEBUG
 	g_rc_lineno = 0;
 #endif
+  if (bp == NULL) 
+	{ mlwrite(TEXT16);
+						/* "[No such Function]" */
+		return FALSE;
+	}
 
 	g_dobuf = bp;
 	g_univct = iter;

@@ -21,11 +21,6 @@
 
 #include <fcntl.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#if USE_UBAR
-#define stat _stat
-#define O_RDONLY _O_RDONLY
-#endif
 
 extern char *getenv();
 
@@ -393,10 +388,11 @@ void Pascal tcapsetsize(int wid, int dpth)
 #endif
 }}
 
+#if 0
 //		 int   g_cursor_on = 0;
 static COORD g_oldcur;
 static WORD  g_oldattr = BG_GREY;
-
+#endif
 
 /*
 Bool Pascal cursor_on_off(Bool on)
@@ -420,7 +416,7 @@ void Pascal USE_FAST_CALL tcapmove(int row, int col)
 	coords.Y = row;
 	
 { HANDLE h = g_ConsOut;
-
+#if 0
 	if (row < term.t_nrowm1 && 0/* && g_cursor_on >= 0 */)
   {	DWORD  Dummy;
 		WriteConsoleOutputAttribute( h, &g_oldattr, 1, g_oldcur, &Dummy );
@@ -432,6 +428,7 @@ void Pascal USE_FAST_CALL tcapmove(int row, int col)
 
 	  WriteConsoleOutputAttribute( h, &MyAttr, 1, coords, &Dummy );	
 	}}
+#endif
 	g_coords = coords;
 	SetConsoleCursorPosition( h, coords);
 }}
@@ -926,8 +923,8 @@ int ttgetc()
 	    }
 		}
 		
-		if (lim != 0 /* && got == need */ && oix < EAT_SZ - 1)
-		{	lim = 0;
+		if (lim != 0 && got == need && oix < EAT_SZ - 1)
+		{	lim = 5;
 			continue;
 		}
 
@@ -969,7 +966,7 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
 #else
  #define DIRY_CHAR DIRSEPCHAR
 #endif
-	char * td = gettmpfn();
+	const char * td = gettmpfn();
 	
 {	char *ss = concat(filename,td,"/me"+(td[strlen(td)-1] == DIRY_CHAR),int_asc(_getpid()),NULL);
 	int tail = strlen(ss);
@@ -1552,11 +1549,6 @@ int pipefilter(char wh)
 //	return FALSE;
 	}
 
-{/*int fid = open(tmpnam, O_RDONLY);			// did the output file get generated?
-	if (fid < 0)
-		return FALSE;
-	close(fid);
-*/
 	if (wh >= '<'-'<')   /* <  =  @ */
 	{ BUFFER * bp = bfind(strcat(strcpy(bname,"_cmd"),int_asc(++bix)), TRUE);
 		if (bp == NULL)
@@ -1606,7 +1598,7 @@ int pipefilter(char wh)
 //if (wh == 'E' - '<')
 //	unlink(fnam3);
 	return rc;
-}}}}}}
+}}}}}
 
 	/* Pipe a one line command into a window
 	 * Bound to ^X @

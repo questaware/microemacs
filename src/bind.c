@@ -865,21 +865,18 @@ char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 
 
 static
-const char * fex_file(int app, const char ** ref_dir, const char * file)
+const char * fex_file(int drop_sl, const char ** ref_dir, const char * file)
 												// next_dir == NULL => do not append file	
 { char ch;
 	const char * dir = *ref_dir;
   if (dir != NULL)
-	{	int ix = -1;
-		if (// dir[0] == '-' && dir[1] == 'I' ||
+	{	if (// dir[0] == '-' && dir[1] == 'I' ||
 		 		   dir[0] == '.' && dir[1] == '/')
 			dir += 2;
   
-	{ int sl = strlen(dir) + strlen(file) + 127;
-//	if (sl > g_fspec_len)
-//	{	g_fspec_len = sl;
-			(void)remallocstr(&g_fspec, NULL, sl);
-//	}
+	{	int ix = -1;
+		int sl = strlen(dir) + strlen(file) + 127;
+		(void)remallocstr(&g_fspec, NULL, sl);
 
 // 	mlwrite("Fex_file %s %s%p\n", file, dir);
 
@@ -887,7 +884,7 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 			;
 			
 		*ref_dir = dir + ix - (ch == 0);
-	{	char * diry = strcat(strpcpy(g_fspec, dir, ix + 1),DIRSEPSTR+app);
+	{	char * diry = strcat(strpcpy(g_fspec, dir, ix + 1),DIRSEPSTR+drop_sl);
 // 	mbwrite(diry);
   {	char * pc = pathcat(g_fspec, sl-1, diry, file);
 // 	mlwrite("%pAfter %s", pc);
@@ -911,51 +908,45 @@ const char * fex_file(int app, const char ** ref_dir, const char * file)
 */
 const char * Pascal flook(char wh, const char * fname)
 
-{ const char * path;	/* environmental PATH variable */
-  const char * res;
-#if 0
-			                  /* if we have an absolute path check only there! */
-	if (*fname == '\\' || *fname == '/' || 
-	   (*fname == '.' &&   (fname[1] == '/' ||
-	   										  fname[1] == '.' && fname[2] == '/'))
-#if S_MSDOS
-	 || *fname != 0 && fname[1] == ':'
-#endif
-	   )
-		return !fexist(fname) ? NULL : fname;
-#endif
+{	const char * ppath = getenv("PATH");
+	const char * path = wh < 0 ? curbp->b_fname :			// Q_LOOKI
+											wh > 0 ? ppath					:			// Q_LOOKP
+				 											 getenv(HOMEPATH);		// Q_LOOKH
+	int drop_sl = (wh & 2);	// Q_LOOKI
+	int clamp = 2;
 
-	path = getenv(HOMEPATH);
+	while (--clamp >= 0 && path != NULL)
+  { for (--path; *++path != 0;)
+  	{ const char * res = fex_file(drop_sl, &path, fname);
+	  	if (res)
+	   		return res;
+	  }
 
-	if      (wh > 0)
-	{	
-		path = getenv("PATH");
-	}
-	else if (wh < 0)
-	{ path = curbp->b_fname;
-	  if ((res = fex_file(1, &path, fname)))
-	   	return res;
-		path = pd_incldirs;
-	}
-	if (path != NULL)
-	{	for (--path; *++path != 0;)
-	  { if ((res = fex_file(0, &path, fname)))
-	      return res;
-		}
+		drop_sl = 0;
+
+	  if      (wh < 0)	// Q_LOOKI
+			path = pd_incldirs;
+		else if (wh == Q_LOOKH)
+			path = ppath;
+		else
+			break;
 	}
 
-	if (wh < 0)
-		return NULL;
-{
+	if (fexist(fname))
+		return fname;
+
+#if 1
+	return NULL;
+#else
 #if S_WIN32
-	char invokenm[514];
 	(void)GetModuleFileName(0, invokenm, 512);
 	path = invokenm;
 #else
 	path = flook(Q_LOOKP, g_invokenm);
 #endif
-	return fex_file(1, &path, fname);
-}}
+  return fex_file(1, &path, path);
+#endif
+}
 
 #if 0
 
@@ -1037,21 +1028,6 @@ int (Pascal *Pascal USE_FAST_CALL fncmatch(char * fname))(int, int)
 }
 
 
-					/* execute a function bound to a key */
-int Pascal execkey(KEYTAB * key, int f, int n)	
-
-{	return key->k_code == 0 			? TRUE :
-  			 key->k_type != BINDFNC ? dobuf(key->k_ptr.buf,n) :
-		  	 in_range((int)(key->k_ptr.fp), 1,40) 
-				  											? execporb((int)(key->k_ptr.fp),n)
-		  													: (*(key->k_ptr.fp))(f, n);
-}
-
-int execwrap(int wh)
-
-{ return execkey(&hooks[wh], FALSE, 1);
-}
-
 #if 0
 			/* set a KEYTAB to the given name of the given type */
 void Pascal setktkey(int type, char * name, KEYTAB * key)
@@ -1096,13 +1072,13 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 
 int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 
-{	char outseq[NSTRING];
-												     /* prompt the user to type us a key to describe */
+{												     /* prompt the user to type us a key to describe */
 	mlwrite(TEXT13);
 			  /* ": describe-key " */
 #define DESC_TO_FILE 0
 #if DESC_TO_FILE
-{	BUFFER *bp = bufflink("pjsout", 64);
+{	char outseq[NSTRING];
+	BUFFER *bp = bufflink("pjsout", 64);
 	if (swbuffer(bp) > 0)
 	{	
 		gotoeob(0,0);

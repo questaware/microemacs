@@ -455,13 +455,13 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 {	if (rdonly())
 		return FALSE;
 
-	if ((f & 0x7fff) == FALSE)
+	if ((f & 1) == FALSE)
 		n = reglines(TRUE);
 
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sign(n)] */
 
 	for (; n; n -= inc)
-	{	int tabsz = curbp->b_tabsize;
+	{	int tabsz = curbp->b_tabsize > 0 ? curbp->b_tabsize : -curbp->b_tabsize;
 		LINE * dotp = curwp->w_dotp;
 		char ch;
 		int l_dcr = dotp->l_dcr;
@@ -478,7 +478,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 				linsert(ins_ct,' ');
 			}}
 
- 		if ((f & 0x8000))											/* entab the resulting spaced line */
+ 		if ((f & 2))											/* entab the resulting spaced line */
 		{ int tab_ct = tabsz;
 			int sp_ct = 0;
 			int outcol = 0;
@@ -512,7 +512,7 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 
 int Pascal entab(int f, int n) /* change spaces to tabs where posible */
 
-{	return detab(f | 0x8000, n);
+{	return detab(f | 2, n);
 }			
 
 /* trim:				trim trailing whitespace from the point to eol
@@ -802,7 +802,7 @@ int USE_FAST_CALL adjustmode(int kind, int global) /* change the editor mode */
 	int bestmatch = 0;
 	int ix = NUMMODES + NCOLORS;							/* loop index */
 	
-	for (; --ix >= 0;)												/* then against the colours */
+	for (; --ix >= 0;)												/* first the colours */
 	{ const char * goal = attrnames[ix];
 		int match = strmatch(goal, cbuf) - goal;
 		if (cbuf[match] != 0)
@@ -822,7 +822,7 @@ int USE_FAST_CALL adjustmode(int kind, int global) /* change the editor mode */
 		{ 
 #if COLOR
 			int mask = in_range(cbuf[0], 'A', 'Z') ? 0xf : 0xf0; // lc is ink
-			short * t = global ? &g_bat_b_color : &curbp->b_color;
+			short * t = global ? &g_bat_b_color : &curbp->b_color;			// TBD: make toggle work
 			*t &= mask;
 			*t |= (index - NUMMODES) << (4 & mask);
 			curwp->w_flag |= WFCOLR;

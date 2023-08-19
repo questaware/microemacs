@@ -230,8 +230,8 @@ void Pascal vtinit(int cols, int dpthm1)
 			vp = (VIDEO *)&vp->v_text[cols+2];
 		}
 
- 		for ( ; --cols >= 0; )
- 			vscreen[dpthm1]->v_text[cols] = ' ';
+//	for ( ; --cols >= 0; )
+//		vscreen[dpthm1]->v_text[cols] = ' ';
 }}}
 
 
@@ -999,7 +999,7 @@ void Pascal updline()
 		mlwrite(g_cmd_line);
 #endif
 	pd_sgarbf = FALSE;
-	tcapmove(row, col);
+  tcapmove(row, col);
 	TTflush();	/* there may be cause to reverse move and flush */
 }}}}}}
 

@@ -51,9 +51,6 @@
     <ClCompile Include="..\src\file.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\fileio.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\input.c">
       <Filter>Source Files</Filter>
     </ClCompile>

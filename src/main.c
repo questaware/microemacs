@@ -471,19 +471,35 @@ void clean_arg(char * str)
 static
 KEYTAB * g_lastbind;
 
+																/* execute a function bound to a key */
+static int Pascal execkey(KEYTAB * key, int f, int n)	
+
+{	return key->k_code == 0 			? TRUE :
+  			 key->k_type != BINDFNC ? dobuf(key->k_ptr.buf,n) :
+		  	 in_range((int)(key->k_ptr.fp), 1,40) 
+				  											? execporb((int)(key->k_ptr.fp),n)
+		  													: (*(key->k_ptr.fp))(f, n);
+}
+
+
+int execwrap(int wh)
+
+{ return execkey(&hooks[wh], FALSE, 1);
+}
+
 /* This is the general command execution routine. It handles the fake binding
  * of all the keys to "self-insert". It also clears out the "thisflag" word,
  * and arranges to move it to the "lastflag", so that the next command can
  * look at it. Return the status of command.
  */
-static int execute(int c, int f, int n)
+static void execute(int c, int f, int n)
 
 { if (c == (CTRL|'['))
 	{ g_prefix |= META;
 ret:
 	  pd_prenum = n;
 		pd_predef = f;
-		return TRUE;
+		return;
 	}
 	
 	if (c == (CTRL|'X'))
@@ -507,7 +523,7 @@ ret:
 { int status = key->k_code;
 	if (status) 				/* if keystroke is bound to a function..do it*/
 	{
-		status = execkey(key, f, n);			// f is 0 or any other value
+		status = execkey(key, f, n);			// f is 0 or 1
 	}
 	else
 	{ if (c == (CTRL | 'I'))
@@ -522,7 +538,7 @@ ret:
 		else
 		{	if (n <= 0) 		/* Fenceposts.	*/
 			{ g_lastflag = 0;
-				return n == 0;
+				return;
 			}
 	
 			/* If a space was typed, fill column is defined, the argument is non-
@@ -550,7 +566,6 @@ ret:
 				}
 		}
 	}
-	return status;
 }}}
 
 #if S_WIN32

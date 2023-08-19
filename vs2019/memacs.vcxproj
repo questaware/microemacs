@@ -157,7 +157,6 @@
     <ClCompile Include="..\src\eval.c" />
     <ClCompile Include="..\src\exec.c" />
     <ClCompile Include="..\src\file.c" />
-    <ClCompile Include="..\src\fileio.c" />
     <ClCompile Include="..\src\input.c" />
     <ClCompile Include="..\src\isearch.c" />
     <ClCompile Include="..\src\line.c" />

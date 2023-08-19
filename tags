@@ -1108,12 +1108,13 @@ exbhook	./src/edef.h
 execbuf	./src/exec.c
 execcmd	./src/exec.c
 execfile	./src/exec.c
-execkey	./src/bind.c
+execkey	./src/main.c
 execporb	./src/exec.c
 execprg	./unix/unix.c
 execprg	./wincon/oswin.c
 execproc	./src/exec.c
 execute	./src/main.c
+execwrap	./src/main.c
 expandp	./src/search.c
 extract_fn	./src/msdir.c
 false	./src/sinc.cpp

@@ -51,7 +51,7 @@ basic.obj bind.obj buffer.obj \
 char.obj crypt.obj \
 display.obj \
 eval.obj exec.obj \
-file.obj fileio.obj \
+file.obj \
 input.obj isearch.obj \
 line.obj \
 main.obj map.obj msdir.obj \
