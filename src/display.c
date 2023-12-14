@@ -369,7 +369,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 {	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
 	int  markuplen = 1;
 	char markupterm = 0;
-	int hix[16] = {0};
+	int hix[30] = {0};
 	const char** high = ((char**)&pd_hlight1);
 //int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
 	char duple = curbp->b_langprops & BCPAS 				? ')' :
@@ -378,7 +378,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	if (tabsize < 0)
 		tabsize = - tabsize;
 
-	memset(hix, 0, sizeof(hix));
+//memset(hix, 0, sizeof(hix));
 
 	while (--len >= 0)
 	{	int chrom = chrom_nxt;
@@ -403,7 +403,9 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			}
 		{ int wix;
 			for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
-			{ hix[wix] += 1;
+			{ if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
+					continue;
+			  hix[wix] += 1;
 			  if (c == high[wix][hix[wix]])
 				{ if (high[wix][1+hix[wix]] == 0)
 						break;
@@ -412,7 +414,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 						break;					
 				}
 				else
-					hix[wix] = (c == high[wix][1]);
+					hix[wix] = (c == high[wix][1]) && (wix == 0 || str[-1] == 0 || c == ' ');
 			}
 
 			if (wix >= 0
@@ -639,7 +641,7 @@ void Pascal modeline(WINDOW * wp)
   cpix += 4;
 
 { const char * fname = bp->b_fname;
-	if (fname != NULL)	/* File name. */
+	if (1 || fname != NULL)	/* File name. */
 	{
 		const char * fn;
 		int fnlen = strlen(fname);

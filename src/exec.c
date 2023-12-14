@@ -89,12 +89,12 @@ static Cc finddo(int f, int n, Command fnc, char * tkn)
 {	Cc cc;
 	KEYTAB kt;
 	kt.k_code = 1;
-	kt.k_type = BINDFNC;
+//kt.k_type = BINDFNC;
 	kt.k_ptr.fp = fnc;
 	
 	if (fnc == NULL)								/* find the pointer to that buffer */
 	{ kt.k_ptr.fp = bfind(tkn, FALSE); 
-		kt.k_type = BINDBUF;
+//	kt.k_type = BINDBUF;
 	}
 
 	return execkey(&kt, f, n);
@@ -913,10 +913,11 @@ Cc Pascal startup(const char * sfname)
 
 		  if (cc > FALSE &&
 			    window_ct(dfb) == NULL)
-		            		  	/* not displayed, remove the unneeded buffer and exit */
+			{         		  	/* not displayed, remove the unneeded buffer and exit */
 		  	zotbuf(dfb);
 
-			curbp = scb;								/* restore the current buffer */
+				curbp = scb;								/* restore the current buffer */
+			}
 		}
 	}}
 

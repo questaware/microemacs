@@ -83,7 +83,7 @@ int init_paren(const char * str, int len)
 							if (0)
 		case 'S':
 		case 'B':	  nch -= 'e';
-							if (nch | s_cmt)
+							if (nch /* | s_cmt */)
 								return 0;
 							ch = 'E';
 		when 'C':	

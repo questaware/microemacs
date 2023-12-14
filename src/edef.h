@@ -336,7 +336,7 @@ typedef union PD_VAR {
 												/* Structure for the key binding table */
 typedef struct
 { short k_code;	        /* Key code, 0 => end of table */
-  short k_type;	        /* binding type (C function or buffer) */
+//short k_type;	        /* binding type (C function or buffer) */
   union EPOINTER k_ptr; /* ptr to thing to execute */
 } KEYTAB;
 
@@ -459,7 +459,7 @@ NOSHARE extern Int envram;			/* # of bytes current in use by malloc */
 const extern char g_logm[3][8];
 
 //NOSHARE extern char palstr[49];		/* palette string		*/
-NOSHARE extern char lastmesg[NCOL+2];	/* last message posted		*/
+NOSHARE extern char lastmesg[NCOL+40];	/* last message posted		*/
 //NOSHARE extern int (Pascal *g_lastfnc)(int, int);/* last function executed */
 NOSHARE extern int  g_eexitflag;		/* EMACS exit flag */
 

@@ -241,18 +241,18 @@ staticc int   msd_nlink[MAX_TREE+1];		/* stack of number of dirs */
 
 #if USE_DIR
 
-static int USE_FAST_CALL scan_fn(char new_sl)
+static char * USE_FAST_CALL scan_fn(char new_sl)
 
 {	int pe;
-	int last_sl = 0;
+	int last_sl = -1;
   char ch;
 	for (pe = -1; (ch = msd_path[++pe]) != 0; )
 		if (ch == '\\' || ch == '/')
-		{ last_sl = pe+1;
-			msd_path[last_sl-1] = new_sl;
+		{ last_sl = pe;
+			msd_path[last_sl] = new_sl;
 		}
 
-	return last_sl;
+	return msd_path+last_sl+1;
 }
 
 #endif
@@ -578,9 +578,9 @@ Char * msd_nfile()
 		return NULL;
 	}
 
-{	int last_sl = scan_fn('/');
+{	char * t = scan_fn('/');
 
-	strpcpy(msd_path+last_sl, msd_curr->l_text, lused(msd_curr->l_dcr)+1);
+	strpcpy(t, msd_curr->l_text, lused(msd_curr->l_dcr)+1);
 
 	return msd_path;
 }

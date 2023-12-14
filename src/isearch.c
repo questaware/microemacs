@@ -97,8 +97,8 @@ int Pascal get_char()
 //	T_is * is = &g_isb;
 								/* See if we're re-executing: */
 
-		if (g_isb.cmd_reexecute >= 0) 	/* Is there an offset?					*/
-			if ((c = g_isb.cmd_buff[g_isb.cmd_reexecute++]) != 0)
+		if (++g_isb.cmd_reexecute > 0) 	/* Is there an offset?					*/
+			if ((c = g_isb.cmd_buff[g_isb.cmd_reexecute - 1]) != 0)
 				return c; 		/* Yes, return any character	*/
 
 				 /* We're not re-executing (or aren't any more).	Try for a real char */
@@ -278,7 +278,7 @@ int Pascal fisearch(int f, int n)
 { 	int srchres;
 		while ((srchres = isearch(n)) <= 0)
 		{ rest_l_offs(&save); 						/* Reset the position 			*/
-			is->cmd_reexecute = 0;					/* Start the whole mess over	*/
+//		is->cmd_reexecute = 0;					/* Start the whole mess over	*/
 			if (srchres == 0) break;
 			/*strpcpy(pat, pat_save, NPAT);  * Restore the old search str */
 		}
@@ -298,7 +298,7 @@ int Pascal fisearch(int f, int n)
 
 int Pascal risearch(int f, int n)
 
-{ return fisearch(0, n ^ 0x80000000);
+{ return fisearch(0, -n);
 }
 
 #endif

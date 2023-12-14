@@ -59,7 +59,7 @@ extern const char getvalnull[];
 char *Pascal getval(char *, char *);
 
 const char * gtfilename(int wh);
-const char *Pascal gtusr(char*);
+const char *Pascal gtusr(char * vname);			/* look up a user var's value */
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
 void init_fncmatch(void);
@@ -218,7 +218,7 @@ int Pascal forwline(int, int);
 int Pascal forwpage(int, int);
 int Pascal forwsearch(int, int);
 int Pascal getccol();
-int Pascal getcmd();
+int Pascal getcmd(int mode);
 int Pascal getfence(int, int);
 int Pascal USE_FAST_CALL getgoal(int, LINE*);
 REGION * Pascal getregion();

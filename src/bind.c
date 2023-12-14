@@ -86,103 +86,103 @@ static int Pascal cbuf40(int f, int n) { return execporb(40,n); }
 
 static KEYTAB keytab[NBINDS+1] = 
 {
-	{CTRL|'A',	BINDFNC, gotobol},
-	{CTRL|'B',	BINDFNC, backchar},
-	{CTRL|'E',	BINDFNC, endword},
-	{CTRL|'H',	BINDFNC, backdel},
-//{CTRL|'J',	BINDFNC, nop},
-	{CTRL|'K',	BINDFNC, killtext},
-	{CTRL|'L',	BINDFNC, refresh},
-	{CTRL|'M',	BINDFNC, ins_newline},
-	{CTRL|'N',	BINDFNC, forwline},
+	{CTRL|'A',	gotobol},
+	{CTRL|'B',	backchar},
+	{CTRL|'E',	endword},
+	{CTRL|'H',	backdel},
+//{CTRL|'J',	nop},
+	{CTRL|'K',	killtext},
+	{CTRL|'L',	refresh},
+	{CTRL|'M',	ins_newline},
+	{CTRL|'N',	forwline},
 #if FLUFF
-	{CTRL|'O',	BINDFNC, openline},
+	{CTRL|'O',	openline},
 #endif
-	{CTRL|'P',	BINDFNC, backline},
-	{CTRL|'Q',	BINDFNC, quote},
-	{CTRL|'S',	BINDFNC, forwsearch},
-	{CTRL|'U',	BINDFNC, uniarg},
-//{CTRL|'X',	BINDFNC, cex},
-	{CTRL|'Z',	BINDFNC, backpage},
-//{CTRL|'[',	BINDFNC, meta},
-	{CTLX|CTRL|'B', BINDFNC, listbuffers},
-	{CTLX|CTRL|'C', BINDFNC, quit},
+	{CTRL|'P',	backline},
+	{CTRL|'Q',	quote},
+	{CTRL|'S',	forwsearch},
+	{CTRL|'U',	uniarg},
+//{CTRL|'X',	cex},
+	{CTRL|'Z',	backpage},
+//{CTRL|'[',	meta},
+	{CTLX|CTRL|'B', listbuffers},
+	{CTLX|CTRL|'C', quit},
 #if AEDIT
-	{CTLX|CTRL|'D', BINDFNC, detab},
-	{CTLX|CTRL|'E', BINDFNC, entab},
+	{CTLX|CTRL|'D', detab},
+	{CTLX|CTRL|'E', entab},
 #endif
-	{CTLX|CTRL|'F', BINDFNC, filefind},
-	{CTLX|CTRL|'I', BINDFNC, insfile},
-//{CTLX|CTRL|'K', BINDFNC, macrotokey},
-	{CTLX|CTRL|'L', BINDFNC, lowerregion},
-	{CTLX|CTRL|'M', BINDFNC, delmode},
-	{CTLX|CTRL|'N', BINDFNC, mvdnwind},
-	{CTLX|CTRL|'P', BINDFNC, mvupwind},
-	{CTLX|CTRL|'R', BINDFNC, fileread},
-	{CTLX|CTRL|'S', BINDFNC, filesave},
+	{CTLX|CTRL|'F', filefind},
+	{CTLX|CTRL|'I', insfile},
+//{CTLX|CTRL|'K', macrotokey},
+	{CTLX|CTRL|'L', lowerregion},
+	{CTLX|CTRL|'M', delmode},
+	{CTLX|CTRL|'N', mvdnwind},
+	{CTLX|CTRL|'P', mvupwind},
+	{CTLX|CTRL|'R', fileread},
+	{CTLX|CTRL|'S', filesave},
 #if AEDIT
-	{CTLX|CTRL|'T', BINDFNC, trim_white},
+	{CTLX|CTRL|'T', trim_white},
 #endif
-	{CTLX|CTRL|'U', BINDFNC, upperregion},
-	{CTLX|CTRL|'W', BINDFNC, filewrite},
+	{CTLX|CTRL|'U', upperregion},
+	{CTLX|CTRL|'W', filewrite},
 #if FLUFF
-	{CTLX|CTRL|'X', BINDFNC, swapmark},
+	{CTLX|CTRL|'X', swapmark},
 #endif
-	{CTLX|CTRL|'Z', BINDFNC, shrinkwind},
-	{CTLX|CTRL|'V', BINDFNC, viewfile},
-	{CTLX|'?',	BINDFNC, deskey},
-	{CTLX|'!',	BINDFNC, spawn},
-//{CTLX|'$',	BINDFNC, spawn},
-	{CTLX|'#',	BINDFNC, filter},
-	{CTLX|'=',	BINDFNC, bufferposition},
-	{CTLX|'(',	BINDFNC, ctlxlp},
-	{CTLX|')',	BINDFNC, ctlxrp},
-	{CTLX|'<',	BINDFNC, narrow},
-	{CTLX|'>',	BINDFNC, widen},
-	{CTLX|'^',	BINDFNC, enlargewind},
-	{CTLX|' ',	BINDFNC, remmark},
-	{CTLX|'0',	BINDFNC, delwind},
-	{CTLX|'1',	BINDFNC, onlywind},
-	{CTLX|'2',	BINDFNC, splitwind},
-	{CTLX|'B',	BINDFNC, usebuffer},
+	{CTLX|CTRL|'Z', shrinkwind},
+	{CTLX|CTRL|'V', viewfile},
+	{CTLX|'?',	deskey},
+	{CTLX|'!',	spawn},
+//{CTLX|'$',	spawn},
+	{CTLX|'#',	filter},
+	{CTLX|'=',	bufferposition},
+	{CTLX|'(',	ctlxlp},
+	{CTLX|')',	ctlxrp},
+	{CTLX|'<',	narrow},
+	{CTLX|'>',	widen},
+	{CTLX|'^',	enlargewind},
+	{CTLX|' ',	remmark},
+	{CTLX|'0',	delwind},
+	{CTLX|'1',	onlywind},
+	{CTLX|'2',	splitwind},
+	{CTLX|'B',	usebuffer},
 #if S_BSD
-	{CTLX|'D',	BINDFNC, bktoshell},
+	{CTLX|'D',	bktoshell},
 #endif
-/*	{CTLX|'F',	BINDFNC, abort},*/
+/*	{CTLX|'F',	abort},*/
 #if DEBUGM
-	{CTLX|'G',	BINDFNC, dispvar},
+	{CTLX|'G',	dispvar},
 #endif
-	{CTLX|'K',	BINDFNC, dropbuffer},
-	{CTLX|'M',	BINDFNC, togmod},
-	{CTLX|'N',	BINDFNC, filename},
-	{CTLX|'O',	BINDFNC, nextwind},
-	{CTLX|'P',	BINDFNC, prevwind},
+	{CTLX|'K',	dropbuffer},
+	{CTLX|'M',	togmod},
+	{CTLX|'N',	filename},
+	{CTLX|'O',	nextwind},
+	{CTLX|'P',	prevwind},
 #if ISRCH
-	{CTLX|'R',	BINDFNC, risearch},
-	{CTLX|'F',	BINDFNC, fisearch},
+	{CTLX|'R',	risearch},
+	{CTLX|'F',	fisearch},
 #endif
-	{CTLX|'W',	BINDFNC, resize},
-	{CTLX|'X',	BINDFNC, nextbuffer},
-	{CTLX|'Z',	BINDFNC, enlargewind},
-	{CTLX|'@',	BINDFNC, pipecmd},
-	{META|CTRL|'R', BINDFNC, qreplace},
+	{CTLX|'W',	resize},
+	{CTLX|'X',	nextbuffer},
+	{CTLX|'Z',	enlargewind},
+	{CTLX|'@',	pipecmd},
+	{META|CTRL|'R', qreplace},
 				/* personal keys */
 #if PERSONAL_KEYS == 0
-	{CTRL|'D',	BINDFNC, forwdel},
-	{CTLX|'E',	BINDFNC, ctlxe},
-	{CTRL|'F',	BINDFNC, ctrlg},
-	{CTRL|'G',	BINDFNC, ctrlg},
+	{CTRL|'D',	forwdel},
+	{CTLX|'E',	ctlxe},
+	{CTRL|'F',	ctrlg},
+	{CTRL|'G',	ctrlg},
 #if CFENCE
-	{META|CTRL|'F', BINDFNC, getfence},
+	{META|CTRL|'F', getfence},
 #endif
-	{CTRL|'R',	BINDFNC, backsearch},
+	{CTRL|'R',	backsearch},
 #if FLUFF
-	{CTRL|'T',	BINDFNC, twiddle},
+	{CTRL|'T',	twiddle},
 #endif
-	{CTRL|'R',	BINDFNC, backsearch},
-	{CTRL|'W',	BINDFNC, killregion},
-	{CTRL|'V',	BINDFNC, forwpage},
-	{CTRL|'Y',	BINDFNC, yank},
+	{CTRL|'R',	backsearch},
+	{CTRL|'W',	killregion},
+	{CTRL|'V',	forwpage},
+	{CTRL|'Y',	yank},
 #else
 /*
 bind-to-key execute-macro ^W
@@ -206,130 +206,130 @@ bind-to-key i-shell ^X%
 bind-to-key filter-buffer ^X\
 bind-to-key filter-buffer ^X|
 */
-	{CTRL|'W', BINDFNC, ctlxe},
+	{CTRL|'W', ctlxe},
 #if CFENCE
-	{CTRL|'T', BINDFNC, getfence},
+	{CTRL|'T', getfence},
 #endif
-	{CTRL|'R', BINDFNC, qreplace},
-/*{CTRL|'F', BINDFNC, forwsearch}, */
-	{META|'S', BINDFNC, backsearch},
-	{CTLX|'D', BINDFNC, killregion},
-	{SPEC|CTRL|'D', BINDFNC, killregion},
-	{CTLX|'C', BINDFNC, copyregion},
-	{CTRL|'G', BINDFNC, kdelete}, /* tbd: freed up ^G to agree with jasspa */
-	{CTRL|'F', BINDFNC, kdelete},
-	{CTRL|'V', BINDFNC, yank},
-	{CTLX|'|', BINDFNC, filter},
-	{CTRL|' ', BINDFNC, setmark},
+	{CTRL|'R', qreplace},
+/*{CTRL|'F', forwsearch}, */
+	{META|'S', backsearch},
+	{CTLX|'D', killregion},
+	{SPEC|CTRL|'D', killregion},
+	{CTLX|'C', copyregion},
+	{CTRL|'G', kdelete}, /* tbd: freed up ^G to agree with jasspa */
+	{CTRL|'F', kdelete},
+	{CTRL|'V', yank},
+	{CTLX|'|', filter},
+	{CTRL|' ', setmark},
 #endif
 
 #if WORDPRO
-	{META|CTRL|'C', BINDFNC, wordcount},
+	{META|CTRL|'C', wordcount},
 #endif
-	{META|CTRL|'G', BINDFNC, gotomark},
-	{META|CTRL|'H', BINDFNC, delbword},
-//{META|CTRL|'K', BINDFNC, unbindkey},
-//{META|CTRL|'L', BINDFNC, refresh},
-	{META|CTRL|'M', BINDFNC, delgmode},
+	{META|CTRL|'G', gotomark},
+	{META|CTRL|'H', delbword},
+//{META|CTRL|'K', unbindkey},
+//{META|CTRL|'L', refresh},
+	{META|CTRL|'M', delgmode},
 #if 0
-	{META|CTRL|'N', BINDFNC, namebuffer},  /* no longer supported */
+	{META|CTRL|'N', namebuffer},  /* no longer supported */
 #endif
-	{META|CTRL|'S', BINDFNC, execfile},
-	{META|CTRL|'V', BINDFNC, nextdown},
+	{META|CTRL|'S', execfile},
+	{META|CTRL|'V', nextdown},
 #if WORDPRO && 0
-	{META|CTRL|'W', BINDFNC, killpara},
+	{META|CTRL|'W', killpara},
 #endif
 #if FLUFF
-	{META|CTRL|'X', BINDFNC, execcmd},
+	{META|CTRL|'X', execcmd},
 #endif
-	{META|CTRL|'Z', BINDFNC, nextup},
-	{META|' ',	BINDFNC, setmark},
-	{META|'?',	BINDFNC, help},
+	{META|CTRL|'Z', nextup},
+	{META|' ',	setmark},
+	{META|'?',	help},
 #if FLUFF
-	{META|'!',	BINDFNC, refresh},
+	{META|'!',	refresh},
 #endif
-	{META|'=',	BINDFNC, setvar},
-	{META|'>',	BINDFNC, gotoeob},
-	{META|'<',	BINDFNC, gotobob},
-	{SPEC|CTRL|'<', BINDFNC, gotobob},
+	{META|'=',	setvar},
+	{META|'>',	gotoeob},
+	{META|'<',	gotobob},
+	{SPEC|CTRL|'<', gotobob},
 #if APROP
-	{META|'A',	BINDFNC, apro},
+	{META|'A',	apro},
 #endif
-//{META|'B',	BINDFNC, backword},
-	{MUTA|'W',	BINDFNC, copyword},
-	{META|'D',	BINDFNC, delfword},
+//{META|'B',	backword},
+	{MUTA|'W',	copyword},
+	{META|'D',	delfword},
 #if CRYPT
-	{META|'E',	BINDFNC, setuekey},
+	{META|'E',	setuekey},
 #endif
-	{META|'G',	BINDFNC, gotoline},
-	{META|'K',	BINDFNC, bindtokey},
-	{META|'L',	BINDFNC, lowerword},
-	{META|'M',	BINDFNC, setgmode},
+	{META|'G',	gotoline},
+	{META|'K',	bindtokey},
+	{META|'L',	lowerword},
+	{META|'M',	setgmode},
 #if WORDPRO
-	{META|'N',	BINDFNC, gotoeop},
-	{META|'P',	BINDFNC, gotobop},
-	{META|'Q',	BINDFNC, fillpara},
+	{META|'N',	gotoeop},
+	{META|'P',	gotobop},
+	{META|'Q',	fillpara},
 #endif
-	{META|'R',	BINDFNC, sreplace},
+	{META|'R',	sreplace},
 #if S_BSD
-	{META|'S',	BINDFNC, bktoshell},
+	{META|'S',	bktoshell},
 #endif
-	{META|'U',	BINDFNC, upperword},
-	{META|'V',	BINDFNC, backpage},
-	{META|'W',	BINDFNC, copyregion},
-	{META|'X',	BINDFNC, namedcmd},
+	{META|'U',	upperword},
+	{META|'V',	backpage},
+	{META|'W',	copyregion},
+	{META|'X',	namedcmd},
 #if S_MSDOS == 0
-	{META|'Z',	BINDFNC, wordsearch},
+	{META|'Z',	wordsearch},
 #endif
-//{META|0x7F, BINDFNC, delbword},
+//{META|0x7F, delbword},
 #if MOUSE
-	{MOUS|'a',	BINDFNC, movemd},
-	{MOUS|'b',	BINDFNC, movemu},
-	{MOUS|'e',	BINDFNC, mregdown},
-	{MOUS|'f',	BINDFNC, mregup},
-	{MOUS|'1',	BINDFNC, resizm},
+	{MOUS|'a',	movemd},
+	{MOUS|'b',	movemu},
+	{MOUS|'e',	mregdown},
+	{MOUS|'f',	mregup},
+	{MOUS|'1',	resizm},
 #endif 
-	{MUTA|'S',	BINDFNC, forwhunt},
-	{MUTA|'R',	BINDFNC, backhunt},
-	{MUTA|'Z',	BINDFNC, wordsearch},
-	{META|',',	BINDFNC, indentsearch},
-	{SPEC|'<',	BINDFNC, gotobob},
-	{SPEC|'P',	BINDFNC, backline},
-	{META|SPEC|'<',BINDFNC, searchIncls},
-	{META|SPEC|'N',BINDFNC, nextwind},
-	{SPEC|'Z',	BINDFNC, backpage},
-	{SPEC|'B',	BINDFNC, backchar},
-	{SPEC|'F',	BINDFNC, forwchar},
-	{SPEC|'>',	BINDFNC, gotoeol},
-	{SPEC|'N',	BINDFNC, forwline},
-	{SPEC|'V',	BINDFNC, forwpage},
-//{SPEC|'C',	BINDFNC, insspace},
-	{SPEC|'D',	BINDFNC, forwdel},
-	{SPEC|CTRL|'B', BINDFNC, backword},
-	{SPEC|CTRL|'F', BINDFNC, nextword},
-	{ALTD|SPEC|'P', BINDFNC, mvupwind},
-	{ALTD|SPEC|'N', BINDFNC, mvdnwind},
+	{MUTA|'S',	forwhunt},
+	{MUTA|'R',	backhunt},
+	{MUTA|'Z',	wordsearch},
+	{META|',',	indentsearch},
+	{SPEC|'<',	gotobob},
+	{SPEC|'P',	backline},
+	{META|SPEC|'<',searchIncls},
+	{META|SPEC|'N',nextwind},
+	{SPEC|'Z',	backpage},
+	{SPEC|'B',	backchar},
+	{SPEC|'F',	forwchar},
+	{SPEC|'>',	gotoeol},
+	{SPEC|'N',	forwline},
+	{SPEC|'V',	forwpage},
+//{SPEC|'C',	insspace},
+	{SPEC|'D',	forwdel},
+	{SPEC|CTRL|'B', backword},
+	{SPEC|CTRL|'F', nextword},
+	{ALTD|SPEC|'P', mvupwind},
+	{ALTD|SPEC|'N', mvdnwind},
 #if WORDPRO
-	{SPEC|CTRL|'Z', BINDFNC, gotobop},
-	{SPEC|CTRL|'V', BINDFNC, gotoeop},
+	{SPEC|CTRL|'Z', gotobop},
+	{SPEC|CTRL|'V', gotoeop},
 #endif
-	{SPEC|SHFT|'1', BINDFNC, (Command)1},		// Shift 
-	{SPEC|SHFT|'2', BINDFNC, (Command)2},
-	{SPEC|SHFT|'3', BINDFNC, (Command)3},
-	{SPEC|SHFT|'4', BINDFNC, (Command)4},
-	{SPEC|SHFT|'5', BINDFNC, (Command)5},
-	{SPEC|SHFT|'6', BINDFNC, (Command)6},
-	{SPEC|SHFT|'7', BINDFNC, (Command)7},
-	{SPEC|SHFT|'8', BINDFNC, (Command)8},
-	{SPEC|SHFT|'9', BINDFNC, (Command)9},
+	{SPEC|SHFT|'1', (Command)1},		// Shift 
+	{SPEC|SHFT|'2', (Command)2},
+	{SPEC|SHFT|'3', (Command)3},
+	{SPEC|SHFT|'4', (Command)4},
+	{SPEC|SHFT|'5', (Command)5},
+	{SPEC|SHFT|'6', (Command)6},
+	{SPEC|SHFT|'7', (Command)7},
+	{SPEC|SHFT|'8', (Command)8},
+	{SPEC|SHFT|'9', (Command)9},
 
 #if S_VMS
-	{0x7F,		BINDFNC, backdel},
+	{0x7F,		backdel},
 #else
-	{0x7F,		BINDFNC, backdel}, // was forw
+	{0x7F,		backdel}, // was forw
 #endif
 
-	{0, 	0, NULL}
+	{0, NULL}
 };
 
 //--------------------------------------------------------------------------
@@ -348,20 +348,18 @@ static KEYTAB * aux_getbind;		/* only valid if result != null */
 /*	GETCMD: Get a command from the keyboard. Process all applicable
 		prefix keys
 */
-int  getcmd()
+int  getcmd(int mode)
 
 { int c = getkey();
-#if 0
-	return c;
-#else
-	int pfx = c == (CTRL|'[') ? META :
+	if (mode)
+		return c;
+{	int pfx = c == (CTRL|'[') ? META :
 						c == (CTRL|'X') ? CTLX : 0;
 	if (pfx != 0)
 		c = getkey();
 																									/* Force to upper */
 	return pfx | (!in_range(c & 0xff,'a','z') ? c : c & ~0x20);
-#endif
-}
+}}
 
 
 									/* This function looks a key binding up in the binding table */
@@ -452,7 +450,7 @@ int Pascal USE_FAST_CALL addnewbind(int c, int (Pascal *func)(int, int))
     ktp = &oflowkeytab[oflowcursize++];
   }
 #endif
-  ktp->k_type   = BINDFNC;
+//ktp->k_type   = BINDFNC;
   ktp->k_code   = c;
   ktp->k_ptr.fp = func;
 	if (func == ctrlg)					/* if the function is a unique prefix key */
@@ -561,7 +559,7 @@ int Pascal getechockey(int mode)
 								/* check to see if we are executing a command line */
 	int c;
 	if (g_macargs <= 0)
-		c = mode ? getkey() : getcmd();
+		c = getcmd(mode);
 	else
 	{ macarg(tok);	/* get the next token */
 	  c = stock(tok);
@@ -821,10 +819,9 @@ int USE_FAST_CALL find_sl(const char * s, int tix)
 
 char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 	
-{ if (dir == NULL || file[0] == '/' || file[0] == '\\')
+{ if      (dir == NULL || file[0] == '/' || file[0] == '\\')
     dir = file;
-	else
-  if (*strmatch("./../", dir) == 0)
+	else if (*strmatch("./../", dir) == 0)
     dir += 2;
 
 { int tix = -1;
@@ -843,8 +840,7 @@ char * Pascal pathcat(char * t, int bufsz, const char * dir, const char * file)
 	      ;
 
 	    if (tix > 0)
-	    { if (t[tix-1] != '.' &&
-	          *strmatch("../", file) == 0)
+	    { if (t[tix-1] != '.' && *strmatch("../", file) == 0)
 	      { for (file = &file[2]; *++file == '/';)		/* strip forward to non / */
 	          ;
 	        continue;
@@ -875,8 +871,6 @@ const char * fex_file(int drop_sl, const char ** ref_dir, const char * file)
 			dir += 2;
   
 	{	int ix = -1;
-		int sl = strlen(dir) + strlen(file) + 127;
-		(void)remallocstr(&g_fspec, NULL, sl);
 
 // 	mlwrite("Fex_file %s %s%p\n", file, dir);
 
@@ -884,7 +878,9 @@ const char * fex_file(int drop_sl, const char ** ref_dir, const char * file)
 			;
 			
 		*ref_dir = dir + ix - (ch == 0);
-	{	char * diry = strcat(strpcpy(g_fspec, dir, ix + 1),DIRSEPSTR+drop_sl);
+	{	int sl = strlen(dir) + strlen(file) + 127;
+		char * fs = remallocstr(&g_fspec, NULL, sl);
+		char * diry = strcat(strpcpy(fs, dir, ix + 1),DIRSEPSTR+drop_sl);
 // 	mbwrite(diry);
   {	char * pc = pathcat(g_fspec, sl-1, diry, file);
 // 	mlwrite("%pAfter %s", pc);
@@ -909,8 +905,8 @@ const char * fex_file(int drop_sl, const char ** ref_dir, const char * file)
 const char * Pascal flook(char wh, const char * fname)
 
 {	const char * ppath = getenv("PATH");
-	const char * path = wh < 0 ? curbp->b_fname :			// Q_LOOKI
-											wh > 0 ? ppath					:			// Q_LOOKP
+	const char * path = wh > 0 ? ppath					:			// Q_LOOKP
+											wh < 0 ? curbp->b_fname :			// Q_LOOKI
 				 											 getenv(HOMEPATH);		// Q_LOOKH
 	int drop_sl = (wh & 2);	// Q_LOOKI
 	int clamp = 2;
@@ -998,7 +994,7 @@ const char *Pascal getfname(int keycode)
 
   if (func != 0)
 									      								/* skim the binding table for a match */
-    if (key->k_type == BINDFNC)
+    if (1 /*key->k_type == BINDFNC*/)
 		{ const NBIND *nptr;										/* pointer into name binding table */
     	for (nptr = &names[0]-1; (++nptr)->n_func != NULL; ) 
         if (nptr->n_func == func)
@@ -1035,7 +1031,7 @@ void Pascal setktkey(int type, char * name, KEYTAB * key)
 				/* name of function or buffer */
 {																		// Only called on table hooks
   key->k_code = 1;
-  key->k_type = type;
+//key->k_type = type;
 	if      (type == BINDFNC)
 	  key->k_ptr.fp = fncmatch(name);
 	else if (type == BINDBUF)
@@ -1057,11 +1053,6 @@ int Pascal help(int f, int n)	/* give me some help!!!!
 					/* "[Help file missing]" */
 	  return FALSE;
 	}
-#if 0
-								/* split the current window to make room for the help stuff */
-	if (splitwind(FALSE, 1) == FALSE)
-	  return FALSE;
-#endif
 		    /* make this window in VIEW mode, update all mode lines */
 	bp->b_flag |= MDVIEW;
 	bp->b_fname = strdup("HELP");  // allow the leakage

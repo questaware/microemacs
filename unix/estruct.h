@@ -176,10 +176,10 @@ union REGS {
 #endif
 
 #if	ATARI || S_MSDOS || S_OS2
-# define DIRSEPSTR	"\\"
+# define DIRSEPSTR	"\\\0"
 # define DIRSEPCHAR	'\\'
 #else
-# define DIRSEPSTR	"/"
+# define DIRSEPSTR	"/\0"
 # define DIRSEPCHAR	'/'
 #endif
 

@@ -173,23 +173,37 @@ const char * const g_envars[] = {
 	"fillcol",		/* current fill column */
 	"gmode",			/* global modes (buffer flags )*/
 	"hardtab",		/* current hard tab size */
-	"highpat1",		/* highlighting string */
-	"highpat10",		/* highlighting string */
-	"highpat11",		/* highlighting string */
-	"highpat12",		/* highlighting string */
-	"highpat13",		/* highlighting string */
-	"highpat14",		/* highlighting string */
-	"highpat15",		/* highlighting string */
-	"highpat16",		/* highlighting string */
-	"highpat2",		/* highlighting string */
-	"highpat3",		/* highlighting string */
-	"highpat4",		/* highlighting string */
-	"highpat5",		/* highlighting string */
-	"highpat6",		/* highlighting string */
-	"highpat7",		/* highlighting string */
-	"highpat8",		/* highlighting string */
-	"highpat9",		/* highlighting string */
 	"hjump",			/* horizontal screen jump size */
+	"hp1",		/* highlighting string */
+	"hp10",		
+	"hp11",		
+	"hp12",		
+	"hp13",		
+	"hp14",		
+	"hp15",		
+	"hp16",		
+	"hp17",
+	"hp18",
+	"hp19",
+	"hp2",		
+	"hp20",
+	"hp21",
+	"hp22",
+	"hp23",
+	"hp24",
+	"hp25",
+	"hp26",
+	"hp27",
+	"hp28",
+	"hp29",
+	"hp3",		
+	"hp30",
+	"hp4",		
+	"hp5",		
+	"hp6",		
+	"hp7",		
+	"hp8",		
+	"hp9",
 	"incldirs",		/* directories to search */
 	"keycount",		/* consecutive times key has been pressed */
 	"kill", 			/* kill buffer (read only) */
@@ -258,10 +272,10 @@ FALSE, /* EVCWLINE */		  /* */
 72,    /* EVFILLCOL */		/* longest line for wordwrap */
 0,     /* EVGMODE */ 		  /* global editor mode */
 8,     /* EVHARDTAB */		/* default tab size */
-0,     /* EVHIGHLIGHT */	/* not in use */
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,     /* EVHIGHLIGHT */	/* */
 1,     /* EVHJUMP */		  /* horizontal jump size */
-0,		 /* EVINCLD */			/* not in use */
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,		 /* EVINCLD */			/* */
 0,     /* EVKEYCT */		  /* consec key ct */
 CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
 0,		 /* EVLANG */  			/* */
@@ -300,10 +314,9 @@ UNDEF, /* EVWRITEHK */
 void Pascal varinit()	/* initialize the user variable list */
 
 {	int ix;
-	for (ix = 17; --ix >= -1; )
+	for (ix = 31; --ix >= -1; )
 		predefvars[ix > 0  ? EVHLIGHT1-1+ix :
 							 ix == 0 ? EVMATCH : EVPALETTE].p = mallocz(2);
-//predefvars[EVINCLD].p = strdup("");
 #if CALLED
   for (i = MAXVARS; --i >= 0;)
     uv[i].u_name[0] = 0;
@@ -364,12 +377,11 @@ char *Pascal mkul(int wh, char * str)	/* make a string lower or upper case */
 
 
 
-static char * Pascal USE_FAST_CALL plinecpy(char line[2])
+static short Pascal USE_FAST_CALL plinecpy(void)
 	
 {//int here = getccol();
   
-  line[0] = 0;
-	line[1] = 0;
+  short res = 0;
 
   if (curwp->w_linep != NULL)
 	{ LINE * pline = curwp->w_dotp;
@@ -378,12 +390,12 @@ static char * Pascal USE_FAST_CALL plinecpy(char line[2])
     { pline = lback(pline);
     { int offs = getgoal(getccol(), pline);
       if (offs < llength(pline))
-      { line[0] = pline->l_text[offs];
+      { res = pline->l_text[offs];
         break;
       }
     }}
   }
-  return line;
+  return res;
 }
 
 //static
@@ -521,7 +533,8 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 
 	if      (funcs[fnum].f_kind < RINT)
 	 switch (fnum)
-	 {case UFDIT:		return plinecpy(fname);
+	 {case UFDIT:		*(short*)arg1 = plinecpy();
+	 								return arg1;
 	  when UFRIGHT: iarg2 -= strlen(arg1);
 				        	return strcpy(arg1, &arg1[-iarg2 < 0 ? 0 : -iarg2]);
 		when UFDIR:		return pathcat(arg1, NSTRING-1, arg1, arg2);
@@ -544,7 +557,7 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 				          }
 		case UFCAT:   return arg1;
 
-		when UFGTCMD:	return cmdstr(&arg1[0], getcmd());
+		when UFGTCMD:	return cmdstr(&arg1[0], getcmd(0));
 		when UFBIND:  return getfname(stock(arg1));
 		when UFFIND:	arg1 = flook(Q_LOOKH, arg1);
 									if (0)
@@ -745,7 +758,7 @@ static int g_uv_vnum;
 const char *Pascal gtusr(char * vname)			/* look up a user var's value */
 																						/* name of user variable to fetch */
 {	char * vptr = NULL;
-  int vnum;
+	int vnum;
 																/* scan the list looking for the user var name */
 	for (vnum = MAXVARS; --vnum >= 0 && g_uv[vnum].u_name[0] != 0; )
 	  if (strcmp(vname, g_uv[vnum].u_name) == 0)
@@ -805,7 +818,7 @@ int Pascal setvar(int f, int n)	/* set a variable */
 	char var[2*NSTRING+1];									/* name of variable to fetch */
 	int clex = g_macargs;
 	if (clex <= 0)
-	{ cc = getstring(&var[0], NVSIZE+1, TEXT51);
+	{ cc = getstring(&var[0], NVSIZE+2, TEXT51);
 /*				 "Variable to set: " */
 	  if (cc <= 0)
 	    return ABORT;
@@ -939,7 +952,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 	  case EVWRAPHK:  ++hookix;
     case EVREADHK:  ++hookix;
 										hooks[hookix].k_code = 1;
-										hooks[hookix].k_type = BINDFNC;
+								//	hooks[hookix].k_type = BINDFNC;
 										hooks[hookix].k_ptr.fp = fncmatch(value);
 //									setktkey(BINDFNC, value, &hooks[hookix]);
 #if S_WIN32
@@ -990,7 +1003,7 @@ fvar:	vix = -1;
 
 	  when '%':		  /* check for existing legal user variable */
 	  	  (void)gtusr(&var[1]);
-		    vix = g_uv_vnum;
+	  	  vix = g_uv_vnum;
 		    if (vix >= 0)
 		    {	strcpy(g_uv[vix].u_name, &var[1]);
 //				v[vix].u_value = NULL;
@@ -1022,7 +1035,7 @@ fvar:	vix = -1;
 
 	  when '%':		  /* check for existing legal user variable */
 	  	  (void)gtusr(&var[1]);
-		    vix = g_uv_vnum;
+	  	  vix = g_uv_vnum;
 		    if (vix >= 0)
 		    {	strcpy(g_uv[vix].u_name, &var[1]);
 //				v[vix].u_value = NULL;
@@ -1112,9 +1125,9 @@ char *Pascal getval(char * tgt, char * tok)
 							blen = lused(lp->l_dcr);
 							              /* grab the line as an argument */
 		      }}
-	  when TOKVAR:	src = gtusr(tokp1);
+	  when TOKVAR:  src = gtusr(tokp1);
 									if (src == NULL)
-										src = g_logm[2];	// "ERROR"
+									  src = g_logm[2];	// "ERROR"
 	  when TOKENV:	src = gtenv(tokp1);
 	  when TOKFUN:	src = gtfun(tokp1);
 //  when TOKLIT:

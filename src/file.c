@@ -258,7 +258,7 @@ struct termios  g_savetty;
 static 
 FILE* Pascal ffropen(const char * fn)
 
-{ if (!(fn[0] == '-' && fn[1] == 0))
+{ if (fn[0] != ' ')
 		return fopen(fn, "rb");
   else
   { int pipefd = dup(0);
@@ -666,7 +666,7 @@ int Pascal readin(char const * fname, int props)
       while ((ch = *++ss) != 0)
         if (ch == ' ')
           fname = ss + 1;
-      fname = strdup(fname);     					// allow leak
+//    fname = strdup(fname);     					// allow leak
 //    cryptremote(tbp->b_remote);
     }
   }
@@ -933,7 +933,7 @@ int Pascal filesave(int f, int n)
 			return ctrlg(-1,-1);			/* "[Aborted]" */
   }
 
-  if (bp->b_fname == null)		/* Must have a name.	*/
+  if (bp->b_fname[0] == 0)		/* Must have a name.	*/
 	{	mlwrite(TEXT145);
 					/* "No file name" */
 		return FALSE;

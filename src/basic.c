@@ -32,8 +32,8 @@ char * USE_FAST_CALL mallocz(int n)
 
 char * Pascal remallocstr(char * * res_ref, const char * val, int len)
 
-{ if (len == 0)
-    len = val == NULL ? NSTRING : strlen(val)+1;
+{ if (len <= 0)
+    len = /*val == NULL ? NSTRING : */ strlen(val)+1;
 { char * res = (char*)mallocz(len);
 
   if (res != NULL && val != NULL)

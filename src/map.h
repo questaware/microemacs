@@ -95,7 +95,7 @@ typedef struct Mapstrm_s
 Map mk_map(Map c, Format_t format, Vint len);
 void map_cache_clear(Map map)	;
 
-Vint binary(int wh, const char * key);
+int binary(int wh, const char * key);
 Cc map_add_(Map * map_ref, Byte * rec);
 Byte * map_find_(Map map, Byte * table, void * key);
 void map_remove_last_(Map * map_ref, Byte * table);

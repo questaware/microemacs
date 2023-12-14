@@ -40,7 +40,7 @@ const char nm[][4] = {"c","cpp", "cxx", "cs",	"h","pc","jav", "prl","pl",
 const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL,
                  			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
 #endif
-const char * suftag  = "cpfqPm";
+const char * suftag  = "cpqPfm";
 
 static
 void Pascal init_buf(BUFFER * bp)
@@ -177,6 +177,7 @@ BUFFER *Pascal bfind(char * bname, int cflag)
 // 	init_buf(bp);
 	 	customise_buf(bp);
 	 	bp->b_flag &= ~BFACTIVE;
+	 	bp->b_fname = mallocz(1);
 	}
 	return bp;
 }}
@@ -295,7 +296,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
   { BUFFER * bp;
     for (bp = bheadp; bp != NULL; bp = bp->b_next)
       if ((bp->b_flag & BFINVS)==0 &&
-          bp->b_fname != null && strcmp(fn, bp->b_fname) == 0)
+         /*bp->b_fname != null && */ strcmp(fn, bp->b_fname) == 0)
 				break;
 
     if (bp == NULL)
@@ -313,7 +314,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 				} 
 				else
       	{	create |= 3;
-				  if (bp->b_fname == null || strcmp(bp->b_fname, fn) == 0)
+				  if (bp->b_fname[0] == 0 || strcmp(bp->b_fname, fn) == 0)
 	          break;
 				}
 	    }
@@ -359,7 +360,7 @@ BUFFER * nextbuf(int n) /*switch to next buffer in buffer list*/
 
 { int cc = lastbuffer(0, -n);
 	if (cc > 0)
-		return curbp;
+		return NULL/*curbp*/;
 
 {	BUFFER * bp = getdefb();
 	swbuffer(bp);
@@ -459,7 +460,7 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 	
 		pd_winnew = 0;
 	
-	  if  (bestbp == NULL || bestbp == curbp)
+		if (toplu == 0)
 		  return 0;
 
 	{	int lu = bestbp->b_luct;
@@ -511,7 +512,7 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 
 	if (!active)		/* not active yet*/
 	{ char * fn = bp->b_fname;
-		if (fn != null)
+		if (fn[0])
 		{	readin(fn, 0);
 #if S_WIN32 && 0
 			setconsoletitle(fn);
@@ -621,6 +622,14 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
  */
 int Pascal dropbuffer(int f, int n)
 
+{ if (n == 0)
+	{	BUFFER *bp;
+		for (bp = bheadp; bp != NULL; bp = bp->b_next)
+			if ((bp->b_flag & (BFINVS+BFCHG)) == 0 && bp != curbp)
+					zotbuf(bp);
+		return OK;
+	}
+
 {	BUFFER * bp = getcbuf(FALSE, curbp, TEXT26);
 				             /* "Kill buffer" */
 	if (bp == NULL)
@@ -638,12 +647,12 @@ int Pascal dropbuffer(int f, int n)
 	if (nb == bp)
 		nb = nextbuf(1);
 	
-	if (nb == NULL || nb == bp)			/* fake deletion of last buffer */
+	if (nb == NULL /*|| nb == bp */)			/* fake deletion of last buffer */
 		return TRUE;
 
 	swbuffer(nb);
 	return zotbuf(bp);
-}}}
+}}}}
 
 
 

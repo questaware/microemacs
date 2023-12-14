@@ -631,7 +631,7 @@ int Pascal scanner(int direct, int again)
 									/* int	direct; 	** which way to go.*/
 									/* int again ; 		** 1 : again, 2 : skip */
 { int pats_top = mk_magic();
-  if (pats_top < 0)
+  if (pats_top <= 0)
 	  return pats_top;
 
 { MC * mcptr = &g_pats[direct > 0 ? 1 : pats_top];

@@ -688,7 +688,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       {	case 'B'-'@':
     			autostr = getkill();
 				when 'N'-'@':
-					if (curbp->b_fname)
+					if (1 || curbp->b_fname)
 						autostr = curbp->b_fname;
 				when 'S'-'@':
 				case ALTD | 'S':

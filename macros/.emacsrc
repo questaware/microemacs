@@ -4,7 +4,7 @@ set $discmd 0
 set $col1ch 1
 set $col2ch 8
 set $palette 71727374757670
-set $highpat1 4hello
+set $hp1 4hello
 ;set $pagelen 74
 
 add-global-mode re
@@ -318,43 +318,63 @@ btk execute-macro-20 ^P
 btk execute-macro-21 ^XV
 
 22 store-macro ; buffhook
-	set $highpat2 ""
-	set $highpat3 ""
-	set $highpat4 ""
-	set $highpat5 ""
-	set $highpat6 ""
-	set $highpat7 ""
-	set $highpat8 ""
-	set $highpat9 ""
-	set $highpat10 ""
-	set $highpat11 ""
-	set $highpat12 ""
-	set $highpat13 ""
-	set $highpat14 ""
-	set $highpat15 ""
-	set $highpat16 ""
+	set $hp2 ""
+	set $hp3 ""
+	set $hp4 ""
+	set $hp5 ""
+	set $hp6 ""
+	set $hp7 ""
+	set $hp8 ""
+	set $hp9 ""
+	set $hp10 ""
+	set $hp11 ""
+	set $hp12 ""
+	set $hp13 ""
+	set $hp14 ""
+	set $hp15 ""
+	set $hp16 ""
+	set $hp17 ""
 ;	set %ri &rig $cbufname 3
 ;	set %oo @&cat "Buffhook " %ri
 	!if &seq &rig $cbufname 3 ".py"
-    set $highpat2 "4 if "
-		set $highpat3 "4 else "
-		set $highpat4 "4 else:"
-		set $highpat5 "4 elif "
-		set $highpat6 "4 def "
-		set $highpat7 "4 while "
-		set $highpat8 "4 break "
-		set $highpat9 "4 try:"
-		set $highpat10 "4 except:"
-		set $highpat11 "4 except "
+    set $hp2 "4 if "
+		set $hp3 "4 else "
+		set $hp4 "4 else:"
+		set $hp5 "4 elif "
+		set $hp6 "4 def "
+		set $hp7 "4 while "
+		set $hp8 "4 break "
+		set $hp9 "4 continue"
+		set $hp9 "4 try:"
+		set $hp10 "4 except:"
+		set $hp11 "4 except "
 	!endif
 	!if &or &seq &rig $cbufname 2 ".c" &seq &rig $cbufname 4 ".cpp"
-    set $highpat2 "4 if "
-		set $highpat3 "4 else "
-		set $highpat4 "4 while "
-		set $highpat5 "4 for "
-		set $highpat6 "4 return "
-		set $highpat7 "4 break;"
-		set $highpat8 "4 continue;"
+    set $hp2 "4 if "
+		set $hp3 "4 else "
+		set $hp4 "4 while "
+		set $hp5 "4 for "
+		set $hp6 "4 return "
+		set $hp7 "4 break;"
+		set $hp8 "4 continue;"
+	!endif
+	!if &or &seq &rig $cbufname 4 ".adb" &seq &rig $cbufname 4 ".ads"
+    set $hp2 "4 if "
+		set $hp3 "4 else "
+		set $hp4 "4 elif "
+	  set $hp5 "4 case "
+		set $hp6 "4 loop "
+		set $hp7 "4 for "
+		set $hp8 "4 return "
+		set $hp9 "4package "
+		set $hp10 "4procedure "
+		set $hp11 "4function "
+	  set $hp12 "4begin "
+	  set $hp13 "4end "
+	  set $hp14 "4 record "
+	  set $hp15 "4 type "
+	  set $hp16 "4 break "
+	  set $hp17 "4private"
 	!endif
 !endm
 
@@ -387,4 +407,4 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".c=c2.cpp=c4.cxx=c2.cs=c2.h=c2.hpp=c4.pc=c2.jav=c2.java=c4.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.pas=P2.md=m2.py=p2"
+set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.jav=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.adb=^q4.ads=^q4.pas=P2.md=m2.py=p-2"

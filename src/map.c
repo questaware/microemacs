@@ -53,7 +53,7 @@ extern Map_t g_capmap;
 #endif
 				/* +ve => found */
 				/* -ve => before index (minus one based!) */
-Vint binary(int wh, const char * key)
+int binary(int wh, const char * key)
 
 { Map map =	wh <  0 ? &g_namemap  :
 						wh == 0 ? &g_fnamemap :
@@ -96,9 +96,9 @@ Vint binary(int wh, const char * key)
   else
 #endif
 	{	while (uppp1 > low)
-    { Vint i = (low + uppp1) >> 1;			/* get the midpoint! */
+    { int i = (low + uppp1) >> 1;			/* get the midpoint! */
 
-      Vint comp = compare(key, map, (Key)&keyfld[map->format.eny_len*i]);
+      int comp = compare(key, map, (Key)&keyfld[map->format.eny_len*i]);
       if (comp == 0)
         return i;
       if (comp < 0)

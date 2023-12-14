@@ -566,20 +566,32 @@ typedef struct t_kill
 
 static t_kill kills[NOOKILL+1];
 
-
 /* doregion */
-
 static
 Pascal doregion(int wh, char * t)
 	
 { if (wh < 0)
 	{ 
-		int offs =  curwp->w_doto;
+		int offs =  curwp->w_doto + 1;
 		LINE * ln = curwp->w_dotp;
 		int len = lused(ln->l_dcr);
-		char * lp = lgets(ln, 0);
+		int dir = -1;
 		char ch;
 
+		while ((offs += dir) < len)
+    {	if (offs < 0 || (ch = ln->l_text[offs]) != '_' && !isalnum(ch))
+    	{	if (dir > 0)
+    			break;
+    		dir = 1;
+    		continue;
+    	}
+    	if (dir < 0)
+    		continue;
+		{ int cc = kinsert(ch);
+	    if (cc <= FALSE)
+	      return cc;
+    }}
+#if 0
 		while (offs >= 0 && 
                ((ch = ((char*)ln)[offs+fieldoffs(LINE*,l_text)]) == '_' || isalnum(ch)))
 			--offs;
@@ -590,6 +602,7 @@ Pascal doregion(int wh, char * t)
 	    if (cc <= FALSE)
 	      return cc;
     }
+#endif
   }
 	else if (--wh > 0 && rdonly())	/* disallow this command if */
 	  return FALSE;		        		/* we are in read only mode */
@@ -851,13 +864,13 @@ int Pascal yank(int notused, int n)
     g_inhibit_scan += 1;
 
   {	int	len = 0;
-  	char	*sp = NULL;					/* pointer into string to insert */
+  	char	*sp = NULL;		/* pointer into string to insert */
 
 #if S_WIN32
     if (ix == 0 && gtusr("NOPASTE") == NULL)
     { 
       sp = ClipPasteStart();
-      if (sp != null)
+      if (sp != NULL)
 	      len = strlen(sp);
     }
 #endif
@@ -867,12 +880,12 @@ int Pascal yank(int notused, int n)
     }
  
     while (--len >= 0)
-    { if (*sp == 'M' - '@' && sp[1] == '\n')
-        ++sp;
-      else
-      { if (linsert(1, *sp++) == FALSE)
-          return FALSE;
-      }
+    { char * ch = *sp;
+    	++sp;
+      if (sp[-1] == 'M' - '@' && sp[0] == '\n')
+        continue;
+      if (linsert(1, ch) == FALSE)
+        return FALSE;
     }
 
     g_inhibit_scan -= 1;

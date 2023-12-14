@@ -74,7 +74,7 @@ int g_prefix = 0;	/* currently pending prefix bits */
 const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
 
 //char palstr[49] = "";		/* palette string		*/
-char lastmesg[NCOL+2] = ""; 	 /* last message posted		*/
+char lastmesg[NCOL+40] = ""; 	 /* last message posted		*/
 //int(Pascal *g_lastfnc)(int, int);/* last function executed	*/
 int g_eexitflag = FALSE;		/* EMACS exit flag		*/
 //int eexitval = 0; 			/* and the exit return value	*/
@@ -149,6 +149,7 @@ void Pascal dcline(int argc, char * argv[])
   tcap_init();
 #endif
 	varinit();		/* user variables */
+	set_var("$incldirs", getenv("INCLUDE"));
 #if DIACRIT
 	initchars();		/* character set definitions */
 #endif
@@ -186,7 +187,7 @@ void Pascal dcline(int argc, char * argv[])
 #if CRYPT 				
 				when 'k': //if (nopipe)									/* -k<key> for code key */
 									{	if (filev[2] != 0)
-											g_bat_b_key = strdup(filev+2);	//visible from command line
+											g_bat_b_key = /*strdup(*/filev+2; // );//visible from command line
 										g_gflag |= MDCRYPT;
 									}
 #endif						
@@ -266,7 +267,7 @@ void Pascal dcline(int argc, char * argv[])
 		if  (nopipe == 0)
 		{ 
 			firstbp->b_flag |= g_gflag;
-			firstbp->b_fname = strdup("-");
+			firstbp->b_fname = strdup(" ");
 		}
 	}
 
@@ -288,8 +289,8 @@ void Pascal dcline(int argc, char * argv[])
 			exit(1);
 		}
 		else
-		{// firstbp->b_flag |= BFACTIVE;
-			firstbp = curbp;
+		{ firstbp = curbp;
+		 // firstbp->b_flag |= BFACTIVE;
 		 //openwind(curwp);
 			startfile = "Error in .rc file%w%w";
 			gline = -cc;
@@ -315,11 +316,11 @@ void Pascal dcline(int argc, char * argv[])
 	setconsoletitle(lastmesg);
 #endif
 
-//curbp = firstbp;
+  curbp = firstbp;
 	swbuffer(firstbp);
 
 	if (nopipe == 0)
-	{	firstbp->b_fname = null;
+	{	
 #if S_WIN32
 		MySetCoMo();
 #endif
@@ -388,8 +389,6 @@ int main(int argc, char * argv[])
 {	KEYTAB * hpp;
 	for (hpp = &hooks[6]; --hpp >= &hooks[0]; )
 	  hpp->k_ptr.fp = nullproc;
-
-	set_var("$incldirs", getenv("INCLUDE"));
 
 	(void)dcline(argc, argv);
 	do
@@ -475,7 +474,7 @@ KEYTAB * g_lastbind;
 static int Pascal execkey(KEYTAB * key, int f, int n)	
 
 {	return key->k_code == 0 			? TRUE :
-  			 key->k_type != BINDFNC ? dobuf(key->k_ptr.buf,n) :
+  		// key->k_type != BINDFNC ? dobuf(key->k_ptr.buf,n) :
 		  	 in_range((int)(key->k_ptr.fp), 1,40) 
 				  											? execporb((int)(key->k_ptr.fp),n)
 		  													: (*(key->k_ptr.fp))(f, n);
@@ -665,8 +664,8 @@ Pascal quickexit(int f, int n)
 
 	for (bp = bheadp; bp != NULL; bp = bp->b_next) 
 	{
-		if ((bp->b_flag & (BFCHG+BFINVS)) == BFCHG &&
-				bp->b_fname != null)
+		if ((bp->b_flag & (BFCHG+BFINVS)) == BFCHG 
+		 /*&&bp->b_fname != null*/)
 		{ curbp = bp; 	/* make that buffer cur */
 //		mlwrite(TEXT103,bp->b_fname);
 						/* "[Saving %s]\n" */
@@ -688,16 +687,16 @@ Pascal quickexit(int f, int n)
  */
 Pascal quit(int f, int n)
 
-{ int status = TRUE;
+{ int status = f;
 																/* Argument forces it.	*/
 	if (! f )
 	{ n = GOOD;
-	{ int got = lastbuffer(-1, 0);
+	  status = lastbuffer(-1, 0) + 1;
 
-		if (got != 0)
+		if (status > 1)
 			status = mlyesno(TEXT104);
 										/* "Modified buffers exist. Leave anyway" */
-	}}
+	}
 
 	if (status > 0)
 	{

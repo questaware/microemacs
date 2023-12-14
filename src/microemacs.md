@@ -227,6 +227,7 @@ detab-region             ^X^D Expand tabs
 display                  ^XG  Display a variable
 drop-buffer              ^XK  If the buffer is displayed in two windows drop the window
                               Otherwise drop the buffer (asks if modified).
+                              If n== 0 drop all visible unchanged buffers.
 end-macro                ^X)  End collecting keys to be executed by execute macro.
                          A-FNx (this is alt backslash)
 end-of-file              M->
@@ -536,9 +537,9 @@ $fillcol       Right margin for text wrapping.
 $gflags        Global Flags
 $gmode         The default (i.e. global) mode for buffers
 $hardtab       The tab stop interval
-$highlight     The first character is a digit selecting a colour from $palette
-               All sequences the same as the rest of the characters are
-               highlighted in that colour. (Cleared by searches).
+$hp1 to        The first character is a digit selecting a colour from $palette
+$hp30          All sequences the same as the rest of the characters are
+               highlighted in that colour. (hp1 cleared by searches).
 $hjump         Horizontal scrolling jump
                (set this to 0 before large pastes through the terminal)
 $hscroll       Enable $hjump

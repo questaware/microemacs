@@ -382,7 +382,7 @@ void Pascal tcapsetsize(int wid, int dpth)
   rc = SetConsoleWindowInfo(h, 1, &rect);
 #if _DEBUG || 1
   if (rc == 0)
-    flagerr("SCWI %d");
+    flagerr("2 Big");
 #endif
 }}
 #endif
