@@ -138,6 +138,7 @@ extern char nulls[];
 #define BCPAS   0x08		/* pascal style comments */
 #define BCFOR   0x10		/* fortran style comments */
 #define BCML    0x20    /* Markup language */
+#define BCSTRNL 0x40    /* NL does not end a string */
 #define BCSIMP  0x80		/* simple keyword */
 
 /*

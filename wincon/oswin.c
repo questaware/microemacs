@@ -199,7 +199,7 @@ void USE_FAST_CALL setcp(int v)
 
 void init_wincon()
 
-{
+{	DWORD     Dummy;
 //Sleep(1000*8);
 																							// reduces memory but slows startup
 	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
@@ -222,7 +222,12 @@ void init_wincon()
 //SetConsoleTextAttribute(h, BG_GREY);
 	g_codepage = GetConsoleOutputCP();
   setcp(1252);
-}}
+{ int sz = g_csbi.dwMaximumWindowSize.X * g_csbi.dwMaximumWindowSize.Y;
+  g_coords.X = 0;
+  g_coords.Y = 0;
+	tcapmove(0,0);
+  FillConsoleOutputCharacter(g_ConsOut, ' ',sz,g_coords,&Dummy );
+}}}
 
 
 void Pascal tcapeeol()
@@ -342,19 +347,22 @@ void Pascal tcapsetsize(int wid, int dpth)
   if (rc == 0)
     flagerr("SCWI %d");
 #else
- 	SMALL_RECT rect = { 0, 0, wid-1, dpth-1 };
+ 	SMALL_RECT rect = { 0, 0, wid-1, dpth };
 	COORD size;
   size.X = wid;
-  size.Y = dpth;
+  size.Y = dpth+1;
 
-{ HANDLE h = g_ConsOut;
+{ int rc;	
+  HANDLE h = g_ConsOut;
 #if _DEBUG
   if (h != GetStdHandle( STD_OUTPUT_HANDLE ))
     mbwrite("Bad Hdl");
 #endif
-  SetConsoleScreenBufferSize( h, size );// size);
 
-#if _DEBUG
+#if _DEBUG && 0
+  rc = SetConsoleScreenBufferSize( h, size );// size);
+	if (rc == 0)
+		flagerr("SCSBS");
   if (h != GetStdHandle( STD_OUTPUT_HANDLE ))
     mbwrite("Bad Hdl_");
 #endif
@@ -363,28 +371,26 @@ void Pascal tcapsetsize(int wid, int dpth)
 // HANDLE consin = GetStdHandle(STD_INPUT_HANDLE);
 // SetConsoleMode(g_ConsIn, ENABLE_WINDOW_INPUT);
 
-//SetFocus(h);								// Sometimes focus is lost?
-{ int rc;	
-#if _DEBUG && 0
-  mbwrite("Doing");
+#if _DEBUG || 1
+//mlwrite("%p Doing %d", dpth);
 	rc = GetConsoleScreenBufferInfo( h, &g_csbi);
   if (rc == 0)
     flagerr("GCSB %d");
-	if (g_csbi.dwSize.X != wid || g_csbi.dwSize.Y != dpth)
-		mlwrite("%p %d %d %d %d", g_csbi.dwSize.X, wid, g_csbi.dwSize.Y, dpth);
+//if (g_csbi.dwSize.X != wid || g_csbi.dwSize.Y != dpth)
+//	mlwrite("%p %d %d %d %d", g_csbi.srWindow.Left, g_csbi.srWindow.Top, g_csbi.srWindow.Right, g_csbi.srWindow.Bottom);
 #endif
-#if _DEBUG && 0
-	rc = SetConsoleScreenBufferSize( h, size);
-  if (rc == 0)
-    flagerr("SCSB %d");
-#endif
+	if (rect.Bottom > g_csbi.srWindow.Bottom)
+		rect.Bottom = g_csbi.srWindow.Bottom;
+
+//mlwrite("%pH %d", rect.Bottom);
 																	// set the screen buffer to be big enough
   rc = SetConsoleWindowInfo(h, 1, &rect);
-#if _DEBUG || 1
+#if _DEBUG
   if (rc == 0)
     flagerr("2 Big");
 #endif
-}}
+// SetFocus(h);								// Sometimes focus is lost?
+}
 #endif
 }}
 

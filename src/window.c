@@ -555,7 +555,7 @@ int Pascal USE_FAST_CALL newdims(int wid, int dpth)	/* resize screen re-writing 
 	if (term.t_ncol == wid && term.t_nrowm1 == dpth - 1)
 		return true;
 
-	term.t_nrowm1 = dpth - 1;		
+	term.t_nrowm1 = dpth-1;
 	term.t_ncol = wid;
 #if MEMMAP == 0
 	term.t_margin = wid / 10;

@@ -183,7 +183,7 @@ int Pascal USE_FAST_CALL scan_paren(char ch)
 			}
 		} 
 		else if (mode & (Q_IN_STR + Q_IN_CHAR))
-		{ if			(ch == '\n' && (lang & BCSQL) == 0)
+		{ if			(ch == '\n' && (lang & BCSTRNL) == 0)
 				mode = 0;
 			else if ((mode & Q_IN_ESC) && dir >= 0)
 				mode &= ~Q_IN_ESC;

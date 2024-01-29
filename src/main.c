@@ -408,8 +408,9 @@ int main(int argc, char * argv[])
 #if S_WIN32
 	if (g_key_)
 	  ClipSet(-1);
-//tcapbeeol(-1,0);
 	tcapmove(term.t_nrowm1, 0);
+//tcapeeol(); // tcapbeeol(-1,0);
+
 #endif
 	tcapclose(0);
 

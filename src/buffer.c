@@ -64,7 +64,10 @@ void Pascal customise_buf(BUFFER * bp)
 		const char *fn;
 		for ( fn = bp->b_bname - 1; *++fn != 0; )
       if (*fn == '.')
-      	pat = fn;
+      {	pat = fn;
+      	if (pat[1] == 's' && pat[2] == 'q')
+      		zero = BCSTRNL;
+      }
 
 		init_buf(bp);
 
@@ -99,7 +102,7 @@ void Pascal customise_buf(BUFFER * bp)
       }}}
 		}
     bp->b_tabsize = tabsize;
-		bp->b_flag |= BFACTIVE | g_gflag;
+		bp->b_flag |= BFACTIVE | zero | g_gflag;
 		bp->b_color = g_bat_b_color;
 
     if (bp->b_key != NULL)
