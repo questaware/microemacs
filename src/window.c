@@ -376,7 +376,7 @@ int Pascal splitwind(int f, int n)
 
 	ntrd = getwpos() - 1 - ntru;
 
-	if (f == FALSE ? ntrd <= 0 : n > 0)
+	if (1 ||(f == FALSE ? ntrd <= 0 : n > 0))
 	{ 					     									/* Old is upper window. */
 	  wp->w_toprow += ntru+1;
 	  wp->w_ntrows = ntrl;

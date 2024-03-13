@@ -30,14 +30,17 @@ char * USE_FAST_CALL mallocz(int n)
 }
 
 
-char * Pascal remallocstr(char * * res_ref, const char * val, int len)
+char* Pascal remallocstr(char** res_ref, const char* val, int len)
 
-{ if (len <= 0)
-    len = /*val == NULL ? NSTRING : */ strlen(val)+1;
-{ char * res = (char*)mallocz(len);
+{ int al = val == NULL ? 0 : strlen(val) + 1;
+  if      (len <= 0)
+    len = al;
+  else if (al > len)
+     al = 0;
+{ char* res = (char*)mallocz(len);
 
-  if (res != NULL && val != NULL)
-  	strcpy(res, val);
+  if (res != NULL && al > 0)
+    memcpy(res, val, al);
 
   free(*res_ref);
   return *res_ref = res;
