@@ -15,7 +15,7 @@ else
 
 CPP=cl.exe
 #CPP_PROJ=/nologo /Yd /W3 /Zi /MDd /Od /I "../src" /D "WIN32_LEAN_AND_MEAN" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FD /c 
-CPP_PROJ=/nologo /YX /Yd /W3 /Zi /MTd /Od /D WIN32_LEAN_AND_MEAN /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /c 
+CPP_PROJ=/nologo /Yd /W3 /Zi /MTd /Od /D WIN32_LEAN_AND_MEAN /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /c 
 LINK32=link
 LINK32_FLAGS=/nologo /debug /out:
 

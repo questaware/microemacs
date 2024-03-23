@@ -468,7 +468,6 @@ int Pascal ovstring(int f, int n_) /* ask for and overwite a string into the cur
 
 int kinsert_n;		/* parameter to kinsert, used in region.c */
 
-
 /* This function deletes "n" bytes, starting at dot. It understands how to deal
  * with end of lines, etc. It returns TRUE if all of the characters were
  * deleted, and FALSE if they were not (because dot ran into the end of the
@@ -513,12 +512,7 @@ int Pascal USE_FAST_CALL ldelchrs(Int n, int tokill)
       rpl_all(3, chunk, doto, dotp, dotp);
 
     if (tokill)
-  	{ char * cp1 = &dotp->l_text[doto];
-			int delct;
-    	for (delct = chunk; --delct >= 0; )
-        if (kinsert(*cp1++) == FALSE)
-          res = ABORT;
-    }
+			res = kinsstr(&dotp->l_text[doto], chunk);
 
 	{ int spare = (l_dcr & (SPARE_MASK)) + (chunk << 2);	// increase spare
     if (spare > SPARE_MASK)
@@ -773,44 +767,54 @@ int Pascal kdelete(int f, int n)
 /* Insert a character to the kill buffer, allocating new chunks as needed.
  * Return TRUE if all is well, and FALSE on errors.
  */
-int Pascal kinsert(char ch)
+int Pascal USE_FAST_CALL kinsert(char ch)
 			 	/* character to insert in the kill buffer */
 { int n = kinsert_n;
   if (n < 0)
     return FALSE;
 
-  kills[n].size += 1;
-{ char * mem = kills[n].mem;
-  int kf = --kills[n].kfree;
+{	int inc = (ch == '\n' && n == 0) + 1;
+  int sz = (kills[n].size += inc);
+  int kf = (kills[n].kfree -= inc);
   if (kf > 0)			     /* kf can legally go negative a little */
   { 
   }
   else
   { kills[n].kfree = KBLOCK-1;
-    mem = (char *)malloc(kills[n].size + kills[n].kfree + 2);
+
+	  if (remallocstr(&kills[n].mem, kills[n].mem, sz + kills[n].kfree + 2) == NULL)
+      return FALSE;
+#if 0
+    mem = (char *)malloc(sz + kills[n].kfree + 2);
     if (mem == NULL)
       return FALSE;
     if (kills[n].mem != NULL)
-      memcpy(&mem[0], kills[n].mem, kills[n].size);
+      memcpy(&mem[0], kills[n].mem, sz);
 
 		free(kills[n].mem);
     kills[n].mem = mem;
+#endif
   }
   
-{ int sz = kills[n].size;
-  mem[sz] = 0;	/* the zero must be set first */
-
-  if (ch == '\n' && n == 0)
-  { kills[n].size += 1;
-    kills[n].kfree -= 1;
-    mem[sz-1] = '\r';
-    mem[++sz] = 0;
-  }
-  
+{ char * mem = kills[n].mem;
   mem[sz-1] = ch;
+  mem[sz] = 0;
+  if (inc > 1)
+    mem[sz-2] = '\r';
 
   return TRUE;
 }}}
+
+
+
+int kinsstr(const char * s, int len)
+
+{ while (--len >= 0)
+    if (kinsert(*s++) == FALSE)
+      return ABORT;
+  
+  return TRUE;
+} 
 
 
 /* shift up all the kill buffers

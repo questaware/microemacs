@@ -69,8 +69,11 @@ int init_paren(const char * str, int len)
 	{
 		when '#': if			(nch == 'i' &&  ch2 == 'f')
 								;
-							else if (nch == 'e' && (ch2 =='n'|| ch2 =='l'))
-								p.sdir -= 2;
+							else if (nch == 'e')
+								if (ch2 =='n')
+									p.sdir -= 2;
+//							if (ch2 =='l'))
+//								p.sdir -= 2;
 //						else
 //						{ p.nest = 0;
 //							ch = 0;
@@ -1175,8 +1178,8 @@ int Pascal getfence(int f, int n)
 
 	n *= 128;
 
-	if (g_paren.fence == '#')
-		c_cmt = 1;
+//if (g_paren.fence == '#')
+//	c_cmt = 1;
 
 	if (g_paren.complex)
 	{	if (n <= 0)
@@ -1209,9 +1212,6 @@ int Pascal getfence(int f, int n)
 			break;
 		}
 			
-		if (c_cmt)					// (not) Fortran or Pascal or SQL
-			break;
-
 		if ((lstr[ix] | 0x20) == 'e' &&
 				wordmatch(ix,"ELSE") + wordmatch(ix,"ELSEIF"))
 		{ /*mbwrite("GotELSEIF");*/
@@ -1221,8 +1221,11 @@ int Pascal getfence(int f, int n)
 			dir = 1;
 		}
 		else		
-		{ char ch = lstr[1] | 0x20;	// lower
-			fd.blk_type[0] = ch_ & ~0x20;	// upper
+	  {	if (c_cmt)					// (not) Fortran or Pascal or SQL
+				break;
+
+		{ char ch = lstr[ix] | 0x20;	// lower
+			fd.blk_type[0] = ch & ~0x20;	// upper
 				
 			if (fd.blk_type[0] == 'E' && ch == 'n')   // END DO, END LOOP, etc
 			{ int nix = 0;
@@ -1245,6 +1248,8 @@ int Pascal getfence(int f, int n)
 				  fch = g_paren.fence;
 				fd.blk_type[0] = g_paren.fence = fch;
 			}}
+			else if (fd.blk_type[0] == 'I' && lstr[ix+1] == 'f')   // END DO, END LOOP, etc
+				fd.blk_type[0] = g_paren.fence = 'E';
 			else
 			{	if (fd.blk_type[0] == 'C')
 					rc = fd.blk_type[0] = ch != 'a' ? 0 : 'B';
@@ -1254,7 +1259,7 @@ int Pascal getfence(int f, int n)
 																    ch != 'o')
 					rc = false;
 			}
-		}
+		}}
 	  if (f_cmt & BCFOR)
 		{ char * start = lgets(spos.curline, -1);
 //		char * ls = start + spos.curoff;
@@ -1309,7 +1314,7 @@ int Pascal getfence(int f, int n)
 		if (scan_paren(ch))
 			continue;
 
-		if (g_paren.nest <= 0)
+		if (g_paren.nest <= 0 && !g_paren.complex)	/* simple */
 		{	g_paren.nest = 1;
 			if (++n >= 0)
 		  	break;
@@ -1317,8 +1322,6 @@ int Pascal getfence(int f, int n)
 			spos = *(Lpos_t*)&curwp->w_dotp;						// last match
 		}
 
-		if (!g_paren.complex)	/* simple */
-			continue;
 /*	  char buf[6];
 			buf[2] = 0;
 			buf[4] = 0;*/																					// Fortran comment
@@ -1455,60 +1458,127 @@ int Pascal fmatch(ch)
 
 #endif
 
+#define CALCSTACK 100
+
+#if OPT_CALCULATOR
+
+double evalexpr(const char * s, int * adv_ref)
+
+{ *adv_ref = -1;
+{ char ch = *s;
+
+	if (ch == '-')
+		ch = *++s;
+{ int tot_adv = 0;
+	for (; in_range(ch, '0', '9') || ch == '.' || ch == ' '; ch = s[++tot_adv])
+		;
+
+	if (tot_adv != 0)
+	{	*adv_ref = tot_adv;
+		return atof(s);
+	}
+
+	if (ch == ')' || ch != '(')
+		return 0.0;
+			
+{ double res = evalexpr(s+1, &tot_adv);
+	if (tot_adv < 0) // || s[tot_adv+1] == 0)
+		return 0.0;
+
+	++tot_adv;
+
+	while (1)
+	{ char op = s[tot_adv++];
+		if (op == ' ')
+			continue;
+	 	if (op == 0 || op == ')')
+		{	*adv_ref = tot_adv;
+			return res;
+		}
+
+	{	int adv2;
+	  double res2 = evalexpr(s+tot_adv, &adv2);
+		if (adv2 < 0)
+			return 0.0;
+
+		tot_adv += adv2;
+
+		switch (op)
+		{	case '-':
+		 		res -= res2;
+		 	when '*':
+	 			res *= res2;
+		 	when '/':
+				if (res2 > -0.00000001 && res2 < 0.00000001)
+					*adv_ref = -2;
+				else
+					res /= res2;
+			when ',':
+				res *= 1000;
+			case '+':
+		 		res += res2;
+		 	otherwise
+				return 0.0;
+		}
+	}}
+}}}}
+
+#endif
 
 																/* increment or decrement a number */
 int Pascal arith(int f, int n)
 				/* int f, n;		** not used */
-{ 
-#if 1
-	endword(1,1);
+{	endword(1,1);
 	endword(-1,-1);
 //update(1);
   copyword(0,1);
 {	char* src = getkill();
 	if (in_range(*src,  '0', '9') || 
 			in_range(src[1],'0', '9'))
-	{	int val = atoi(src);
-		int olen = strlen(src);
-		char * tgt = int_asc(val+n);
-		int len = strlen(tgt);
-		int offs = curwp->w_doto;
-		if (offs > 0 && curwp->w_dotp->l_text[offs-1] <= ' ' &&
-		    len > olen)
-			forwdel(0,-1);
+	{	int olen = strlen(src);
+		int val = atoi(src);
 		forwdel(0,olen);
-		linstr(tgt);
-	}
-}
-#else
-	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
-	char * lstr = lgets(s.curline, s.curoff);
-	int len = llength(s.curline) - s.curoff;
-	
-	if (len > 10) 
-		len = 10;
-	
-	if (len > 0 && in_range(*lstr,'0','9'))
-	{	
-		char buf[11];
-		char * t = buf - 1;
-		char * e;
-		for (e = lstr-1; --len >= 0 && in_range(*++e,'0','9');)
-			*++t = *e;
-		*++t = 0;
-		
-	{	int val = atoi(buf) + n;
-		int	olen = t - buf;
-		char * src = int_asc(val);
-		len = strlen(src);
-
-		if (len > olen)
-		{ if (s.curoff > 0 && *(lstr-1) == ' ')
-				forwdel(f, -1);
+	{	char * tgt = int_asc(val+n);
+		if (strlen(tgt) > olen)
+		{ int offs = curwp->w_doto;
+			if (offs > 0 && curwp->w_dotp->l_text[offs-1] <= ' ')
+				forwdel(0,-1);
 		}
-		forwdel(f,olen);
-		linstr(src);
+		linstr(tgt);
 	}}
-#endif
 	return TRUE;
-}
+}}
+
+#if OPT_CALCULATOR
+																/* increment or decrement a number */
+int Pascal calculator(int f, int n)
+				/* int f, n;		** not used */
+ 
+{	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
+	int len = llength(s.curline) - s.curoff;
+	if (len > 256) 
+		len = 256;
+
+{ char buf[256+1];
+	int adj;
+	buf[0] = '(';
+	((char*)memcpy(buf+1, lgets(s.curline, s.curoff), len))[len] = 0;
+{	double res = evalexpr(buf, &adj);
+	kdelete(0, 0);
+{	char * all = float_asc(res);
+	if (adj <= 0)
+		all = "Error";
+{	int rc = kinsstr(all, strlen(all));
+	// int rc = kinsstr(buf+128+7, sprintf(buf, f, res)-7);
+
+#if S_MSDOS
+	ClipSet(0);
+#endif
+	
+	if (!f)
+		mbwrite(all);
+
+	return rc;
+}}}}}
+
+#endif

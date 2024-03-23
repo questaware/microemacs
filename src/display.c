@@ -648,21 +648,22 @@ void Pascal modeline(WINDOW * wp)
   	if (fnlen > NLINE - 4 - cpix)
 		  fnlen = NLINE - 4 - cpix;
 
+		++fnlen;
+		((char*)memcpy(&tline.lc.l_text[cpix], fname, fnlen))[fnlen-1] = ' ';
+		cpix += fnlen;
+
 		for (fn = &fname[fnlen]; --fn >= fname && *fn != '/'; )
 			;
 						
-		++fnlen;
-		strpcpy(&tline.lc.l_text[cpix], fname, fnlen);
-		cpix += fnlen;
-		tline.lc.l_text[cpix-1] = ' ';
-
-		if (strcmp(fn+1,bp->b_bname) == 0)
+		if (strcmp(fn+1,bp->b_bname)== 0)
 			goto no_bn;
 	}
 
 	tline.lc.l_text[cpix] = '@';
-	strpcpy(&tline.lc.l_text[cpix+1], bp->b_bname, NLINE - 1 - cpix);
-	tline.lc.l_text[strlen(tline.lc.l_text)] = ' ';
+	i = strlen(bp->b_bname);
+	if (i > NLINE - 1 - cpix)
+		i = NLINE - 1 - cpix;
+	((char*)memcpy(&tline.lc.l_text[cpix+1], bp->b_bname, i))[i] = ' ';
 
 no_bn:
 {	int numbuf = lastbuffer(0,0);

@@ -1158,6 +1158,7 @@ fisearch	./src/isearch.c
 fixnull	./src/eval.c
 flagerr	./wincon/oswin.c
 flickcode	./src/epredef.h
+float_asc	./src/eval.c
 flook	./src/bind.c
 flook_init	./src/bind.c
 flookdown	./src/bind.c
@@ -1310,6 +1311,7 @@ killpara	./src/word.c
 killregion	./src/region.c
 killtext	./src/random.c
 kinsert	./src/line.c
+kinsstr	./src/line.c
 lalloc	./src/line.c
 last_was_srch	./src/search.c
 lastbuffer	./src/buffer.c
@@ -1677,7 +1679,7 @@ tidyup	./unix/unix.c
 timeset	./unix/unix.c
 timeset	./wincon/oswin.c
 tkn	./src/exec.c
-to_kill_buff	./src/region.c
+to_kill_buff	./src/line.c
 toggmode	./src/random.c
 togmod	./src/random.c
 token	./src/exec.c

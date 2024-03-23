@@ -97,6 +97,7 @@
 #define	BACKCH  0	/* allow debugging file				*/
 #define	MEOPT_SINC 1    /* include search-incls				*/
 #define	MEOPT_TAGS 1    /* include find-tag				*/
+#define	OPT_CALCULATOR 1 /* implement a calculator */
 //#define	MEOPT_IPIPES 1
 
 

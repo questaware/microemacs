@@ -203,6 +203,7 @@ beginning-of-line        ^A
 bind-to-key              M-K  (takes command then key)
 btk                      M-K  short for bind-to-key
 buffer-position          ^X=  gives information
+calculator							 evaluate an expression to the right of curpos arg => dont show popup.
 case-region-lower        ^X^L
 case-region-upper        ^X^U
 case-word-capitalize     M-C  Make the first letter of word upper case

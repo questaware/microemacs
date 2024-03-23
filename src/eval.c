@@ -443,12 +443,12 @@ int USE_FAST_CALL stol(char * val)					/* convert a string to a numeric logical 
 
 #define INTWIDTH (sizeof(int) * 3)
 
+static char result[90];
 
 				/* output integer as radix r */
 char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix)
 
 {	static const char hexdigits[] = "0123456789ABCDEF";
-  static char result[INTWIDTH+2];
 
 	memset(&result, ' ', INTWIDTH); 
 	result[INTWIDTH] = 0;
@@ -472,10 +472,46 @@ char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix)
 }}
 
 
+
 char *Pascal USE_FAST_CALL int_asc(int i)
 			/* integer to translate to a string */
 { return int_radix_asc(i,10);
 }
+
+
+char * float_asc(double x)
+
+{ int sign = 0;
+	if (x < 0.0)
+	{	x = -x;
+		--sign;
+	}
+
+{ int shift = 0;
+  while (x > 2000000000)
+  { ++shift;
+    x /= 10;
+  }
+
+	if (x > 0.0)
+	  while (x < 0.00001)
+  	{ --shift;
+   		x *= 10;
+	  }
+  
+{	int val = x;
+  x -= val;
+  result[19] = '-';
+{ char * res = int_asc(val);
+  strcpy(result+20, res);
+{ int after = x * 10000000;
+  char * aft = int_asc(after);
+  strcpy(result+40, aft);
+{ char * shft = int_asc(shift);
+	char * exp = shift == 0 ? NULL : "e";
+
+  return concat(result+60, result+20+sign, ".", result+40, exp, shft, NULL);
+}}}}}}
 
 
 static 
@@ -869,11 +905,11 @@ static
 int Pascal svar(int var, char * value)	/* set a variable */
 
 {	Cc cc = TRUE;
-  char ** varref;
   int vnum = var & 0x7ff;
+  char ** varref;
 
   if (var - vnum == (TKVAR << 11))
-  { varref = &g_uv[vnum].u_value;
+	{ varref = &g_uv[vnum].u_value;
   	goto remalloc;
   }
 
