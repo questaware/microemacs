@@ -1467,8 +1467,25 @@ double evalexpr(const char * s, int * adv_ref)
 { *adv_ref = -1;
 { char ch = *s;
 
-	if (ch == '-')
-		ch = *++s;
+//if (ch == '-')
+//	ch = *++s;
+	if (ch == '%')
+	{ char buf[30];
+		int v_adv = 0;
+	  strpcpy(buf, s+1, sizeof(buf-1));
+	  while (in_range(buf[v_adv], 'a', 'z') || in_range(buf[v_adv], '0', '9'))
+	  	++v_adv;
+	  buf[v_adv] = 0;
+	  
+	{ const char * ss = gtusr(buf);
+	  if (ss != NULL)
+		{ int that_adv;
+		  double res = evalexpr(ss, &that_adv);
+	  	if (that_adv > 0)
+		  	*adv_ref = v_adv+1;
+	  	return res;
+	  }
+	}}
 { int tot_adv = 0;
 	for (; in_range(ch, '0', '9') || ch == '.' || ch == ' '; ch = s[++tot_adv])
 		;
@@ -1478,7 +1495,7 @@ double evalexpr(const char * s, int * adv_ref)
 		return atof(s);
 	}
 
-	if (ch == ')' || ch != '(')
+	if (ch != '(')
 		return 0.0;
 			
 { double res = evalexpr(s+1, &tot_adv);
@@ -1554,31 +1571,49 @@ int Pascal arith(int f, int n)
 int Pascal calculator(int f, int n)
 				/* int f, n;		** not used */
  
-{	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
-	int len = llength(s.curline) - s.curoff;
-	if (len > 256) 
-		len = 256;
+{ int ix;
+	while (1)
+	{	Lpos_t spos = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
+		int len = llength(spos.curline) - spos.curoff;
+		if (len > 256) 
+			len = 256;
 
-{ char buf[256+1];
-	int adj;
-	buf[0] = '(';
-	((char*)memcpy(buf+1, lgets(s.curline, s.curoff), len))[len] = 0;
-{	double res = evalexpr(buf, &adj);
-	kdelete(0, 0);
-{	char * all = float_asc(res);
-	if (adj <= 0)
-		all = "Error";
-{	int rc = kinsstr(all, strlen(all));
-	// int rc = kinsstr(buf+128+7, sprintf(buf, f, res)-7);
+	{ char * s = lgets(spos.curline, spos.curoff);
+	  char buf[256*2+1];
+		ix = 0;
+	  while (++ix < len)
+	  	if (s[ix] == '=')
+	  	{ buf[256] = '%';
+	  	  ((char*)memcpy(buf+256+1, s, ix))[ix] = 0;
+	  		s += ix + 1;
+	  		len -= ix;
+	  		ix = -1;
+	  		break;
+	  	}
+		
+	{	int adj;
+		((char*)memcpy(buf+1, s, len))[len] = 0;
+		buf[0] = '(';
+	{	double res = evalexpr(buf, &adj);
+		const char * all = adj <= 0 ? "Error" : float_asc(res);
 
-#if S_MSDOS
-	ClipSet(0);
-#endif
+		if (ix < 0)
+		{	set_var(buf+256, all);
+			if (!forwline(1,1))
+				return TRUE;
+		}	
+		else
+		{	if (!f)
+				mbwrite(all);
+			kdelete(0, 0);
+		{	int rc = kinsstr(all, strlen(all));
+	#if S_MSDOS
+			ClipSet(0);
+	#endif
 	
-	if (!f)
-		mbwrite(all);
-
-	return rc;
-}}}}}
+			return rc;
+		}}
+	}}}}
+}
 
 #endif

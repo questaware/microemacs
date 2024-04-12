@@ -226,7 +226,7 @@ Pascal movemu(f, n)
 			   then we are resizing */
 	if (lastypos == term.t_nrowm1 && lastxpos + 1 == term.t_ncol)
 	{	(*term.t_eeop)();
-		newdims(pd_xpos + 1, pd_ypos + 1);
+		newdims(TRUE, pd_xpos + 1, pd_ypos + 1);
 		return TRUE;
 	}
 
@@ -385,7 +385,7 @@ Pascal resizm(int f, int n) /* these are ignored... we get the new size info fro
 														   the mouse driver */
 {
 	(*term.t_eeop)();
-	newdims(pd_xpos, pd_ypos);
+	newdims(TRUE, pd_xpos, pd_ypos);
 	return TRUE;
 }
 

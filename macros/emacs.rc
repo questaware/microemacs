@@ -348,6 +348,7 @@ btk execute-macro-21 ^XV
 		set $hp9 "4 try:"
 		set $hp10 "4 except:"
 		set $hp11 "4 except "
+		set $hp12 "4 for "
 	!endif
 	!if &or &seq &rig $cbufname 2 ".c" &seq &rig $cbufname 4 ".cpp"
     set $hp2 "4 if "

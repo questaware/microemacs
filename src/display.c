@@ -403,18 +403,18 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			}
 		{ int wix;
 			for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
-			{ if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
-					continue;
-			  hix[wix] += 1;
-			  if (c == high[wix][hix[wix]])
-				{ if (high[wix][1+hix[wix]] == 0)
+			{ // if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
+				//	continue;
+			  if (c == high[wix][1+hix[wix]])
+				{ hix[wix] += 1;
+				  if (high[wix][1+hix[wix]] == 0)
 						break;
 					if (high[wix][1+hix[wix]] == ' ' && 
 					    high[wix][2+hix[wix]] == 0   && (len * (str[1] - ' ') <= 0))
 						break;					
 				}
 				else
-					hix[wix] = (c == high[wix][1]) && (wix == 0 || str[-1] == 0 || c == ' ');
+					hix[wix] = (c == high[wix][1]) && (wix == 0 || str[-1] <= ' ' || c == ' ');
 			}
 
 			if (wix >= 0

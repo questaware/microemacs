@@ -1497,6 +1497,7 @@ pipecmd	./unix/unix.c
 pipecmd	./wincon/oswin.c
 pipefilter	./wincon/oswin.c
 plinecpy	./src/eval.c
+point_curr	./src/line.c
 poke	./mtgdi/estruct.h
 poke	./unix/estruct.h
 poke	./wincon/estruct.h

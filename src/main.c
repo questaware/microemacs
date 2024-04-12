@@ -223,18 +223,7 @@ void Pascal dcline(int argc, char * argv[])
 		else if (filev[0]== '@')
 			startfile = &filev[1];
 		else																	/* Process an input file */
-		{ char * s;
-			char ch;
-		  
-			if (filev[1])
-	  		for ( s = (filev+1); (ch = *++s) != 0; )
-	  		{
-	  		  if (ch == ':')
-	  		  { *s = 0;
-	  				gline = atoi(s+1);
-	  				break;
-	  		  }
-				}
+		{ gline = extract_line(filev, 0);
 
 		  if (is_opt('P'))									// look along path
 		  { char * s = (char *)flook(Q_LOOKH, filev);

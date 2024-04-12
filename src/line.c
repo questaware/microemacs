@@ -50,6 +50,18 @@ void Pascal ibefore(LINE * tline, LINE * new_line)
   new_line->l_bp->l_fp = new_line;
   tline->l_bp = (Lineptr)new_line;
 }
+
+#if 0
+
+char * USE_FAST_CALL point_curr(Lpos_t * spos_ref)
+
+{ Lpos_t spos = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
+	spos.line_no = llength(spos.curline) - spos.curoff;
+	*spos_ref = spos;
+	return lgets(spos.curline, spos.curoff);
+}
+
+#endif
 
 							// wh : -1, 0, 1, 2, 3
 

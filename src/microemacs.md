@@ -203,7 +203,12 @@ beginning-of-line        ^A
 bind-to-key              M-K  (takes command then key)
 btk                      M-K  short for bind-to-key
 buffer-position          ^X=  gives information
-calculator							 evaluate an expression to the right of curpos arg => dont show popup.
+calculator							 evaluate expressions to the right of curpos arg => dont show popup.
+                         A series of lines <var>=<expression> are evaluated.
+                         Expression can contain %v where v is a user variable.
+                         Var refers to a user variable,
+                         The first line without an = is the last expression evaluated and 
+                         its result is put in kill buffer 0 and can be a popup.
 case-region-lower        ^X^L
 case-region-upper        ^X^U
 case-word-capitalize     M-C  Make the first letter of word upper case

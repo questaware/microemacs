@@ -58,10 +58,6 @@ LL g_ll;
 
 static LL g_sll;
 
-static char g_savepat[NPAT+2];
-
-//static int g_slastkey;
-
 static int g_kbdm[NKBDM];		/* Macro */
 
 //static LINE * macro_start_line;
@@ -74,12 +70,14 @@ static int		g_kbdwr = 0;								// -ve => play
 
 static void USE_FAST_CALL save_state(int wh)
 
-{ if (wh)
+{	static char g_savepat[NPAT+2];
+
+	if (wh)
 		strcpy(pat,g_savepat);
 	else
-	{	strcpy(g_savepat,pat);
-		g_sll = g_ll;
+	{	g_sll = g_ll;
 		g_slast_dir = pd_lastdir;
+		strcpy(g_savepat,pat);
 	}
 }
 
@@ -91,7 +89,7 @@ static void USE_FAST_CALL save_state(int wh)
 int ctlxlp(int f, int n)
 
 { if (g_kbdwr > 0)
-	{ mlwrite(TEXT105);
+	{ mlwrite(TEXT105);	// Already active
 		return FALSE;
 	}
 
@@ -164,7 +162,7 @@ int  ctlxe(int f, int n)
 		save_state(0);
 				 
 		if (g_kbdwr >= 0)
-		{ mlwrite(TEXT105);
+		{ mlwrite(TEXT105);	// Already active
 			return FALSE;
 		}
 

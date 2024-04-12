@@ -466,6 +466,22 @@ int Pascal insfile(int f, int n)
 									: readin(NULL, FILE_LOCK+FILE_REST+FILE_INS);
 }
 
+
+int extract_line(char * s, char alt)
+
+{	int ch;
+	for (--s; (ch = *++s) != 0; )																	// strip off :n
+  	if ((ch == ':' || ch == alt))
+  	{	ch = atoi(s+1);
+  		if (ch > 0)
+  			break;
+		}
+
+	*s = 0;
+  return ch;
+}
+	
+
 /* Select a file for editing.
  * Look around to see if you can find it another buffer; 
  * if you can find it just switch to the buffer; 
@@ -478,23 +494,14 @@ int Pascal filefind(int f, int n)
 {	if (resterr())		/* don't allow this command if restricted */
 		return FALSE;
 
-{	int ch;
-  char * s;
-  char * fname = gtfilename(0);
+{	char * fname = gtfilename(0);
                       	/* "Find file" */
 	if	(fname == NULL || fname[0] <= ' ')
 	  return FALSE;
 
-	for (s = fname-1; (ch = *++s) != 0; )																	// strip off :n
-  	if ((ch == ':' || ch == '('))
-  	{	ch = atoi(s+1);
-  		if (ch > 0)
-  			break;
-		}
-          
- *s = 0;
+{ int	ch = extract_line(fname, '(');
 
-{	BUFFER * bp = bufflink(fname,7); // was bufflkup
+	BUFFER * bp = bufflink(fname,7); // was bufflkup
 	if (bp == NULL)
 	  return FALSE;
 
@@ -502,6 +509,10 @@ int Pascal filefind(int f, int n)
 	  mlwrite(TEXT135);
 					/* "[Old buffer]" */
 	swbuffer(bp);
+	if (f)
+	{ curwp->w_bufp->b_flag |= MDVIEW;
+		upmode();
+	}
 	
 	return ch == 0 ? TRUE : gotoline(1,ch);
 }}}
@@ -509,13 +520,7 @@ int Pascal filefind(int f, int n)
 
 int Pascal viewfile(int f, int n)	/* visit a file in VIEW mode */
 
-{	int s = filefind(f, n); 	/* bug: > 2 files => some not view */
-	if (s)
-	{ curwp->w_bufp->b_flag |= MDVIEW;
-	  upmode();
-	}
-
-	return s;
+{	return filefind(1, 1); 	/* bug: > 2 files => some not view */
 }
 
 #if CRYPT == 0
