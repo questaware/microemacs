@@ -142,7 +142,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 
 #define USE_DIR 1
 
-#define PSCP_CMD "c:\\bbin\\pscp.exe "
+#define PSCP_CMD "c:\\bin\\pscp.exe "
 #define CLIP_LIFE 300					// seconds
 
 #define NOOKILL 2

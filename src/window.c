@@ -552,6 +552,8 @@ int Pascal USE_FAST_CALL newdims(int wid, int dpth)	/* resize screen re-writing 
 	if (wid < 10)
 		wid = term.t_ncol;
 
+	vtinit(wid,dpth-1);
+
 	if (term.t_ncol == wid && term.t_nrowm1 == dpth - 1)
 		return true;
 
@@ -561,7 +563,6 @@ int Pascal USE_FAST_CALL newdims(int wid, int dpth)	/* resize screen re-writing 
 	term.t_margin = wid / 10;
 	term.t_scrsiz = wid - (term.t_margin * 2);
 #endif
-	vtinit(wid,dpth-1);
 //#if S_WIN32 == 0
 	tcapsetsize(wid,dpth);
 //#endif

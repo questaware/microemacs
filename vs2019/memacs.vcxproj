@@ -98,7 +98,7 @@
     <ClCompile>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>. ..</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <AdditionalOptions>/D WIN32_LEAN_AND_MEAN %(AdditionalOptions)</AdditionalOptions>
@@ -141,6 +141,7 @@
       <AdditionalIncludeDirectories>. ..</AdditionalIncludeDirectories>
       <AdditionalOptions>/D WIN32_LEAN_AND_MEAN %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MinSpace</Optimization>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

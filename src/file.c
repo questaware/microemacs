@@ -604,6 +604,13 @@ static
 void io_message(const char * txt, int nline)
 
 { mlwrite("[%s%d%s%s", txt, nline,  TEXT143,nline == 1 ? "]" : "s]");
+#if S_MSDOS
+{ int row = ttrow;			// unfortunately the window can be scrolled down by 1
+  int col = ttcol;
+  tcapmove(0,0);
+  tcapmove(row,col);
+}
+#endif
 }
 
 

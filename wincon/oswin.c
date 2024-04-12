@@ -76,18 +76,16 @@ void ttopen()
 
 	mexist = FALSE;  /* provisionally */
 				/* check if the mouse drive exists first */
-#if MSC | TURBO | DTL | LATTICE | MWC
 	rg.x.ax = 0x3533;	/* look at the interrupt 33 address */
 	int86x(0x21, &rg, &rg, &segreg);
 	miaddr = (((long)segreg.es) << 16) + (long)rg.x.bx;
 	if (miaddr == 0 || *(char * far)miaddr == 0xcf)
-#endif
 	  return;
-				/* and then check for the mouse itself */
+									/* then check for the mouse itself */
 	rg.x.ax = 0;		/* mouse status flag */
 	int86(0x33, &rg, &rg);	/* check for the mouse interupt */
 	nbuttons = rg.x.bx;
-     /* in_init(); */
+
 	mexist = 0;
 	rg.x.dx = 0;		                /* top row */
 	if (rg.x.ax == 0)
@@ -173,6 +171,7 @@ int flagerr(const char *str)  //display detailed error info
 
 static HANDLE  g_ConsOut;                   /* Handle to the console */
 
+static
 CONSOLE_SCREEN_BUFFER_INFO g_csbi;   /* Console information */
 //CONSOLE_CURSOR_INFO        ccInfo;
 
@@ -202,48 +201,105 @@ static void USE_FAST_CALL FCOC(int sz)
 
 {	DWORD     Dummy;
 	if (sz == 0)
-		sz = g_csbi.dwMaximumWindowSize.X * g_csbi.dwMaximumWindowSize.Y;
+	{ int plen = g_csbi.srWindow.Bottom-g_csbi.srWindow.Top+1;
+  	int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+2;	/* why 2 ? */
+//	sz = g_csbi.dwMaximumWindowSize.X * g_csbi.dwMaximumWindowSize.Y;
+		sz = plen*pwid;
+	}
 
   FillConsoleOutputCharacter(g_ConsOut, ' ',sz,g_coords,&Dummy );
 }
 
 
-void SetBufferWindow(HANDLE h, int wid, int dpth)
+#define CheckProcess()
 
-{	SMALL_RECT rect = { 0, 0, wid-1, dpth-1 };
+#if 0
+
+void CheckProcess()
+
+{	HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
+  int	rc = GetConsoleScreenBufferInfo( h, &g_csbi); // Do we need this?
+	if (rc == 0)
+		flagerr("CHKPROC");
+	else
+		mbwrite("CHKPASS");
+}
+
+#endif
+
+//static int g_buffsize;
+
+static
+void SetBufferWindow(int wid, int dpth)
+
+{	int rc;
+  HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
+//SMALL_RECT rect = { 0, 0, wid-1, dpth }; // was dpth-1
+	SMALL_RECT rect = { 0, 0, 1, 1 }; // was dpth-1
 	COORD size;
-  size.X = wid-1;
+  size.X = wid;
   size.Y = dpth;
 
-{	int rc = SetConsoleScreenBufferSize( h, size );// size);
-#if _DEBUG
-	if (rc == 0)
-		flagerr("SCSBS");
+	CheckProcess();
+	if (wid)
+	{ rc = SetConsoleScreenBufferSize( h, size );// size);
+#if _DEBUG 
+		if (rc == 0)
+			flagerr("SCSBS");
 
-	if (h != GetStdHandle( STD_OUTPUT_HANDLE ))
-    mbwrite("Bad Hdl_");
+		if (h != GetStdHandle( STD_OUTPUT_HANDLE ))
+	 	  mbwrite("Bad Hdl_");
+#endif
+	}
 
+	g_ConsOut = h;
+#if 1
 //mlwrite("%p Doing %d", dpth);
 	rc = GetConsoleScreenBufferInfo( h, &g_csbi); // Do we need this?
   if (rc == 0)
-    flagerr("GCSB %d");
+  { flagerr("GCSB");
+//	rc = GetConsoleScreenBufferInfo( h, &g_csbi); // Do we need this?
+//  if (rc == 0)
+//   	flagerr("GCSB---");
+  }
+//if (!g_buffsize)
+//{
+//	g_buffsize = g_csbi.dwCursorPosition.Y;
+//	mbwrite(int_asc(g_buffsize));
+//}
+#endif
 //if (g_csbi.dwSize.X != wid || g_csbi.dwSize.Y != dpth)
 //	mlwrite("%p %d %d %d %d", g_csbi.srWindow.Left, g_csbi.srWindow.Top, g_csbi.srWindow.Right, g_csbi.srWindow.Bottom);
-#endif
-
-	if (rect.Bottom > g_csbi.srWindow.Bottom)
-		rect.Bottom = g_csbi.srWindow.Bottom;
 
 //mlwrite("%pH %d", rect.Bottom);
 //mbwrite(int_asc(dpth-1));
+	CheckProcess();
+//mbwrite(int_asc(dpth));
+//mbwrite(int_asc(wid-1));
+#if _MSC_VER > 1600 || 1
+	rc = SetConsoleWindowInfo(h, 1, &rect);
+#if _DEBUG
+	if (rc == 0)
+		flagerr("2 Big");
+#endif
+	// Initially srWindow.Bottom is smaller by 1
+	if ((unsigned)(dpth-1) >= g_csbi.dwMaximumWindowSize.Y)	
+		dpth = g_csbi.dwMaximumWindowSize.Y;
+	rect.Bottom = dpth-1;
+	if ((unsigned)(wid-1) >= g_csbi.dwMaximumWindowSize.X)
+		wid = g_csbi.dwMaximumWindowSize.X;
+	rect.Right = wid-1;
 																	// set the screen buffer to be big enough
   rc = SetConsoleWindowInfo(h, 1, &rect);
-#if _DEBUG
+#if _DEBUG || 1
   if (rc == 0)
     flagerr("2 Big");
 #endif
-	SetFocus(h);
-}}
+#endif
+//SetFocus(h);
+//mbwrite("About to fail");
+	CheckProcess();
+}
 
 void init_wincon()
 
@@ -255,14 +311,13 @@ void init_wincon()
 //Sleep(1000*8);
 											      /* Get display screen information, clear the screen.*/
 {	HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
-	g_ConsOut = h;
 
-#if 0
-  if (SetConsoleMode(h, ENABLE_PROCESSED_OUTPUT) == 0)
+#if 1
+  if (SetConsoleMode(h, 0) == 0)
     flagerr("SCMO %d");
 #endif
 
-	GetConsoleScreenBufferInfo( h, &g_csbi );
+//GetConsoleScreenBufferInfo( h, &g_csbi );
 
 	SetConsoleTextAttribute(h, BG_GREY);
 		 
@@ -270,15 +325,14 @@ void init_wincon()
 //SetConsoleTextAttribute(h, BG_GREY);
 	g_codepage = GetConsoleOutputCP();
   setcp(1252);
-{ int plen = g_csbi.srWindow.Bottom-g_csbi.srWindow.Top+1;
-  int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+2;	/* why 2 ? */
-	SetBufferWindow(h, pwid, plen);
+	SetBufferWindow(0, 0);
 
   g_coords.X = 0;
   g_coords.Y = 0;
+
 	tcapmove(0,0);
 	FCOC(0);
-}}}
+}}
 
 
 void Pascal tcapeeol()
@@ -302,6 +356,9 @@ void Pascal tcapepage()
 void Pascal tcapclose(int lvl)
 
 { setcp(g_codepage);
+	tcapmove(255,0);
+	FCOC(1000000);
+//tcapeeol();
 /*CloseHandle(hConsoleIn);
   hConsoleIn = NULL;  cannot do this */
 }
@@ -389,7 +446,7 @@ void Pascal tcapsetsize(int wid, int dpth)
 {
 #if 1
   HANDLE h = g_ConsOut;
-	SetBufferWindow(h, wid, dpth);
+	SetBufferWindow(wid, dpth);
 #else
  	SMALL_RECT rect = { 0, 0, wid-1, dpth }; // was dpth
 	COORD size;
