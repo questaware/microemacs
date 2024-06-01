@@ -381,17 +381,26 @@ int main(int argc, char * argv[])
 
 	(void)dcline(argc, argv);
 	do
-	{ g_lastflag = 0; 								/* Fake last flags.*/
+	{ extern int g_focus_count;
+		g_lastflag = 0; 								/* Fake last flags.*/
 
 																	/* execute the "command" macro, normally null*/
 		execwrap(2);  // cmdhook	** used to push/pop lastflag **
 				
-		update(FALSE);		/* Fix up the screen	*/
+	{	int ct = g_focus_count <= 0 ? -1 : reload_buffers();
 
-	{ int	c = getkey(); 	/* get the next command from the keyboard */
+		update(FALSE);		/* Fix up the screen	*/
+		
+		if (ct >= 0)
+		{	mbwrite(TEXT29);
+			if (ct == 0)
+				g_focus_count = -2;
+		}
+
+	{	int	c = getkey(); 	/* get the next command from the keyboard */
 
 		editloop(c);
-	}}
+	}}}
 	while (!g_eexitflag);
 
 #if S_WIN32

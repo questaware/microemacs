@@ -24,6 +24,8 @@
 #endif
 
 #include "build.h"
+#include "time.h"
+
 /*
 #if S_UNIX5
 #include <unistd.h>

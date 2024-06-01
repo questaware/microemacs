@@ -409,7 +409,7 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
         break;
     }
 
-    if (i >= cpos && i < (unsigned)best)
+    if (i >= cpos && i < (best & 0xff))
     	best = i;
   } // loop
 
@@ -795,10 +795,10 @@ Command getname(int wh)
 }
 
 
-const char * gtfilename(int wh)
+char * gtfilename(int wh)
 				/* prompt to user on command line */
 {
-  return (const char *)complete(wh ? TEXT132 : TEXT131, NULL, CMP_FILENAME);
+  return complete(wh ? TEXT132 : TEXT131, NULL, CMP_FILENAME);
 }
 
 

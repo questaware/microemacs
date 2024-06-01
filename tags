@@ -1536,6 +1536,7 @@ reframe	./src/display.c
 refresh	./src/window.c
 refresh_colour	./src/display.c
 reglines	./src/region.c
+reload_buffers	./src/buffer.c
 remallocstr	./src/basic.c
 remmark	./src/basic.c
 rename	./mtgdi/estruct.h

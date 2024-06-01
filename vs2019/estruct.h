@@ -28,6 +28,7 @@
 #define EBCDIC	0	/* later IBM mainfraim versions will use EBCDIC	*/
 
 #include "build.h"
+#include <time.h>
 
 				/* handle constant and voids properly */
 #define NOSHARE

@@ -47,6 +47,8 @@ char *Pascal bytecopy();
 char *Pascal envval();
 //void Pascal expandp(char *, char *, char *, int);
 //const char * USE_FAST_CALL fixnull(const char * s);
+time_t ffiletime(FILE * ffp);
+FILE* Pascal ffropen(const char * fn);
 int USE_FAST_CALL find_nch(int wh, int cix, LINE * lp);
 char * float_asc(double x);
 const char * Pascal flook(char, const char *);
@@ -60,7 +62,7 @@ const char *Pascal getreg(char * t);
 extern const char getvalnull[];
 char *Pascal getval(char *, char *);
 
-const char * gtfilename(int wh);
+char * gtfilename(int wh);
 const char *Pascal gtusr(char * vname);			/* look up a user var's value */
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
@@ -112,6 +114,7 @@ unsigned short USE_FAST_CALL refresh_colour(int row, int col);
 #endif
 int Pascal reglines(Bool ask);
 void Pascal release(char * mp);
+int reload_buffers(void);
 int Pascal remmark(int, int);
 int Pascal risearch(int, int);
 void Pascal rpl_all(int, int, int, LINE*, LINE*);

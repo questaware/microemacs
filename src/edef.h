@@ -6,6 +6,14 @@
                         	Steve Wilhite and George Jones
 */
 
+#if S_WIN32
+#include <windows.h>
+#define Filetime FILETIME
+#else
+#define Filetime time_t
+#endif
+
+
 #define CTRL	 0x0100		/* Control flag, or'ed in		*/
 #define META	 0x0200		/* Meta flag, or'ed in			*/
 #define CTLX	 0x0400		/* ^X flag, or'ed in			*/
@@ -265,23 +273,24 @@ typedef char * CRYPTKEY;
  * have not been read in yet. These get read in at "use buffer" time.
  */
 typedef struct	BUFFER
-{	struct LINE *	b_dotp;		  /* Link to "." LINE structure	*/
-	int	  				b_doto; 		/* offset of "."; isomorphism to MARK ends */
-	int 					b_window_ct;/* valid only after window_ct() */
-  struct MARKS  b_mrks;
-	struct LINE * b_wlinep;		/* top LINE in last window */
-	struct BUFFER *b_next; 	/* next BUFFER		*/   /* isomorphism ends */
-	struct LINE   b_baseline;	/* the header LINE	*/
+{ struct LINE * b_dotp;      /* Link to "." LINE structure  */
+	int           b_doto;      /* offset of "."; isomorphism to MARK ends */
+	int           b_window_ct; /* valid only after window_ct() */
+	struct MARKS  b_mrks;
+	struct LINE * b_wlinep ;   /* top LINE in last window */
+	struct BUFFER *b_next;     /* next BUFFE R    */   /* isomorphism ends */
+	struct LINE   b_baseline ; /* the header LINE */
 	struct LINE * b_narlims[2];/*narrowed top, bottom text */
-	signed char 	b_tabsize;	/* size of hard tab		*/
-	CRYPTKEY  		b_key;
-	short   			b_color;		/* current colors		*/
-	short	  			b_flag; 		/* Flags and modes  */
-	char    			b_langprops;			/* type of language of contents */
-	short   			b_luct;			/* last use count		*/ 
-	char *    b_fname;					/* malloc'd and owned by BUFFER */
-	char *	  b_remote;					/* remote command 		*/
-	char	    b_bname[6]; 			/* Buffer name	(or bigger than this)	*/
+	signed char   b_tabsize ;  /* size of hard t ab   */
+	CRYPTKEY      b_key;
+	short         b_color;     /* current colo rs		*/
+	short         b_flag;      /* Flags and modes  */
+	char          b_langprops; /* type of language of contents */
+	short         b_luct;      /* last use cou nt		*/ 
+	char *        b_fname;     /* malloc'd and owned by BUFFER */
+	char *        b_remote;    /* remote command     */
+	Filetime			b_utime;     /* Unix time */
+	char          b_bname[6];  /* Buffer name  (or bigger than this) */
 }	BUFFER;
 				/* for compatibility: */
 

@@ -24,6 +24,8 @@
 
 #if S_WIN32 == 0
 #include	<unistd.h>
+#else
+extern Filetime g_file_time;
 #endif
 
 
@@ -201,13 +203,23 @@ int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
 
 #if S_MSDOS == 0
 
-int Pascal ffisdiry(FILE * ffp)
+int ffisdiry(FILE * ffp)
 
 { struct stat fstat_;
   return fstat(fileno(ffp), &fstat_) == OK && (fstat_.st_mode & 040000) != 0;
 }
 
+
+time_t ffiletime(FILE * ffp)
+
+{ struct stat fstat_;
+  if (fstat(fileno(ffp), &fstat_) != OK)
+  	return 0;
+  return fstat_.st_mtime;
+}
+
 #endif
+
 
 /*##############  Filename utilities ##############*/
 
@@ -254,8 +266,7 @@ struct termios  g_savetty;
 #endif
 
 
-																			/* Open a file for reading. */
-static 
+																			/* Open a file for reading. */ 
 FILE* Pascal ffropen(const char * fn)
 
 { if (fn[0] != ' ')
@@ -364,7 +375,7 @@ FILE * ffwopen(int mode, char * fn)
  * Check only at the newline.
  */
 static
-int Pascal USE_FAST_CALL ffputline(Bool crypt, int nbuf, char buf[], FILE * op)
+int Pascal USE_FAST_CALL ffputline(int/* bool*/crypt, int nbuf, char buf[], FILE * op)
 	
 {	int cc;
 #if S_WIN32 == 0
@@ -608,6 +619,7 @@ void io_message(const char * txt, int nline)
 { int row = ttrow;			// unfortunately the window can be scrolled down by 1
   int col = ttcol;
   tcapmove(0,0);
+	Sleep(10);
   tcapmove(row,col);
 }
 #endif
@@ -710,7 +722,7 @@ int Pascal readin(char const * fname, int props)
     return FALSE;
 
   if (!ins)
-	{ Cc rc = bclear(bp);
+  { Cc rc = bclear(bp);
   	if (rc <= FALSE)			/* Changes not discarded */
   	  return rc;
 
@@ -744,10 +756,12 @@ int Pascal readin(char const * fname, int props)
 	  curwp->mrks.c[0].marko = 0;*/
   }
 {	int   nline = 0;
-#if S_MSDOS == 0
-	diry = ffisdiry();
-#elif S_WIN32 == 0
-  char spareline[257];
+#if S_MSDOS
+	extern Filetime g_file_time;
+	Filetime datetime = (name_mode(fname), g_file_time);
+#else
+	Filetime datetime = ffiletime(ffp);
+	diry = ffisdiry(ffp);
 #endif
 	if (diry)
 	{ msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
@@ -759,13 +773,17 @@ int Pascal readin(char const * fname, int props)
   { char * ln;
   	LINE *lp1;
 	  if (diry)
-		{	cc = FIOEOF;
+		{ 
+#if S_MSDOS == 0
+			char spareline[257];
+#endif
+			cc = FIOEOF;
 	    ln = msd_nfile();
 	    if (ln == NULL)
 	      break;
 	     
 	    /*mlreply(fline, spareline+200, 60);*/
-#if S_MSDOS && S_WIN32 == 0
+#if S_MSDOS == 0
 	    ln  = LFN_to_8dot3(LFN_from_83, 1, ln, &spareline[0]);
 #endif
 			if (ln[0] == '.' && ln[1] == '/')
@@ -817,7 +835,6 @@ int Pascal readin(char const * fname, int props)
 	  }
 	  io_message(TEXTS_+txt_o, nline);
 	}
-}}
 out:
 	bp->b_flag |= g_crlfflag;
 
@@ -841,6 +858,7 @@ out:
 	  tcapkopen();								/* open the keyboard again (Unix only) */
 //  swb_luct = topluct() + 1;
 //  bp->b_luct = swb_luct;
+		bp->b_utime = datetime;
 	  bp->b_dotp = lforw(&bp->b_baseline);
 	  bp->b_wlinep = bp->b_dotp;
 
@@ -854,6 +872,7 @@ out:
 		}
 #endif
   }
+}}
 
 {	LINE * lp;
  	int clamp = 3;
@@ -1121,6 +1140,12 @@ good:
 	}
 //repl_bfname(bp, fn);		// destroys fn
 
+#if S_WIN32
+	name_mode(fn);
+	bp->b_utime = g_file_time;
+#else
+	bp->b_utime = ffiletime(op);
+#endif
 	bp->b_flag &= ~BFCHG;
 																					 /* report on status of file write */
 	io_message(strcpy(tname, TEXT149), nline);

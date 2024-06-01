@@ -17,9 +17,9 @@
 #include	"msdir.h"
 #include	"logmsg.h"
 
-#if S_WIN32 && 0
-#include <windows.h>
-#endif
+//#if S_WIN32
+//#include <stdint.h>
+//#endif
 
 char * Pascal repl_bfname(BUFFER * bp, const char * str)
 
@@ -55,6 +55,43 @@ void Pascal init_buf(BUFFER * bp)
 		memset(&bp->b_doto, 0, sizeof(int)*2 + sizeof(bp->b_mrks));
 }
 
+
+int reload_buffers(void)
+
+{	int ct = -1;
+	BUFFER *bp;
+	for (bp = bheadp; bp != NULL; bp = bp->b_next)
+		if ((bp->b_flag & BFINVS) == 0 && bp->b_fname)
+		{	Filetime dt;
+#if S_WIN32
+			extern Filetime g_file_time;
+			if (!name_mode(bp->b_fname))
+				continue;
+			dt = g_file_time;
+		  if (*(__int64*)&dt == *(__int64*)&(bp->b_utime))
+		  	continue;
+#else
+		  time_t dt;
+		  FILE * ffp = ffropen(bp->b_fname);
+			if (!ffp)
+				continue;
+				
+		  dt = ffiletime(ffp);
+		  if (dt == bp->b_utime)
+		  	continue;
+		  	
+		  fclose(ffp);
+#endif
+			if (++ct == 0)
+			{	bp->b_utime = dt;
+				if (bp != curbp)
+					swbuffer(bp);
+//			mbwrite(TEXT29);
+			}
+		}
+
+	return ct;
+}
 
 static
 void Pascal customise_buf(BUFFER * bp)

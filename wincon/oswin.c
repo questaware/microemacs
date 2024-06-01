@@ -7,7 +7,7 @@
 /*#include        <winuser.h>*/
 #include   <stdio.h>
 #include   <conio.h>
-#include   <windows.h>
+//#include   <windows.h>
 #include   <process.h>
 
 #include  "estruct.h"
@@ -32,6 +32,8 @@ static int mexist;	/* is the mouse driver installed? */
 static int nbuttons;	/* number of buttons on the mouse */
 static int oldbut;	/* Previous state of mouse buttons */
 #endif
+
+int g_focus_count;
 
 #define millisleep(n) Sleep(n)
 
@@ -303,7 +305,7 @@ void SetBufferWindow(int wid, int dpth)
 
 void init_wincon()
 
-{	DWORD     Dummy;
+{
 //Sleep(1000*8);
 																							// reduces memory but slows startup
 	SetProcessWorkingSetSize(GetCurrentProcess(), (SIZE_T)-1, (SIZE_T)-1);
@@ -1025,6 +1027,9 @@ int ttgetc()
 	      g_eaten[++oix] = ctrl | (chr == 0xdd ? 0x7c : chr);
 				++g_chars_since_ctrl;
 	    }}
+	    else if (r->EventType == FOCUS_EVENT)
+	    { ++g_focus_count;
+	    }
 	    else if (r->EventType == MENU_EVENT)
 	    { /*loglog1("Menu %x", r->Event.MenuEvent.dwCommandId);*/
 	    }
@@ -1083,7 +1088,7 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
 	
 	for (iter = 25; --iter >= 0; )
 	{
-		if (!fexist(ss))
+		if (!name_mode(ss))
 			break;
 		
 		ss[tail-2] = 'A' + 24 - iter;				// File should not exist anyway
@@ -1150,6 +1155,7 @@ again:
 
 
 
+FILETIME g_file_time;
 
 int Pascal name_mode(const char * s)
 
@@ -1165,7 +1171,8 @@ int Pascal name_mode(const char * s)
 	if ((int)myfile < 0)
 		return 0;
 	if (GetFileInformationByHandle(myfile, &fileinfo))
-	{ res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
+	{ g_file_time = fileinfo.ftLastWriteTime;
+		res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
 	  if (fileinfo.nNumberOfLinks > 1)
 	  	res |= FILE_ATTRIBUTE_NORMAL;
 	}
