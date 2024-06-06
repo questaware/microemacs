@@ -121,7 +121,7 @@ static int Pascal cclmake(int patix, MC *  mcptr)
 	mcptr->lchar = to;
 	mcptr->mc_type = CCL;
 
-{	Bitmap * p_bmap = (Bitmap *)remallocstr(&g_cclarray[ to ], NULL, HICHAR >> 3);
+{	Bitmap * p_bmap = (Bitmap *)remallocstr((char**)&g_cclarray[ to ], NULL, HICHAR >> 3);
 	if (p_bmap == NULL)
 	  return ERR_OOMEM;							/* Test the initial character(s) in ccl for
 																	 * special cases - negate ccl, or an end ccl
@@ -664,7 +664,7 @@ int Pascal scanner(int direct, int again)
     else
     { ch = nextch(&lpos, direct); 		/* Advance the cursor.*/
       if (skip)
-		  { if ((scan_paren(ch) & Q_IN_CMT) != 0)
+		  { if ((scan_paren((char)ch) & Q_IN_CMT) != 0)
 		  		continue;
 		  }
 
@@ -686,7 +686,7 @@ int Pascal scanner(int direct, int again)
 
     ch = nextch(&lpos, direct);  /* Advance the cursor.*/
 		if (skip)
-		  scan_paren(ch);
+		  scan_paren((char)ch);
   }}
 	   
   if (direct > 0)     /* at beginning of string */

@@ -52,10 +52,9 @@ static int g_crlfflag;
 // 0 	 : "..."
 // -ve : ordinary
 
-int Pascal nmlze_fname(char * tgt, const char * src, char * tmp)
+int Pascal nmlze_fname(char * tgt, const char * s, char * tmp)
 	
 { int search_type = 0;
-  const char * s = src;
   			int tix;
   			char ch;
   
@@ -578,7 +577,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
   	  return NULL;
   }}
 
-   mlwrite(TEXT139);	/* "Reading file" */
+	mlwrite(TEXT139);	/* "Reading file" */
 
 { char * cmd = fullcmd + strlen(fullcmd) + 1;
 	const char * cmdnm = gtusr("scp");
@@ -587,8 +586,8 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 
   Cc cc = ttsystem(strcat(strcat(cmd,tmp),rnm), fullcmd);
   if (cc != OK)
-	{	props |= Q_POPUP;
-		concat(cmd, cmdnm," Fetch failed ",int_asc(cc), 0);
+	{	concat(cmd, cmdnm," Fetch failed ",int_asc(cc), 0);
+		props = Q_POPUP;
 	}
   else
 	{//	sprintf(diag_p, "EKEY %x %s", curbp, ekey == NULL ? "()" : ekey);
@@ -614,7 +613,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 static
 void io_message(const char * txt, int nline)
 
-{ mlwrite("[%s%d%s%s", txt, nline,  TEXT143,nline == 1 ? "]" : "s]");
+{ mlwrite("[%s%d%s%s", txt, nline, TEXT143, &"s]"[!nline]);
 #if S_MSDOS
 { int row = ttrow;			// unfortunately the window can be scrolled down by 1
   int col = ttcol;
@@ -727,10 +726,11 @@ int Pascal readin(char const * fname, int props)
   	  return rc;
 
 // 	bp->b_flag &= ~(BFINVS|BFCHG);
-  	fname = repl_bfname(bp, fname);
-	 	if (fname == NULL)
-	 	  return ABORT;
-
+		if (!(props & FILE_NMSG))
+  	{	fname = repl_bfname(bp, fname);
+	 		if (fname == NULL)
+	 	  	return ABORT;
+	 	}
   			/* let a user macro get hold of things...if he wants */
   	execwrap(0);  // readhook
   }
@@ -755,7 +755,7 @@ int Pascal readin(char const * fname, int props)
 	/*curwp->mrks.c[0].markp = lback(curwp->w_dotp);
 	  curwp->mrks.c[0].marko = 0;*/
   }
-{	int   nline = 0;
+{	int   nline = -1;
 #if S_MSDOS
 	extern Filetime g_file_time;
 	Filetime datetime = (name_mode(fname), g_file_time);
@@ -858,7 +858,8 @@ out:
 	  tcapkopen();								/* open the keyboard again (Unix only) */
 //  swb_luct = topluct() + 1;
 //  bp->b_luct = swb_luct;
-		bp->b_utime = datetime;
+		if (!(props & FILE_NMSG))
+			bp->b_utime = datetime;
 	  bp->b_dotp = lforw(&bp->b_baseline);
 	  bp->b_wlinep = bp->b_dotp;
 
@@ -936,7 +937,7 @@ int Pascal filewrite(int f, int n)
 /*		       "Write file: " */
 		return cc;
 
-	return writeout(fname);
+	return writeout(fname, TRUE);
 }
 
 
@@ -992,7 +993,7 @@ int Pascal filesave(int f, int n)
 //  ++fn;
   }}
 
-{	int rc = writeout(fn);
+{	int rc = writeout(fn,TRUE);
 	if (rc > FALSE)
 	{ 
 	  if (cmd != NULL)
@@ -1049,7 +1050,7 @@ int Pascal filesave(int f, int n)
  * a user specifyable routine (in $writehook) can be run.
  */
 
-int Pascal writeout(const char * fn)
+int Pascal writeout(const char * fn, Bool original)
 				/* name of file to write current buffer to */
 { Cc cc;
   struct stat stat_;
@@ -1109,7 +1110,7 @@ good:
 
 												/* write the current buffer's lines to the disk file */
 	cc = FIOSUC;
-	nline = 0;					/* track the Number of lines		*/
+	nline = -1;					/* track the Number of lines		*/
 	for (lp = &bp->b_baseline;
 			!l_is_hd((lp = lforw(lp))); )
 	{ 
@@ -1140,13 +1141,15 @@ good:
 	}
 //repl_bfname(bp, fn);		// destroys fn
 
+	if (original)
+	{
 #if S_WIN32
-	name_mode(fn);
-	bp->b_utime = g_file_time;
+		bp->b_utime = (name_mode(fn),g_file_time);
 #else
-	bp->b_utime = ffiletime(op);
+		bp->b_utime = ffiletime(op);
 #endif
-	bp->b_flag &= ~BFCHG;
+		bp->b_flag &= ~BFCHG;
+	}
 																					 /* report on status of file write */
 	io_message(strcpy(tname, TEXT149), nline);
 															/* "[Wrote 999 line" */

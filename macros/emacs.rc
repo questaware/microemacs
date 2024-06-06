@@ -382,7 +382,7 @@ btk execute-macro-21 ^XV
 set $exbhook execute-macro-22
 
 btk search-forward A-S
-btk save-file ^XA-S
+btk save-file ^X-S
 
 btk select-buffer ^XB
 btk next-buffer M-FN;

@@ -254,7 +254,7 @@ int Pascal scan_par_line(LINE * lp)
 	int mode = g_paren.in_mode;
 	if ((g_clring & BCPRL) == 0)
 		while (++ix <= cplim)
-		{ mode = scan_paren(ix == cplim ? '\n' : (char)lgetc(lp, ix));
+		{ mode = scan_paren((char)(ix == cplim ? '\n' : (char)lgetc(lp, ix)));
 		}
 	else
 	{ cplim -= 2;
@@ -1093,7 +1093,7 @@ int USE_FAST_CALL got_f_key(fdcr * fd, int tabsz, int fs_cmt)			// Fortran or SQ
 			if (len >= 4)
 			{	if (len > 4 && lp->l_text[offs+4] <= ' ' || lp->l_text[offs+3] <= ' ')
 					++ix;
-				if (*strmatch("ELSE", lp->l_text[offs]) == 0 && g_paren.ch != 'D') 
+				if (*strmatch("ELSE", &lp->l_text[offs]) == 0 && g_paren.ch != 'D') 
 				{ if (g_paren.nest == 0 && ix == 3)
 						return 1;
 					++ix;
@@ -1195,7 +1195,7 @@ int Pascal getfence(int f, int n)
 		}
 		else if (dir)
 		{	if (n <= 0)
-				dir = init_paren(&g_paren.fence,0);
+				dir = init_paren((char*)&g_paren.fence,0);	// little endian
 		}
 		else
 		{	mlwrite(TEXT35);
@@ -1245,11 +1245,14 @@ int Pascal getfence(int f, int n)
 				else if	(!wordmatch(nix,fch == 'D' ? "DO" :
 														    fch == 'L' ? "LOOP" : 
 														    fch == 'S' ? "SELECT" : "IF"))
-				  fch = g_paren.fence;
-				fd.blk_type[0] = g_paren.fence = fch;
+				  fch = (char)g_paren.fence;
+				g_paren.fence = (short)fch;
+				fd.blk_type[0] = fch;
 			}}
 			else if (fd.blk_type[0] == 'I' && lstr[ix+1] == 'f')   // END DO, END LOOP, etc
-				fd.blk_type[0] = g_paren.fence = 'E';
+			{	fd.blk_type[0] = 'E';
+				g_paren.fence = (short)'E';
+			}
 			else
 			{	if (fd.blk_type[0] == 'C')
 					rc = fd.blk_type[0] = ch != 'a' ? 0 : 'B';
@@ -1462,7 +1465,7 @@ int Pascal fmatch(ch)
 
 #if OPT_CALCULATOR
 
-double evalexpr(const char * s, int * adv_ref)
+double evalexpr(char * s, int * adv_ref)
 
 { *adv_ref = -1;
 { char ch = *s;
@@ -1470,7 +1473,7 @@ double evalexpr(const char * s, int * adv_ref)
 //if (ch == '-')
 //	ch = *++s;
 	if (ch == '%')
-	{ char buf[30];
+	{ char buf[120];
 		int v_adv = 0;
 	  strpcpy(buf, s+1, sizeof(buf-1));
 	  while (in_range(buf[v_adv], 'a', 'z') || in_range(buf[v_adv], '0', '9'))
@@ -1480,15 +1483,21 @@ double evalexpr(const char * s, int * adv_ref)
 	{ const char * ss = gtusr(buf);
 	  if (ss != NULL)
 		{ int that_adv;
-		  double res = evalexpr(ss, &that_adv);
+		  double res = evalexpr(strpcpy(buf,ss,119), &that_adv);
 	  	if (that_adv > 0)
 		  	*adv_ref = v_adv+1;
 	  	return res;
 	  }
 	}}
 { int tot_adv = 0;
-	for (; in_range(ch, '0', '9') || ch == '.' || ch == ' '; ch = s[++tot_adv])
+	for (; ch == ' '; ch = s[++tot_adv])
 		;
+	for (; in_range(ch, '0', '9') || ch == '.' || ch == ','; ch = s[++tot_adv])
+		if (ch == ',')
+		{
+			memmove(s+tot_adv, s+tot_adv+1, 20);
+			--tot_adv;
+		}
 
 	if (tot_adv != 0)
 	{	*adv_ref = tot_adv;
@@ -1530,9 +1539,7 @@ double evalexpr(const char * s, int * adv_ref)
 					*adv_ref = -2;
 				else
 					res /= res2;
-			when ',':
-				res *= 1000;
-			case '+':
+			when '+':
 		 		res += res2;
 		 	otherwise
 				return 0.0;
@@ -1556,7 +1563,7 @@ int Pascal arith(int f, int n)
 		int val = atoi(src);
 		forwdel(0,olen);
 	{	char * tgt = int_asc(val+n);
-		if (strlen(tgt) > olen)
+		if ((int)strlen(tgt) > olen)
 		{ int offs = curwp->w_doto;
 			if (offs > 0 && curwp->w_dotp->l_text[offs-1] <= ' ')
 				forwdel(0,-1);
@@ -1571,34 +1578,34 @@ int Pascal arith(int f, int n)
 int Pascal calculator(int f, int n)
 				/* int f, n;		** not used */
  
-{ int ix;
-	while (1)
+{	while (1)
 	{	Lpos_t spos = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
+		char * s = lgets(spos.curline, spos.curoff);
+	  char buf[256*2+1];
+
+		int ix = 0;
 		int len = llength(spos.curline) - spos.curoff;
 		if (len > 256) 
 			len = 256;
 
-	{ char * s = lgets(spos.curline, spos.curoff);
-	  char buf[256*2+1];
-		ix = 0;
 	  while (++ix < len)
 	  	if (s[ix] == '=')
-	  	{ buf[256] = '%';
-	  	  ((char*)memcpy(buf+256+1, s, ix))[ix] = 0;
-	  		s += ix + 1;
+			{	((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
+	  		s += ix + 1;														// new source
 	  		len -= ix;
-	  		ix = -1;
+	  		ix = 0;
 	  		break;
 	  	}
 		
 	{	int adj;
-		((char*)memcpy(buf+1, s, len))[len] = 0;
-		buf[0] = '(';
-	{	double res = evalexpr(buf, &adj);
+		((char*)memcpy(buf+256+1, s, len))[len] = 0;
+	  buf[0] = '%';
+		buf[256] = '(';
+	{	double res = evalexpr(buf+256, &adj);
 		const char * all = adj <= 0 ? "Error" : float_asc(res);
 
-		if (ix < 0)
-		{	set_var(buf+256, all);
+		if (ix <= 0)
+		{	set_var(buf, all);
 			if (!forwline(1,1))
 				return TRUE;
 		}	
@@ -1613,7 +1620,7 @@ int Pascal calculator(int f, int n)
 	
 			return rc;
 		}}
-	}}}}
+	}}}
 }
 
 #endif

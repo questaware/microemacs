@@ -219,7 +219,8 @@ int Pascal widen(int notused, int n)
 	}}
 
 	setcline();
-	orwindmode(WFHARD|WFMODE);
+	upwind(1);
+//orwindmode(WFHARD|WFMODE);
 
 	mlwrite(TEXT75);
 				/* "[Buffer is widened]" */

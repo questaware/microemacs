@@ -74,9 +74,9 @@ char * Pascal strpcpypfx(char * t_, const char * s_, int n_, char term)
 					/* at most n chars including the 0 */
 char * Pascal strpcpy(char * t_, const char * s_, int n_)
 #if S_VMS == 0
-{ register short n = n_;
-  register char * s = s_;
-  register char * t = t_;
+{ short n = n_;
+  const char * s = s_;
+  char * t = t_;
  
   if (t != null)
   { while (--n > 0 && (*t++ = *s++) != 0)

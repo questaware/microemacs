@@ -71,7 +71,6 @@ int reload_buffers(void)
 		  if (*(__int64*)&dt == *(__int64*)&(bp->b_utime))
 		  	continue;
 #else
-		  time_t dt;
 		  FILE * ffp = ffropen(bp->b_fname);
 			if (!ffp)
 				continue;
@@ -156,7 +155,7 @@ int g_bfindmade;
 /* Find a buffer, by name.
  * If the buffer is not found and the cflag & 1 is TRUE, create it. 
  */
-BUFFER *Pascal bfind(char * bname, int cflag)
+BUFFER *Pascal bfind(const char * bname, int cflag)
 										/* name of buffer to find */
 										/* cflag   1: create it 2: make buffer name unique */
 {	int cc = -1;
@@ -181,7 +180,7 @@ BUFFER *Pascal bfind(char * bname, int cflag)
 		char *sp = strlast(bname+1, '.') - 1;
 #else
 		char *sp, *sp_ = null;
-		for (sp = bname; *++sp; )
+		for (sp = (char*)bname; *++sp; )			// declared const but never if cflag & 1
 		  if (*sp == '.')
 				sp_ = sp;
 		if (sp_ != NULL)
@@ -767,10 +766,8 @@ int Pascal listbuffers(int iflag, int n)
 	{ Int	nbytes = 0L;													/* Count bytes in buf.	*/
 		LINE * lp;
 		for (lp = &bp->b_baseline; !l_is_hd((lp=lforw(lp))); )
- /* for (lp = bp->b_baseline; (lp = lforw(lp)) != bp->b_baseline; ) */
 			nbytes += (Int)llength(lp)+1L;
-
-					/* we could restore lastmesg */
+																					/* we could restore lastmesg */
 		mlwrite("%>%c%c%c %s %7d %15s %s\n",
 						bp->b_flag & BFACTIVE ? '@' : ' ',
 						bp->b_flag & BFCHG ? '*' : ' ',
@@ -782,7 +779,7 @@ int Pascal listbuffers(int iflag, int n)
 	}}
 	curbp->b_flag |= MDVIEW;
 	curbp->b_flag &= ~BFCHG;		/* don't flag this as a change */
-	if (avail > 0)
+//if (avail > 0)
 		shrinkwind(0, avail);
 	return gotobob(0,0);
 }}}

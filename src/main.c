@@ -144,7 +144,9 @@ void Pascal dcline(int argc, char * argv[])
 	const char * def_bname = "main";
 	int	carg;
 
-#if S_MSDOS == 0
+#if S_MSDOS
+	extern int _getcwd(char *, size_t);
+#else
   vtinit(0,0);
   tcap_init();
 #endif
@@ -266,7 +268,7 @@ void Pascal dcline(int argc, char * argv[])
 { Cc cc = startup(startfile);
 #if 0
 	if (pd_gflags & MD_NO_MMI)
-	{ writeout(null);
+	{ writeout(null,FALSE);
 		return 1;
 	}
 #endif
@@ -384,11 +386,11 @@ int main(int argc, char * argv[])
 	{ extern int g_focus_count;
 		g_lastflag = 0; 								/* Fake last flags.*/
 
+	{	int ct = g_focus_count <= 0 ? -1 : reload_buffers();
+
 																	/* execute the "command" macro, normally null*/
 		execwrap(2);  // cmdhook	** used to push/pop lastflag **
 				
-	{	int ct = g_focus_count <= 0 ? -1 : reload_buffers();
-
 		update(FALSE);		/* Fix up the screen	*/
 		
 		if (ct >= 0)

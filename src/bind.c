@@ -1015,7 +1015,7 @@ Map_t g_namemap = mk_const_map(T_DOMSTR, 0, names, 1);	//-1: last entry not want
 						/* fncmatch:	match fname to a function in the names table and return
 													any match or NULL if none
 						*/
-int (Pascal *Pascal USE_FAST_CALL fncmatch(char * fname))(int, int)
+int (Pascal *Pascal USE_FAST_CALL fncmatch(const char * fname))(int, int)
 	/* char *fname;	** name to attempt to match */
 		
 { int last_fnum = binary_const(-1, fname);

@@ -1218,6 +1218,7 @@ getregion	./src/region.c
 getremote	./src/file.c
 getstr	./src/input.c
 getstring	./src/input.c
+gettmpfn	./src/file.c
 gettyp	./src/eval.c
 getval	./src/eval.c
 getwpos	./src/window.c

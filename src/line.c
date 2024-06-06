@@ -640,7 +640,7 @@ Pascal doregion(int wh, char * t)
 	        *t++ = ch;
 	    }
 	    else if (wh == 0)		// was 1
-	    { ch = kinsert(ch);
+	    { ch = kinsert((char)ch);
 	      if (ch <= FALSE)
 	        return ch;
 	    }
@@ -896,7 +896,7 @@ int Pascal yank(int notused, int n)
     }
  
     while (--len >= 0)
-    { char * ch = *sp;
+    { char ch = *sp;
     	++sp;
       if (sp[-1] == 'M' - '@' && sp[0] == '\n')
         continue;

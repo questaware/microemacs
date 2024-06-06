@@ -54,8 +54,6 @@ extern char * strpcpy(char * tgt, const char * src, int mlen);
 /*#include 	"h/msera.h"*/
 /*#include	"h/eprintf.h"*/
 
-/*extern char * strchr();*/
-
 #if NONDIR
    #define DIRENT direct
 #else

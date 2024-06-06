@@ -145,7 +145,7 @@ int Pascal docmd(char * cline)
 
 {	int n = ! f ? 1 : g_univct;  					/* numeric repeat value */
 //int (Pascal *fnc)(int, int);      	  /* function to execute */
-	Command fnc;      	  								/* function to execute */
+//Command fnc;      	  								/* function to execute */
 	char ebuffer[132];
 #define tkn ebuffer+1
 	++g_macargs;	      									/* in cline execution */
@@ -210,7 +210,7 @@ int Pascal namedcmd(int f, int n)
 																						/* grab token and advance past */
 	  (void)token(ebuffer, sizeof(ebuffer));
 							     /* evaluate it */
-	{ char * fnm = getval(ebuffer, ebuffer);
+	{ const char * fnm = getval(ebuffer, ebuffer);
 	  if (fnm == g_logm[2])
 	    return FALSE;
 																								/* and look it up */

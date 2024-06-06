@@ -33,7 +33,7 @@ int Pascal USE_FAST_CALL isword(char ch)
  */
 int Pascal inword()
 
-{ return isword(thischar());
+{ return isword((char)thischar());
 }
 
 #if FLUFF
@@ -129,7 +129,7 @@ int Pascal nextword(int notused, int n)
 
 		  while (1)
 			{ int ch = thischar();
-				int state = isword(ch);
+				int state = isword((char)ch);
 				if (state ^ mask)
 					break;
 				ch -= ' ';
@@ -201,7 +201,7 @@ static int USE_FAST_CALL ccaseword(int n, int low)
 
     while (TRUE)
     { int ch = thischar();
-    	char is = isword(ch);
+    	char is = isword((char)ch);
     	if (is)
     	{ if (--iter == 0)
     			goto next;
@@ -496,7 +496,7 @@ int Pascal wordcount(int notused, int n)
 				ch = '\r';
 			}
 			
-			if (isword(ch))
+			if (isword((char)ch))
 			{ nwords += 1 ^ in_wd;
 			  in_wd = TRUE;
 			}

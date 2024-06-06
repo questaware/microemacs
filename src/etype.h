@@ -24,7 +24,7 @@ void ClipPasteEnd(void);
 /*extern int atoi(char * s);*/
 
 #if S_MSDOS == 0
-int Pascal millisleep(unsigned int n);
+int millisleep(unsigned int n);
 #endif
 char * USE_FAST_CALL mallocz(int n);
 void USE_FAST_CALL adb(int n);
@@ -36,7 +36,7 @@ int Pascal calculator(int, int);
 void Pascal customise_buf(BUFFER * bp);
 char * Pascal duplicate(const char * src);
 void cls(void);
-BUFFER *Pascal bfind(char * bname, int cflag);
+BUFFER *Pascal bfind(const char * bname, int cflag);
 int  USE_FAST_CALL ectoc(int c);
 int Pascal getIncls(int f, int n);
 BUFFER * getcbuf(int createflag, BUFFER * bp, const char *prompt);
@@ -60,7 +60,7 @@ const char *Pascal getfname(int);
 char *Pascal getkill(void);
 const char *Pascal getreg(char * t);
 extern const char getvalnull[];
-char *Pascal getval(char *, char *);
+const char *Pascal getval(char *, char *);
 
 char * gtfilename(int wh);
 const char *Pascal gtusr(char * vname);			/* look up a user var's value */
@@ -68,7 +68,7 @@ char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
 void init_fncmatch(void);
 char *Pascal USE_FAST_CALL int_asc(int);
-char * Pascal USE_FAST_CALL int_radix_asc(int i, int r);
+char * Pascal USE_FAST_CALL int_radix_asc(int i, int r, char fill);
 int kinsstr(const char * s, int len);
 int Pascal makename(char *, const char *);
 char *Pascal mkkey(const char *);
@@ -81,7 +81,7 @@ int to_kill_buff(int wh, int n);
 const char *Pascal transbind(char *);
 int Pascal USE_FAST_CALL trimstr(int from, char * s);
 char *Pascal xlat(char *, char *, char *);
-int (Pascal *Pascal USE_FAST_CALL fncmatch(char *))(int, int);
+int (Pascal *Pascal USE_FAST_CALL fncmatch(const char *))(int, int);
 Command getname(int wh);
 char * Pascal getconsoletitle();
 int Pascal desfunc(int,int);
@@ -124,9 +124,9 @@ void Pascal setconsoletitle(char * title);
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);
-int Pascal set_var(char *, char *);
+int Pascal set_var(char *, const char *);
 int Pascal shiftkill(int f, int n);
-int USE_FAST_CALL stol(char * s);
+int USE_FAST_CALL stol(const char * s);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
 void tcapsetfgbg(int chrom);
@@ -462,7 +462,7 @@ int Pascal wordcount(int, int);
 int Pascal wordsearch(int, int);
 int Pascal wrapword(int, int);
 int Pascal writemsg(int, int);
-int Pascal writeout(const char *);
+int Pascal writeout(const char * fn, Bool original);
 int Pascal yank(int, int);
 int Pascal zotbuf(BUFFER*);
 void Pascal MySetCoMo();

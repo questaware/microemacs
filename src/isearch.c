@@ -76,7 +76,7 @@ int Pascal USE_FAST_CALL echochar(int c, int col)
 			++col;
 			mlout('^');
 		}
-		mlout(c);
+		mlout((char)c);
 	}
 #if S_MSDOS == 0
 	TTflush();

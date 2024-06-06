@@ -1403,7 +1403,7 @@ int mlwrite(const char * fmt, ...)
 				 when 'o':  radix = 8 - 6;
 				 case 'x':  radix += 6;
 				 case 'd':  
-				 case 'f':  sp = int_radix_asc(get_arg(int,ap), radix);
+				 case 'f':  sp = int_radix_asc(get_arg(int,ap), radix, ' ');
 				 				  	if (ch == 'f' - '0')
 										{ int sl = strlen(sp);
 										  sp[sl] = sp[sl-1];

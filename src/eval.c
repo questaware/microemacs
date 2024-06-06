@@ -435,7 +435,7 @@ static char * USE_FAST_CALL push_arg(int fnum, const char * src)
 }}
 
 
-int USE_FAST_CALL stol(char * val)					/* convert a string to a numeric logical */
+int USE_FAST_CALL stol(const char * val)					/* convert a string to a numeric logical */
 {
   return val[0] == 'T' || atoi(val) != 0;	/* check for logical values */	 
 }
@@ -446,11 +446,11 @@ int USE_FAST_CALL stol(char * val)					/* convert a string to a numeric logical 
 static char result[90];
 
 				/* output integer as radix r */
-char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix)
+char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix, char fill)
 
 {	static const char hexdigits[] = "0123456789ABCDEF";
 
-	memset(&result, ' ', INTWIDTH); 
+	memset(&result, fill, INTWIDTH);
 	result[INTWIDTH] = 0;
 //result[INTWIDTH+1] = 0;	
 
@@ -475,7 +475,7 @@ char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix)
 
 char *Pascal USE_FAST_CALL int_asc(int i)
 			/* integer to translate to a string */
-{ return int_radix_asc(i,10);
+{ return int_radix_asc(i,10, ' ');
 }
 
 
@@ -493,22 +493,25 @@ char * float_asc(double x)
     x /= 10;
   }
 
-	if (x > 0.0)
-	  while (x < 0.00001)
-  	{ --shift;
-   		x *= 10;
-	  }
+	if (x > 0.0 && x < 0.00001)
+	{		//	shift -= 2;
+		while (x < 1.0)
+		{
+			--shift;
+			x *= 10;
+		}
+	}
   
-{	int val = x;
+{	int val = (int)x;
   x -= val;
   result[19] = '-';
 { char * res = int_asc(val);
   strcpy(result+20, res);
-{ int after = x * 10000000;
-  char * aft = int_asc(after);
-  strcpy(result+40, aft);
-{ char * shft = int_asc(shift);
-	char * exp = shift == 0 ? NULL : "e";
+{ int after = (int)(x * 10000000);
+  char * aft = int_radix_asc(after, 10, '0');
+  strcpy(result+40, result+6);
+{	char * exp = shift == 0 ? NULL : "e";
+	char * shft = int_asc(shift);
 
   return concat(result+60, result+20+sign, ".", result+40, exp, shft, NULL);
 }}}}}}
@@ -595,7 +598,7 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 
 		when UFGTCMD:	return cmdstr(&arg1[0], getcmd(0));
 		when UFBIND:  return getfname(stock(arg1));
-		when UFFIND:	arg1 = flook(Q_LOOKH, arg1);
+		when UFFIND:	arg1 = (char*)flook(Q_LOOKH, arg1);
 									if (0)
 		case UFENV:			arg1 = getenv(arg1);
 									return arg1 == NULL ? "" : arg1;
@@ -902,7 +905,7 @@ static
 
 
 static
-int Pascal svar(int var, char * value)	/* set a variable */
+int Pascal svar(int var, const char * value)	/* set a variable */
 
 {	Cc cc = TRUE;
   int vnum = var & 0x7ff;
@@ -992,7 +995,7 @@ int Pascal svar(int var, char * value)	/* set a variable */
 										hooks[hookix].k_ptr.fp = fncmatch(value);
 //									setktkey(BINDFNC, value, &hooks[hookix]);
 #if S_WIN32
-		when EVWINTITLE:setconsoletitle(value);
+		when EVWINTITLE:setconsoletitle((char*)value);	// Is this safe?
 #endif
 	  when EVDEBUG:	
 	  case EVSTATUS:	
@@ -1059,7 +1062,7 @@ fvar:	vix = -1;
 #endif
 
 
-int Pascal set_var(char var[NVSIZE+1], char * value)	/* set a variable */
+int Pascal set_var(char var[NVSIZE+1], const char * value)	/* set a variable */
 					/* name of variable to fetch */
 					/* value to set variable to */
 {	int vix;	/* type to return */
@@ -1129,7 +1132,7 @@ const char getvalnull[] = "";
 
 				/* the oob checks are faulty */
 					/* find the value of a token */
-char *Pascal getval(char * tgt, char * tok)
+const char *Pascal getval(char * tgt, char * tok)
 														/* token: token to evaluate */
 {	int blen = NSTRING-1;
 	const char * src = (const char *)tok;

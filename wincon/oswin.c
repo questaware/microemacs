@@ -285,15 +285,15 @@ void SetBufferWindow(int wid, int dpth)
 		flagerr("2 Big");
 #endif
 	// Initially srWindow.Bottom is smaller by 1
-	if ((unsigned)(dpth-1) >= g_csbi.dwMaximumWindowSize.Y)	
+	if ((unsigned short)(dpth-1) >= g_csbi.dwMaximumWindowSize.Y)	
 		dpth = g_csbi.dwMaximumWindowSize.Y;
 	rect.Bottom = dpth-1;
-	if ((unsigned)(wid-1) >= g_csbi.dwMaximumWindowSize.X)
+	if ((unsigned short)(wid-1) >= g_csbi.dwMaximumWindowSize.X)
 		wid = g_csbi.dwMaximumWindowSize.X;
 	rect.Right = wid-1;
 																	// set the screen buffer to be big enough
   rc = SetConsoleWindowInfo(h, 1, &rect);
-#if _DEBUG || 1
+#if _DEBUG
   if (rc == 0)
     flagerr("2 Big");
 #endif
@@ -315,7 +315,7 @@ void init_wincon()
 {	HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
 
 #if 1
-  if (SetConsoleMode(h, 0) == 0)
+  if (SetConsoleMode(h, 0) == 0 && 0)
     flagerr("SCMO %d");
 #endif
 
@@ -332,8 +332,8 @@ void init_wincon()
   g_coords.X = 0;
   g_coords.Y = 0;
 
-	tcapmove(0,0);
-	FCOC(0);
+//tcapmove(0,0); Try this
+//FCOC(0);
 }}
 
 
@@ -741,7 +741,7 @@ HANDLE setMyConsoleIP()
 	//while (--clamp >= 0)
 	//{
 	
-	Cc rc = SetConsoleMode(h,ENABLE_WINDOW_INPUT);// Allowed to fail
+	Cc rc = SetConsoleMode(h,0);// Allowed to fail
 #if _DEBUG
 	if (!rc)
 	  flagerr("Ewi");
@@ -1080,7 +1080,7 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
 #endif
 	const char * td = gettmpfn();
 	
-{	char *ss = concat(filename,td,"/me"+(td[strlen(td)-1] == DIRY_CHAR),int_asc(_getpid()),NULL);
+{	char *ss = concat(filename,td,"/me"+(td[strlen(td)-1] == DIRY_CHAR),int_asc(thread_id()),NULL);
 	int tail = strlen(ss);
 	int iter; 
 	ss[tail] = suffix;
@@ -1624,12 +1624,11 @@ int pipefilter(char wh)
 	{ 			
 		fnam1 = mkTempCommName('i', pipeInFile);
 
-		if (writeout(fnam1) <= FALSE)		/* write it out, checking for errors */
+		if (writeout(fnam1,FALSE) <= FALSE)		/* write it out, checking for errors */
 		{ // mlwrite(TEXT2);
 																			/* "[Cannot write filter file]" */
 			return FALSE;
 		}
-		curbp->b_flag |= BFCHG;
 		mlwrite(TEXT159);					/* "\001Wait ..." */
 	}
 
@@ -1674,15 +1673,11 @@ int pipefilter(char wh)
 		if (wh == '='-'<')
 			curbp = bp;
 		else
-		{	swbuffer(bp);
-		/*linstr(tmpnam); */
-								/* make this window in VIEW mode, update all mode lines */
-			curwp->w_bufp->b_flag |= MDVIEW;
-		/*upmode();*/
-		}
+			swbuffer(bp);
 	}
 {	Cc rc = FALSE;
 	if (wh == '!'-'<')
+	{ SetConsoleMode(g_ConsOut,ENABLE_PROCESSED_OUTPUT);
 	{ FILE * ip = fopen(fnam2, "rb");
 		if (ip != NULL)
 		{ char * ln;
@@ -1690,19 +1685,17 @@ int pipefilter(char wh)
 				fputs(ln, stdout);
 
 			fclose(ip);
-			puts(TEXT6);
+			fputs(TEXT6, stdout);
 			ttgetc();
 		/*homes();*/
 			rc = TRUE;
 		}
-	}
+		SetConsoleMode(g_ConsOut,0);
+	}}
 	else													/* on failure, escape gracefully */ 		
 	{ BUFFER * bp = curbp;
-		char * sfn = bp->b_fname;
-		bp->b_fname = null;									/* otherwise it will be freed */
 		rc = readin(fnam2, FILE_NMSG);
-		bp->b_fname = sfn; 									/* restore name */
-		bp->b_flag |= BFCHG; 								/* flag it as changed */
+		bp->b_flag |= MDVIEW | BFCHG; 			/* flag it as changed */
 		flush_typah();
 	}
 																	/* get rid of the temporary files */
@@ -1719,7 +1712,7 @@ int pipefilter(char wh)
 	 */
 int Pascal pipecmd(int f, int n)
 
-{ return pipefilter(n >= 0 ? '@' : '<');
+{ return pipefilter((char)(n >= 0 ? '@' : '<'));
 }
 
 	/*
@@ -1869,7 +1862,7 @@ Cc ClipSet(int clix)
 
 #if 1
 	if (clix > 0 && pd_cliplife != 0)
-  {	HANDLE thread = CreateThread(NULL, 0, ClipSet_, (void*)(++g_clix),0,NULL);
+  {	HANDLE thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ClipSet_, (void*)(++g_clix),0,NULL);
   }
 #endif
 	return OK;
