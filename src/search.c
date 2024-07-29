@@ -189,6 +189,7 @@ int Pascal mk_magic()
 	g_pats[NPAT].mc_type = -1;	/* a barrier */
 
 {	MC * mcptr = g_pats;
+	int lchr = -1;
 
 //mcpat[0].mc_type = MCNIL;
 
@@ -201,7 +202,8 @@ int Pascal mk_magic()
 
 		mcptr->mc_type = LITCHAR;
 
-	{	int pchr = pat[++patix];
+		lchr = pat[++patix];
+	{	int pchr = lchr;
 		if (pchr == 0 /* == ERR_SYN */)
 			break;
 
@@ -229,7 +231,15 @@ int Pascal mk_magic()
 			  pchr = '\n';
 //			continue;
 			}
-
+			else if (lchr == pchr)
+			{	if (pchr == MC_BOL)
+					mcptr->mc_type = BOL;
+				if (pchr == MC_EOL)
+				{	pchr = '\n';
+					mcptr->mc_type = EOL;
+				}
+			}
+		
 		mcptr->lchar = pchr;
 	}}	/* End of while.*/
 
@@ -247,12 +257,6 @@ int Pascal mk_magic()
 	{	mcptr->mc_type = MCNIL; 	/* Close off the meta-string */
 
 	  patix = (--mcptr) - g_pats;
-		if (mcptr->lchar == MC_EOL)
-		{ mcptr->mc_type = EOL;
-			mcptr->lchar = '\n';
-		}
-		if (g_pats[1].lchar == MC_BOL)
-			g_pats[1].mc_type = BOL;
   }
 	return patix;
 }}

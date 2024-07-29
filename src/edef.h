@@ -312,6 +312,7 @@ typedef struct	{
 	int		r_offset;		/* Origin LINE offset.		*/
 	long	r_size; 		/* Length in characters.	*/
 	int		r_lines;		/* number of lines in the buffer*/
+	int		r_up;				/* mark is above */
 }	REGION;
 
 /* The editor communicates with the display using a high level interface. A

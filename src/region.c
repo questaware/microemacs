@@ -15,18 +15,9 @@ REGION g_region;
 /* This routine figures out the bounds of the region in the current
  * window, and fills in the fields of the "REGION" structure pointed to by
  * "rp". Because the dot and mark are usually very close together, we scan
- * outward from dot looking for mark. This should save time. Return a
- * standard code. Callers of this routine should be prepared to get an
- * "ABORT" status; we might make this have the confirm thing later.
+ * outward from dot looking for mark. This should save time. 
  */
 REGION * Pascal getregion()
-{
-  LINE * mark_line = curwp->mrks.c[0].markp;
-  if (mark_line == NULL)
-  {	mlwrite(TEXT76);
-					/* "No mark set in this window" */
-	  return NULL;
-	}
 
 {	int lines = 1;
 	int wh = 1;
@@ -34,49 +25,57 @@ REGION * Pascal getregion()
 	int _size = (int)curwp->mrks.c[0].marko - offset;
 	int bsize = -_size;
 
-	g_region.r_linep = curwp->w_dotp;
 {	LINE* flp = curwp->w_dotp;
 	LINE* blp = flp;
 
-	while (true)
-	{
-		lines -= 1;
-
-		if (blp == mark_line)
-		{	g_region.r_linep = blp;
-			_size = bsize;
-			if (_size > 0 || lines < 0)
-				offset = (int)curwp->mrks.c[0].marko;
-			break;
-		}
-
-		if (wh > 0)
-		{	blp = lback(blp);
-			wh = blp->l_dcr & 1;
-			bsize += llength(blp) + wh;
-		}
-
-		if (flp == mark_line)
-			break;
-
-		if (!l_is_hd(flp))
-		{	_size += llength(flp) + 1;
-			flp = lforw(flp);
-		}
+  LINE * mark_line = curwp->mrks.c[0].markp;
+  if (mark_line == NULL)
+  {	mlwrite(TEXT76);
+					/* "No mark set in this window" */
+	  _size = 0;
 	}
+	else
+		while (true)
+		{
+			lines -= 1;
+
+			if (blp == mark_line)
+			{	wh = -1;
+				_size = bsize;
+				if (_size > 0 || lines < 0)
+					offset = (int)curwp->mrks.c[0].marko;
+				break;
+			}
+
+			if (wh > 0)
+			{	blp = lback(blp);
+				wh = blp->l_dcr & 1;
+				bsize += llength(blp) + wh;
+			}
+
+			if (flp == mark_line)
+				break;
+
+			if (!l_is_hd(flp))
+			{	_size += llength(flp) + 1;
+				flp = lforw(flp);
+			}
+		}
 
 	g_region.r_lines = -lines;
 	g_region.r_size = _size > 0 ? _size : -_size;		// case: markp == w_dotp 
 	g_region.r_offset = offset;
+	g_region.r_linep = wh >= 0 ? curwp->w_dotp : blp;
+	g_region.r_up = wh < 0;
 
 	return &g_region;
-}}}
+}}
 
 													/*	reglines:	how many lines in the current region */
 int Pascal reglines(Bool ask)
 
 {	REGION * r = getregion();	   							/* check for a valid region first */
-	if (r == NULL)
+	if (r->r_size == 0)
 	{ if (!ask || g_macargs > 0)
 			return 0;								
 	{ int rc = mlyesno(TEXT180);
@@ -109,14 +108,18 @@ int Pascal killregion(int f, int n)
 {	if (rdonly())
 	  return FALSE;
 
-  (void)reglines(FALSE);
+{	int lines = reglines(FALSE);
+	if (g_region.r_up)
+	{	curwp->w_line_no -= lines;
+		curwp->w_flag |= WFMODE;
+	}
 
 /*if ((g_lastflag&CFKILL) == 0)		** This is a kill type	**
     kdelete() */;								/* command, so do magic */
 	g_thisflag = CFKILL;					/* kill buffer stuff.	*/
 	kinsert_n = chk_k_range(n);
 	return ldelchrs(g_region.r_size, TRUE);
-}
+}}
 
 /*	Narrow-to-region (^X-<) makes all but the current region in
 	the current buffer invisable and unchangable

@@ -65,45 +65,6 @@ int Pascal nmlze_fname(char * tgt, const char * s, char * tmp)
    	*tgt++ = '.';
    	*tgt++ = '/';
   }
-#if 0
-  t = tgt-1;
-
-	tgt[NFILEN-2] = 0;
-
-  while (t < &tgt[NFILEN-2])
-  { ch = *s++;
-    *++t = ch;
-
-    if (ch == 0)
-      break;
-
-    if      (ch == '*')
-      search_type = MSD_DIRY | MSD_MATCHED;
-    else if (ch == '.' && s[0] == '.' && s[1] == '.')
-    {	search_type = (tgt - t) - 1;
-    	--t;
-    	s += 2 + (s[2] == '/');
-    }
-    else if (ch == '/' || ch == '\\')
-    {	t[0] = '/';
-    { int dif = (t - tgt) - 3;
-      if (dif >= 0)
-      { if (t[-1] == '.')
-      	{ if (t[-2] == '/')			// "/./"
-	        { t -= 2;
-	          continue;
-	        }
-      		if (dif > 0 && t[-2] == '.' && t[-3] == '/' && t[-4] != '.' ) // "x/../"
-	        { t -= 4;
-	        	for (; --t >= tgt && *t != '/'; )
-	            ;
-	          continue;
-	        }
-      	} 
-			}
-    }}
-  }
-#else
   tix = -1;
 
 	tgt[NFILEN-2] = 0;
@@ -141,7 +102,6 @@ int Pascal nmlze_fname(char * tgt, const char * s, char * tmp)
 			}
     }}
   }
-#endif
 { const char * cwd_ = getcwd(tmp, NFILEN);
   if (cwd_ == null)
     cwd_ = "/";
@@ -151,16 +111,13 @@ int Pascal nmlze_fname(char * tgt, const char * s, char * tmp)
   int root = 0;
 	char * t = tgt;
 
-  while (strcmp_right(t, "../") == 0)
+  while (!root && strcmp_right(t, "../") == 0)
   { t += 3;						  											 			/* target forward */
 		++num_dirs;
 
 	  while (!(root = (--cw < cwd_)) && *cw != DIRSEPCHAR) /* cwd backward */
       ;
-      
-		if (root)
-			break;
-	}
+ 	}
 
   if (num_dirs > 0)
 	{	int deduct = -1;
@@ -182,10 +139,9 @@ int Pascal nmlze_fname(char * tgt, const char * s, char * tmp)
 
 		if (deduct >= 0)
 		{ char * s = tgt + deduct;
-			char * tt = tgt - 1;
+			char * tt = tgt - 1 + root;
 			char ch;
-			if (root)
-				*++tt = '/';
+			tgt[0] = '/';
 				
 			for (; ((ch = *++s) == '.' || ch == '/'); )
 				*++tt = ch;
@@ -618,7 +574,7 @@ void io_message(const char * txt, int nline)
 { int row = ttrow;			// unfortunately the window can be scrolled down by 1
   int col = ttcol;
   tcapmove(0,0);
-	Sleep(10);
+	Sleep(5);
   tcapmove(row,col);
 }
 #endif
@@ -735,6 +691,19 @@ int Pascal readin(char const * fname, int props)
   	execwrap(0);  // readhook
   }
   
+{	int   nline = 0;
+#if S_MSDOS
+	extern Filetime g_file_time;
+	Filetime datetime = (name_mode(fname), g_file_time);
+#else
+	Filetime datetime = ffiletime(ffp);
+	diry = ffisdiry(ffp);
+#endif
+	if (diry)
+	{ msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
+	  bp->b_flag |= MDDIR;
+	}
+
   if (cc != 0)
     goto out;
 
@@ -755,18 +724,6 @@ int Pascal readin(char const * fname, int props)
 	/*curwp->mrks.c[0].markp = lback(curwp->w_dotp);
 	  curwp->mrks.c[0].marko = 0;*/
   }
-{	int   nline = -1;
-#if S_MSDOS
-	extern Filetime g_file_time;
-	Filetime datetime = (name_mode(fname), g_file_time);
-#else
-	Filetime datetime = ffiletime(ffp);
-	diry = ffisdiry(ffp);
-#endif
-	if (diry)
-	{ msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
-	  bp->b_flag |= MDDIR;
-	}
 
 //sp_langprops = bp->b_langprops & BCCOMT;
 	while (1)

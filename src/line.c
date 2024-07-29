@@ -613,15 +613,14 @@ Pascal doregion(int wh, char * t)
 	else if (--wh > 0 && rdonly())	/* disallow this command if */
 	  return FALSE;		        		/* we are in read only mode */
   else
-	{ REGION * ion = getregion();
-	  if (ion == NULL)
+	{	int  space = NSTRING-1;
+		REGION * ion = getregion();
+	  LINE  *linep = ion->r_linep; 		/* Current line.	*/
+		int  sz = ion->r_size;
+	  if (sz == 0)
 	    return 0;
 
 	{ int	 loffs;
-	  LINE  *linep = ion->r_linep; 		/* Current line.	*/
-
-		int  space = NSTRING-1;
-		int  sz = ion->r_size;
 				    /* don't let the region be larger than a string can hold */
 //  if (wh == 0 && sz > NSTRING - 1)
 //    sz = NSTRING - 1;

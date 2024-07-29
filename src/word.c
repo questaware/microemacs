@@ -476,10 +476,10 @@ int Pascal wordcount(int notused, int n)
 	Int nlines = 1;
 
 	REGION * r = getregion();
-	if (r != NULL)
+	int size = r->r_size;
+	if (size != 0)
 	{	LINE *lp = 	 r->r_linep;
 		int offset = r->r_offset;
-		Int size = r->r_size;
 								/* count up things */
 	  
 	  nchars = size;

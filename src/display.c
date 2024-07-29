@@ -553,6 +553,7 @@ static int     g_lastfcol;
  * This is the only routine that knows how the modeline is formatted.
  * Called by "update" any time there is a dirty window.
  */
+static 
 void Pascal modeline(WINDOW * wp)
 	
 {

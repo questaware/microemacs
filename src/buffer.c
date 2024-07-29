@@ -133,12 +133,14 @@ void Pascal customise_buf(BUFFER * bp)
 	          ++pr;
 					}
           
-        tabsize = atoi(pr+2);
+        six = atoi(pr+2);
+        if (six > 0)
+        	tabsize = six;
         break;
       }}}
 		}
     bp->b_tabsize = tabsize;
-		bp->b_flag |= BFACTIVE | zero | g_gflag;
+		bp->b_flag |= zero | g_gflag;
 		bp->b_color = g_bat_b_color;
 
     if (bp->b_key != NULL)
@@ -150,7 +152,7 @@ void Pascal customise_buf(BUFFER * bp)
 
 
 
-int g_bfindmade;
+int g_bfindmade;						// result from bufflink()
 
 /* Find a buffer, by name.
  * If the buffer is not found and the cflag & 1 is TRUE, create it. 
@@ -162,9 +164,6 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
                       			/* find the place in the list to insert this buffer */
 	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_next);
 
-//if (cflag & 2)
-//	unqname(bname);                     /* dont conflict with other buffers */
-
 	for (; sb->b_next != NULL; sb = sb->b_next) 
 	{ cc = strcmp(sb->b_next->b_bname, bname);
 		if (cc < 0)
@@ -173,7 +172,7 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
 		if (cc > 0)
 			break;
 		if (!(cflag & 2))
-			break;
+			return sb->b_next;
 		cc = 1;					// Case greater than existing, need unique : dont return NULL
 	{	
 #if 0
@@ -196,16 +195,14 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
 	
 	g_bfindmade = cc;
 	
-	if (cc == 0)
-		return sb->b_next;
-
-	if (!(cflag & 3))
+	if (!(cflag & 1))
 		return null;
 
 {	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+10); //can grow by 2
 	if (bp != NULL)
 	{	strcpy(bp->b_bname, bname);
-		bp->b_tabsize = 8;				/* Cannot be 0 */
+//	bp->b_tabsize = 8;				/* Cannot be 0 */
+	 	bp->b_fname = mallocz(1);
 		bp->b_next = sb->b_next;    /* insert it */
 		sb->b_next = bp;
 																				/* and set up the other buffer fields */
@@ -214,9 +211,8 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
 	//bp->b_color = g_bat_b_color;
 
 // 	init_buf(bp);
-	 	customise_buf(bp);
-	 	bp->b_flag &= ~BFACTIVE;
-	 	bp->b_fname = mallocz(1);
+		customise_buf(bp);
+// 	bp->b_flag &= ~BFACTIVE;
 	}
 	return bp;
 }}
@@ -299,6 +295,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 #endif
 //fname_[0] = 'A';
 //fname_[1] = 'B';
+	g_bfindmade = FALSE;
 	create |= (g_macargs > 0);
 { Fdcr_t fdcr = {NULL};
   char bname[NFILEN];
@@ -467,16 +464,18 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 #endif
 
 	while (1)
-	{	BUFFER *bp;
-		short toplu = 0;
+	{	short toplu = 0;
   	BUFFER * bestbp = NULL;
+  	BUFFER *bp;
 		for (bp = bheadp; bp != NULL; bp = bp->b_next)
 			if ((bp->b_flag & BFINVS) == 0)
 			{	if (f >= 0)
 					count += 1 + ((bp->b_flag & BFCHG) << 14);
 				else
 				{	if (bp->b_flag & BFCHG)
-						return swbuffer(bp);
+					{	bestbp = bp;
+						goto sw;
+					}
 				}
 	
 			{ int lu = bp->b_luct * sign;
@@ -502,6 +501,7 @@ int Pascal lastbuffer(int f, int n)   /* switch to previously used buffers */
 		if (toplu == 0)
 		  return 0;
 
+sw:
 	{	int lu = bestbp->b_luct;
 		swbuffer(bestbp);
 	 	bestbp->b_luct = lu;
@@ -541,15 +541,15 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 	bp->b_luct = ++g_top_luct;
 
 {	int active = bp->b_flag & BFACTIVE;
-
-	if (!active)		/* not active yet*/
-	{
- 		customise_buf(bp);
- 	}
+	if (!active)
+		customise_buf(bp);	/* recustomise after emacs.rc */
 
 	g_clring = (bp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS+BCML));		
 
-	if (!active)		/* not active yet*/
+	if (!active)
+	{	bp->b_flag |= BFACTIVE;
+//  bp->b_color = g_bat_b_color;
+
 	{ char * fn = bp->b_fname;
 		if (fn[0])
 		{	readin(fn, 0);
@@ -557,7 +557,7 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 			setconsoletitle(fn);
 #endif
 		}
-	}
+	}}
 
 { WINDOW * cwp = leavewind(0, NULL);
 	cwp->w_bufp	= bp;

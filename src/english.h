@@ -65,6 +65,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT19	"\b[Key not bound]"
 #define	TEXT20	"Apropos string: "
 #define	TEXT21	"Binding list"
+#define	TEXT22  "No .rc file"
 #define	TEXT24	"Use buffer"
 #define	TEXT26	"Drop buffer"
 #define	TEXT28	"Buffer in use"

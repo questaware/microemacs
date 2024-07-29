@@ -181,6 +181,8 @@ int Pascal USE_FAST_CALL scan_paren(char ch)
 			else
 			{ mode = beg_s1 												 ? Q_IN_CMT + Q_IN_EOL :
 							 ch == '*'											 ? Q_IN_CMT 					 :
+							 ch == '"'											 ? Q_IN_STR					   :
+							 ch == '\''											 ? Q_IN_CHAR					 :
 							 ch == beg_cmt &&
 							 ch == g_paren.prev  && dir >= 0 ? Q_IN_CMT + Q_IN_EOL : 0;
 			}
@@ -188,10 +190,8 @@ int Pascal USE_FAST_CALL scan_paren(char ch)
 		else if (mode & (Q_IN_STR + Q_IN_CHAR))
 		{ if			(ch == '\n' && (lang & BCSTRNL) == 0)
 				mode = 0;
-			else if ((mode & Q_IN_ESC) && dir >= 0)
-				mode &= ~Q_IN_ESC;
-			else if (ch == '\\' && dir >= 0)
-				mode |= Q_IN_ESC;
+			else if (dir >= 0 && ((mode & Q_IN_ESC) || ch == '\\'))
+				mode ^= Q_IN_ESC;
 			else if (ch == "'\""[(mode >> Q_LOG_STR) & 1])
 				mode = beg_s1 && ch == g_paren.prev ? Q_IN_CMT0 : 0;
 			break;
@@ -206,21 +206,6 @@ int Pascal USE_FAST_CALL scan_paren(char ch)
 		}
 
 		if (mode == 0)
-#if 0
-    {   if (ch == g_paren.ch)
-        { /*loglog2("INC %d %s", g_paren.nest, str);*/
-          ++g_paren.nest;
-          ++g_paren.nestclamped;
-//        if (g_paren.nestclamped <= 0)
-//          g_paren.nestclamped = 1;
-        }
-        if (ch == g_paren.fence)
-        { /*loglog2("DEC %d %c", g_paren.nest, ch);*/
-          --g_paren.nest;	/* srchdeffile needs relative and clamped nestings */
-          --g_paren.nestclamped;
-        }
-    }
-#else
 		{ int adj = 0;
 			if (ch == g_paren.ch)
 				++adj;
@@ -232,7 +217,6 @@ int Pascal USE_FAST_CALL scan_paren(char ch)
 //		if (g_paren.nestclamped <= 0)
 //			g_paren.nestclamped = 1;
 		}
-#endif
 	} while (0);
 
 /* if (mode & Q_IN_EOL)
@@ -1588,7 +1572,10 @@ int Pascal calculator(int f, int n)
 		if (len > 256) 
 			len = 256;
 
-	  while (++ix < len)
+		if (len <= 0)
+			return TRUE;
+		
+		while (++ix < len)
 	  	if (s[ix] == '=')
 			{	((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
 	  		s += ix + 1;														// new source

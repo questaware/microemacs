@@ -275,15 +275,11 @@ void Pascal dcline(int argc, char * argv[])
 
 	if (cc <= FALSE)
 	{ if (cc == -32000)
-		{	startfile = "No .rc file";
-			mbwrite(startfile);
-			exit(1);
-		}
+			mbwrite(TEXT22);
 		else
 		{ firstbp = curbp;
 		 // firstbp->b_flag |= BFACTIVE;
 		 //openwind(curwp);
-			startfile = "Error in .rc file%w%w";
 			gline = -cc;
 		}
 	}
