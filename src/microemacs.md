@@ -204,6 +204,7 @@ bind-to-key              M-K  (takes command then key)
 btk                      M-K  short for bind-to-key
 buffer-position          ^X=  gives information
 calculator							 evaluate expressions to the right of curpos arg => dont show popup.
+												 All operators have the same precedence.
                          A series of lines <var>=<expression> are evaluated.
                          Expression can contain %v where v is a user variable.
                          Var refers to a user variable,

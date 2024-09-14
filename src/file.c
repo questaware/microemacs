@@ -29,8 +29,8 @@ extern Filetime g_file_time;
 #endif
 
 
-#undef USE_DIR
-#define USE_DIR S_WIN32
+//#undef USE_DIR
+//#define USE_DIR S_WIN32
 
 
 #if S_BORLAND
@@ -121,19 +121,20 @@ int Pascal nmlze_fname(char * tgt, const char * s, char * tmp)
 
   if (num_dirs > 0)
 	{	int deduct = -1;
+		++cw;
 		for (; --num_dirs >= 0; )
-		{	const Char * ncw;
+		{
 #if S_WIN32
-			ncw = strmatch(cw+1, t);				// MSDOS is not case sensitive
+			const Char * ncw = strmatch(cw, t);				// MSDOS is not case sensitive
 #else
-		 	ncw = strsame(cw+1, t);
+		 	const Char * ncw = strsame(cw, t);
 #endif
-	    if ((*ncw != 0 && *ncw != DIRSEPCHAR) || t[ncw - cw - 1] != '/')
+	    if ((*ncw != 0 && *ncw != DIRSEPCHAR) || t[ncw - cw] != '/')
 	    	break;
 	    
 			deduct += 3;
 			++t;
-			while ((ch = *++cw) != 0 && ch != DIRSEPCHAR)
+			while ((ch = *cw++) != 0 && ch != DIRSEPCHAR)
 				++t;
 		}
 
@@ -626,11 +627,11 @@ int Pascal readin(char const * fname, int props)
 
 { Cc cc = FIOSUC;
 	BUFFER * bp = curbp;
-  if (!got_at)
-  { if (s[-1] == '/')                           /* remove trailing slash */
-	  	fname = strpcpy(fnbuff, fname, s - fname);
-	}
-	else
+  if (got_at)
+//{ if (s[-1] == '/')                           /* remove trailing slash */
+//  	fname = strpcpy(fnbuff, fname, s - fname);
+//}
+//else
   { BUFFER * tbp = get_remote(Q_POPUP, bp, NULL, fname);
     if (tbp == NULL)
       --cc;
@@ -657,10 +658,13 @@ int Pascal readin(char const * fname, int props)
 #if S_MSDOS
 //#define FILE_ATTRIBUTE_DIRECTORY 16
 	  diry = name_mode(fname) & FILE_ATTRIBUTE_DIRECTORY;
-	  if (diry)
-		  cc = OK;
+	  if (!diry)
+			cc = 1;
 		else
-	    cc = 1;
+		{	cc = OK;
+			if (!got_at && s[-1] != '/')                           /* add trailing slash */
+				fname = strcat(strcpy(fnbuff, fname), "/");
+		}
 #endif
 	}
 

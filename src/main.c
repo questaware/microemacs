@@ -86,8 +86,7 @@ int g_thisflag;	/* Flags, this command		*/
 int g_lastflag;	/* Flags, last command		*/
 WINDOW *curwp; 		/* Current window		*/
 BUFFER *curbp; 		/* Current buffer		*/
-WINDOW *wheadp;		/* Head of list of windows	*/
-BUFFER *bheadp;		/* Head of list of buffers 	*/
+void * g_heads[2];
 
 char  pat[NPAT+2];	/* search pattern		*/
 char rpat[NPAT+2];	/* replacement pattern		*/

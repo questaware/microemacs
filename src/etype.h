@@ -74,7 +74,7 @@ int Pascal makename(char *, const char *);
 char *Pascal mkkey(const char *);
 char *Pascal mkul(int, char *);
 char *Pascal namval();
-BUFFER * Pascal prevele(BUFFER*, BUFFER*);
+BUFFER * Pascal prevele(int, BUFFER*);
 char *Pascal timeset();
 char *Pascal token(char * tok, int size);
 int to_kill_buff(int wh, int n);

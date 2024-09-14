@@ -68,7 +68,8 @@ int reload_buffers(void)
 			if (!name_mode(bp->b_fname))
 				continue;
 			dt = g_file_time;
-		  if (*(__int64*)&dt == *(__int64*)&(bp->b_utime))
+		  if (*(__int64*)&dt == *(__int64*)&(bp->b_utime)
+		  &&  *(__int64*)&(bp->b_utime) != 0)
 		  	continue;
 #else
 		  FILE * ffp = ffropen(bp->b_fname);
@@ -76,7 +77,7 @@ int reload_buffers(void)
 				continue;
 				
 		  dt = ffiletime(ffp);
-		  if (dt == bp->b_utime)
+		  if (dt == bp->b_utime && bp->b_utime != 0)
 		  	continue;
 		  	
 		  fclose(ffp);
@@ -85,7 +86,6 @@ int reload_buffers(void)
 			{	bp->b_utime = dt;
 				if (bp != curbp)
 					swbuffer(bp);
-//			mbwrite(TEXT29);
 			}
 		}
 
@@ -304,7 +304,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
   int srch = nmlze_fname(&fname[0], filename, bname) & ~(create & MSD_DIRY);
 
   if (srch > 0)
-  { Cc cc = msd_init(fname, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC|MSD_USEPATH);
+  { Cc cc = msd_init(fname, srch|MSD_REPEAT|MSD_HIDFILE|MSD_SYSFILE|MSD_IC/*|MSD_USEPATH*/);
   	if      (cc < OK)
   	{ mlwrite(TEXT79);
   		return NULL;
@@ -316,7 +316,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 
       while ((fn = msd_nfile()) != NULL)
       {															// USE_DIR => newest file comes last
-#if USE_DIR == 0
+#if S_WIN32 == 0
         if (newdate >= (unsigned)msd_stat.st_mtime)
         	continue;
         newdate = (unsigned)msd_stat.st_mtime;
@@ -635,7 +635,7 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 	if (s <= FALSE)				/* Blow text away.	*/
 		return s;
 		
-{ BUFFER *bp1 = prevele(bheadp, bp);	/* Find the header. */
+{ BUFFER *bp1 = prevele(1, bp);	/* Find the header. */
 
 	if (bp1 == NULL)			/* Unlink it. */
 		bheadp = bp->b_next;
@@ -759,7 +759,6 @@ int Pascal listbuffers(int iflag, int n)
 	{ if ((bp->b_flag & BFINVS) && (iflag == 0))
 			continue;
 
-		line[9] = 0;
 		fmt_modecodes(line, bp->b_flag);
 
 		--avail;
@@ -768,6 +767,7 @@ int Pascal listbuffers(int iflag, int n)
 		for (lp = &bp->b_baseline; !l_is_hd((lp=lforw(lp))); )
 			nbytes += (Int)llength(lp)+1L;
 																					/* we could restore lastmesg */
+		line[9] = 0;
 		mlwrite("%>%c%c%c %s %7d %15s %s\n",
 						bp->b_flag & BFACTIVE ? '@' : ' ',
 						bp->b_flag & BFCHG ? '*' : ' ',
@@ -777,10 +777,13 @@ int Pascal listbuffers(int iflag, int n)
 						bp->b_bname,
 						bp->b_fname);
 	}}
-	curbp->b_flag |= MDVIEW;
-	curbp->b_flag &= ~BFCHG;		/* don't flag this as a change */
+
 //if (avail > 0)
 		shrinkwind(0, avail);
+
+	curbp->b_flag |= MDVIEW;
+	curbp->b_flag &= ~BFCHG;		/* don't flag this as a change */
+
 	return gotobob(0,0);
 }}}
 

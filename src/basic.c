@@ -48,9 +48,10 @@ char* Pascal remallocstr(char** res_ref, const char* val, int len)
 
 
 
-BUFFER * Pascal prevele(BUFFER * bl, BUFFER * bp)
+BUFFER * Pascal prevele(int wh, BUFFER * bp)
 
-{
+{	BUFFER * bl = g_heads[wh];
+
   while (bl != NULL && bl->b_next != bp)
     bl = bl->b_next;
   return bl;

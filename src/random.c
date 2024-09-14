@@ -1445,8 +1445,6 @@ int Pascal fmatch(ch)
 
 #endif
 
-#define CALCSTACK 100
-
 #if OPT_CALCULATOR
 
 double evalexpr(char * s, int * adv_ref)
@@ -1457,9 +1455,9 @@ double evalexpr(char * s, int * adv_ref)
 //if (ch == '-')
 //	ch = *++s;
 	if (ch == '%')
-	{ char buf[120];
+	{ char buf[257];
 		int v_adv = 0;
-	  strpcpy(buf, s+1, sizeof(buf-1));
+	  strcpy(buf, s+1);
 	  while (in_range(buf[v_adv], 'a', 'z') || in_range(buf[v_adv], '0', '9'))
 	  	++v_adv;
 	  buf[v_adv] = 0;
@@ -1473,41 +1471,44 @@ double evalexpr(char * s, int * adv_ref)
 	  	return res;
 	  }
 	}}
-{ int tot_adv = 0;
-	for (; ch == ' '; ch = s[++tot_adv])
+
+{ int tot_adv = -1;
+	int got = 0;
+	while ((ch = s[++tot_adv]) == ' ')
 		;
-	for (; in_range(ch, '0', '9') || ch == '.' || ch == ','; ch = s[++tot_adv])
+	for (; ch == '.' || ch == ',' || in_range(ch, '0', '9'); ch = s[++tot_adv])
+	{
 		if (ch == ',')
 		{
 			memmove(s+tot_adv, s+tot_adv+1, 20);
 			--tot_adv;
 		}
+		got = 1;
+	}
 
-	if (tot_adv != 0)
+	if (got)
 	{	*adv_ref = tot_adv;
 		return atof(s);
 	}
 
-	if (ch != '(')
+  if (ch == 0)
 		return 0.0;
 			
-{ double res = evalexpr(s+1, &tot_adv);
-	if (tot_adv < 0) // || s[tot_adv+1] == 0)
-		return 0.0;
-
-	++tot_adv;
+{	double res = evalexpr(s+1, &tot_adv);
+//if (tot_adv < 0)
+//	return 0.0;
 
 	while (1)
-	{ char op = s[tot_adv++];
+	{ char op = s[++tot_adv];
 		if (op == ' ')
 			continue;
-	 	if (op == 0 || op == ')')
+	 	if (op == ')' || op == 0)
 		{	*adv_ref = tot_adv;
 			return res;
 		}
 
 	{	int adv2;
-	  double res2 = evalexpr(s+tot_adv, &adv2);
+	  double res2 = evalexpr(s+tot_adv+1, &adv2);
 		if (adv2 < 0)
 			return 0.0;
 
@@ -1569,12 +1570,12 @@ int Pascal calculator(int f, int n)
 
 		int ix = 0;
 		int len = llength(spos.curline) - spos.curoff;
+		if (len <= 0)
+			return TRUE;
+
 		if (len > 256) 
 			len = 256;
 
-		if (len <= 0)
-			return TRUE;
-		
 		while (++ix < len)
 	  	if (s[ix] == '=')
 			{	((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
@@ -1583,7 +1584,7 @@ int Pascal calculator(int f, int n)
 	  		ix = 0;
 	  		break;
 	  	}
-		
+
 	{	int adj;
 		((char*)memcpy(buf+256+1, s, len))[len] = 0;
 	  buf[0] = '%';

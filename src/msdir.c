@@ -99,10 +99,11 @@ void printf2(const char * msg, const char * val)
 #endif
 }
 
+#endif
 
 static
 Cc match_fn_re_ic(Char * tlt,
-										Char * pat
+									Char * pat
 #if S_WIN32 == 0
 									 ,int /*Bool*/ fn_ic
 #else
@@ -148,8 +149,6 @@ Cc match_fn_re_ic(Char * tlt,
 }
 
 #undef fn_ic
-
-#endif
 
 /*	FILE Directory routines		*/
 
@@ -291,28 +290,36 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 	return rc - 1;
 }
 #else
-	msd_props = props;
+  int pe = -1;
+  int last_pe = pe;
+  Bool no_star = pe;
+  msd_props = props;
   msd_iter = DOS_FFILE;
 
-	msd_pat[0] = 0;							/* extract pattern, and cut back */
-  if (props & MSD_USEPATH)
-  { pe = pe_last_sl;
-    strpcpy(msd_pat, &diry[pe], sizeof(msd_pat)-1);
+  while (1)
+  { char ch = *diry++;
+    msd_path[++pe] = ch;
+    if (ch == 0)
+    	break;
+    if (ch == '/')
+      last_pe = pe;
+    if (ch == '*')
+      no_star = 0;
   }
 
-  if (pe > 0 && msd_path[pe-1] != '/')
-  { msd_path[pe] = '/';
-  	msd_path[++pe] = 0;
-  }
+  g_pathend = last_pe + 1;
 
-  g_pathend = pe;
+/* extract pattern, and cut back */
+  strpcpy(msd_pat, &msd_path[last_pe+1], sizeof(msd_pat) - 1);
+  if (no_star)
+	  msd_pat[0] = 0;							
 
   loglog2("PATH %s PAT  %s", msd_path, msd_pat);
 {	  
 #if   S_WIN32
 	const char * const stars = "./*.*";
-  const char * dir = pe == 0 ? stars : msd_relpath;
-  strpcpy(&msd_path[pe], stars+1, 5);
+  const char * dir = msd_relpath;
+  strcpy(&msd_path[last_pe+1], stars);
 /*eprintf(null, "FF %s\n", dir);*/
 
 #if VS_CHAR8
@@ -324,8 +331,6 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 #endif
 
 /*eprintf(null, "HANDLE %x %s\n", msd_curr, (Char*)msd_sct.cFileName);*/
-  msd_path[pe-1] = '/';
-//msd_path[pe] = 0;
   if (msd_curr == INVALID_HANDLE_VALUE)
     return EDENIED;
 
@@ -357,7 +362,7 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 staticc Cc getnext()
 {
 #if S_WIN32
-  strcpy(&msd_path[g_pathend], "*.*");
+//strcpy(&msd_path[g_pathend], "*.*");
 /*eprintf(null, "FNF %x, %s\n", msd_curr, msd_path);*/
 
 #if VS_CHAR8
@@ -365,7 +370,7 @@ staticc Cc getnext()
 #else
   if (msd_curr == 0 || ! FindNextFileA(msd_curr, &msd_sct))
 #endif
-  { msd_path[g_pathend] = 0;
+  { // msd_path[g_pathend] = 0;
     return ~OK;
   }
 

@@ -482,8 +482,11 @@ NOSHARE extern Short g_clring;
 
 NOSHARE extern WINDOW *curwp; 		/* Current window		*/
 NOSHARE extern BUFFER *curbp; 		/* Current buffer		*/
-NOSHARE extern WINDOW *wheadp;		/* Head of list of windows	*/
-NOSHARE extern BUFFER *bheadp;		/* Head of list of buffers	*/
+NOSHARE extern void * g_heads[2];
+
+#define bheadp ((BUFFER*)g_heads[1])		/* Head of list of buffers	*/
+#define wheadp ((WINDOW *)g_heads[0])		/* Head of list of windows	*/
+
 NOSHARE extern BUFFER *blistp;		/* Buffer for C-X C-B		*/
 				extern LL	g_ll;
 

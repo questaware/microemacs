@@ -182,13 +182,14 @@ int Tag::get_to_newline(void)
 
 {	char ch;
 	char * ln = fgets(g_tagline, TAGBUFFSZ-1, g_fp);
-	if (ln == NULL || ln[0] == 0)
+	if (ln == NULL)
 		return 0;
-	while ((ch = *++ln) != 0)
-	  if (ch <= '\r')				// TAB, CR, LF
-		*ln = 0;
 
-	return ln - g_tagline;
+	while ((ch = *ln++) != 0)
+	  if (ch <= '\r')				// TAB, CR, LF
+		ln[-1] = 0;
+
+	return ln - 1 - g_tagline;
 }
 							// A challenge with this code is to reduce the
 							// number of get_to_newline invocation points
@@ -238,13 +239,13 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
   	{ if (seq < 0)
 	  { pos = (start+end) >> 1;
 	    fseek(fp, pos, 0);
-	  { int got = get_to_newline();
-		pos += got;
+	  { int gott = get_to_newline();
+		pos += gott;
 	  }}
 	  									/* Get line of info */
-    { int got = get_to_newline();
-	  pos += got;
-	  if (got == 0)
+    { int got_ = get_to_newline();
+	  pos += got_;
+	  if (got_ == 0)
 	  	break;
 	  fd_cc = strcmp(key, tagline);
 	  if (fd_cc > 0)					/* forward */
@@ -256,7 +257,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 	  	  break;
 	 	if (last_pos != pos)
 		{ last_pos = pos;
-		  end = pos - got;
+		  end = pos - got_;
 		  continue;
 		}
 	  }
@@ -468,9 +469,9 @@ findTag(int f, int n)
 			;
 		if (ch != 0)
 		{	*s = 0;
-			if (s[1] == ':' && middle == 0)
+			if (s[1] == ch && middle == 0)
 				res = Tag::findTagExec(s+2);
-			if (res != TRUE)
+			if (res <= 0)
 				res = Tag::findTagExec(tag);
 		}
 	}

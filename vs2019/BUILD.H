@@ -140,7 +140,8 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define USE_MAPSTREAM 0
 #define MINIMAP
 
-#define USE_DIR 1
+#define USE_DIR 0
+//#define USE_DIR 1
 
 #define PSCP_CMD "c:\\bin\\pscp.exe "
 #define CLIP_LIFE 300					// seconds

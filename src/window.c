@@ -163,7 +163,7 @@ int Pascal prevwind(int f, int n)
 
   if (wheadp == curwp)
   	return nextwind(f, 0);
-	curwp = (WINDOW*)prevele((BUFFER*)wheadp,(BUFFER*)curwp);
+	curwp = (WINDOW*)prevele(0,(BUFFER*)curwp);
 	return TRUE;
 }
 
@@ -272,13 +272,14 @@ static
 int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 
 {	WINDOW *wp;														  /* window to receive deleted space */
-	WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_next);		/* previous */
 	WINDOW *nwp = NULL;
 	WINDOW * next;
 	WINDOW * cwp = curwp;
 													     		/* find receiving window and give up space */
 	int top = cwp->w_toprow;
 	int nxttop = top + cwp->w_ntrows + 1;
+
+	WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_next);		/* previous */
         
 	for (wp = wheadp; wp != NULL; wp = next)
 	{ next = wp->w_next;
@@ -385,7 +386,7 @@ int Pascal splitwind(int f, int n)
 		ntrl = ntru;
 	} 
 	else					      							/* Old is lower window */
-	{ WINDOW * wp1 = (WINDOW*)prevele((BUFFER*)wheadp,(BUFFER*)curwp);
+	{ WINDOW * wp1 = (WINDOW*)prevele(0,(BUFFER*)curwp);
 	  if (wp1 == null)
 	    wheadp = wp;
 	  else

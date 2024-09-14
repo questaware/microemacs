@@ -623,8 +623,7 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 	 }
 	else if (funcs[fnum].f_kind == RINT)
 	{switch (fnum)
-	 {case UFABS:			iarg1 = absv(iarg1);
-		when UFADD:	  	iarg1 += iarg2;
+	 {case UFADD:	  	iarg1 += iarg2;
 		when UFSUB:	  	iarg1 -= iarg2;
 		when UFTIMES: 	iarg1 *= iarg2;
 		when UFDIV:	  	iarg1 /= iarg2;
@@ -633,6 +632,7 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 		
 		when UFASCII:		iarg1 = (int)arg1[0];
 		when UFGTKEY: 	  
+	  when UFABS:			iarg1 = absv(iarg1);
 		when UFRND:   	iarg1 = (ernd() % absv(iarg1)) + 1;
 		when UFSINDEX:	iarg1 = sindex(arg1, arg2);
 		when UFBAND:		iarg1 &= iarg2;
