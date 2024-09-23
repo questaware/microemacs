@@ -22,10 +22,11 @@
 #include	"msdir.h"
 #include	"logmsg.h"
 
-#if S_WIN32 == 0
-#include	<unistd.h>
-#else
+#if S_WIN32
 extern Filetime g_file_time;
+#else
+#include	<unistd.h>
+Filetime g_file_time;
 #endif
 
 
@@ -617,21 +618,19 @@ int Pascal readin(char const * fname, int props)
 #endif
 { char fnbuff[NFILEN+1];
 	int diry = FALSE;
-  int got_at = FALSE;
+  int got_at = 0;
 
-	const char * s = fname-1;
+  const char * s = fname-1;
   while (*++s != 0)
   { if (*s == '@')
-      got_at = TRUE;
+      got_at = 2;
   }
+  if (s[-1] == '/')
+   --got_at;
 
 { Cc cc = FIOSUC;
 	BUFFER * bp = curbp;
-  if (got_at)
-//{ if (s[-1] == '/')                           /* remove trailing slash */
-//  	fname = strpcpy(fnbuff, fname, s - fname);
-//}
-//else
+  if (got_at > 0)
   { BUFFER * tbp = get_remote(Q_POPUP, bp, NULL, fname);
     if (tbp == NULL)
       --cc;
@@ -653,32 +652,40 @@ int Pascal readin(char const * fname, int props)
 
 { FILE * ffp = cc != FIOSUC ? NULL : ffropen(fname);
 
+#if S_MSDOS == 0
+#define FILE_ATTRIBUTE_DIRECTORY S_IFDIR
+#endif
+
+#if S_MSDOS
 	if (ffp == NULL)			/* File not found. */
+#endif
 	{ 
 #if S_MSDOS
-//#define FILE_ATTRIBUTE_DIRECTORY 16
-	  diry = name_mode(fname) & FILE_ATTRIBUTE_DIRECTORY;
-	  if (!diry)
-			cc = 1;
-		else
-		{	cc = OK;
-			if (!got_at && s[-1] != '/')                           /* add trailing slash */
-				fname = strcat(strcpy(fnbuff, fname), "/");
-		}
+    diry = name_mode(fname) & FILE_ATTRIBUTE_DIRECTORY;
+#else
+    diry = S_ISDIR(name_mode(fname));
 #endif
+		if (ffp == NULL)			/* File not found. */
+		  if (!diry)
+				cc = 1;
+			else
+				if (got_at == 0)                 /* add trailing slash */
+					fname = strcat(strcpy(fnbuff, fname), "/");
+#if S_MSDOS
 	}
+#endif
+
+  if (cc < 0)
+    return FALSE;
 
 	if ((props & FILE_NMSG) == 0)
 														/* read the file in */
-		mlwrite(cc < 0 ? TEXT152 :
-		        cc > 0 ? TEXT138 :
+		mlwrite(cc > 0 ? TEXT138 :
     	    	ins    ? TEXT153 : TEXT139);
 /*		        "[No such file]" */
 /*			      "[New file]" */
 /*            "[Inserting file]" */
 /*            "[Reading file]" */
-  if (cc < 0)
-    return FALSE;
 
   if (!ins)
   { Cc rc = bclear(bp);
@@ -687,8 +694,7 @@ int Pascal readin(char const * fname, int props)
 
 // 	bp->b_flag &= ~(BFINVS|BFCHG);
 		if (!(props & FILE_NMSG))
-  	{	fname = repl_bfname(bp, fname);
-	 		if (fname == NULL)
+  	{	if (repl_bfname(bp, fname) == NULL)
 	 	  	return ABORT;
 	 	}
   			/* let a user macro get hold of things...if he wants */
@@ -700,12 +706,11 @@ int Pascal readin(char const * fname, int props)
 	extern Filetime g_file_time;
 	Filetime datetime = (name_mode(fname), g_file_time);
 #else
-	Filetime datetime = ffiletime(ffp);
-	diry = ffisdiry(ffp);
+	Filetime datetime = ffp == NULL ? g_file_time : ffiletime(ffp);
 #endif
 	if (diry)
-	{ msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
-	  bp->b_flag |= MDDIR;
+	{ bp->b_flag |= MDDIR;
+		msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
 	}
 
   if (cc != 0)
@@ -735,18 +740,13 @@ int Pascal readin(char const * fname, int props)
   	LINE *lp1;
 	  if (diry)
 		{ 
-#if S_MSDOS == 0
-			char spareline[257];
-#endif
 			cc = FIOEOF;
 	    ln = msd_nfile();
 	    if (ln == NULL)
 	      break;
 	     
 	    /*mlreply(fline, spareline+200, 60);*/
-#if S_MSDOS == 0
-	    ln  = LFN_to_8dot3(LFN_from_83, 1, ln, &spareline[0]);
-#endif
+
 			if (ln[0] == '.' && ln[1] == '/')
 				ln += 2;
 	    cc = strlen(ln);

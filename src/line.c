@@ -574,7 +574,7 @@ static t_kill kills[NOOKILL+1];
 
 /* doregion */
 static
-Pascal doregion(int wh, char * t)
+int Pascal doregion(int wh, char * t)
 	
 { if (wh < 0)
 	{ 
@@ -692,7 +692,7 @@ int copyword(int f, int n)
  * redisplay is done in all buffers. Bound to
  * "C-X C-L".
  */
-Pascal lowerregion(int f, int n)
+int Pascal lowerregion(int f, int n)
 
 { return doregion(2 + 1, NULL);
 }

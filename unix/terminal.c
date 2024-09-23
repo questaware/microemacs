@@ -842,7 +842,7 @@ void Pascal tcapscreg(int row1, int row2)
 
 
 
-void Pascal tcapsetsize(int width, int length, int clamp)
+void Pascal tcapsetsize(int width, int length)
 
 { char buf[40];
 //sprintf(buf, "\033[8;%d;%dt", length, width);

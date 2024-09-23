@@ -592,7 +592,7 @@ int Pascal bindtokey(int f, int n)
 
 			/* unbindkey: delete a key from the key binding table */
 
-Pascal unbindkey(int f, int n)
+int Pascal unbindkey(int f, int n)
 							/* int f, n;	** command arguments [IGNORED] */
 {
   if (g_macargs <= 0)		/* prompt the user to type in a key to unbind */

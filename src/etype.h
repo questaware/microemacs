@@ -33,7 +33,7 @@ char * Pascal allocate(unsigned nbytes);
 char * Pascal callocate(unsigned nbytes);
 int Pascal calculator(int, int);
 //int count_work(void);
-void Pascal customise_buf(BUFFER * bp);
+//void Pascal customise_buf(BUFFER * bp);
 char * Pascal duplicate(const char * src);
 void cls(void);
 BUFFER *Pascal bfind(const char * bname, int cflag);
@@ -194,7 +194,6 @@ int Pascal entab(int, int);
 int Pascal execbuf(int, int);
 int Pascal execcmd(int, int);
 int Pascal execfile(int, int);
-int Pascal execkey(KEYTAB * key, int f, int n);
 int Pascal execporb(int isp, int n);
 int Pascal execproc(int, int);
 int        execwrap(int wh);
@@ -285,7 +284,6 @@ int Pascal mlputi(int);
 void Pascal mlputs(int, const char *);
 #define mlreply(a,b,c) nextarg(a,b,c)
 int Pascal USE_FAST_CALL mlyesno(const char *);
-void Pascal modeline(WINDOW *);
 int Pascal mouseoffset();
 int Pascal movemd();
 int Pascal movemu();
@@ -443,7 +441,7 @@ int Pascal upscreen(int, int);
 int Pascal upwind_(void);
 #define upwind(x) upwind_()
 #else
-void Pascal upwind(int garbage);
+int Pascal upwind(int garbage);
 #endif
 int Pascal usebuffer(int, int);
 int Pascal use_named_str(Char *,Char *);

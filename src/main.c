@@ -369,7 +369,7 @@ int main(int argc, char * argv[])
 	log_init("emacs.log", 300000, 0);
 	loglog("***************Started***************");
 #endif
-	wheadp =
+	*g_wheadp_ref =
 	 curwp = (WINDOW *)mallocz(sizeof(WINDOW)); /* First window	*/
 
 {	KEYTAB * hpp;
@@ -435,7 +435,7 @@ Pascal clean()
 		free(wp);
 		wp = tp;
 	}
-	wheadp = NULL;
+	*wheadp = NULL;
 					/* then the buffers */
 	while ((bp = bheadp))
 	{ bp->b_flag = 0; /* don't say anything about a changed buffer! */
@@ -609,8 +609,6 @@ void Pascal editloop(int c)
 			n = g_univct;
 		}
 	}
-
-	loglog2("EL %x %c", c,c);
 																						/* do META-# processing if needed */
 	if ((c & PFXX) && in_range((c & 0xff), '-', '9')
 								 && getbind(c)->k_code == 0)

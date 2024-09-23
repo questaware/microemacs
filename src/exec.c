@@ -337,7 +337,7 @@ char *Pascal token(char * tok, int size)
 	}
 
 	*tok = 0;
-	return g_execstr = (char*)(c == 0 ? src : src+1);
+	return g_execstr = (char*)src+!!c;
 #endif
 }
 
@@ -590,7 +590,8 @@ failexit:
 			++g_rc_lineno;
 #endif
 													/* allocate eline and copy macro line to it */
-		{	int dirnum;					/* directive index */
+		{ char golabel[20];
+			int dirnum = -1;		/* directive index */
 			int linlen = lused(lp->l_dcr)+1;
 		  if (linlen < sizeof(smalleline))
 			  ebuf = smalleline;
@@ -621,17 +622,15 @@ failexit:
 		    }
 #endif
 																				/* Parse directives here.... */
-		  dirnum = -1;
 		  if (*eline == '!')								/* Find out which directive this is */
 		  {
 		    for (dirnum = NUMDIRS; --dirnum >= 0; )
 		      if (strcmp_right(eline+1, dname[dirnum]) == 0)
-						break;
-																				/* and bitch if it's illegal */
-		    if (dirnum < 0)
-		    { msg += 1;		    					/* "%%Unknown Directive" */
-		      continue;
-		    }
+						goto jover__;
+																	/* bitch if it's illegal */
+		    msg += 1;		    					/* "%%Unknown Directive" */
+		    continue;
+jover__:;
 		  }
 																		/* if macro store is on, salt this away */
 		  if (g_bstore != null && dirnum != DENDM)
@@ -679,13 +678,11 @@ failexit:
 						{ WHBLOCK* whtemp;
 							for (whtemp = whlist; whtemp; whtemp = whtemp->w_next) 
 							  if (whtemp->w_begin == lp)
-							    break;
+							    goto jover;
         
-							if (whtemp == NULL) 
-							{ msg -= 1;				/* "%%Internal While loop error" */
-							  continue;
-							}
-																					    /* reset the line pointer back.. */
+							msg -= 1;				/* "%%Internal While loop error" */
+							continue;
+jover:														    /* reset the line pointer back.. */
 							lp = whtemp->w_end;
 				    }
 
@@ -700,50 +697,47 @@ failexit:
 						--nest_level;
 						continue;
 
-		      when DGOTO:	/* GOTO directive */
-																	/* .....only if we are currently executing */
-						if (exec_level == 0) 
-						{ char golabel[20];
-							g_execstr = eline;
-							(void)token(golabel, sizeof(golabel));
-						  
-						  for (lp = &bp->b_baseline; 
-						      !l_is_hd((lp=lforw(lp))); )
-						    if (*lp->l_text == '*' &&
-										strcmp_right(&lp->l_text[1],golabel) == 0)
-									break;
-
-							if (l_is_hd(lp))
-						  {	mlwrite(TEXT127, golabel);				/* "%%No such label" */
-						  	cc = FALSE;
-							}
-						}
-						continue;
-	        
-		      when DENDWHILE:	/* ENDWHILE directive */
-						if (exec_level == 0)
-																					/* find the right while loop */
-						{ WHBLOCK * whtemp; 
-						  for (whtemp = whlist; whtemp; whtemp = whtemp->w_next)
-						    if (whtemp->w_break == 0 &&
-										whtemp->w_end == lp)
-						      break;
-		        
-						  if (whtemp == NULL)
-						  { msg -= 1;						/* "%%Internal While loop error" */
-						    continue;
-						  }
-																				  /* reset the line pointer back.. */
-						  lp = lback(whtemp->w_begin);
-						}
-						continue;
 					when DENDM:
 		    		if (g_bstore != NULL)
 		    		{ g_bstore->b_dotp = lforw(&g_bstore->b_baseline);
 				    	g_bstore = NULL;
 				    }
 		  	    continue;
-		    } // switch
+
+		  	  default:
+						if (exec_level == 0)							/* execute the statement */
+																	/* .....only if we are currently executing */
+							if      (dirnum == DGOTO)
+							{ 
+								g_execstr = eline;
+								(void)token(golabel, sizeof(golabel));
+								 
+								for (lp = &bp->b_baseline; 
+								     !l_is_hd((lp=lforw(lp))); )
+								  if (*lp->l_text == '*' &&
+											strcmp_right(&lp->l_text[1],golabel) == 0)
+										break;
+
+								if (l_is_hd(lp))
+								{	mlwrite(TEXT127, golabel);				/* "%%No such label" */
+								 	cc = FALSE;
+								}
+								continue;
+							}
+							else if (dirnum == DENDWHILE)
+							{ WHBLOCK * whtemp; 
+							  for (whtemp = whlist; whtemp; whtemp = whtemp->w_next)
+							    if (whtemp->w_break == 0 &&
+											whtemp->w_end == lp)
+							      goto jover_;
+			        
+							  msg -= 1;						/* "%%Internal While loop error" */
+							  continue;
+jover_:							  									/* reset the line pointer back.. */
+							  lp = lback(whtemp->w_begin);
+								continue;
+							}
+				}
 		  }
 
 			if (exec_level == 0)							/* execute the statement */
@@ -831,7 +825,7 @@ dinput:
 	  int oldinp = g_disinp;
 	  int oldstatus = pd_cmdstatus;
 	  
-		if (c == abortc) 
+		if (c == g_abortc) 
 		  return FALSE;
 
 	  switch (c)

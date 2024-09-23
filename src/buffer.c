@@ -17,13 +17,10 @@
 #include	"msdir.h"
 #include	"logmsg.h"
 
-//#if S_WIN32
-//#include <stdint.h>
-//#endif
 
 char * Pascal repl_bfname(BUFFER * bp, const char * str)
 
-{ return remallocstr(&bp->b_fname, str, 0);
+{ return bp->b_fname == str ? bp->b_fname : remallocstr(&bp->b_fname, str, 0);
 }
 
 
@@ -61,7 +58,7 @@ int reload_buffers(void)
 {	int ct = -1;
 	BUFFER *bp;
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
-		if ((bp->b_flag & BFINVS) == 0 && bp->b_fname)
+		if ((bp->b_flag & (BFINVS+MDDIR) == 0) && bp->b_fname)
 		{	Filetime dt;
 #if S_WIN32
 			extern Filetime g_file_time;
@@ -162,7 +159,7 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
 										/* cflag   1: create it 2: make buffer name unique */
 {	int cc = -1;
                       			/* find the place in the list to insert this buffer */
-	BUFFER * sb = backbyfield(&bheadp, BUFFER, b_next);
+	BUFFER * sb = backbyfield(g_bheadp_ref, BUFFER, b_next);
 
 	for (; sb->b_next != NULL; sb = sb->b_next) 
 	{ cc = strcmp(sb->b_next->b_bname, bname);
@@ -638,7 +635,7 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 { BUFFER *bp1 = prevele(1, bp);	/* Find the header. */
 
 	if (bp1 == NULL)			/* Unlink it. */
-		bheadp = bp->b_next;
+		*g_bheadp_ref = bp->b_next;
 	else
 		bp1->b_next = bp->b_next;
 

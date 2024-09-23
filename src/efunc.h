@@ -33,7 +33,9 @@ const NBIND names[] =
 	{"btk",									bindtokey},
 	{"buffer-mode",					togmod},
 	{"buffer-position",			bufferposition},
+#if OPT_CALCULATOR
 	{"calculator",					calculator},
+#endif
 	{"case-region-lower",		lowerregion},
 	{"case-region-upper",		upperregion},
 	{"case-word-capitalize",capword},

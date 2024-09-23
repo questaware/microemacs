@@ -1,5 +1,6 @@
 #if S_WIN32 == 0
 #define msd_ignore(x) ,x
+#include <sys/stat.h>
 #else
 #define msd_ignore(x)
 #endif

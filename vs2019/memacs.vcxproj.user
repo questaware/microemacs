@@ -11,9 +11,9 @@
     <LocalDebuggerWorkingDirectory>$(ProjectDir)\debug</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>c:\gener\microemacs\src/buffer.c</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>..\..\src/buffer.c</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerWorkingDirectory>c:\gener\microemacs\src</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerWorkingDirectory>c:\gener\microemacs\wincon\release</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerCommandArguments> -w -k @c:\bbin\emacs78.rc ../../src</LocalDebuggerCommandArguments>

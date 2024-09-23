@@ -74,6 +74,8 @@ extern int g_stdin_fileno;
 
 static const char g_emacsdir[] = "mkdir -p ~/.emacs.d/";
 
+int g_focus_count;
+
 extern char * getenv();
 
 
@@ -644,7 +646,7 @@ int pipefilter(wh)
   {
     fnam1 = mkTempCommName('i', pipeInFile);
 
-    if (writeout(fnam1) <= FALSE)   /* write it out, checking for errors */
+    if (writeout(fnam1,FALSE) <= FALSE)   /* write it out, checking for errors */
 			return write_diag(1000);
 
     mlwrite(TEXT159);         /* "\001Wait ..." */
@@ -667,7 +669,7 @@ int pipefilter(wh)
   usehost(strcat(line,fnam2), FALSE);
 
   if (wh >= '<'-'<')   /* <  @ */
-  { BUFFER * bp = bfind(line /*strcat(strcpy(bname,"_cmd"),int_asc(bix))*/, TRUE, 0);
+  { BUFFER * bp = bfind(line /*strcat(strcpy(bname,"_cmd"),int_asc(bix))*/, TRUE);
     if (bp == NULL)
       return FALSE;
 /*

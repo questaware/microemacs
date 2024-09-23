@@ -484,8 +484,11 @@ NOSHARE extern WINDOW *curwp; 		/* Current window		*/
 NOSHARE extern BUFFER *curbp; 		/* Current buffer		*/
 NOSHARE extern void * g_heads[2];
 
-#define bheadp ((BUFFER*)g_heads[1])		/* Head of list of buffers	*/
 #define wheadp ((WINDOW *)g_heads[0])		/* Head of list of windows	*/
+#define bheadp ((BUFFER*)g_heads[1])		/* Head of list of buffers	*/
+
+#define g_wheadp_ref &g_heads[0]
+#define g_bheadp_ref &g_heads[1]
 
 NOSHARE extern BUFFER *blistp;		/* Buffer for C-X C-B		*/
 				extern LL	g_ll;

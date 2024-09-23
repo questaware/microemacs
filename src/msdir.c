@@ -336,8 +336,8 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
 
 #else
   const char * dir = pe == 0 ? "." : msd_relpath;
-  if ((props & MSD_USEPATH) && pe_last_sl > 0)
-  	msd_relpath[pe_last_sl] = 0;
+  if ((props & MSD_USEPATH) && last_pe > 0)
+  	msd_relpath[last_pe] = 0;
   msd_curr = opendir(dir);
 /*eprintf(null, "%d %d OPen %s\n", msd_ix, msd_chd, dir);*/
   if (msd_curr == NULL)
@@ -347,8 +347,8 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
     return EDENIED;
   }
   
-  if (pe_last_sl > 0)
-  	msd_relpath[pe_last_sl] = '/';
+  if (last_pe > 0)
+  	msd_relpath[last_pe] = '/';
 #endif
 }
   return OK;

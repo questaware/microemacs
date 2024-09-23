@@ -1029,7 +1029,7 @@ remalloc:
 
 
 
-#if 0
+#if DEBUGM
 
 static int Pascal findvar(char * var)      /* find a variables type and name */
 	
@@ -1105,7 +1105,7 @@ fvar:	vix = -1;
 	{ mlwrite("%!(%s <- %s)", var, value);
 	  update(TRUE);
 	        
-	  if (getkey() == abortc) /* and get the keystroke to hold the output */
+	  if (getkey() == g_abortc) /* and get the keystroke to hold the output */
 	  { mlwrite("%!"TEXT54);
 						/* "[Macro aborted]" */
 	    cc = FALSE;
@@ -1285,7 +1285,7 @@ int Pascal desfunc(int f, int n)
 
 /*------------------------------------------------------------*/
 
-#if	0
+#if DEBUGM
 
 int Pascal dispvar(int f, int n)	/* display a variable's value */
 	/* int n;		** numeric arg (can overide prompted value) */

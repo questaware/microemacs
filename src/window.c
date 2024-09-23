@@ -279,7 +279,7 @@ int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 	int top = cwp->w_toprow;
 	int nxttop = top + cwp->w_ntrows + 1;
 
-	WINDOW *pwp = backbyfield(&wheadp, WINDOW, w_next);		/* previous */
+	WINDOW *pwp = backbyfield(g_wheadp_ref, WINDOW, w_next);		/* previous */
         
 	for (wp = wheadp; wp != NULL; wp = next)
 	{ next = wp->w_next;
@@ -300,7 +300,7 @@ int Pascal USE_FAST_CALL dowind(int wh)			/* 0: only window, 1: del window */
 	}
 
 	if (wh == 0)
-	{	wheadp = cwp;
+	{	*g_wheadp_ref = cwp;
 		cwp->w_next = NULL;
 		cwp->w_toprow = 0;
 		cwp->w_ntrows = term.t_nrowm1-1;
@@ -388,7 +388,7 @@ int Pascal splitwind(int f, int n)
 	else					      							/* Old is lower window */
 	{ WINDOW * wp1 = (WINDOW*)prevele(0,(BUFFER*)curwp);
 	  if (wp1 == null)
-	    wheadp = wp;
+	    *g_wheadp_ref = wp;
 	  else
 	    wp1->w_next = wp;
 
