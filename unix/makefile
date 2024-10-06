@@ -11,7 +11,7 @@ USRC=unix
 LFLAGS=-km
 
 OFILES=	basic.o bind.o buffer.o char.o crypt.o display.o eval.o \
-	exec.o file.o fileio.o input.o isearch.o line.o main.o malloc.o \
+	exec.o file.o input.o isearch.o line.o main.o malloc.o \
 	mouse.o msdir.o random.o region.o search.o sinc.o tag.o window.o word.o
 
 UOFILES= unix.o terminal.o lock.o

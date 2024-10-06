@@ -152,6 +152,7 @@ const char * const g_envars[] = {
 	"asave",			/* # of chars between auto-saves */
 	"bufhook",		/* enter buffer switch hook */
 	"cbflags",		/* current buffer flags */
+	"cblang",			/* current buffer language */
 	"cbufname",		/* current buffer name (read only)*/
 	"cfname",		  /* current file name */
 	"cliplife",		/* life of data in clip board */
@@ -251,6 +252,7 @@ PD_VAR predefvars[NEVARS+2] =
 256,   /* EVASAVE */ 	
 1,     /* EVBUFHOOK */		/* actual: pd_sgarbf */
 STOP,  /* EVCBFLAGS */		/* actual: kbdmode - curr keyboard macro mode*/
+0,
 0,     /* EVCBUFNAME */		/* actual: kbdrd */
 -1,    /* EVCFNAME */		  /* actual: kbdwr */
 CLIP_LIFE,/*EVCLIPLIFE */	/* actual: cliplife */
@@ -658,17 +660,10 @@ const char * USE_FAST_CALL gtfun(char * fname)/* evaluate a function */
 				    						adb(iarg1);*/
 		                if      (fnum == UFSLESS)
 		                  iarg1 &= 2;
-#if 1
-										else
-										{ iarg1 += 1;
-											iarg1 &= (fnum - UFSEQUAL + 1);
-										}
-#else
 		                else if (fnum == UFSEQUAL)
 		                  iarg1 = iarg1 == 0;
 		                else if (iarg1 < 0)
 		                  iarg1 = 0;
-#endif
 		when UFNOT: 	  
 		case UFAND:
 		case UFOR:		  iarg1 = stol(arg1);
@@ -725,6 +720,7 @@ const char * USE_FAST_CALL gtenv(const char * vname)
 //	when EVUSESOFTTAB:res = curbp->b_mode & BSOFTTAB ? 1 : 0;
 	  when EVCBFLAGS:  res = curbp->b_flag;
 	  case EVCMODE:    if (vnum == EVCMODE) res = res >> NUMFLAGS;
+	  when EVCBLANG:	 res = curbp->b_langprops;;
 	  when EVCBUFNAME: return curbp->b_bname;
 	  when EVCFNAME:   return curbp->b_fname;
 //  when EVSRES:	   return sres;
@@ -1141,12 +1137,16 @@ const char *Pascal getval(char * tgt, char * tok)
 
 	switch (*tok)
 	{ case TOKARG:															/* interactive argument */
+						if (tok[1] == TOKARG)
+						{	++tok;
+							blen = 0;
+						}
 						getval(&tok[0], &tok[1]);
-		        ++pd_discmd;							/* echo it always! */
-					{	Cc cc = getstring(&tgt[0], NSTRING, tok);
+			      ++pd_discmd;							/* echo it always! */
+					{	Cc cc = getstring(&tgt[0], blen, tok);
 						--pd_discmd;
-						return cc < 0 ? getvalnull : tgt;
-		      }
+							return cc < 0 ? getvalnull : tgt;
+			    }
 	  case TOKBUF:															/* buffer contents fetch */
 					{ BUFFER * bp = bfind(getval(tgt, tokp1), FALSE);
 						if (bp == NULL)

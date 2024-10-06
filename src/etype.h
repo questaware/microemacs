@@ -89,10 +89,10 @@ int Pascal desvars(int, int);
 int Pascal dispvar(int,int);
 int USE_FAST_CALL myeq(int, int);
 int Pascal ernd(void);
+int Pascal name_mode(const char *);
 #if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
  int Pascal fexist(const char *);
 #else
-int Pascal name_mode(const char *);
 #define fexist(fn) name_mode(fn)
 #endif
 char * fex_up_dirs(const char * dir, const char * file);
@@ -183,7 +183,6 @@ int Pascal deskey(int, int);
 int Pascal detab(int, int);
 char *Pascal dir_entry_name();
 Cc doeither(int f, int n, Command fnc);
-int Pascal dobuf(BUFFER*, int);
 extern BUFFER * g_dofilebuff;
 void Pascal double_crypt(char *, int);
 int Pascal dropbuffer(int, int);
@@ -333,7 +332,11 @@ int Pascal resize(int, int);
 int Pascal resizm(int,int);
 void USE_FAST_CALL rest_l_offs(Lpos_t*);
 int        resterr();
-//int Pascal restwnd(int, int);
+#if S_WIN32
+#define reverse_cursor(x) 1
+#else
+void reverse_cursor(int x);
+#endif
 int Pascal rmcclear();
 void Pascal rvstrcpy(char *, char *);
 int Pascal savematch();
@@ -402,7 +405,7 @@ void Pascal ttopen();
 #else
 #define ttopen()
 #endif
-void Pascal tcapclose(int lvl);
+int Pascal tcapclose(int lvl);
 #ifndef tcapkopen
 void Pascal tcapkopen();
 #endif

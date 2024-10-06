@@ -10,6 +10,9 @@
 #include	"etype.h"
 #include	"elang.h"
 
+static int Pascal docmd(char * cline);
+
+
 /*	The !WHILE directive in the execution language needs to
 	stack references to pending whiles. These are stored linked
 	to each currently open procedure via a linked list of
@@ -79,347 +82,6 @@ BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 	return bfind(ebuffer, create);
 }
 
-
-static Cc finddo(int f, int n, Command fnc, char * tkn)
-
-#if 0
-{	if (fnc == NULL)
-		fnc = fncmatch(tkn);					/* match the token to see if it exists */
-
-{	Cc cc;
-	KEYTAB kt;
-	kt.k_code = 1;
-//kt.k_type = BINDFNC;
-	kt.k_ptr.fp = fnc;
-	
-	if (fnc == NULL)								/* find the pointer to that buffer */
-	{ kt.k_ptr.fp = bfind(tkn, FALSE); 
-//	kt.k_type = BINDBUF;
-	}
-
-	return execkey(&kt, f, n);
-}}
-#else
-{	Cc cc;
-
-	if (fnc == NULL)
-		fnc = fncmatch(tkn);					/* match the token to see if it exists */
-
-	if (fnc != NULL)
-	{ 
-		cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
-																	 : (*fnc)(f, n);			/* call the function */
-	}
-	else													/* find the pointer to that buffer */
-	{ BUFFER *bp = bfind(tkn, FALSE); 
-		cc = dobuf(bp,n);
-	}
-
-	return cc;
-}
-#endif
-
-/*	docmd:	take a passed string as a command line and translate
-		it to be executed as a command. This function will be
-		used by execute-command-line and by all source and
-		startup files. Lastflag/thisflag is also updated.
-
-	format of the command line is:
-
-		{# arg} <command-name> {<argument string(s)>}
-
-*/
-static 
-char *g_execstr = NULL; 								/* pointer to string to execute */
-
-static
-int Pascal docmd(char * cline)
-			/* command line to execute */
-{	  	  	  	  		     /* if we are scanning and not executing..go back here */
-	char *s_execstr = g_execstr; 		/* original exec string */
-
-	g_execstr = cline;	      						/* and set this one as current */
-
-{	int f = g_got_uarg;
-  g_got_uarg = FALSE;								// The 1st command in the buffer gets the arg
-
-{	int n = ! f ? 1 : g_univct;  					/* numeric repeat value */
-//int (Pascal *fnc)(int, int);      	  /* function to execute */
-//Command fnc;      	  								/* function to execute */
-	char ebuffer[132];
-#define tkn ebuffer+1
-	++g_macargs;	      									/* in cline execution */
-
-	g_lastflag = g_thisflag;
-	g_thisflag = 0;
-
-{ int	cc = macarg(tkn);									/* TRUE, FALSE, ABORT */
-	if (cc > FALSE)
-		if (*(tkn) < 'A')
-		{ f = TRUE;
-		  n = atoi(getval(tkn, tkn));
-														      /* and now get the command to execute */
-		  cc = macarg(tkn);
-		}  
-
-	if (cc > FALSE)
-	{	
-#if 1
-		cc = finddo(f,n,NULL,tkn);
-#else
-		if (fnc != NULL)
-		{ 
-			cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
-																		 : (*fnc)(f, n);			/* call the function */
-		}
-		else													/* find the pointer to that buffer */
-		{ BUFFER *bp = bfind(tkn, FALSE); 
-		  if (bp == NULL) 
-			{ mlwrite(TEXT16);
-							/* "[No such Function]" */
-				cc = FALSE;
-			}
-			else 												/* execute the buffer */
-				cc = dobuf(bp,n);
-		}
-#endif
-		pd_cmdstatus = cc;						/* save the status */
-//	g_lastfnc = fnc;
-	}
-	--g_macargs;										/* restore g_macargs flag */
-	g_execstr = s_execstr;
-	return cc;
-#undef tkn
-}}}}
-
-
-/* namedcmd:	execute a named command even if it is not bound */
-
-int Pascal namedcmd(int f, int n)
-	  /* command arguments [passed through to command executed] */
-{
-	int (Pascal *kfunc)(int, int);/* ptr to the function to execute */
-	int scle = g_macargs;
-	int cc;
-
-	if (! scle)
-																	/* prompt the user to type a named command */
-	  kfunc = getname(0);						/* and get the function name to execute */
-	else
-	{	char ebuffer[40];
-																						/* grab token and advance past */
-	  (void)token(ebuffer, sizeof(ebuffer));
-							     /* evaluate it */
-	{ const char * fnm = getval(ebuffer, ebuffer);
-	  if (fnm == g_logm[2])
-	    return FALSE;
-																								/* and look it up */
-	  kfunc = NULL;
-	}}
-
-#if 1
-	cc = finddo(f,n,kfunc,"");
-#else
-	if (kfunc != NULL)
-	{ // g_macargs = FALSE;
-																												/* call the function */
-		cc = in_range((int)kfunc, 1, 40) ? execporb((int)kfunc, n)
-																		 : (*kfunc)(f, n);
-	  // g_macargs = scle;
-	}
-	else
-	{ mlwrite(TEXT16);
-					/* "[No such function]" */
-	  cc = FALSE;
-	}
-#endif
-	return cc;
-}
-
-#if FLUFF || DEBUGM
-
-/*	execcmd:	Execute a command line command to be typed in
-			by the user					*/
-int Pascal execcmd(int f, int n)
-
-{
-	char cmdnm[NSTRING];		/* string holding command to execute */
-						      /* get the line wanted */
-	int cc = mlreply(": ", cmdnm, NSTRING);
-	if (cc > FALSE)
-	  return cc;
-
-//g_exec_level = 0;
-	return docmd(cmdnm);
-}
-#endif
-
-
-/* token:	chop a token off a string
-		return a pointer past the token
-*/
-
-char *Pascal token(char * tok, int size)
-				/* source string, destination token string */
-				/* maximum size of token */
-{
-#if 1
-	const char * src = g_execstr;
-	char quotef = 0;	/* is the current string quoted? */
-	char c;
-	int leading = 1;
-
-	for (; (c = *src) != 0; ++src)
-	{														/* process special characters */
-		if 			(leading < 0)		
-	    switch (c)
-	    { case 'r': c = 'J' - '@';
-	      when 'n': c = 'M' - '@'; 
-	      when 'l': c = 'L' - '@'; 
-	      when 't': c = 'I' - '@';  
-	      when 'b': c = 'H' - '@';  
-	    }
-	  else if (c == '~')
-	  	leading = -1;
-	  else if (c == quotef)									/* check for the end of the token */
-	  	break;
-	  else if (c == ' ' || c == '\t')
-	  { if (leading)
-	      continue;
-	    if (quotef == 0)										/* terminates unless in quotes */
-	      break;
-	  }
-	  else if ((c == '"' || c == '\'') && quotef == 0 && leading)
-	  { quotef = c;													/* set quote mode if quote found */
-	    leading = 0;
-	    continue;
-	  }
-	  if (--size <= 0)
-	  	break;
-	  *tok++ = c;
-	  leading = 0;
-	}
-
-	*tok = 0;
-	return g_execstr = (char*)(*src == 0 ? src : src+1);
-#else
-	const char * src = g_execstr - 1;
-	char quotef = 0;	/* is the current string quoted? */
-	char c;
-	int leading = -1;
-
-	for (; (c = *++src) != 0;)
-	{	if (c == quotef)										/* check for the end of the token */
-	  	break;
-		++leading;
-		if (c == '~')													/* process special characters */
-	    switch (*++src)
-	    { case 'r': c = 'J' - '@';
-	      when 'n': c = 'M' - '@'; 
-	      when 'l': c = 'L' - '@'; 
-	      when 't': c = 'I' - '@';  
-	      when 'b': c = 'H' - '@';
-	      otherwise --src;
-	    }
-	  else if (c <= ' ')
-		{	if (leading == 0)
-				continue;
-		  if (quotef == 0)										/* terminates unless in quotes */
-	      break;
-	  }
-	  else if ((c == '"' || c == '\'') && quotef + leading == 0)
-	  { quotef = c;													/* set quote mode if quote found */
-	    continue;
-	  }
-	  if (--size <= 0)
-	  	break;
-	  *tok++ = c;
-	}
-
-	*tok = 0;
-	return g_execstr = (char*)src+!!c;
-#endif
-}
-
-
-int Pascal macarg(char * tok) /* get a macro line argument */
-				/* buffer to place argument */
-{ ++g_macargs;
-{	int res = nextarg(null, tok, NSTRING);
-  --g_macargs;
-	return res;      
-}}
-
-/*	nextarg:	get the next argument	*/
-
-int Pascal nextarg(const char * prompt, char * buffer, int size)
-				/* prompt to use if we must be interactive */
-				/* buffer to put token into */
-				/* size of the buffer */
-{	extern int g_gs_keyct;
-	g_gs_keyct = 0;
-
-	if (g_macargs <= 0 || g_execstr == NULL)		/* we are interactive */
-	  return getstring(buffer, size, prompt);
-																			      /* grab token and advance past */
-	(void)token(buffer, size);
-
-	return getval(buffer, buffer) != getvalnull;/* evaluate it ** no protection!*/
-}
-
-
-
-static int USE_FAST_CALL common_return(BUFFER * bp)
-	
-{	if (bp == NULL)
-	{ mlwrite(TEXT99);				/*	out of memory */
-	  return FALSE;
-	}
-														/* and make sure it is empty */
-	bp->b_flag |= BFINVS;
-	g_bstore = bp;
-	return bclear(bp);
-}
-
-/*	storemac:	Set up a macro buffer and flag to store all
-			executed command lines there			*/
-
-int Pascal storemac(int f, int n)
-	/* int n;		** macro number to use */
-{
-	if (f == FALSE || ! in_range(n, 1,40))
-	{ mlwrite(f == FALSE ? TEXT111		/* must have a numeric argument */
-											 : TEXT112);
-/*			"No macro specified" */
-/*			"Macro number out of range" */
-	  return FALSE;
-	}
-
-	return common_return(bmfind(TRUE, n));	/*set up the new macro buffer */
-}
-
-
-int Pascal execporb(int isp, int n)
-										 /* isp; ** must be 0, or 1 to 40 */
-{	BUFFER * bp = bmfind(FALSE, isp);
-	if (bp == NULL) 
-	{ mlwrite(TEXT130);
-										/* "Macro not defined" */
-		return FALSE;
-	}
-					/* and now execute it as asked */
-	return dobuf(bp,n);
-}
-
-/*	execbuf:	Execute the contents of a buffer of commands	*/
-
-int Pascal execbuf(int f, int n)
-	/* int f, n;	** default flag and numeric arg */
-{ 
-  return execporb(0,n);
-}
-
-
 static
 char * Pascal skipleadsp(char * s, int len)
 	
@@ -428,6 +90,11 @@ char * Pascal skipleadsp(char * s, int len)
     ++s;
   return s;
 }
+
+
+#if _DEBUG
+int g_rc_lineno;
+#endif
 
 
 #if LIM_WHILE
@@ -446,33 +113,13 @@ void Pascal freewhile(WHBLOCK * wp)/* free a list of while block pointers */
 
 #endif
 
-/*	dobuf:	execute the contents of the buffer pointed to
-		by the passed BP
-
-	Directives start with a "!" and include:
-
-	!endm		End a macro
-	!if (cond)	conditional execution
-	!else
-	!endif
-	!return 	Return (terminating current macro)
-	!goto <label>	Jump to a label in the current macro
-	!force		Force macro to continue...even if command fails
-	!while (cond)	Execute a loop if the condition is true
-	!endwhile
-        
-	Line Labels begin with a "*" as the first nonblank char, like:
-
-	*LBL01
-*/
-
-#if _DEBUG
-int g_rc_lineno;
-#endif
+static 
+char *g_execstr = NULL; 								/* pointer to string to execute */
 
 BUFFER * g_dobuf;
 
-int Pascal dobuf(BUFFER * bp, int iter)
+static 
+int Pascal dobuf(BUFFER * bp, int iter, const char * name)
 			 /* iter:   # times to do it */
 {
 	char smalleline[80];
@@ -491,7 +138,7 @@ int Pascal dobuf(BUFFER * bp, int iter)
 	g_rc_lineno = 0;
 #endif
   if (bp == NULL) 
-	{ mlwrite(TEXT16);
+	{ mlwrite(concat(smalleline, TEXT16, " ", name, null));
 						/* "[No such Function]" */
 		return FALSE;
 	}
@@ -774,6 +421,363 @@ jover_:							  									/* reset the line pointer back.. */
 }
 
 
+static Cc finddo(int f, int n, Command fnc, char * tkn)
+
+#if 0
+{	if (fnc == NULL)
+		fnc = fncmatch(tkn);					/* match the token to see if it exists */
+
+{	Cc cc;
+	KEYTAB kt;
+	kt.k_code = 1;
+//kt.k_type = BINDFNC;
+	kt.k_ptr.fp = fnc;
+	
+	if (fnc == NULL)								/* find the pointer to that buffer */
+	{ kt.k_ptr.fp = bfind(tkn, FALSE); 
+//	kt.k_type = BINDBUF;
+	}
+
+	return execkey(&kt, f, n);
+}}
+#else
+{	Cc cc;
+
+	if (fnc == NULL)
+		fnc = fncmatch(tkn);					/* match the token to see if it exists */
+
+	if (fnc != NULL)
+	{ 
+		cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
+																	 : (*fnc)(f, n);			/* call the function */
+	}
+	else													/* find the pointer to that buffer */
+	{ BUFFER *bp = bfind(tkn, FALSE); 
+		cc = dobuf(bp,n,tkn);
+	}
+
+	return cc;
+}
+#endif
+
+/*	docmd:	take a passed string as a command line and translate
+		it to be executed as a command. This function will be
+		used by execute-command-line and by all source and
+		startup files. Lastflag/thisflag is also updated.
+
+	format of the command line is:
+
+		{# arg} <command-name> {<argument string(s)>}
+
+*/
+static
+int Pascal docmd(char * cline)
+			/* command line to execute */
+{	  	  	  	  		     /* if we are scanning and not executing..go back here */
+	char *s_execstr = g_execstr; 		/* original exec string */
+
+	g_execstr = cline;	      						/* and set this one as current */
+
+{	int f = g_got_uarg;
+  g_got_uarg = FALSE;								// The 1st command in the buffer gets the arg
+
+{	int n = ! f ? 1 : g_univct;  					/* numeric repeat value */
+//int (Pascal *fnc)(int, int);      	  /* function to execute */
+//Command fnc;      	  								/* function to execute */
+	char ebuffer[132];
+#define tkn ebuffer+1
+	++g_macargs;	      									/* in cline execution */
+
+	g_lastflag = g_thisflag;
+	g_thisflag = 0;
+
+{ int	cc = macarg(tkn);									/* TRUE, FALSE, ABORT */
+	if (cc > FALSE)
+		if (*(tkn) < 'A')
+		{ f = TRUE;
+		  n = atoi(getval(tkn, tkn));
+														      /* and now get the command to execute */
+		  cc = macarg(tkn);
+		}  
+
+	if (cc > FALSE)
+	{	
+#if 1
+		cc = finddo(f,n,NULL,tkn);
+#else
+		if (fnc != NULL)
+		{ 
+			cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
+																		 : (*fnc)(f, n);			/* call the function */
+		}
+		else													/* find the pointer to that buffer */
+		{ BUFFER *bp = bfind(tkn, FALSE); 
+		  if (bp == NULL) 
+			{ mlwrite(TEXT16);
+							/* "[No such Function]" */
+				cc = FALSE;
+			}
+			else 												/* execute the buffer */
+				cc = dobuf(bp,n, tkn);
+		}
+#endif
+		pd_cmdstatus = cc;						/* save the status */
+//	g_lastfnc = fnc;
+	}
+	--g_macargs;										/* restore g_macargs flag */
+	g_execstr = s_execstr;
+	return cc;
+#undef tkn
+}}}}
+
+
+/* namedcmd:	execute a named command even if it is not bound */
+
+int Pascal namedcmd(int f, int n)
+	  /* command arguments [passed through to command executed] */
+{
+	int (Pascal *kfunc)(int, int);/* ptr to the function to execute */
+	int scle = g_macargs;
+	int cc;
+
+	if (! scle)
+																	/* prompt the user to type a named command */
+	  kfunc = getname(0);						/* and get the function name to execute */
+	else
+	{	char ebuffer[40];
+																						/* grab token and advance past */
+	  (void)token(ebuffer, sizeof(ebuffer));
+							     /* evaluate it */
+	{ const char * fnm = getval(ebuffer, ebuffer);
+	  if (fnm == g_logm[2])
+	    return FALSE;
+																								/* and look it up */
+	  kfunc = NULL;
+	}}
+
+#if 1
+	cc = finddo(f,n,kfunc,"");
+#else
+	if (kfunc != NULL)
+	{ // g_macargs = FALSE;
+																												/* call the function */
+		cc = in_range((int)kfunc, 1, 40) ? execporb((int)kfunc, n)
+																		 : (*kfunc)(f, n);
+	  // g_macargs = scle;
+	}
+	else
+	{ mlwrite(TEXT16);
+					/* "[No such function]" */
+	  cc = FALSE;
+	}
+#endif
+	return cc;
+}
+
+#if FLUFF || DEBUGM
+
+/*	execcmd:	Execute a command line command to be typed in
+			by the user					*/
+int Pascal execcmd(int f, int n)
+
+{
+	char cmdnm[NSTRING];		/* string holding command to execute */
+						      /* get the line wanted */
+	int cc = mlreply(": ", cmdnm, NSTRING);
+	if (cc > FALSE)
+	  return cc;
+
+//g_exec_level = 0;
+	return docmd(cmdnm);
+}
+#endif
+
+
+/* token:	chop a token off a string
+		return a pointer past the token
+*/
+
+char *Pascal token(char * tok, int size)
+				/* source string, destination token string */
+				/* maximum size of token */
+{
+#if 1
+	const char * src = g_execstr;
+	char quotef = 0;	/* is the current string quoted? */
+	char c;
+	int leading = 1;
+
+	for (; (c = *src) != 0; ++src)
+	{														/* process special characters */
+		if 			(leading < 0)		
+	    switch (c)
+	    { case 'r': c = 'J' - '@';
+	      when 'n': c = 'M' - '@'; 
+	      when 'l': c = 'L' - '@'; 
+	      when 't': c = 'I' - '@';  
+	      when 'b': c = 'H' - '@';  
+	    }
+	  else if (c == '~')
+	  	leading = -1;
+	  else if (c == quotef)									/* check for the end of the token */
+	  	break;
+	  else if (c == ' ' || c == '\t')
+	  { if (leading)
+	      continue;
+	    if (quotef == 0)										/* terminates unless in quotes */
+	      break;
+	  }
+	  else if ((c == '"' || c == '\'') && quotef == 0 && leading)
+	  { quotef = c;													/* set quote mode if quote found */
+	    leading = 0;
+	    continue;
+	  }
+	  if (--size <= 0)
+	  	break;
+	  *tok++ = c;
+	  leading = 0;
+	}
+
+	*tok = 0;
+	return g_execstr = (char*)(*src == 0 ? src : src+1);
+#else
+	const char * src = g_execstr - 1;
+	char quotef = 0;	/* is the current string quoted? */
+	char c;
+	int leading = -1;
+
+	for (; (c = *++src) != 0;)
+	{	if (c == quotef)										/* check for the end of the token */
+	  	break;
+		++leading;
+		if (c == '~')													/* process special characters */
+	    switch (*++src)
+	    { case 'r': c = 'J' - '@';
+	      when 'n': c = 'M' - '@'; 
+	      when 'l': c = 'L' - '@'; 
+	      when 't': c = 'I' - '@';  
+	      when 'b': c = 'H' - '@';
+	      otherwise --src;
+	    }
+	  else if (c <= ' ')
+		{	if (leading == 0)
+				continue;
+		  if (quotef == 0)										/* terminates unless in quotes */
+	      break;
+	  }
+	  else if ((c == '"' || c == '\'') && quotef + leading == 0)
+	  { quotef = c;													/* set quote mode if quote found */
+	    continue;
+	  }
+	  if (--size <= 0)
+	  	break;
+	  *tok++ = c;
+	}
+
+	*tok = 0;
+	return g_execstr = (char*)src+!!c;
+#endif
+}
+
+
+int Pascal macarg(char * tok) /* get a macro line argument */
+				/* buffer to place argument */
+{ ++g_macargs;
+{	int res = nextarg(null, tok, NSTRING);
+  --g_macargs;
+	return res;      
+}}
+
+/*	nextarg:	get the next argument	*/
+
+int Pascal nextarg(const char * prompt, char * buffer, int size)
+				/* prompt to use if we must be interactive */
+				/* buffer to put token into */
+				/* size of the buffer */
+{	extern int g_gs_keyct;
+	g_gs_keyct = 0;
+
+	if (g_macargs <= 0 || g_execstr == NULL)		/* we are interactive */
+	  return getstring(buffer, size, prompt);
+																			      /* grab token and advance past */
+	(void)token(buffer, size);
+
+	return getval(buffer, buffer) != getvalnull;/* evaluate it ** no protection!*/
+}
+
+
+
+static int USE_FAST_CALL common_return(BUFFER * bp)
+	
+{	if (bp == NULL)
+	{ mlwrite(TEXT99);				/*	out of memory */
+	  return FALSE;
+	}
+														/* and make sure it is empty */
+	bp->b_flag |= BFINVS;
+	g_bstore = bp;
+	return bclear(bp);
+}
+
+/*	storemac:	Set up a macro buffer and flag to store all
+			executed command lines there			*/
+
+int Pascal storemac(int f, int n)
+	/* int n;		** macro number to use */
+{
+	if (f == FALSE || ! in_range(n, 1,40))
+	{ mlwrite(f == FALSE ? TEXT111		/* must have a numeric argument */
+											 : TEXT112);
+/*			"No macro specified" */
+/*			"Macro number out of range" */
+	  return FALSE;
+	}
+
+	return common_return(bmfind(TRUE, n));	/*set up the new macro buffer */
+}
+
+
+int Pascal execporb(int isp, int n)
+										 /* isp; ** must be 0, or 1 to 40 */
+{	BUFFER * bp = bmfind(FALSE, isp);
+	if (bp == NULL) 
+	{ mlwrite(TEXT130);
+										/* "Macro not defined" */
+		return FALSE;
+	}
+					/* and now execute it as asked */
+	return dobuf(bp,n,"");
+}
+
+/*	execbuf:	Execute the contents of a buffer of commands	*/
+
+int Pascal execbuf(int f, int n)
+	/* int f, n;	** default flag and numeric arg */
+{ 
+  return execporb(0,n);
+}
+
+/*	dobuf:	execute the contents of the buffer pointed to
+		by the passed BP
+
+	Directives start with a "!" and include:
+
+	!endm		End a macro
+	!if (cond)	conditional execution
+	!else
+	!endif
+	!return 	Return (terminating current macro)
+	!goto <label>	Jump to a label in the current macro
+	!force		Force macro to continue...even if command fails
+	!while (cond)	Execute a loop if the condition is true
+	!endwhile
+        
+	Line Labels begin with a "*" as the first nonblank char, like:
+
+	*LBL01
+*/
+
+
 #if	DEBUGM
 /*		Interactive debugger
 
@@ -903,7 +907,7 @@ Cc Pascal startup(const char * sfname)
 		  cc = readin(fspec, 0);
 									/* go execute it! */
 		  if (cc > FALSE)
-		  	cc = dobuf(dfb,1);
+		  	cc = dobuf(dfb,1, "Startup");
 
 		  if (cc > FALSE &&
 			    window_ct(dfb) == NULL)

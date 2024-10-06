@@ -504,7 +504,7 @@ int Pascal tcapopen()
 
 			/* This function gets called just before we go
 			 * back home to the command interpreter.	 */
-void tcapclose(int lvl)
+int tcapclose(int lvl)
 
 {			/* send end-of-keypad-transmit string if defined */
  /* if (gflags & MD_NO_MMI)

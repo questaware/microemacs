@@ -61,7 +61,6 @@ src/eval.c
 src/evar.h
 src/exec.c
 src/file.c
-src/fileio.c
 src/fixctagsbug.cpp
 src/map.h
 src/input.c
@@ -103,10 +102,7 @@ vms/terminal.c
 vms/vms.c
 wincon/Makefile
 wincon/BUILD.H
-wincon/msemacs.c
 wincon/estruct.h
-wincon/logmsg.c
-wincon/logmsg.oc
 wincon/mkw.bat
 wincon/msexec.c
 wincon/oswin.c

@@ -204,7 +204,7 @@ bind-to-key              M-K  (takes command then key)
 btk                      M-K  short for bind-to-key
 buffer-position          ^X=  gives information
 calculator							 evaluate expressions to the right of curpos arg => dont show popup.
-												 All operators have the same precedence.
+												 All operators have the same precedence. ^ means to power.
                          A series of lines <var>=<expression> are evaluated.
                          Expression can contain %v where v is a user variable.
                          Var refers to a user variable,
@@ -626,6 +626,7 @@ In Unix EMACS uses the command infocmp to read the keyboard codes.
   (The following functions can be used in .rc files.)
 
   MONAMIC, RSTR, "@",     /* Prompts for a value using value */
+  MONAMIC, RSTR, "@@",    /* Prompts for a key stroke using value */
   MONAMIC, RINT, "abs",   /* absolute value of a number */
   DYNAMIC, RINT, "add",   /* add two numbers together */
   DYNAMIC, RSTR, "and",   /* logical and */

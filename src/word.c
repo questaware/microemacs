@@ -281,7 +281,7 @@ int Pascal endword(int notused, int n)
  * command for the right number of characters. With a zero argument do nothing.
  * Bound to "M-D".
  */
-Pascal delfword(int notused, int n)
+int Pascal delfword(int notused, int n)
 
 {	if (rdonly())
 	  return FALSE;
@@ -354,7 +354,7 @@ char * Pascal reform(char * para)	/* reformat a paragraph */
 }
 
 
-Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
+int Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 															   	current fill column */
 {	if (rdonly())
 	  return FALSE;

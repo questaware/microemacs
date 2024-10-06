@@ -338,23 +338,6 @@ int ttflush(void)
 
 // static int  g_eaten_char = -1;		 /* Re-eaten char */
 
-void flush_typah()
-
-{ struct pollfd fds;
-  fds.fd = 0; /* this is STDIN */
-  fds.events = POLLIN;
-
-//g_eaten_char = -1;
-
-  while (TRUE)
-	{	int ret = poll(&fds, 1, 0);
-  	if (ret != 1)
-  		break;
-  	
-    (void)ttgetraw();
-  }
-}
-
 #if 0
 
 void Pascal reeat(int c)
@@ -405,6 +388,22 @@ int ttgetraw()
 #endif
 }
 
+void flush_typah()
+
+{ struct pollfd fds;
+  fds.fd = 0; /* this is STDIN */
+  fds.events = POLLIN;
+
+//g_eaten_char = -1;
+
+  while (TRUE)
+	{	int ret = poll(&fds, 1, 0);
+  	if (ret != 1)
+  		break;
+  	
+    (void)ttgetraw();
+  }
+}
 
 #if	TYPEAH
 /* typahead:	Check to see if any characters are already in the
@@ -487,23 +486,6 @@ static void usehost(line, end)
 #endif
   upwind(TRUE);
 }
-/* Create a subjob with a copy of the command intrepreter in it. When the
- * command interpreter exits, mark the screen as garbage so that you do a full
-  * repaint. Bound to "^X C". The message at the start in VMS puts out a newline.
-   * Under some (unknown) condition, you don't get one free when DCL starts up.
-    */
-int spawncli(int f, int n)
-    
-{ register char *cp = getenv("SHELL");
-  if (cp == NULL || *cp == 0)
-#if S_BSD
-    cp = "exec /bin/csh";
-#else
-    cp = "exec /bin/sh";
-#endif
-  return gen_spawn(f, n, NULL, cp);
-}
-
 
 
 int gen_spawn(f, n, prompt, line)
@@ -530,6 +512,24 @@ int gen_spawn(f, n, prompt, line)
 			   /* if we are interactive, pause here */
   return TRUE;
 }
+
+/* Create a subjob with a copy of the command intrepreter in it. When the
+ * command interpreter exits, mark the screen as garbage so that you do a full
+  * repaint. Bound to "^X C". The message at the start in VMS puts out a newline.
+   * Under some (unknown) condition, you don't get one free when DCL starts up.
+    */
+int spawncli(int f, int n)
+    
+{ register char *cp = getenv("SHELL");
+  if (cp == NULL || *cp == 0)
+#if S_BSD
+    cp = "exec /bin/csh";
+#else
+    cp = "exec /bin/sh";
+#endif
+  return gen_spawn(f, n, NULL, cp);
+}
+
 
 /* Run a one-liner in a subjob. When the command returns, wait for a single
  * character to be typed, then mark the screen as garbage so a full repaint is

@@ -372,8 +372,9 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	int hix[30] = {0};
 	const char** high = ((const char**)&pd_hlight1);
 //int chrom_on = 0;		/* 1: ul, 2: bold, -1 manual */
-	char duple = curbp->b_langprops & BCPAS 				? ')' :
-							 curbp->b_langprops &(BCCOMT+BCSQL) ? '/' : 0;
+  int langprops = curbp->b_langprops;
+  char duple = langprops & BCPAS        ? ')' :
+               langprops &(BCCOMT+BCSQL) ? '/' : 0;
 	int tabsize = curbp->b_tabsize;
 	if (tabsize < 0)
 		tabsize = - tabsize;
@@ -401,11 +402,12 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 					++len;
 				}
 			}
-		{ int wix;
+		{ int ch = langprops & BCFOR ? tolower(c) : c;
+			int wix;
 			for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
 			{ // if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
 				//	continue;
-			  if (c == high[wix][1+hix[wix]])
+			  if (ch == high[wix][1+hix[wix]])
 				{ hix[wix] += 1;
 				  if (high[wix][1+hix[wix]] == 0)
 						break;
@@ -414,7 +416,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 						break;					
 				}
 				else
-					hix[wix] = (c == high[wix][1]) && (wix == 0 || str[-1] <= ' ' || c == ' ');
+					hix[wix] = (ch == high[wix][1]) && (wix == 0 || str[-1] <= ' ' || ch == ' ');
 			}
 
 			if (wix >= 0
@@ -865,11 +867,7 @@ void Pascal updline()
 */
 {	WINDOW * wp = curwp;
  static LINE * g_up_lp = NULL;
-				int flag = 
-#if MEMMAP
-				   g_up_lp != wp->w_dotp ? WFHARD /*| WFTXTU|WFTXTD*/ | WFMODE | WFMOVE :
-#endif
-										0;
+				int flag = g_up_lp != wp->w_dotp ? WFHARD /*| WFTXTU|WFTXTD*/ | WFMODE | WFMOVE : 0;
 	g_up_lp = wp->w_dotp;
 {	int fcol = wp->w_fcol; // < pd_fcol ? pd_fcol : wp->w_fcol;
 	int row = wp->w_toprow;
@@ -1354,6 +1352,31 @@ void Pascal mlputs(int wid, const char * s)
 		mlout(' ');
 }
 
+#if S_WIN32 == 0
+
+static COORD g_tcursor;
+
+void reverse_cursor(int notused)
+
+{   tcaprev(1);
+//  tcapchrom(8+4);
+{   COORD tc = g_coords;
+    VIDEO * vp = vscreen[tc.Y];
+    mlout(vp->v_text[tc.X]);
+    if (*(int*)&g_tcursor == *(int*)&tc)
+      tcaprev(0);
+    else
+    { vp = vscreen[g_tcursor.Y];
+      tcapmove(g_tcursor.Y,g_tcursor.X);
+      tcaprev(0);
+      mlout(vp->v_text[g_tcursor.X]);
+      tcapmove(g_tcursor.Y,g_tcursor.X);
+      g_tcursor = tc;
+    }
+}}
+
+#endif
+
 #define get_arg(type,ap) va_arg(ap, type)
 
 int mlwrite(const char * fmt, ...)
@@ -1379,6 +1402,10 @@ int mlwrite(const char * fmt, ...)
 #if COLOR && 0
 		tcapbfcol(V_BLANK); /* set up the proper colors for the command line */
 #endif
+    if (fmt[1] <= 0)
+    	/*tcaprev(0)*/;
+    else
+      reverse_cursor(0);
 		tcapmove(255, 0);
 		tcapeeol();
 	}

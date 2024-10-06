@@ -11,6 +11,8 @@
 #include	"estruct.h"
 #if S_MSDOS
 #include <windows.h>
+#else
+#include <unistd.h>
 #endif
 #include	"edef.h"
 #include	"etype.h"
@@ -73,6 +75,8 @@ static int Pascal cbuf40(int f, int n) { return execporb(40,n); }
 #else
 #define MUTA META
 #endif
+
+#define DESC_TO_FILE 0
 
 /*
  * Command table.
@@ -351,8 +355,10 @@ static KEYTAB * aux_getbind;		/* only valid if result != null */
 int  getcmd(int mode)
 
 { int c = getkey();
+#if DESC_TO_FILE
 	if (mode)
 		return c;
+#endif
 {	int pfx = c == (CTRL|'[') ? META :
 						c == (CTRL|'X') ? CTLX : 0;
 	if (pfx != 0)
@@ -414,12 +420,34 @@ KEYTAB * getbind(int c)
 
 
 static
-int Pascal USE_FAST_CALL addnewbind(int c, int (Pascal *func)(int, int))
-					/* key to find what is bound to it */
-{ /*if (c == (CTRL | SPEC | 'N'))
-      adb(4);*/
+int Pascal getechockey(int mode)
 
-{ KEYTAB * ktp = getbind(c);
+{ char outseq[20];
+	char tok[NSTRING];
+								/* check to see if we are executing a command line */
+	int c;
+	if (g_macargs <= 0)
+		c = getcmd(mode);
+	else
+	{ macarg(tok);	/* get the next token */
+	  c = stock(tok);
+	}
+																	/* change it to something printable */
+  if (!mode)
+  	mlwrite("\001 %s",cmdstr(&outseq[1], c));	// can be overwritten!
+
+  return c;
+}
+
+
+#if 0
+
+static
+int Pascal USE_FAST_CALL addnewbind(int (Pascal *func)(int, int))
+					/* key to find what is bound to it */
+
+{	int c = getechockey(FALSE);
+	KEYTAB * ktp = getbind(c);
 
 #if NBINDS
   if (ktp == &keytab[NBINDS])
@@ -457,7 +485,9 @@ int Pascal USE_FAST_CALL addnewbind(int c, int (Pascal *func)(int, int))
 	 	g_abortc = c;								/* reset the appropriate global prefix variable*/
 
   return TRUE;
-}}
+}
+
+#endif
 
 
 typedef struct
@@ -551,28 +581,6 @@ unsigned int Pascal stock(char * keyname)
 }
 
 
-static
-int Pascal getechockey(int mode)
-
-{ char outseq[20];
-	char tok[NSTRING];
-								/* check to see if we are executing a command line */
-	int c;
-	if (g_macargs <= 0)
-		c = getcmd(mode);
-	else
-	{ macarg(tok);	/* get the next token */
-	  c = stock(tok);
-	}
-																	/* change it to something printable */
-  if (!mode)
-  	mlwrite("\001 %s",cmdstr(&outseq[1], c));	// can be overwritten!
-
-  return c;
-}
-
-
-
 			/* bindtokey: add a new key to the key binding table */
 int Pascal bindtokey(int f, int n)
 									/* int f, n;	** command arguments [IGNORED] */
@@ -586,8 +594,44 @@ int Pascal bindtokey(int f, int n)
 	}
 
 {	int c = getechockey(FALSE);
+	KEYTAB * ktp = getbind(c);
 
-	return addnewbind(c, kfunc); /* search the table to see if it exists */
+#if NBINDS
+  if (ktp == &keytab[NBINDS])
+  { mlwrite(TEXT94);
+					/* "[TABLE OVERFLOW]" */
+    return FALSE;
+  }
+
+#else
+  if (ktp == &null_keytab ||
+      in_range(ktp - keytab, 0, upper_index(keytab))
+     )
+  { if (oflowcursize >= oflowtabsize)
+    {
+      if (oflowcursize < 0)
+        oflowcursize = 0;
+        
+      oflowtabsize = oflowcursize + 50;
+    { KEYTAB * tab = (KEYTAB*)remallocstr((char**)&oflowkeytab, 
+				         													(const char *)oflowkeytab, 
+																				  sizeof(KEYTAB)*oflowtabsize);
+      if (tab == NULL)
+      { mlwrite(TEXT94);
+							/* "[TABLE OVERFLOW]" */
+        return FALSE;
+      }
+    }}
+    ktp = &oflowkeytab[oflowcursize++];
+  }
+#endif
+//ktp->k_type   = BINDFNC;
+  ktp->k_code   = c;
+  ktp->k_ptr.fp = kfunc;
+	if (kfunc == ctrlg)					/* if the function is a unique prefix key */
+	 	g_abortc = c;								/* reset the appropriate global prefix variable*/
+
+  return TRUE;
 }}
 
 			/* unbindkey: delete a key from the key binding table */
@@ -616,6 +660,7 @@ int Pascal unbindkey(int f, int n)
   ktp[-1].k_code = 0;										/* null out the last one */
 
 #else
+  error error
   if (in_range(sktp - keytab, 0, upper_index(keytab)))
     addnewbind(c, NULL);
   else
@@ -1066,7 +1111,6 @@ int Pascal deskey(int f, int n)	/* describe the command for a certain key */
 {												     /* prompt the user to type us a key to describe */
 	mlwrite(TEXT13);
 			  /* ": describe-key " */
-#define DESC_TO_FILE 0
 #if DESC_TO_FILE
 {	char outseq[NSTRING];
 	BUFFER *bp = bufflink("pjsout", 64);

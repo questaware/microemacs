@@ -5,6 +5,7 @@
 
 #include	<stdio.h>
 #include	<stdlib.h>
+#include	<math.h>
 #include	"estruct.h"
 #include	"edef.h"
 #include	"etype.h"
@@ -1503,7 +1504,7 @@ double evalexpr(char * s, int * adv_ref)
 		if (op == ' ')
 			continue;
 	 	if (op == ')' || op == 0)
-		{	*adv_ref = tot_adv;
+		{	*adv_ref = tot_adv+!!op;
 			return res;
 		}
 
@@ -1526,6 +1527,8 @@ double evalexpr(char * s, int * adv_ref)
 					res /= res2;
 			when '+':
 		 		res += res2;
+			when '^':
+		 		res = pow(res, res2);
 		 	otherwise
 				return 0.0;
 		}

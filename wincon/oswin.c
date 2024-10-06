@@ -355,7 +355,7 @@ void Pascal tcapepage()
 /* This function gets called just before we go back home to the command
  * interpreter.
  */
-void Pascal tcapclose(int lvl)
+int Pascal tcapclose(int lvl)
 
 { setcp(g_codepage);
 	tcapmove(255,0);
@@ -363,6 +363,7 @@ void Pascal tcapclose(int lvl)
 //tcapeeol();
 /*CloseHandle(hConsoleIn);
   hConsoleIn = NULL;  cannot do this */
+  return 0;
 }
 
 #endif
@@ -514,17 +515,22 @@ Bool Pascal cursor_on_off(Bool on)
 
 void Pascal USE_FAST_CALL tcapmove(int row, int col)
 
-{ COORD  coords;
-	coords.X = col;
+{ HANDLE h = g_ConsOut;
+  COORD  coords;
 
 	if (row > term.t_nrowm1)
-  { // tcapbeep();
-    row = term.t_nrowm1;
+	{	if (row == 255 && g_coords.Y < term.t_nrowm1)
+	  {	DWORD  Dummy;
+			WORD MyAttr = FOREGROUND_BLUE * 7 + COMMON_LVB_UNDERSCORE;
+
+		  WriteConsoleOutputAttribute( h, &MyAttr, 1, g_coords, &Dummy );	
+  	}  
+  	row = term.t_nrowm1;
   }
 
 	coords.Y = row;
+	coords.X = col;
 	
-{ HANDLE h = g_ConsOut;
 #if 0
 	if (row < term.t_nrowm1 && 0/* && g_cursor_on >= 0 */)
   {	DWORD  Dummy;
@@ -540,7 +546,7 @@ void Pascal USE_FAST_CALL tcapmove(int row, int col)
 #endif
 	g_coords = coords;
 	SetConsoleCursorPosition( h, coords);
-}}
+}
 
 
 
@@ -586,15 +592,19 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 /*GetConsoleScreenBufferInfo( cout, &ccInfo );*/
 	GetConsoleScreenBufferInfo( cout, &g_csbi );
 
-{ COORD curpos = g_csbi.dwCursorPosition;
+{	WORD 		cuf[2];
+	unsigned long n_out;
+	COORD curpos = g_csbi.dwCursorPosition;
   unsigned long  Dum;
 #if VS_CHAR8
 #define gch (char)ch
 #else
 	wchar_t gch = ch;
 #endif
+	cuf[0] = FG_WHITE;
 																		/* write char to screen with current attrs */
   WriteConsoleOutputCharacter(cout, &gch,1, curpos, &Dum);
+  WriteConsoleOutputAttribute(cout, cuf, 1, curpos, &n_out);
 
 /* ttcol = col;*/
 

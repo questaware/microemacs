@@ -507,6 +507,11 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 //++g_cursor_on;
   g_chars_since_ctrl = 1000;
   
+  if (nbuf == 0)
+  { buf[0] = getkey();
+  	buf[1] = 0;
+  }
+  else
   for (;;)
   {	int c;             													/* current input character */
   	if (redo & 1)

@@ -12,7 +12,7 @@
 #include	<sys/types.h>
 #include	<sys/stat.h>
 
-#define _POSIX_SOURCE
+#define _POSIX_SOURCE 1
 
 #include	"estruct.h"
 #include	"edef.h"
@@ -389,7 +389,7 @@ Cc Pascal USE_FAST_CALL ffgetline(int flen, char * * line_ref, FILE * ffp)
 	  if (++i >= flen)
 	  {														/* lines longer than 16Mb get truncated */
 	    flen += NSTRING;
-		  line = remallocstr(line_ref, *line_ref, flen);
+		  line = remallocstr(line_ref, *line_ref, flen+1);
 			if (line == NULL)
 	      return FIOMEM;
 
@@ -595,7 +595,7 @@ void io_message(const char * txt, int nline)
 int Pascal readin(char const * fname, int props)
 										/* name of file to read */
 									 	/* check for file locks?, -ve => insert */
-{	static char * g_line;
+{	static char * g_line = NULL;
 	int ins = props & FILE_INS;
 
   if (props & FILE_REST)
@@ -671,9 +671,7 @@ int Pascal readin(char const * fname, int props)
 			else
 				if (got_at == 0)                 /* add trailing slash */
 					fname = strcat(strcpy(fnbuff, fname), "/");
-#if S_MSDOS
 	}
-#endif
 
   if (cc < 0)
     return FALSE;
@@ -719,6 +717,7 @@ int Pascal readin(char const * fname, int props)
   init_paren("(", 0);
 	
   g_crlfflag = 0;
+//g_flen = 0;
 
 { LINE * nextline = &bp->b_baseline;
 

@@ -57,6 +57,9 @@ int reload_buffers(void)
 
 {	int ct = -1;
 	BUFFER *bp;
+
+//return ct;
+
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
 		if ((bp->b_flag & (BFINVS+MDDIR) == 0) && bp->b_fname)
 		{	Filetime dt;
@@ -125,7 +128,7 @@ void Pascal customise_buf(BUFFER * bp)
 				}
       { int six;
         for (six = 6; --six >= 0; )
-        	if (suftag[six] == pr[2])
+        	if (((suftag[six] ^ pr[2]) & ~0x20) == 0)
 	        { bp->b_langprops = (1 << six);
 	          ++pr;
 					}
@@ -549,7 +552,8 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 
 	{ char * fn = bp->b_fname;
 		if (fn[0])
-		{	readin(fn, 0);
+		{
+			readin(fn, 0);
 #if S_WIN32 && 0
 			setconsoletitle(fn);
 #endif
@@ -562,6 +566,7 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 
 	setcline();							
 	execwrap(5); // bufhook      let a user macro get hold of things
+	
 	return upwind(TRUE);
 }}}
 

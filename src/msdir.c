@@ -30,6 +30,7 @@
 # include        <dos.h>
 # include        <io.h>
 #else
+# include				 <unistd.h>
 # include        <stdlib.h>
 # if NONDIR == 0
 #  include       <dirent.h>
@@ -335,7 +336,7 @@ Cc msd_init(Char const *  diry,	/* must not be "" */
     return EDENIED;
 
 #else
-  const char * dir = pe == 0 ? "." : msd_relpath;
+  const char * dir = last_pe < 0 ? "." : msd_relpath;
   if ((props & MSD_USEPATH) && last_pe > 0)
   	msd_relpath[last_pe] = 0;
   msd_curr = opendir(dir);

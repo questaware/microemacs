@@ -649,7 +649,7 @@ void Pascal editloop(int c)
 /*	Fancy quit command. If the any buffer has changed do a write on 
 	that buffer and exit emacs, otherwise simply exit.
 */
-Pascal quickexit(int f, int n)
+int Pascal quickexit(int f, int n)
 
 {
 	BUFFER *bp;		/* scanning pointer to buffers */
@@ -679,7 +679,7 @@ Pascal quickexit(int f, int n)
 /* Quit command. If an argument, always quit. Otherwise confirm if a buffer
  * has been changed and not written out. Normally bound to "C-X C-C".
  */
-Pascal quit(int f, int n)
+int Pascal quit(int f, int n)
 
 { int status = f;
 																/* Argument forces it.	*/
