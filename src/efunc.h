@@ -163,7 +163,7 @@ const NBIND names[] =
 	{"list-buffers",				listbuffers},
 	{"list-functions",			desfunc},
 	{"list-key",						deskey},
-	{"list-variables",			desvars},
+	{"list-variables",			listvars},
 //{"macro-to-key",				macrotokey},
 //{"meta-prefix",					meta},
 #if	MOUSE

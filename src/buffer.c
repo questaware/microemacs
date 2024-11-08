@@ -34,10 +34,10 @@ int Pascal hidebuffer(int f, int n)
 #if 0
 const char nm[][4] = {"c","cpp", "cxx", "cs",	"h","pc","jav", "prl","pl",
 											"for","fre","inc","pre","f", "sql","pas","md"};
-const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BPRL, BPRL,
+const char fm[] 	 = {BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCDEF,BCPRL, BCPRL,
                  			BCFOR,BCFOR,BCFOR,BCFOR,BCFOR,BCSQL,BCPAS, BCML};
 #endif
-const char * suftag  = "cpqPfm";
+const char * suftag  = "cpqafm";
 
 static
 void Pascal init_buf(BUFFER * bp)
@@ -96,13 +96,15 @@ static
 void Pascal customise_buf(BUFFER * bp)
 
 {		int zero = 0;
-	  const char * pat = (char*)&zero;
+	  const char * fsuffix = "";
 		const char *fn;
 		for ( fn = bp->b_bname - 1; *++fn != 0; )
       if (*fn == '.')
-      {	pat = fn;
-      	if (pat[1] == 's' && pat[2] == 'q')
-      		zero = BCSTRNL;
+      {	fsuffix = fn;
+				if (fsuffix[1] == 'e' && fsuffix[2] == '2')
+					zero |= BCRYPT2;
+//     	if (fsuffix[1] == 's' && fsuffix[2] == 'q')
+//     		zero = BCSTRNL;
       }
 
 		init_buf(bp);
@@ -114,7 +116,7 @@ void Pascal customise_buf(BUFFER * bp)
       while (*++pr != 0)
       { if (*pr != '.') continue;
         
-      { const char * p = pat;
+      { const char * p = fsuffix;
 
         while (*++p != 0 && *++pr == *p)
           ;
@@ -124,7 +126,7 @@ void Pascal customise_buf(BUFFER * bp)
 //			bp->b_flag &= ~ MDIGCASE;
 			  if (pr[2] == '^')
         { pr += 1;
-				  bp->b_flag |= MDIGCASE;
+				  zero |= MDIGCASE;
 				}
       { int six;
         for (six = 6; --six >= 0; )
@@ -134,20 +136,18 @@ void Pascal customise_buf(BUFFER * bp)
 					}
           
         six = atoi(pr+2);
-        if (six > 0)
+        if (six != 0)
         	tabsize = six;
         break;
       }}}
 		}
-    bp->b_tabsize = tabsize;
-		bp->b_flag |= zero | g_gflag;
-		bp->b_color = g_bat_b_color;
 
     if (bp->b_key != NULL)
-   		bp->b_flag |= MDCRYPT;
+   		zero |= MDCRYPT;
 
-		if (pat[1] == 'e' && pat[2] == '2')
-			bp->b_flag |= BCRYPT2;
+		bp->b_flag |= zero | g_gflag;
+    bp->b_tabsize = tabsize;
+		bp->b_color = g_bat_b_color;
 }}
 
 

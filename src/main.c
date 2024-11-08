@@ -74,7 +74,7 @@ int g_prefix = 0;	/* currently pending prefix bits */
 const char g_logm[3][8] = { "FALSE","TRUE", "ERROR" };			/* logic literals	*/
 
 //char palstr[49] = "";		/* palette string		*/
-char lastmesg[NCOL+40] = ""; 	 /* last message posted		*/
+char lastmesg[NCOL+140] = ""; 	 /* last message posted		*/
 //int(Pascal *g_lastfnc)(int, int);/* last function executed	*/
 int g_eexitflag = FALSE;		/* EMACS exit flag		*/
 //int eexitval = 0; 			/* and the exit return value	*/

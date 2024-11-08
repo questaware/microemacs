@@ -627,7 +627,7 @@ char *Pascal token(char * tok, int size)
 	    if (quotef == 0)										/* terminates unless in quotes */
 	      break;
 	  }
-	  else if ((c == '"' || c == '\'') && quotef == 0 && leading)
+	  else if ((c == '"' || c == '\'') && leading > 0)
 	  { quotef = c;													/* set quote mode if quote found */
 	    leading = 0;
 	    continue;

@@ -318,62 +318,67 @@ btk execute-macro-20 ^P
 btk execute-macro-21 ^XV
 
 22 store-macro ; buffhook
-  set $hp2 ""
-  set $hp3 ""
-  set $hp4 ""
-  set $hp5 ""
-  set $hp6 ""
-  set $hp7 ""
-  set $hp8 ""
-  set $hp9 ""
-  set $hp10 ""
-  set $hp11 ""
-  set $hp12 ""
-  set $hp13 ""
-  set $hp14 ""
-  set $hp15 ""
-  set $hp16 ""
-  set $hp17 ""
-; set %oo @&cat "Buffhook " $cblang
-; set %oo @&cat "Lang " $cbufname
-  !if &not &equ $cblang 0
+	set $hp2 ""
+	set $hp3 ""
+	set $hp4 ""
+	set $hp5 ""
+	set $hp6 ""
+	set $hp7 ""
+	set $hp8 ""
+	set $hp9 ""
+	set $hp11 ""
+	set $hp12 ""
+	set $hp13 ""
+	set $hp14 ""
+	set $hp15 ""
+	set $hp16 ""
+	set $hp17 ""
+;	set %ri &rig $cbufname 3
+;	set %oo @&cat "Buffhook " %ri
+  !if &not &equ &ban $cblang 31 0
     set $hp2 "1 if "
     set $hp3 "1 else "
     set $hp4 "1 while "
-    set $hp16 "1 break "
-    set $hp5 "1 for "
-    set $hp6 "1 return "
-    set $hp9 "1 continue"
+    set $hp5 "1 break "
+    set $hp6 "1 for "
+    set $hp7 "1 return "
+    set $hp8 "1 continue"
   !endif
   !if &seq &rig $cbufname 3 ".py"
-    set $hp4 "1 else:"
-    set $hp5 "1 elif "
-    set $hp6 "1 def "
-    set $hp9 "1 try:"
-    set $hp10 "1 except:"
-    set $hp11 "1 except "
+    set $hp3 "1 else:"
+    set $hp9 "1 elif "
+    set $hp10 "1 def "
+    set $hp11 "1 try:"
+    set $hp12 "1 except:"
+    set $hp13 "1 except "
+    set $hp14 "1 class "
   !endif
-; !if &or &seq &rig $cbufname 2 ".c" &seq &rig $cbufname 4 ".cpp"
-; !endif
-  !if &seq &rig $cbufname 3 ".f"
-    set $hp7 "1 do "
-    set $hp8 "1 enddo "
-    set $hp9 "1 endif "
+  !if &or &seq &rig $cbufname 2 ".c" &seq &rig $cbufname 4 ".cpp"
+    set $hp5 "1 break;"
+    set $hp8 "1 continue;"
+    set $hp9 "1 switch "
+  !endif
+  !if &equ $cblang 16
+    set $hp9 "1 elif "
+    set $hp10 "1 endif"
+    set $hp11 "1 enddo "
+    set $hp12 "1 do "
+    set $hp13 "1 call "
+		set $hp14 "1 then "
   !endif
   !if &or &seq &rig $cbufname 4 ".adb" &seq &rig $cbufname 4 ".ads"
     set %oo @"Ada"
-    set $hp4 "1 elif "
-    set $hp5 "1 case "
-    set $hp6 "1 loop "
-    set $hp9 "1package "
-    set $hp10 "1procedure "
-    set $hp11 "1function "
-    set $hp12 "1begin "
-    set $hp13 "1end "
-    set $hp14 "1 record "
-    set $hp15 "1 type "
-    set $hp16 "1 break "
-    set $hp17 "1private"
+    set $hp9 "1 elif "
+    set $hp10 "1 case "
+    set $hp11"1 loop "
+    set $hp12 "1package "
+    set $hp13 "1procedure "
+    set $hp14 "1function "
+    set $hp15 "1begin "
+    set $hp16 "1end "
+    set $hp17 "1 record "
+;   set $hp15 "1 type "
+;   set $hp17 "1private"
   !endif
 !endm
 
@@ -406,5 +411,5 @@ set $discmd 1
 set %istrl 64
 
 set $hardtab 2
-set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.js=c2.jav=c2.htm=c2.htm=c2.html=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.adb=^q4.ads=^q4.pas=P2.md=m2.py=p-2"
+set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.js=c2.jav=c2.htm=c2.htm=c2.html=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.adb=^q4.ads=^q4.pas=a2.md=m2.py=p-2"
 

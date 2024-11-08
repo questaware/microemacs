@@ -455,15 +455,16 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 		int l_dcr = dotp->l_dcr;
 		int  offs;											/* detab line */
 
-		if (l_dcr == 0)
-			break;
-		for (offs = -1; ++offs < lused(l_dcr); )
+//	if (l_dcr == 0)
+//		break;
+		for (offs = -1; ++offs < lused(dotp->l_dcr); )
 			if ((ch = lgetc(dotp, offs)) == '\t')
 			{ lputc(dotp, offs, ' ');
 				curwp->w_doto = offs;
 			{	int ins_ct = tabsz - (offs % tabsz) - 1;
 				offs += ins_ct;
 				linsert(ins_ct,' ');
+				dotp = curwp->w_dotp;
 			}}
 
  		if ((f & 2))											/* entab the resulting spaced line */
@@ -522,6 +523,7 @@ int Pascal trim_white(int f, int n)
 	{ 			
 		lp = curwp->w_dotp; 						/* trim the current line */
 																		/* lose the spare */
+
 		lp->l_dcr = (trimstr(lused(lp->l_dcr),lp->l_text) << (SPARE_SZ+2)) 
 		      		+ (lp->l_dcr & ((1 << (SPARE_SZ+2))-1));
 																				/* advance/or back to the next line */
@@ -1328,7 +1330,7 @@ int Pascal getfence(int f, int n)
 					mbwrite(buf);*/
 				}
 			}
-			else if (f_cmt)
+			else if (f_cmt && in_range(g_paren.fence, 'A','Z'))
 			{ ch = got_f_key(&fd, tabsz, f_cmt);
 				if (ch < 0 && ch > -2 && g_paren.nest == 2 
 				 && fd.koffs - 9 <= lastko)
@@ -1349,7 +1351,7 @@ int Pascal getfence(int f, int n)
 					lastko = fd.koffs;
 			}
 		}
-		else if (ch == g_paren.fence && f_cmt != 0)
+		else if (ch == g_paren.fence && in_range(g_paren.fence, 'A','Z') && f_cmt != 0)
 		{ ch = got_f_key(&fd, tabsz, f_cmt);
 			if (ch <= 0 || s_cmt == 0 && fd.koffs - 8 > lastko)
 			{ ++g_paren.nest;  // undo it

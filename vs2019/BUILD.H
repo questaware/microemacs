@@ -151,5 +151,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define NROW	60			/* Max Screen size. 	*/
 #define NCOL 148
 
+#define VS_CHAR8 1
+
 #include "../src/base.h"
 #endif /* BUILDINC */

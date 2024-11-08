@@ -329,8 +329,10 @@ void init_wincon()
   setcp(1252);
 	SetBufferWindow(0, 0);
 
+#if CALLED
   g_coords.X = 0;
   g_coords.Y = 0;
+#endif
 
 //tcapmove(0,0); Try this
 //FCOC(0);
@@ -410,10 +412,11 @@ wchar_t * char_to_wchar(char const * src, int sz, wchar_t * tgt)
 #endif
 
 
+#if VS_CHAR8 == 0 || DEBUG
 void Pascal setconsoletitle(char * title)
 
 {
-#if VS_CHAR8 == 0
+#if VS_CHAR8
 	wchar_t buf[100];
 	swprintf(buf, 100, L"%S", title == null ? "" : title);
   SetConsoleTitle(buf);
@@ -422,6 +425,7 @@ void Pascal setconsoletitle(char * title)
 #endif
 }
 
+#endif
 
 // char * Pascal getconsoletitle()
 
@@ -1163,7 +1167,7 @@ again:
 }
 #endif
 
-
+// Results: 1: read Only, 8 multiple links
 
 FILETIME g_file_time;
 
@@ -1184,7 +1188,7 @@ int Pascal name_mode(const char * s)
 	{ g_file_time = fileinfo.ftLastWriteTime;
 		res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
 	  if (fileinfo.nNumberOfLinks > 1)
-	  	res |= FILE_ATTRIBUTE_NORMAL;
+	  	res |= 8;
 	}
 	
   CloseHandle(myfile);

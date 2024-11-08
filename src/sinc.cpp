@@ -70,19 +70,19 @@ extern int g_bfindmade;
 #define meLine      LINE
 #define backWord(a, b) backword(a, b)
 
+// wh: -1: Non space : ch to search for
+
 int USE_FAST_CALL find_nch(int wh, int cix, LINE * lp)
 
 { int len = llength(lp);
 	
   while ( ++cix >= 0 && cix < len )
   { char ch = lp->l_text[cix];
-		if (wh < 0)
-		{	if (ch > ' ')
-				return cix;
+		if (ch <= ' ')
 			continue;
-		}
-    if (ch == wh)
-      return cix;
+		if (wh > 0 && ch != wh)
+	    continue;
+    return cix;
 //  if (! isword(ch) )
 //   	break;
 	}
@@ -186,14 +186,13 @@ char Sinc::ops[] =
 		   	"return\000 if\000     while\000  else\000   switch\000 " // end of ops
 		 	  "class\000  struct\000 union\000  enum\000   "
 //	  	"public","private","protected",
-				"\"C\"\000    namespace";
+				"\"C\"\000    namespace\000\000\000\000";
 
 const char * Sinc::target;
 
 int Pascal Sinc::strxct_mtch(int wh, int offs, LINE * lp ) // const char * src_, const char * slim)
 															/* -1, 0, 1 */
-{	int len = llength(lp);
-	int t_ = wh * 16 - 8;
+{	int t_ = wh * 16 - 8;
 	int ct = wh + 2;				// -1: just Sinc::target
 		;											// ct = 1
 
@@ -205,6 +204,7 @@ int Pascal Sinc::strxct_mtch(int wh, int offs, LINE * lp ) // const char * src_,
 
   for ( ; --ct >= 0; )
   { const char * pat = wh < 0 ? Sinc::target : &Sinc::ops[t_ += 8];
+		int len = llength(lp);
 		int ix;
     for (ix = offs - 1; ++ix < len && *pat == lp->l_text[ix]; ++pat)
     	;
@@ -365,18 +365,18 @@ int Sinc::doit_forward(LINE* lp, char * cp_, short from_w_good_cl, int obrace_dp
 	    			  	}
 
 	           		state |= M_GOT_NM | M_AFTER_NM;
+	            	if ((state & M_PRE_SCT) == 0 && word_ct < 0)
+	      				{ /*paren_dpth = 0;*/
+	              	state |= M_AFTER_NM0;
+		      			  continue;
+	            	}
+
 	      				if ((state & M_IN_P) && sparen_nest < 0 ||
 	          				word_ct < 0		 /* set back */ 			||
 		          		  rp_line == lines_left  /* a (x)..tgt; ignored */)
 	      	      { loglog("Arft RP");
 									return F_NF;
 	      				}
-
-	            	if ((state & M_PRE_SCT) == 0 && word_ct < 0) 
-	      				{ /*paren_dpth = 0;*/
-	              	state |= M_AFTER_NM0;
-		      			  continue;
-	            	}
 	            }
 						}
           }
@@ -812,7 +812,7 @@ scan:
 	  	        					   	 LINE * tlp = wp->w_dotp;
         	  					 	   	 int wh = strxct_mtch(1, off, tlp);
           					 	   
-    	      					 	   	 if (wh == 1 || wh == 0)		// "C", namespace
+    	      					 	   	 if ((unsigned)wh <= 1)		// "C", namespace
     	      					 	   	 	 break;
 														 rc = 0;
 													 }

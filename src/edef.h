@@ -470,7 +470,7 @@ NOSHARE extern Int envram;			/* # of bytes current in use by malloc */
 const extern char g_logm[3][8];
 
 //NOSHARE extern char palstr[49];		/* palette string		*/
-NOSHARE extern char lastmesg[NCOL+40];	/* last message posted		*/
+NOSHARE extern char lastmesg[NCOL+140];	/* last message posted		*/
 //NOSHARE extern int (Pascal *g_lastfnc)(int, int);/* last function executed */
 NOSHARE extern int  g_eexitflag;		/* EMACS exit flag */
 

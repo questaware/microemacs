@@ -288,7 +288,7 @@ int find_match(const char * src, int len)
 
 #if MEMMAP
 static
-const short ctrans_[] = 	/* ansi to ibm color translation table */
+const char ctrans_[] = 	/* ansi to ibm color translation table */
 	{0, 4, 2, 6, 1, 5, 3, 7,
 	 8, 12, 10, 14, 9, 13, 11, 15};
 
@@ -350,23 +350,20 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 { // const char c_beg_cmt[16] = "`/`///`/(/`///`/";
 	// const char c_sec_cmt[16] = " *#***#***#***#*";
  	Short  clring = g_clring;
-	int mode = clring == 0 ? 0 : lp->l_dcr & VFCMT;
-	if (cmt_chrom == 0)
-		mode = 0;
-	else
-		cmt_chrom = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
+	int mode = clring == 0 ? 0 : cmt_chrom * (lp->l_dcr & VFCMT);
+	cmt_chrom *= (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
 
 //int beg_cmt = c_beg_cmt[clring & 15];
 //int sec_cmt = c_sec_cmt[clring & 15];
 	
 {	int chrom_nxt = 0;
-	if (!is_ml && ((clring & BCD)   && mode ||
-		   					 (clring & BCFOR) && toupper(str[1]) == 'C' && len > 0))
+	if ((clring & BCD) && mode)
 		chrom_nxt = cmt_chrom;
 
 //int chrom_in_peril = false;
 
 {	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
+  int atbeg = 1;
 	int  markuplen = 1;
 	char markupterm = 0;
 	int hix[30] = {0};
@@ -384,7 +381,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	while (--len >= 0)
 	{	int chrom = chrom_nxt;
 		if (vtc >= term.t_ncol)
-		{ tgt[term.t_ncol] = (short)(chrom + '$');
+		{ // tgt[term.t_ncol] = (short)(chrom + '$');
 			break;
 		}
 		
@@ -402,32 +399,38 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 					++len;
 				}
 			}
-		{ int ch = langprops & BCFOR ? tolower(c) : c;
-			int wix;
-			for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
-			{ // if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
-				//	continue;
-			  if (ch == high[wix][1+hix[wix]])
-				{ hix[wix] += 1;
-				  if (high[wix][1+hix[wix]] == 0)
-						break;
-					if (high[wix][1+hix[wix]] == ' ' && 
-					    high[wix][2+hix[wix]] == 0   && (len * (str[1] - ' ') <= 0))
-						break;					
-				}
-				else
-					hix[wix] = (ch == high[wix][1]) && (wix == 0 || str[-1] <= ' ' || ch == ' ');
-			}
 
-			if (wix >= 0
-			 && (wix == 0 || (mode & (Q_IN_CMT+Q_IN_EOL+Q_IN_STR)) == 0)) // 1st or ! in cmt
-			{ int tgtix = vtc-hix[wix]+2;
-				if (tgtix > 0)
-			  	tgt[tgtix] |= palcol(high[wix][0]-'1') | CHR_NEW;
-//			memset(hix, 0, sizeof(hix));
-				hix[wix] = 0;
-				chrom_nxt = CHR_OLD;
-			}
+		{	int foll = str[1] - ' ';
+			int bef = str[-1] <= ' ' || atbeg > 0;
+			do 
+		  {	int ch = atbeg > 0 ? ' ' : langprops & BCFOR ? tolower(c) : c;
+				int wix;
+				for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
+				{ // if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
+					//	continue;
+				  if (ch == high[wix][1+hix[wix]])
+					{ hix[wix] += 1;
+					  if (high[wix][1+hix[wix]] == 0)
+							break;
+						if (high[wix][1+hix[wix]] == ' ' && 
+						    high[wix][2+hix[wix]] == 0   && foll <= 0)
+							break;					
+					}
+					else
+						hix[wix] = (ch == high[wix][1]) && (ch == ' ' || wix == 0 || bef);
+				}
+
+				if (wix >= 0
+				 && (wix == 0 || (mode & (Q_IN_CMT+Q_IN_EOL+Q_IN_STR)) == 0)) // 1st or ! in cmt
+				{ int tgtix = vtc-hix[wix]+2;
+					if (tgtix <= 0)
+						tgtix = 1;
+				  tgt[tgtix] |= palcol(high[wix][0]-'1') | CHR_NEW;
+	//			memset(hix, 0, sizeof(hix));
+					hix[wix] = 0;
+					chrom_nxt = CHR_OLD;
+				}
+			} while (--atbeg >= 0);
 		}}
 		if      (c < 0x20 || c == 0x7F)
 		{ if (c <= pd_col2ch && c - pd_col1ch >= 0)
@@ -488,7 +491,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 				||	(clring & BCSQL)				&&  c == '-' && str[-1] == c
 				||	(clring & BCPRL)				&& (c == '#' ||
 																			 (c == '\'' || c == '"') && c == str[-1] && c == str[-2])
-				||	(clring & BCFOR)				&&  c == '!')
+				||	(clring & BCFOR)				&& (c == '!' || (toupper(c)== 'C' && atbeg > 0)))
 #else
 				if (c == sec_cmt & (str[-1] == beg_cmt || (clring & BCPRL))
 				||  c == '/'  && c == str[-1] && (clring & BCCOMT)
@@ -551,6 +554,17 @@ static int     g_lastfcol;
 
 #endif
 
+static int set_field(char * tgt, const char * src, int maxlen)
+
+{ maxlen = -maxlen;
+{ int fnlen = strlen(src);
+  if (fnlen > maxlen)
+		fnlen = maxlen;
+	
+	((char*)memcpy(tgt, src, fnlen))[fnlen] = ' ';
+	return fnlen;
+}}
+
 /* Redisplay the mode line for the window pointed to by the "wp".
  * This is the only routine that knows how the modeline is formatted.
  * Called by "update" any time there is a dirty window.
@@ -641,41 +655,28 @@ void Pascal modeline(WINDOW * wp)
 	tline.lc.l_text[cpix] = ')'; 
 	tline.lc.l_text[cpix+3] = ' ';
   tline.lc.l_text[cpix+1] = n;
-  cpix += 4;
+//cpix += 4;
 
 { const char * fname = bp->b_fname;
 	if (1 || fname != NULL)	/* File name. */
 	{
-		const char * fn;
-		int fnlen = strlen(fname);
-  	if (fnlen > NLINE - 4 - cpix)
-		  fnlen = NLINE - 4 - cpix;
+		int fnlen = set_field(&tline.lc.l_text[cpix+4], fname, cpix - NLINE - 8);
+		cpix += ++fnlen;
 
-		++fnlen;
-		((char*)memcpy(&tline.lc.l_text[cpix], fname, fnlen))[fnlen-1] = ' ';
-		cpix += fnlen;
-
-		for (fn = &fname[fnlen]; --fn >= fname && *fn != '/'; )
+		while (--fnlen >= 0 && fname[fnlen] != '/')
 			;
 						
-		if (strcmp(fn+1,bp->b_bname)== 0)
+		if (strcmp(fname+fnlen+1,bp->b_bname)== 0)
 			goto no_bn;
 	}
 
-	tline.lc.l_text[cpix] = '@';
-	i = strlen(bp->b_bname);
-	if (i > NLINE - 1 - cpix)
-		i = NLINE - 1 - cpix;
-	((char*)memcpy(&tline.lc.l_text[cpix+1], bp->b_bname, i))[i] = ' ';
+	tline.lc.l_text[cpix+4] = '@';
+	(void)set_field(&tline.lc.l_text[cpix+5], bp->b_bname, cpix - NLINE - 5);
 
 no_bn:
-{	int numbuf = lastbuffer(0,0);
-	int numm = numbuf >> 16;
-	numbuf &= 0xff;
+{	int numbuf = lastbuffer(0,0) & 0xff;
 	if (numbuf > 9)
 		tline.lc.l_text[term.t_ncol-3] = '0' + numbuf / 10;
-	else if (numm)
-		tline.lc.l_text[term.t_ncol-3] = ' ';
 	
 	tline.lc.l_text[term.t_ncol-2] = '0' + numbuf % 10;
 	tline.lc.l_dcr = term.t_ncol << (SPARE_SZ+2);

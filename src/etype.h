@@ -85,7 +85,7 @@ int (Pascal *Pascal USE_FAST_CALL fncmatch(const char *))(int, int);
 Command getname(int wh);
 char * Pascal getconsoletitle();
 int Pascal desfunc(int,int);
-int Pascal desvars(int, int);
+int Pascal listvars(int, int);
 int Pascal dispvar(int,int);
 int USE_FAST_CALL myeq(int, int);
 int Pascal ernd(void);
@@ -120,7 +120,11 @@ int Pascal risearch(int, int);
 void Pascal rpl_all(int, int, int, LINE*, LINE*);
 int Pascal USE_FAST_CALL scan_for_sl(LINE * lp);
 int Pascal scanner(int, int);
+#if VS_CHAR8 && DEBUG == 0
+#define setconsoletitle(t) SetConsoleTitle(t)
+#else
 void Pascal setconsoletitle(char * title);
+#endif
 int Pascal setlower(char*,char*);
 int Pascal setupper(char*,char*);
 int Pascal setvar(int, int);

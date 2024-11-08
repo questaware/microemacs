@@ -565,11 +565,25 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
     }
 
     key_ct += 1;
-
-		if (ch >= (ALTD | '1') && ch <= (ALTD | '3'))
-    { ch = (ch & 0x7f) - '1';
-			redo = 3;
-      autostr = strcpy(mybuf, g_ll.lastline[g_last_cmd]);
+	{	int chix = ch - (ALTD | '1');
+		if ((unsigned)chix <= 2)
+    { strcpy(mybuf, g_ll.lastline[g_last_cmd]);
+#if 1
+		{ int beg = 0;
+			int cix = -1;
+			while (1)
+			{ ch = mybuf[++cix];
+				if (ch <= ' ')
+				{ mybuf[cix] = 0;
+          if (ch == 0)
+            break;
+          if (--chix == 0)
+						beg = cix+1;
+				}
+			}
+			autostr = mybuf + (chix > 0 ? cix : beg);
+		}
+#else      
 		{ int cix_ = strlen(autostr);
 			int cix = cix_;
       mybuf[cix+1] = 0;
@@ -579,8 +593,12 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
        	  mybuf[cix] = 0;
       while (--ch >= 0)
        	autostr += strlen(autostr)+1;
+    }
+#endif
+    	redo = 3;
 			continue;
-    }}
+		}
+	}
 
 	{	int tpos = cpos;
     if (ch & SPEC)
@@ -614,8 +632,8 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 				when ('>'):	tpos = fulllen;
       }
       
-//    if (((unsigned int)(tpos - fulllen)) > 0)
-	    if (tpos < 0 || tpos > fulllen)
+	    if ((unsigned int)tpos > (unsigned)fulllen)
+//    if (tpos < 0 || tpos > fulllen)
         /* tcapbeep() */ ;
       else
       { cpos = tpos;
@@ -687,7 +705,7 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
       buf[cpos] = 0;
     }}
     else if ((c <= 'Z'-'@' && c != 'I'-'@' || c == (ALTD | 'S')) && c != QUOTEC)
-    { switch (c)
+    {	switch (c)
       {	case 'B'-'@':
     			autostr = getkill();
 				when 'N'-'@':
@@ -697,8 +715,9 @@ static int getstr(char * buf, int nbuf, int promptlen, int gs_type)
 				case ALTD | 'S':
 					if (pd_patmatch != NULL)
 						autostr = pd_patmatch;
+
 				when 0:										// All illegal CTRL.s mapped to /
-					autostr = "/"; 
+					autostr = "/";
 				otherwise
 					autostr = mybuf;
 		      woffs = getwtxt(NSTRING-3-cpos, woffs, c - ('W'-'@'), &mybuf[0]);

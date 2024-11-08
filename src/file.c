@@ -379,7 +379,7 @@ Cc Pascal USE_FAST_CALL ffgetline(int flen, char * * line_ref, FILE * ffp)
 	{ c = getc(ffp);		    /* if it's longer, get more room */
 											/* test for any errors that may have occured */
 		if (c < 0)
-			return feof(ffp) ? FIOEOF : FIOERR;
+			break;
 
 	  if (c == '\r')
 	  { g_crlfflag = MDMS;
@@ -406,6 +406,9 @@ Cc Pascal USE_FAST_CALL ffgetline(int flen, char * * line_ref, FILE * ffp)
 	  }
 	  line[i] = c;
 	} while (c != '\n');
+
+	if (c < 0)
+		return i >= 0 ? i + 1 : feof(ffp) ? FIOEOF : FIOERR;
 
 //line[i] = 0;
 
@@ -1014,7 +1017,6 @@ int Pascal writeout(const char * fn, Bool original)
 				/* name of file to write current buffer to */
 { Cc cc;
   struct stat stat_;
-  int caution;
   LINE *lp;
   int nline;	  /* number of lines written */
 	char tname[NSTRING+100];	/* temporary file name */
@@ -1029,23 +1031,38 @@ int Pascal writeout(const char * fn, Bool original)
           				 
 { FILE * op;                 	/* determine if we will use the save method */
 #if S_VMS
-  caution = 0;
+  int caution = 0;
 #elif S_MSDOS
-  caution = pd_ssave == 0 ? 0 : name_mode(fn);
+  int caution = name_mode(fn);  // & (1+8);
+  if (caution & (1+8))
+	{ int yn = mlyesno(caution & 8 ? TEXT218 : TEXT221);
+	  if (yn < 0)
+  	  return yn;
+  	if ((caution & 8) && !yn)
+  		caution = -1;
+  }
+  
 #else
+	int caution;
 	cc = stat(fn , &stat_);
 { int w = cc < 0 ? TRUE :
 	             (stat_.st_mode & (getuid() == stat_.st_uid ? 0200 :
 	                               getgid() == stat_.st_gid ? 020  : 02
 	                               ));
-	caution = pd_ssave && cc >= 0 || !w;
+	caution = cc >= 0 || !w;
 	if (caution && stat_.st_nlink > 1 || !w)
-	{ caution = mlyesno(w ? TEXT218 : TEXT221);
-	  if (caution < 0)
-  	  return caution;
+	{ int yn =  mlyesno(w ? TEXT218 : TEXT221);
+	  if (yn < 0)
+  	  return yn;
+  	
+  	if (stat_.st_nlink > 1 && !yn)
+  		caution	= -1;
 	}
 }
 #endif
+  if (pd_ssave && caution >= 0)
+  	caution = 1;
+
 	g_crlfflag = bp->b_flag & MDMS;
 	if (bp->b_flag & MDCRYPT)
 		resetkey(&bp->b_key);
@@ -1054,9 +1071,9 @@ int Pascal writeout(const char * fn, Bool original)
 //sp = makename(tname+NSTRING, fn);
 	for (nline = 4; --nline >= 0; )/* mk unique name using random numbers */
 	{	strpcpy(tname, fn, NSTRING-30);		/* overwrite the makename */
-		if (caution)
+		if (caution > 0)
 			strcpy(&tname[makename(tname+NSTRING, fn)+1], int_asc(ernd()));
-		op = fopen(tname, S_WIN32 ? "wb" : caution == 0 ? "wb" : "wbx"); // why does wb not work?
+		op = fopen(tname, S_WIN32 ? "wb" : caution > 0 ? "wb" : "wbx"); // why does wb not work?
 		if (op != NULL)
 			goto good;
 	}
@@ -1090,21 +1107,22 @@ good:
 	#define mesg deltaf 
 //mesg[0] = 0;		/* message buffer */
 
-	if (caution)					/* erase original file */
-	{ int rc = unlink(fn);
-		if (rc == 0 && (rc = rename(tname, fn)) == 0)
+	if (caution > 0)					/* erase original file */
+	{ (void)unlink(fn);
+	{	int rc = rename(tname, fn);
+		if (rc == 0)
 		{ // tname[0] = 0;
 
 			if (! S_MSDOS && stat_.st_mode != MYUMASK)
 				chmod(fn, stat_.st_mode & 07777);
 		}
-	}
+	}}
 //repl_bfname(bp, fn);		// destroys fn
 
 	if (original)
 	{
 #if S_WIN32
-		bp->b_utime = (name_mode(fn),g_file_time);
+		bp->b_utime = g_file_time;
 #else
 		bp->b_utime = ffiletime(op);
 #endif

@@ -27,7 +27,7 @@
 
 LINE *Pascal mk_line(const char * src, int used, int extra_cmt)
 {
-  LINE *lp = (LINE *)mallocz(sizeof(LINE)-sizeof(lp->l_text)+used+(extra_cmt>>2));
+  LINE *lp = (LINE *)mallocz(sizeof(LINE)-sizeof(lp->l_text)+used+(extra_cmt>>2)+0);
   if (lp != NULL)
   {
 #ifdef _DEBUG	

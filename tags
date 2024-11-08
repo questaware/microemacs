@@ -1075,7 +1075,6 @@ delwind	./src/window.c
 desbind	./src/bind.c
 desfunc	./src/eval.c
 deskey	./src/bind.c
-desvars	./src/eval.c
 detab	./src/random.c
 detabline	./src/random.c
 diagflag	./src/epredef.h
@@ -1339,6 +1338,7 @@ linetext	./src/sinc.cpp
 linsert	./src/line.c
 linstr	./src/line.c
 listbuffers	./src/buffer.c
+listvars	./src/eval.c
 llength	./mtgdi/estruct.h
 llength	./unix/estruct.h
 llength	./wincon/estruct.h
@@ -1450,6 +1450,7 @@ mvupwind	./src/window.c
 myeq	./src/search.c
 myino	./src/msdir.c
 name_mode	./src/bind.c
+name_mode	./wincon/oswin.c
 namedcmd	./src/exec.c
 narrow	./src/region.c
 nclicks	./src/epredef.h
