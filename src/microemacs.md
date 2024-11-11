@@ -520,8 +520,7 @@ $cliplife      Cut/paste buffer entries older than this are silently deleted!!
 $cmdhook       
 $cmode         The mode on the current buffer
 Colours: 
-               On IBMPC BG_COLOUR * 16 + FG_COLOUR + (8:intense)
-               Elsewhere selects from the palette library $palette
+               1: blue, 2: green, 3: cyan, 4: red 5: purple 6: yellow
 $cmtcolour     Comment colour
 $col1ch        Lowest palette selector character
 $col2ch        Highest palette selector character
@@ -562,9 +561,7 @@ $match         The last string matched
 $msflag        1: file had ^M on input
 $pagelen       Lines on the screen. Changing this changes the physical length
 $pagewidth     Width of the screen. Changing this changes the physical width
-$palette       A dot separated list of strings str giving colours ESC [ <str> m 
-               On msdos it is not this but a sequence of hex digit pairs
-               describing colours on the MSDOS screen
+$palette       No effect on Windows. Translates colours.
 $pending       Read only; typahead text 
 $popup         Write only; Raise a pop-up with this text.
 $ram           Not implemented

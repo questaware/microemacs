@@ -3,7 +3,6 @@ set $exbhook execute-macro-22
 set $discmd 0
 set $col1ch 1
 set $col2ch 8
-set $palette 71727374757670
 set $hp1 4hello
 ;set $pagelen 74
 
@@ -336,49 +335,53 @@ btk execute-macro-21 ^XV
 ;	set %ri &rig $cbufname 3
 ;	set %oo @&cat "Buffhook " %ri
   !if &not &equ &ban $cblang 31 0
-    set $hp2 "1 if "
-    set $hp3 "1 else "
-    set $hp4 "1 while "
-    set $hp5 "1 break "
-    set $hp6 "1 for "
-    set $hp7 "1 return "
-    set $hp8 "1 continue"
+    set $hp2 "4 if "
+    set $hp3 "4 else "
+    set $hp4 "4 while "
+    set $hp5 "4 break "
+    set $hp6 "4 for "
+    set $hp7 "4 return "
+    set $hp8 "4 continue"
   !endif
   !if &seq &rig $cbufname 3 ".py"
-    set $hp3 "1 else:"
-    set $hp9 "1 elif "
-    set $hp10 "1 def "
-    set $hp11 "1 try:"
-    set $hp12 "1 except:"
-    set $hp13 "1 except "
-    set $hp14 "1 class "
+    set $hp3 "4 else:"
+    set $hp9 "4 elif "
+    set $hp10 "4 def "
+    set $hp11 "4 try:"
+    set $hp12 "4 except:"
+    set $hp13 "4 except "
+    set $hp14 "4 class "
   !endif
   !if &or &seq &rig $cbufname 2 ".c" &seq &rig $cbufname 4 ".cpp"
-    set $hp5 "1 break;"
-    set $hp8 "1 continue;"
-    set $hp9 "1 switch "
+    set $hp5 "4 break;"
+    set $hp8 "4 continue;"
+    set $hp9 "4 switch "
+    set $hp10 "4 case "
+    set $hp11 "4 default:"
+		set $hp12 "4 else "
+		set $hp13 "4 do "
   !endif
   !if &equ $cblang 16
-    set $hp9 "1 elif "
-    set $hp10 "1 endif"
-    set $hp11 "1 enddo "
-    set $hp12 "1 do "
-    set $hp13 "1 call "
-		set $hp14 "1 then "
+    set $hp9 "4 elif "
+    set $hp10 "4 endif"
+    set $hp11 "4 enddo "
+    set $hp12 "4 do "
+    set $hp13 "4 call "
+		set $hp14 "4 then "
   !endif
   !if &or &seq &rig $cbufname 4 ".adb" &seq &rig $cbufname 4 ".ads"
     set %oo @"Ada"
-    set $hp9 "1 elif "
-    set $hp10 "1 case "
-    set $hp11"1 loop "
-    set $hp12 "1package "
-    set $hp13 "1procedure "
-    set $hp14 "1function "
-    set $hp15 "1begin "
-    set $hp16 "1end "
-    set $hp17 "1 record "
-;   set $hp15 "1 type "
-;   set $hp17 "1private"
+    set $hp9 "4 elif "
+    set $hp10 "4 case "
+    set $hp11"4 loop "
+    set $hp12 "4package "
+    set $hp13 "4procedure "
+    set $hp14 "4function "
+    set $hp15 "4begin "
+    set $hp16 "4end "
+    set $hp17 "4 record "
+;   set $hp15 "4 type "
+;   set $hp17 "4private"
   !endif
 !endm
 

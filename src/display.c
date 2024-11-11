@@ -287,26 +287,26 @@ int find_match(const char * src, int len)
 
 
 #if MEMMAP
-static
-const char ctrans_[] = 	/* ansi to ibm color translation table */
-	{0, 4, 2, 6, 1, 5, 3, 7,
-	 8, 12, 10, 14, 9, 13, 11, 15};
-
-# define trans(x) ctrans_[x]
-#else
 # define trans(x) (x)
+#else
+static
+const unsigned char ctrans_[] = 	/* ansi to ibm color translation table */
+	{0,  4,  2,  6, 1,  5,  3, 7,
+	 8, 12, 10, 14, 9, 13, 11, 15};
+# define trans(x) ctrans_[x]
 #endif
 
 #if MEMMAP
 
+#define palcol(c) (((c) + 1) << 8)
+#else
+
 static int palcol(int ix)
 
-{ int clr = pd_palstr[ix] | 0x20;
+{ int clr = pd_palstr[ix & 0xf] | 0x20;
 	return (in_range(clr,'0','9') ? clr - '0' :
- 				  in_range(clr,'a','F') ? clr - 'a' + 10 : 0) << 8;
+ 				  in_range(clr,'a','f') ? clr - 'a' + 10 : 0) << 8;
 }
-#else
-#define palcol(c) (((c) + 1) << 8)
 #endif
 //89:;<=>?                
 Short g_clring;

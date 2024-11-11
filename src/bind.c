@@ -588,7 +588,7 @@ int Pascal bindtokey(int f, int n)
 	int (Pascal *kfunc)(int, int) = getname(2);
 																				/* ": bind-to-key " */
 	if (kfunc == NULL)
-	{ mlwrite(TEXT16);
+	{ mlwrite(TEXT16, "???");
 				  /* "[No such function]" */
 	  return FALSE;
 	}

@@ -258,7 +258,7 @@ STOP,  /* EVCBFLAGS */		/* actual: kbdmode - curr keyboard macro mode*/
 CLIP_LIFE,/*EVCLIPLIFE */	/* actual: cliplife */
 0,     /* EVCMDHK */ 		  /* actual: execlevel - execution IF level */
 0,     /* EVCMODE */ 	  	/* actual: kbdrep */
-4,		 /* EVCMTCOL */		  /* comment colour */
+1,		 /* EVCMTCOL */		  /* comment colour */
 -1,    /* EVCOL1CH */		  /* character selecting colour 1 */
 -1,    /* EVCOL2CH */		  /* character selecting colour n */
 TRUE,  /* EVCURCHAR */		/* actual: revexist -does reverse video exist?*/
@@ -316,9 +316,12 @@ UNDEF, /* EVWRITEHK */
 void Pascal varinit()	/* initialize the user variable list */
 
 {	int ix;
-	for (ix = 31; --ix >= -1; )
+	for (ix = 31; --ix >= 0; )
 		predefvars[ix > 0  ? EVHLIGHT1-1+ix :
-							 ix == 0 ? EVMATCH : EVPALETTE].p = mallocz(2);
+							           EVMATCH].p = mallocz(2);
+#if S_MSDOS == 0
+  predefvars[EVPALETTE].p = strdup("426153789abcdef0");
+#endif
 #if CALLED
   for (i = MAXVARS; --i >= 0;)
     uv[i].u_name[0] = 0;

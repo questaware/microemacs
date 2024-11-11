@@ -3,7 +3,6 @@ set $exbhook execute-macro-22
 set $discmd 0
 set $col1ch 1
 set $col2ch 8
-set $palette 1234560
 set $hp1 4target
 ;set $pagelen 74
 
@@ -357,6 +356,10 @@ btk execute-macro-21 ^XV
     set $hp5 "4 break;"
     set $hp8 "4 continue;"
     set $hp9 "4 switch "
+    set $hp10 "4 case "
+    set $hp11 "4 default:"
+		set $hp12 "4 else "
+		set $hp13 "4 do "
   !endif
   !if &equ $cblang 16
     set $hp9 "4 elif "

@@ -59,7 +59,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT13	": describe-key "
 #define	TEXT14	"Not Bound"
 #define	TEXT15	" \000Command to use "
-#define	TEXT16	"No such function"
+#define	TEXT16	"No such function %s"
 #define	TEXT17	"Binding table FULL!"
 #define	TEXT18	": unbind-key "
 #define	TEXT19	"\b[Key not bound]"

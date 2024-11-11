@@ -137,11 +137,6 @@ int Pascal dobuf(BUFFER * bp, int iter, const char * name)
 #if _DEBUG
 	g_rc_lineno = 0;
 #endif
-  if (bp == NULL) 
-	{ mlwrite(concat(smalleline, TEXT16, " ", name, null));
-						/* "[No such Function]" */
-		return FALSE;
-	}
 
 	g_dobuf = bp;
 	g_univct = iter;
@@ -421,7 +416,7 @@ jover_:							  									/* reset the line pointer back.. */
 }
 
 
-static Cc finddo(int f, int n, Command fnc, char * tkn)
+static Cc finddo(int f, int n, Command fnc, char * tkn, const char * diag)
 
 #if 0
 {	if (fnc == NULL)
@@ -453,6 +448,11 @@ static Cc finddo(int f, int n, Command fnc, char * tkn)
 	}
 	else													/* find the pointer to that buffer */
 	{ BUFFER *bp = bfind(tkn, FALSE); 
+	  if (bp == NULL) 
+		{ mlwrite(TEXT16, *tkn ? tkn : diag);
+						/* "[No such Function]" */
+			return FALSE;
+		}
 		cc = dobuf(bp,n,tkn);
 	}
 
@@ -503,7 +503,7 @@ int Pascal docmd(char * cline)
 	if (cc > FALSE)
 	{	
 #if 1
-		cc = finddo(f,n,NULL,tkn);
+		cc = finddo(f,n,NULL,tkn, cline);
 #else
 		if (fnc != NULL)
 		{ 
@@ -513,7 +513,7 @@ int Pascal docmd(char * cline)
 		else													/* find the pointer to that buffer */
 		{ BUFFER *bp = bfind(tkn, FALSE); 
 		  if (bp == NULL) 
-			{ mlwrite(TEXT16);
+			{ mlwrite(TEXT16, "???");
 							/* "[No such Function]" */
 				cc = FALSE;
 			}
@@ -556,7 +556,7 @@ int Pascal namedcmd(int f, int n)
 	}}
 
 #if 1
-	cc = finddo(f,n,kfunc,"");
+	cc = finddo(f,n,kfunc,"", "?");
 #else
 	if (kfunc != NULL)
 	{ // g_macargs = FALSE;
@@ -566,7 +566,7 @@ int Pascal namedcmd(int f, int n)
 	  // g_macargs = scle;
 	}
 	else
-	{ mlwrite(TEXT16);
+	{ mlwrite(TEXT16, "???");
 					/* "[No such function]" */
 	  cc = FALSE;
 	}
