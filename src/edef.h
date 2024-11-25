@@ -279,6 +279,9 @@ typedef struct	BUFFER
 	struct MARKS  b_mrks;
 	struct LINE * b_wlinep ;   /* top LINE in last window */
 	struct BUFFER *b_next;     /* next BUFFE R    */   /* isomorphism ends */
+#if DO_UNDO
+	struct UNDO * b_undo;
+#endif
 	struct LINE   b_baseline ; /* the header LINE */
 	struct LINE * b_narlims[2];/*narrowed top, bottom text */
 	signed char   b_tabsize ;  /* size of hard t ab   */
@@ -396,6 +399,18 @@ typedef struct Fdcr_s
   char   name[NFILEN+1];
 } Fdcr_t, *Fdcr;
 
+
+typedef struct UNDO 
+{
+	struct UNDO * u_bp;		/* Link to the previous UNDO	*/
+	struct LINE * u_lp;		/* Link to LINE */
+	struct LINE * u_llost;/* Link to lost lines */
+	int						u_size;	/* size of text */
+	int						u_offs;
+	int 	        u_dcr; 	/* Used(24) spare(6) incomment(1) header(1) */
+	char	        u_text[16]; /* A bunch of characters.	*/
+}	UNDO;
+
 #include "epredef.h"
 
 					   /*  Internal defined functions */
@@ -479,6 +494,8 @@ NOSHARE extern int  g_eexitflag;		/* EMACS exit flag */
 NOSHARE extern int   g_thisflag;	/* Flags, this command		*/
 NOSHARE extern int   g_lastflag;	/* Flags, last command		*/
 NOSHARE extern Short g_clring;
+NOSHARE extern Bool  g_inhibit_undo;
+
 
 NOSHARE extern WINDOW *curwp; 		/* Current window		*/
 NOSHARE extern BUFFER *curbp; 		/* Current buffer		*/
@@ -539,13 +556,13 @@ NOSHARE extern TERM	term;		/* Terminal information.	*/
 #define BG(x) ((x)<<12)
 #define FG(x) ((x)<<8)
 
-#define Q_LOG_STR 3
+#define Q_LOG_CHAR 3
 
-#define Q_IN_ESC   1
+#define Q_IN_CMT0  1
 #define Q_IN_CMT   2
-#define Q_IN_CHAR  4
-#define Q_IN_STR   8
-#define Q_IN_CMT0 16
+#define Q_IN_ESC   4
+#define Q_IN_CHAR  8
+#define Q_IN_STR  16
 #define Q_IN_CMTL 32
 #define Q_IN_CMT_ 64
 #define Q_IN_EOL 128

@@ -268,13 +268,18 @@ void Pascal vttidy()
 
 /* Markup language bold and underline marks must be in pairs here */
 
+#if Q_IN_CMT0 != 1
+error error
+#endif
+
+// -1: not found, 0: single, 1: double
+
 static
 int find_match(const char * src, int len)
 
 { char ch = src[0];
   int dbl = len > 1 && src[1] == ch;
-  if (dbl)
-    ++src;
+  src += dbl;
   while (--len >= 0)
   { if (*++src == ch)
     { if (!dbl || (len > 0 && src[1] == ch))
@@ -356,7 +361,8 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 //int beg_cmt = c_beg_cmt[clring & 15];
 //int sec_cmt = c_sec_cmt[clring & 15];
 	
-{	int chrom_nxt = 0;
+{	int triad = clring & BCFOR ? -'C' : 0;
+  int chrom_nxt = 0;
 	if ((clring & BCD) && mode)
 		chrom_nxt = cmt_chrom;
 
@@ -399,43 +405,11 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 					++len;
 				}
 			}
-
-		{	int foll = str[1] - ' ';
-			int bef = str[-1] <= ' ' || atbeg > 0;
-			do 
-		  {	int ch = atbeg > 0 ? ' ' : langprops & BCFOR ? tolower(c) : c;
-				int wix;
-				for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
-				{ // if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
-					//	continue;
-				  if (ch == high[wix][1+hix[wix]])
-					{ hix[wix] += 1;
-					  if (high[wix][1+hix[wix]] == 0)
-							break;
-						if (high[wix][1+hix[wix]] == ' ' && 
-						    high[wix][2+hix[wix]] == 0   && foll <= 0)
-							break;					
-					}
-					else
-						hix[wix] = (ch == high[wix][1]) && (ch == ' ' || wix == 0 || bef);
-				}
-
-				if (wix >= 0
-				 && (wix == 0 || (mode & (Q_IN_CMT+Q_IN_EOL+Q_IN_STR)) == 0)) // 1st or ! in cmt
-				{ int tgtix = vtc-hix[wix]+2;
-					if (tgtix <= 0)
-						tgtix = 1;
-				  tgt[tgtix] |= palcol(high[wix][0]-'1') | CHR_NEW;
-	//			memset(hix, 0, sizeof(hix));
-					hix[wix] = 0;
-					chrom_nxt = CHR_OLD;
-				}
-			} while (--atbeg >= 0);
-		}}
+		}
 		if      (c < 0x20 || c == 0x7F)
 		{ if (c <= pd_col2ch && c - pd_col1ch >= 0)
 			{ 
-				chrom_nxt = palcol(c - pd_col1ch); /* this is manual colouring */
+				chrom_nxt = palcol(c - pd_col1ch) | CHR_NEW; 	/* this is manual colouring */
 				continue;
 			}
 			else
@@ -445,7 +419,8 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			}
 		}
 		else if (c < '0')
-		{ if			(mode & (Q_IN_EOL+Q_IS_NEG))
+		{ triad = (c == '\'' || c == '"') && c == str[-1] && c == str[-2];
+			if			(mode & (Q_IN_EOL+Q_IS_NEG))
 				;
 			else if ((clring & BCML) && (c == '*' || c == '_') && str[-1] != c &&
 			         ((str[-1] > ' ' || len > 0 && str[1] > ' ')))
@@ -465,10 +440,10 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
         { int wh = find_match(str, len);
           if (wh >= 0)
 					{	chrom_nxt = wh ? chrom | CHR_UL : cmt_chrom;
-            mode |= wh ? Q_IN_CMT : Q_IN_CMT0;
 						markuplen = wh;
             len -= wh;
             str += wh;
+            mode |= wh+1;
             markupterm = c;
             continue;
           }
@@ -477,7 +452,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 			else if (mode & (Q_IN_CMT+Q_IN_CMT0))
 			{ 
 			  if (str[-1] == '*' && c == duple	/* l_props cannot be '*', '"' */
-				|| (c == '\'' || c == '"') && c == str[-1] && c == str[-2])
+				 || triad)
 				{ mode = 0;
 					chrom_nxt = CHR_OLD;
 				}
@@ -489,9 +464,8 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 				if ((clring & BCCOMT+BCSQL) && (c == '*' || c == '/') && str[-1] == '/'
 				||	(clring & BCPAS)				&&	c == '*' && str[-1] == '('
 				||	(clring & BCSQL)				&&  c == '-' && str[-1] == c
-				||	(clring & BCPRL)				&& (c == '#' ||
-																			 (c == '\'' || c == '"') && c == str[-1] && c == str[-2])
-				||	(clring & BCFOR)				&& (c == '!' || (toupper(c)== 'C' && atbeg > 0)))
+				||	(clring & BCPRL)				&& (c == '#' || triad)
+				||	(clring & BCFOR)				&& (c == '!'))
 #else
 				if (c == sec_cmt & (str[-1] == beg_cmt || (clring & BCPRL))
 				||  c == '/'  && c == str[-1] && (clring & BCCOMT)
@@ -499,14 +473,48 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 				||  c == '-'  && str[-1] == c && (clring & BCSQL)
 				||  c == '!'  && (clring & BCFOR))
 #endif
-				{ mode = c != '*' ? Q_IN_EOL : Q_IN_CMT;
-					if (c != '#' && (clring & BCPRL))
-						mode = Q_IN_CMT;
+				{ 
+eolcmt:
+					mode = c != '*' && !triad ? Q_IN_EOL : Q_IN_CMT;
 					chrom = cmt_chrom;
 //				if (((clring & (BCFOR | BCPRL)) == 0) && vtc-1 >= 0)
 						tgt[vtc] |= chrom;
 				}
 		}
+		if (atbeg > 0 && toupper(c)== -triad)
+			goto eolcmt;
+
+	{	int foll = str[1] - ' ';
+		int bef = str[-1] <= ' ' || atbeg > 0;
+		do 
+	  {	int ch = atbeg > 0 ? ' ' : langprops & BCFOR ? tolower(c) : c;
+			int wix;
+			for (wix = (mode & Q_IN_CMT) ? 1 : sizeof(hix)/sizeof(hix[0]); --wix >= 0; )
+			{ // if (wix > 0 && hix[wix] == 0 && str[-1] > ' ')
+				//	continue;
+			  if (ch == high[wix][1+hix[wix]])
+				{ hix[wix] += 1;
+				  if (high[wix][1+hix[wix]] == 0)
+						break;
+					if (high[wix][1+hix[wix]] == ' ' && 
+					    high[wix][2+hix[wix]] == 0   && foll <= 0)
+						break;					
+				}
+				else
+					hix[wix] = (ch == high[wix][1]) && (ch == ' ' || wix == 0 || bef);
+			}
+
+			if (wix >= 0
+			 && (wix == 0 || (mode & (Q_IN_CMT+Q_IN_EOL+Q_IN_STR)) == 0)) // 1st or ! in cmt
+			{ int tgtix = vtc-hix[wix]+2;
+				if (tgtix <= 0)
+					tgtix = 1;
+			  tgt[tgtix] |= palcol(high[wix][0]-'1') | CHR_NEW;
+//			memset(hix, 0, sizeof(hix));
+				hix[wix] = 0;
+				chrom_nxt = CHR_OLD;
+			}
+		} while (--atbeg >= 0);
 
 //	if (chrom_in_peril && chrom_on > 0)
 //	{ chrom_in_peril = false;
@@ -519,7 +527,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 nop:
 		if (++vtc > 0)
 			tgt[vtc] = c | chrom;
-	}}
+	}}}
 
 { int ct = term.t_ncol - vtc;
 
@@ -701,8 +709,8 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 																				> 0 =? all */
 {	int color = window_bgfg(wp);
 	LINE *lp = wp->w_linep;
-	int	sline = wp->w_toprow - 1;
-	int	zline = sline + wp->w_ntrows;
+	int	row = wp->w_toprow - 1;
+	int	zrow = row + wp->w_ntrows;
 			
 //int cmt_clr = (trans(pd_cmt_colour & 0xf)) << 8 | CHR_NEW;
 
@@ -711,16 +719,16 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 		color = V_BLANK;
 #endif
 #if _DEBUG
-	if (zline >= term.t_nrowm1)
-	{ /* addb(sline); */
-		zline = term.t_nrowm1-1;
+	if (zrow >= term.t_nrowm1)
+	{ /* addb(row); */
+		zrow = term.t_nrowm1-1;
 	}
 #endif
 	
-	while (++sline <= zline)
-	{ if      (wh < 0)
-		{ if (vscreen[sline]->v_flag & VFEXT)
-			{ VIDEO * vp = vtmove(sline, wp->w_fcol, 1, lp);
+	while (++row <= zrow)
+	{	if      (wh < 0)
+		{ if (vscreen[row]->v_flag & VFEXT)
+			{ VIDEO * vp = vtmove(row, wp->w_fcol, 1, lp);
 																		/* this line no longer is extended */
 				if (lp != wp->w_dotp)
 				{	vp->v_flag -= VFEXT;
@@ -730,7 +738,7 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 		}	
 		else if (wh || lp == wp->w_dotp)	/* and update the virtual line */
 		{
-			VIDEO * vp = vtmove(sline, wp->w_fcol, 1, lp);
+			VIDEO * vp = vtmove(row, wp->w_fcol, 1, lp);
 
 			vp->v_color = color;
 			vp->v_flag &= ~(VFREQ | VFML);
@@ -935,10 +943,10 @@ void Pascal updline()
 		}}
 	}
 
-	wp->w_fcol = fcol;
-	wp->w_flag |= flag;
 	if (rhs < 0)			// allow deextension on this line
 		wp->w_dotp = NULL;
+	wp->w_fcol = fcol;
+	wp->w_flag |= flag;
 
 					 /* update the current window if we have to move it around */
 {	int hard = wp->w_flag & WFHARD;
@@ -1103,8 +1111,6 @@ nop_here:
 int /*Pascal*/ update(int force)
 	/* int force; ** force update past type ahead? */
 {
-	WINDOW *wp;
-
 	if (TRUE
 
 #if GOTTYPEAH || VISMAC == 0
@@ -1120,7 +1126,8 @@ int /*Pascal*/ update(int force)
 			 ))
 #endif
 		 )
-	{ 															/* update any windows that need refreshing */
+	{	WINDOW *wp;
+ 																		/* update any windows needing refreshing */
 		for (wp = wheadp; wp != NULL; wp = wp->w_next)
 			if (wp->w_flag) 			 				/* if the window has changed, service it */
 			{ int set = reframe(wp) & ~( WFMOVE+WFMODE);
@@ -1172,8 +1179,8 @@ void Pascal updateline(int row)
 	vp1->v_flag &= ~(VFCHG+VFREQ/*+VFML*/);/* flag this line is unchanged */
 
 {	short prechrom = vp1->v_color;
-	int bg = (vp1->v_flag & VFML) == 0 ? 0x70
-																		 : (prechrom & 0x70);
+	int bg = (vp1->v_flag & VFML) == 0 ? 0x70 : (prechrom & 0x70);
+
 	pscreen[row]->v_color = prechrom;
 	pscreen[row]->v_flag = vp1->v_flag;
 
@@ -1223,8 +1230,7 @@ void Pascal updateline(int row)
 		tcaprev(TRUE);
 #endif
 															
-{ int same_ct = 0;
-  short *phz = &ph->v_text[term.t_ncol];
+{ short *phz = &ph->v_text[term.t_ncol];
   short *ph9 = phz;
 														/* terminals cannot do this */
 #if 1
@@ -1269,8 +1275,7 @@ void Pascal updateline(int row)
 	if (prechrom != 0)
 		tcapchrom(CHROM_OFF);
 
-	if ( same_ct == 0 &&
-      (vp1->v_flag & VFML) == 0)
+	if ((vp1->v_flag & VFML) == 0 )
 	{ extern short scbot;
 
 		while (++ph1 < phz /* cpend */)		/* Ordinary. */

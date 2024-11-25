@@ -192,7 +192,6 @@
     <ClInclude Include="..\src\logmsg.h" />
     <ClInclude Include="..\src\map.h" />
     <ClInclude Include="..\src\msdir.h" />
-    <ClInclude Include="..\wincon\BUILD.H" />
     <ClInclude Include="..\wincon\estruct.h" />
     <ClInclude Include="..\wincon\winpipe.h" />
     <ClInclude Include="BUILD.H" />

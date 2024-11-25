@@ -295,6 +295,7 @@ bind-to-key filter-buffer ^X|
 #endif 
 	{MUTA|'S',	forwhunt},
 	{MUTA|'R',	backhunt},
+	{MUTA|'U',	undochange},
 	{MUTA|'Z',	wordsearch},
 	{META|',',	indentsearch},
 	{SPEC|'<',	gotobob},
@@ -755,16 +756,7 @@ int Pascal buildlist(int wh)
 
 	if (wh == 0)
   { 
-#define bltbl "^B	kill_buffer contents\n" \
-              "^F	Complete a filename\n" \
-				      "^G	Abort\n"\
-				      "^K	Chars to eol\n"\
-				      "^N	Filename of buffer\n"\
-				      "^S,Alt-S Search string\n"\
-				      "^W	Chars to eow\n"\
-				      "Arrows	Previous\n"\
-				      ".*^$[\\	Magic\n"
-  	(void)linstr(bltbl);
+  	(void)linstr(TEXT27);
   }
   else
  	{ char mstring[NSTRING];	/* string to match cmd names to */

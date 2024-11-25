@@ -158,7 +158,6 @@ class Tag
 	static int    g_LastStart;
 	static char * g_LastName;
 	static char * g_tagline;
-	static char * g_tagfile;
 	static char * g_alt_root;
 
 	static FILE * g_fp;
@@ -166,14 +165,13 @@ class Tag
 	static int get_to_newline(void);
 	static int findTagInFile(const char *key, const char * tagfile);
  public:
-	static int USE_FAST_CALL findTagExec(const char key[]);
+	static int USE_FAST_CALL findTagExec(const char key[], char * tagfile);
 };
 
 int	  Tag::g_lastClamp;
 int   Tag::g_LastStart;
 char *Tag::g_LastName = NULL;
 char *Tag::g_tagline;
-char *Tag::g_tagfile;
 char *Tag::g_alt_root;
 
 FILE *Tag::g_fp;
@@ -298,7 +296,7 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 #endif
 
 
-int USE_FAST_CALL Tag::findTagExec(const char key[])
+int USE_FAST_CALL Tag::findTagExec(const char key[], char * tagfile)
 
 {	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
 	const char * const tagfname = TAGFNAME;
@@ -306,26 +304,22 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 	if (Tag::g_LastName == NULL)
 	  Tag::g_LastName = (char*)mallocz(sl_);
 
-{	char tagfile[TAGFILEN];
-	char tagline[TAGBUFFSZ+1];
+{	char tagline[TAGBUFFSZ+1];
 
-	int clamp = Tag::g_lastClamp + 1;
-	int state = Tag::g_lastClamp > 0 &&
+	int clamp = 6; // Tag::g_lastClamp + 1;
+	int state = Tag::g_lastClamp >= 0 &&
 				strcmp(Tag::g_LastName, key) == 0;
-	if (state)
-	{	strcpy(tagfile, g_tagfile);
-		free(g_tagfile);
-	}	
-	else
+
+	if (!state)
 	{   Tag::g_LastStart = -1;
-		clamp = 6;
+	//	clamp = 6;
 	}
 
 	g_tagline = tagline;
 	
 	while (--clamp >= 0)
 	{
-        if (!fexist(state & 1  ? tagfile 		:
+        if (!fexist(// state & 1  ? tagfile 		:
 					clamp == 0 ? strcpy(tagfile,tagfname+5*3) : 
 								pathcat(tagfile, 260, curbp->b_fname, tagfname+clamp*3)))
         	continue;
@@ -335,8 +329,6 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 		if (z == 0)			/* found tag */
 			break;
     }}
-
-	Tag::g_tagfile = strdup(tagfile);
 
 	Tag::g_lastClamp = clamp;
 	if (clamp < 0)
@@ -364,7 +356,7 @@ int USE_FAST_CALL Tag::findTagExec(const char key[])
 			*fn = 0;
 			char * root = Tag::g_alt_root == NULL ? tagfile : Tag::g_alt_root;
 
-			bp = bufflink(pathcat(tagfile,sizeof(tagfile), root, file), 1 + 64);
+			bp = bufflink(pathcat(tagfile,TAGFILEN, root, file), 1 + 64);
 			if (bp == NULL)
 				break;
 		}
@@ -461,7 +453,8 @@ findTag(int f, int n)
         	mkul(1, tag);
     }}
 
-{	int res = Tag::findTagExec(tag);
+{	char tagfile[TAGFILEN];
+	int res = Tag::findTagExec(tag, tagfile);
 	if (res != TRUE)
 	{	char * s = tag - 1;
 		char ch;
@@ -470,9 +463,9 @@ findTag(int f, int n)
 		if (ch != 0)
 		{	*s = 0;
 			if (s[1] == ch && middle == 0)
-				res = Tag::findTagExec(s+2);
+				res = Tag::findTagExec(s+2, tagfile);
 			if (res <= 0)
-				res = Tag::findTagExec(tag);
+				res = Tag::findTagExec(tag, tagfile);
 		}
 	}
 //	if (res == TRUE)
@@ -510,12 +503,13 @@ int main(int argc, char * argv[])
 
 {	if (argc != 2)
     	explain();
-{	int clamp = 10;
+{	char tagfile[TAGFILEN];
+	int clamp = 10;
     char * tag = argv[1];
 	char tagline[1025];
     strcpy(tagline, "NOVAL");
     
-    while (findTagExec(tag) && --clamp >= 0)
+    while (findTagExec(tag, tagfile) && --clamp >= 0)
 	{	char * tl = tagline+strlen(tagline);
 		while (*++tl != 0 && is_space(*tl))
 		  ;

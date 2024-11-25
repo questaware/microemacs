@@ -215,6 +215,7 @@ const char * const g_envars[] = {
 	"line", 			/* text of current line */
 	"match",			/* last matched magic pattern */
 	"msflag",			/* activate mouse? */
+	"noindent",		/* dont copy space from line above */
 	"pagelen",		/* number of lines used by editor */
 	"pagewidth",	/* current screen width */
 	"palette",		/* current palette string */
@@ -228,6 +229,7 @@ const char * const g_envars[] = {
 	"ssave",			/* safe save flag */
 	"status",			/* returns the status of the last command */
 	"uarg",				/* last universal arg */
+	"undos",			/* size of undo cache */
 	"version",		/* current version number */
 	"winnew",	  	/* window is newly created */
 	"wintitle",		/* the title on the window */
@@ -287,6 +289,7 @@ CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
 TRUE,  /* EVLINE */       /* not in use */
 0,     /* EVMATCH */      /* actual: saveflag - Flags, saved with $target var */
 1,     /* EVMSFLAG */     /* use the mouse? */
+0,		 /* EVNOINDENT */		/* dont copy space from line above */
 FALSE, /* EVPAGELEN */    /* actual: eexitflag */
 TRUE,  /* EVPAGEWIDTH */	/* */
 0,     /* EVPALETTE */    /* not in use */
@@ -301,6 +304,7 @@ UNDEF, /* EVSEARCH */
 1,     /* EVSTATUS */			/* last command status */
 #if 0
 0,     /* EVUARG */				/* universal argument */
+0,     /* EVUNDOS */
 UNDEF, /* EVVERSION */	
 UNDEF, /* EVWINTITLE */
 UNDEF, /* EVWLINE */ 	
@@ -1076,16 +1080,19 @@ int Pascal set_var(char var[NVSIZE+1], const char * value)	/* set a variable */
 
 fvar:	vix = -1;
 	switch (var[0])
-	{ case '$':			/* check for legal enviromnent var */
-	      vix = binary_const(1, &var[1])|(TKENV << 11);
+	{ default:
+		case '$':			/* check for legal enviromnent var */
+	      vix = binary_const(1, &var[var[0] == '$'])|(TKENV << 11);
 
 	  when '%':		  /* check for existing legal user variable */
-	  	  (void)gtusr(&var[1]);
-	  	  vix = g_uv_vnum;
-		    if (vix >= 0)
-		    {	strcpy(g_uv[vix].u_name, &var[1]);
-					vix |= TKVAR << 11;
-		    }				/* indirect operator? */
+				if (strlen(var) < NVSIZE)
+	  	  {	(void)gtusr(&var[1]);
+		  	  vix = g_uv_vnum;
+			    if (vix >= 0)
+			    {	strcpy(g_uv[vix].u_name, &var[1]);
+						vix |= TKVAR << 11;
+		    	}				/* indirect operator? */
+		    }
 	  when '&': 
 		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
 		    {			  /* grab token, and eval it */
@@ -1236,6 +1243,10 @@ int Pascal mkdes()
   curwp->w_doto = 0;
 //upmode();
 //mlerase();					/* clear the mode line */
+
+#if DO_UNDO
+	g_inhibit_undo = 0;
+#endif
   return TRUE;
 }
 

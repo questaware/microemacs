@@ -240,6 +240,7 @@ const NBIND names[] =
 #endif
 	{"uarg",								uniarg},
 	{"unbind-key",					unbindkey},
+	{ "undo",								undochange},
 	{"update-screen",				upscreen},
 	{"view-file",						viewfile},
 	{"widen-from-region",		widen},

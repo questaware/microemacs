@@ -95,6 +95,10 @@ void openwindbuf(char * bname)
     
     openwind(leavewind(0, NULL));
   }
+  
+#if DO_UNDO
+	g_inhibit_undo = TRUE;
+#endif
 }}
 
 /*

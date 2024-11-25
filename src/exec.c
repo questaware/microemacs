@@ -276,11 +276,8 @@ jover__:;
 		  }
 																		/* if macro store is on, salt this away */
 		  if (g_bstore != null && dirnum != DENDM)
-		  { LINE * mp = mk_line(ebuf,linlen-1,0);
-		    if (mp == NULL)
-		    { cc = FALSE;
-		      continue;
-		    }
+		  { LINE * mp = mk_line(ebuf,linlen-1, linlen-1,0);
+
 																		/* attach the line to the end of the buffer */
         ibefore(&g_bstore->b_baseline, mp);
 		    continue;

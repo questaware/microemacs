@@ -193,7 +193,7 @@ int Pascal USE_FAST_CALL scan_paren(char ch)
 				mode = 0;
 			else if (dir >= 0 && ((mode & Q_IN_ESC) || ch == '\\'))
 				mode ^= Q_IN_ESC;
-			else if (ch == "'\""[(mode >> Q_LOG_STR) & 1])
+			else if (ch == "\"'"[(mode >> Q_LOG_CHAR) & 1])
 				mode = beg_s1 && ch == g_paren.prev ? Q_IN_CMT0 : 0;
 			break;
 		}
@@ -649,7 +649,8 @@ int Pascal ins_newline(int notused, int n)
 				 * negative, wrap mode is enabled, and we are now past fill column,
 				 * and we are not read-only, perform word wrap.
 				 */
-	short lang = curbp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS);
+	short lang = curbp->b_langprops & (BCCOMT+BCPRL+BCFOR+BCSQL+BCPAS)
+							& !predefvars[EVNOINDENT].i;
 
 	if ((curbp->b_flag & MDWRAP) && 
 			getccol() > pd_fillcol)
@@ -1081,9 +1082,9 @@ int USE_FAST_CALL got_f_key(fdcr * fd, int tabsz, int fs_cmt)			// Fortran or SQ
 			{	if (len > 4 && lp->l_text[offs+4] <= ' ' || lp->l_text[offs+3] <= ' ')
 					++ix;
 				if (*strmatch("ELSE", &lp->l_text[offs]) == 0 && g_paren.ch != 'D') 
-				{ if (g_paren.nest == 0 && ix == 3)
+				{	++ix;
+				 	if (g_paren.nest == 0 && ix == 4)
 						return 1;
-					++ix;
 					if (len <= ix)
 						return 0;
 				}
@@ -1466,14 +1467,14 @@ double evalexpr(char * s, int * adv_ref)
 	  buf[v_adv] = 0;
 	  
 	{ const char * ss = gtusr(buf);
-	  if (ss != NULL)
-		{ int that_adv;
-		  double res = evalexpr(strpcpy(buf,ss,119), &that_adv);
-	  	if (that_adv > 0)
-		  	*adv_ref = v_adv+1;
-	  	return res;
-	  }
-	}}
+	  if (ss == NULL)
+	  	return 0.0;
+	{ int that_adv;
+	  double res = evalexpr(strpcpy(buf,ss,119), &that_adv);
+	 	if (that_adv > 0)
+	  	*adv_ref = v_adv+1;
+	 	return res;
+	}}}
 
 { int tot_adv = -1;
 	int got = 0;
@@ -1583,7 +1584,9 @@ int Pascal calculator(int f, int n)
 
 		while (++ix < len)
 	  	if (s[ix] == '=')
-			{	((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
+			{	while (ix > 0 && s[ix-1] <= ' ')
+				  --ix;
+				((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
 	  		s += ix + 1;														// new source
 	  		len -= ix;
 	  		ix = 0;

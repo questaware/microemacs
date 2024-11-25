@@ -22,27 +22,28 @@ REGION * Pascal getregion()
 {	int lines = 1;
 	int wh = 1;
 	int offset = curwp->w_doto;
-	int _size = (int)curwp->mrks.c[0].marko - offset;
-	int bsize = -_size;
+	int size = (int)curwp->mrks.c[0].marko - offset;
+	int bsize = -size;
 
 {	LINE* flp = curwp->w_dotp;
+	LINE* lp = flp;
 	LINE* blp = flp;
 
   LINE * mark_line = curwp->mrks.c[0].markp;
   if (mark_line == NULL)
   {	mlwrite(TEXT76);
 					/* "No mark set in this window" */
-	  _size = 0;
+	  size = 0;
 	}
 	else
 		while (true)
-		{
-			lines -= 1;
+		{	lines -= 1;
 
 			if (blp == mark_line)
-			{	wh = -1;
-				_size = bsize;
-				if (_size > 0 || lines < 0)
+			{	lp = blp;
+				wh = -1;
+				size = bsize;
+				if (size > 0 || lines < 0)
 					offset = (int)curwp->mrks.c[0].marko;
 				break;
 			}
@@ -57,16 +58,16 @@ REGION * Pascal getregion()
 				break;
 
 			if (!l_is_hd(flp))
-			{	_size += llength(flp) + 1;
+			{	size += llength(flp) + 1;
 				flp = lforw(flp);
 			}
 		}
 
 	g_region.r_lines = -lines;
-	g_region.r_size = _size > 0 ? _size : -_size;		// case: markp == w_dotp 
+	g_region.r_size = size > 0 ? size : -size;		// case: markp == w_dotp 
 	g_region.r_offset = offset;
-	g_region.r_linep = wh >= 0 ? curwp->w_dotp : blp;
 	g_region.r_up = wh < 0;
+	g_region.r_linep = lp;
 
 	return &g_region;
 }}
@@ -105,10 +106,13 @@ int Pascal reglines(Bool ask)
  */
 int Pascal killregion(int f, int n)
 
-{	if (rdonly())
+{	++g_inhibit_undo;
+	if (rdonly())
 	  return FALSE;
 
+	--g_inhibit_undo;
 {	int lines = reglines(FALSE);
+	rdonly();
 	if (g_region.r_up)
 	{	curwp->w_line_no -= lines;
 		curwp->w_flag |= WFMODE;

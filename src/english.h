@@ -68,8 +68,22 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT22  "No .rc file"
 #define	TEXT24	"Use buffer"
 #define	TEXT26	"Drop buffer"
+#define TEXT27 "^B	kill_buffer contents\n" \
+               "^F	Complete a filename\n" \
+				       "^G	Abort\n"\
+				       "^K	Chars to eol\n"\
+				       "^N	Filename of buffer\n"\
+				       "^S,Alt-S Search string\n"\
+				       "^W	Chars to eow\n"\
+				       "ALT-1, ALT-2, ALT3 Words of last commnd line\n"\
+				       "Arrows	Previous\n"\
+				       ".*^$[\\	Magic\n"
 #define	TEXT28	"Buffer in use"
+#if S_MSDOS
 #define	TEXT29	"File has changed externally"
+#else
+#define	TEXT29	"File has changed externally. Save anyway?"
+#endif
 #define	TEXT30	"ACT   Modes      Size Buffer          File"
 #define	TEXT31	"         Global Modes"
 #define	TEXT32	"Discard changes"

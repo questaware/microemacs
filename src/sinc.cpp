@@ -222,7 +222,7 @@ void USE_FAST_CALL Sinc::bufappline(int indent, const char * str)
 
 { int  sz = strlen(str);
 	if (Sinc::g_outbuffer)
-	{	LINE * inslp = mk_line(str, indent+sz, 1);
+	{	LINE * inslp = mk_line(str, indent+sz, indent+sz, 1);
 	   
 		if (inslp != NULL)
 		{	memset(&inslp->l_text[0], ' ', indent);

@@ -268,6 +268,45 @@ BUFFER * Pascal bufflkup(const char * filename)
 
 #endif
 
+
+/*	Take a file name, and from it fabricate a buffer name. 
+	This routine knows about the syntax of file names on the target system.
+	I suppose that this information could be in table form.
+	Returns a pointer into fname indicating the end of the file path;
+	i.e. 1 character BEYOND the path name.
+ */
+static
+int Pascal makename(char * bname, const char * fname)
+
+{									/* Find the last directory entry name in the file name */
+	int  cand = 0;
+	int  six;
+  char ch;
+
+  for (six = 0; (ch = fname[six++]) != 0; )
+#if	S_AMIGA
+	  if (ch == ':' || ch == '/')
+#elif	S_VMS
+	  if (ch == ':' || ch == ']' || ch == '/')
+#elif	S_MSDOS | S_FINDER
+	  if (ch ==':' || ch == '\\' || ch =='/')
+#else
+	  if (ch == '/')
+#endif
+//    cand = s_cp;
+	    cand = six;
+
+			/* s_cp is pointing to the first real filename char */
+
+#if	S_VMS
+  (void)strpcpypfx(&bname[0], fname+cand, NBUFN, ';');
+#else
+  (void)strpcpy(&bname[0], fname+cand, NBUFN);
+#endif
+  return cand;
+}
+
+
 BUFFER * Pascal bufflink(const char * filename, int create)
 												/* create: 1: create, 4: look up, MSD_DIRY=16: dont search, 
 																	 32:dont stay, 64: swbuffer, 128 no_share */
@@ -644,6 +683,11 @@ int Pascal zotbuf(BUFFER * bp)	/* kill the buffer pointed to by bp */
 	else
 		bp1->b_next = bp->b_next;
 
+#if DO_UNDO
+	if (bp->b_undo)
+		run_trim(bp, 0);
+#endif
+
 	free(bp->b_remote);
 	free(bp->b_fname);
 	free((char *) bp);			/* Release buffer block */
@@ -783,10 +827,7 @@ int Pascal listbuffers(int iflag, int n)
 //if (avail > 0)
 		shrinkwind(0, avail);
 
-	curbp->b_flag |= MDVIEW;
-	curbp->b_flag &= ~BFCHG;		/* don't flag this as a change */
-
-	return gotobob(0,0);
+	return mkdes();
 }}}
 
 

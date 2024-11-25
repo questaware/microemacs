@@ -152,9 +152,6 @@
     <ClInclude Include="..\src\msdir.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\wincon\BUILD.H">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\wincon\estruct.h">
       <Filter>Header Files</Filter>
     </ClInclude>

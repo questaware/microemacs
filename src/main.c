@@ -710,19 +710,6 @@ int Pascal quit(int f, int n)
 }
 
 
-int rdonly()
-
-{ if (curbp->b_flag & MDVIEW)
-	{
-		mlwrite(TEXT109);
-	/*		"VIEW mode" */
-		return TRUE;
-	}
-	
-	return FALSE;
-}
-
-
 int resterr()
 
 { if (is_opt('R'))

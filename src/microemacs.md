@@ -203,8 +203,8 @@ beginning-of-line        ^A
 bind-to-key              M-K  (takes command then key)
 btk                      M-K  short for bind-to-key
 buffer-position          ^X=  gives information
-calculator							 evaluate expressions to the right of curpos arg => dont show popup.
-												 All operators have the same precedence. ^ means to power.
+calculator							 evaluate expressions to the right of curpos. arg => dont show popup.
+												 All operators have the same precedence. ^ means to-power.
                          A series of lines <var>=<expression> are evaluated.
                          Expression can contain %v where v is a user variable.
                          Var refers to a user variable,
@@ -404,6 +404,7 @@ store-procedure
 trim-line                ^X^T
 trim-region              ^X^T
 unbind-key               M-^K
+undo                     A-U	Undo the last change on this buffer
 universal-argument       ^U
 unmark-buffer            M-~
 update-screen
@@ -576,6 +577,7 @@ $ssave         Save files to an intermediate temporary
 $sscroll       Smooth scroll
 $status        Status of the last editor command
 $uarg          ESC arg to command
+$undos         The number of undoable changes to this buffer
 $version       This program version
 $winnew        A window is newly created
 $wintitle      Write only; Change the window title
