@@ -1584,11 +1584,12 @@ int Pascal calculator(int f, int n)
 
 		while (++ix < len)
 	  	if (s[ix] == '=')
-			{	while (ix > 0 && s[ix-1] <= ' ')
+			{	int ix_ = ix;
+				while (ix > 0 && s[ix-1] <= ' ')
 				  --ix;
 				((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
-	  		s += ix + 1;														// new source
-	  		len -= ix;
+	  		s += ix_ + 1;														// new source
+	  		len -= ix_ + 1;
 	  		ix = 0;
 	  		break;
 	  	}

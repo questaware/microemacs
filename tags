@@ -938,6 +938,7 @@ b_linep	./mtgdi/estruct.h
 b_linep	./unix/estruct.h
 b_linep	./wincon/estruct.h
 backWord	./src/sinc.cpp
+backbychar	./src/etype.h
 backbyfield	./src/base.h
 backchar	./src/basic.c
 backdel	./src/random.c
@@ -1526,7 +1527,7 @@ ra_pop	./src/msdir.c
 ratio	./src/random.c
 rawch	./wincon/oswin.c
 rbuf	./src/msdir.c
-rdonly	./src/main.c
+rdonly	./src/line.c
 readhook	./src/edef.h
 readin	./src/file.c
 readpattern	./src/search.c
@@ -1559,6 +1560,12 @@ revexist	./src/epredef.h
 risearch	./src/isearch.c
 rpl_all	./src/line.c
 rtfrmshell	./unix/unix.c
+run_destroy	./src/line.c
+run_make	./src/line.c
+run_move	./src/line.c
+run_trim	./src/line.c
+run_validate	./src/line.c
+run_var_update	./src/line.c
 rval	./src/epredef.h
 rvstrcpy	./src/search.c
 save_pos	./src/basic.c
@@ -1601,6 +1608,7 @@ setuekey	./src/crypt.c
 setupper	./src/char.c
 setvar	./src/eval.c
 sgarbf	./src/epredef.h
+shiftkill	./line.c
 shrinkwind	./src/window.c
 sindex	./src/eval.c
 skipleadsp	./src/exec.c
@@ -1738,6 +1746,7 @@ update_map	./src/map.c
 updateline	./src/display.c
 updline	./src/display.c
 upmode	./src/display.c
+undochange	./src/line.c
 upper	./src/input.c
 upper_index	./mtgdi/base.h
 upper_index	./src/base.h

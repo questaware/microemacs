@@ -482,7 +482,9 @@ eolcmt:
 				}
 		}
 		if (atbeg > 0 && toupper(c)== -triad)
+		{	atbeg = 0;
 			goto eolcmt;
+		}
 
 	{	int foll = str[1] - ' ';
 		int bef = str[-1] <= ' ' || atbeg > 0;

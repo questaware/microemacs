@@ -1006,11 +1006,10 @@ int Pascal wordsearch(int f, int n)
     }
   }
 
-  rest_l_offs(&sv);
+	rest_l_offs(&sv);
   
   if (ix < 0)
   {
-    ldelchrs(ix, 0);
 #if S_WIN32 && 0
     mbwrite(buff);
 #endif

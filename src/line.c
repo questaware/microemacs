@@ -2,7 +2,7 @@
  * They are the only routines that touch the text. They also touch the buffer
  * and window structures, to make sure that the necessary updating gets done.
  * There are routines in this file that handle the kill buffer too. It isn't
- * here for any good reason.
+ * here for any good reason. Dont find LINE.l_text
  *
  * Note that this code only updates the dot and mark values in the window list.
  * Since all the code acts on the current window, the buffer that we are
