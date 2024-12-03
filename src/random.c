@@ -440,32 +440,41 @@ int Pascal handletab(int f, int n)
 
 int Pascal detab(int f, int n) /* change tabs to spaces */
 
-{	if (rdonly())
+{	int lines = ask_region();
+  if (lines < 0)
 		return FALSE;
 
 	if ((f & 1) == FALSE)
-		n = reglines(TRUE);
+		n = lines;
 
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sign(n)] */
 
 	for (; n; n -= inc)
 	{	int tabsz = curbp->b_tabsize > 0 ? curbp->b_tabsize : -curbp->b_tabsize;
 		LINE * dotp = curwp->w_dotp;
-		char ch;
 		int l_dcr = dotp->l_dcr;
+		int inhibit = g_inhibit_undo-1;
 		int  offs;											/* detab line */
 
 //	if (l_dcr == 0)
 //		break;
 		for (offs = -1; ++offs < lused(dotp->l_dcr); )
-			if ((ch = lgetc(dotp, offs)) == '\t')
-			{ lputc(dotp, offs, ' ');
-				curwp->w_doto = offs;
-			{	int ins_ct = tabsz - (offs % tabsz) - 1;
-				offs += ins_ct;
-				linsert(ins_ct,' ');
-				dotp = curwp->w_dotp;
-			}}
+		{ char ch;
+			if ((ch = lgetc(dotp, offs)) != '\t')
+				continue;
+			
+#if DO_UNDO
+			if (++inhibit <= 0)
+				(void)run_make(dotp);
+#endif
+			lputc(dotp, offs, ' ');
+		{	int ins_ct = tabsz - (offs % tabsz) - 1;
+			curwp->w_doto = offs;
+			linsert(ins_ct,' ');
+			offs += ins_ct;
+			dotp = curwp->w_dotp;
+			inhibit = g_inhibit_undo-1;
+		}}
 
  		if ((f & 2))											/* entab the resulting spaced line */
 		{ int tab_ct = tabsz;
@@ -509,11 +518,12 @@ int Pascal entab(int f, int n) /* change spaces to tabs where posible */
 */
 int Pascal trim_white(int f, int n)
 
-{	if (rdonly())
+{	int lines = ask_region();
+  if (lines < 0)
 		return FALSE;
 
 	if (f == FALSE)
-		n = reglines(TRUE);
+		n = lines;
 
 { LINE *lp;									/* current line pointer */
 /*int length;								** current length */
@@ -532,6 +542,7 @@ int Pascal trim_white(int f, int n)
 //thisflag &= ~CFCPCN;		/* flag that this resets the goal column */
 	return lchange(WFEDIT);
 }}
+
 #endif
 
 
@@ -682,8 +693,8 @@ int Pascal ins_newline(int notused, int n)
  */
 int Pascal forwdel(int f, int n)
 
-{	if (rdonly())
-		return FALSE;
+{// if (rdonly())
+ //		return FALSE;
 
 	g_thisflag = CFKILL;
 

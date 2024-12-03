@@ -43,6 +43,7 @@ BUFFER * getcbuf(int createflag, BUFFER * bp, const char *prompt);
 BUFFER * Pascal bufflkup(const char * filename);
 BUFFER *Pascal bufflink(const char *, int);
 char * Pascal repl_bfname(BUFFER*, const char *);
+Cc run_make(LINE * ln);
 void run_trim(BUFFER * bp, int lim);
 char *Pascal bytecopy();
 char *Pascal envval();
@@ -142,6 +143,7 @@ int Pascal uneat();
 LINE * mk_line(const char *, int, int, int);
 LINE *Pascal mouseline();
 int Pascal apro(int, int);
+int ask_region();
 int Pascal backchar(int, int);
 #define backbychar(x) backchar(x,x)
 int Pascal backdel(int, int);

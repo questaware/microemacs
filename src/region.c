@@ -73,6 +73,7 @@ REGION * Pascal getregion()
 }}
 
 													/*	reglines:	how many lines in the current region */
+static
 int Pascal reglines(Bool ask)
 
 {	REGION * r = getregion();	   							/* check for a valid region first */
@@ -99,6 +100,20 @@ int Pascal reglines(Bool ask)
 	return r->r_lines;
 }
 
+
+int ask_region()
+
+{	++g_inhibit_undo;
+{	Bool rc = rdonly();
+	--g_inhibit_undo;
+	if (rc)
+	  return -1;
+
+{	int lines = reglines(TRUE);
+	rdonly();
+	return lines;
+}}}
+
 /*
  * Kill the region. Ask "getregion" to figure out the bounds of the region.
  * Move "." to the start, and kill the characters into the n.th kill buffer.
@@ -106,13 +121,10 @@ int Pascal reglines(Bool ask)
  */
 int Pascal killregion(int f, int n)
 
-{	++g_inhibit_undo;
-	if (rdonly())
+{ int lines = ask_region();
+	if (lines < 0)
 	  return FALSE;
-
-	--g_inhibit_undo;
-{	int lines = reglines(FALSE);
-	rdonly();
+ 	
 	if (g_region.r_up)
 	{	curwp->w_line_no -= lines;
 		curwp->w_flag |= WFMODE;
@@ -123,7 +135,7 @@ int Pascal killregion(int f, int n)
 	g_thisflag = CFKILL;					/* kill buffer stuff.	*/
 	kinsert_n = chk_k_range(n);
 	return ldelchrs(g_region.r_size, TRUE);
-}}
+}
 
 /*	Narrow-to-region (^X-<) makes all but the current region in
 	the current buffer invisable and unchangable

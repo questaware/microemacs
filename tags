@@ -934,6 +934,7 @@ append_keys	./src/bind.c
 app_kbdm	./src/input.c
 apro	./src/bind.c
 arith	./src/random.c
+ask_region	./src/region.c
 b_linep	./mtgdi/estruct.h
 b_linep	./unix/estruct.h
 b_linep	./wincon/estruct.h

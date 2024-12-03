@@ -405,9 +405,8 @@ typedef struct UNDO
 	struct UNDO * u_bp;		/* Link to the previous UNDO	*/
 	struct LINE * u_lp;		/* Link to LINE */
 	struct LINE * u_llost;/* Link to lost lines */
-	int						u_size;	/* size of text */
 	int						u_offs;
-	int 	        u_dcr; 	/* Used(24) spare(6) incomment(1) header(1) */
+	int 	        u_dcr; 	/* Used(24) spare(6) incomment(1) append(1) */
 	char	        u_text[16]; /* A bunch of characters.	*/
 }	UNDO;
 

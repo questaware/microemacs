@@ -933,10 +933,9 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 { int val = atoi(value);
   int hookix = 0;		  /* set an environment variable */
 
+	varref = &predefvars[vnum].p;
 	if (in_range(vnum, EVHLIGHT1, EVHLIGHT9))
-	{ varref = &predefvars[vnum].p;
 		goto remalloc;
-	}
 
   switch (vnum) 
   {
@@ -980,8 +979,7 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 
 	  when EVPALETTE:
 	  case EVFILEPROF:
-	  case EVINCLD:		 varref = &predefvars[vnum].p;
-							  	   goto remalloc;
+	  case EVINCLD:		 goto remalloc;
 
 	  when EVPOPUP:    mbwrite(value);
 				           //  upwind();

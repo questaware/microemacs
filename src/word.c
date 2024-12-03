@@ -283,8 +283,8 @@ int Pascal endword(int notused, int n)
  */
 int Pascal delfword(int notused, int n)
 
-{	if (rdonly())
-	  return FALSE;
+{//if (rdonly())
+ //  return FALSE;
 
 	kinsert_n = 0;
 
@@ -356,11 +356,12 @@ char * Pascal reform(char * para)	/* reformat a paragraph */
 
 int Pascal fillpara(int f, int n)		/* Fill the current paragraph according to the
 															   	current fill column */
-{	if (rdonly())
-	  return FALSE;
+{	int lines = ask_region();
+  if (lines < 0)
+		return FALSE;
 
-{	if (f == FALSE)
-		n = reglines(TRUE);
+	if (f  == FALSE)
+		n = lines;
 
 {	int inc = n;
 	Lpos_t s = *(Lpos_t*)&curwp->w_dotp;						/* original line pointer */
@@ -430,7 +431,7 @@ int Pascal fillpara(int f, int n)		/* Fill the current paragraph according to th
 																				/* reposition us to the same place */
 	forwbychar(back);
 	return cc; 
-}}}}}
+}}}}
 
 
 #if 0

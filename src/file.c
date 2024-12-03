@@ -657,6 +657,7 @@ int Pascal readin(char const * fname, int props)
   	if (rc <= FALSE)			/* Changes not discarded */
   	  return rc;
 
+		run_trim(bp, 0);
 // 	bp->b_flag &= ~(BFINVS|BFCHG);
 		if (!(props & FILE_NMSG))
   	{	if (repl_bfname(bp, fname) == NULL)
