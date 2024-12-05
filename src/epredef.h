@@ -125,6 +125,7 @@ extern PD_VAR predefvars[];
 #define pd_fcol		  predefvars[EVFCOL].i
 #define pd_ssave    predefvars[EVSSAVE].i
 #define pd_incldirs predefvars[EVINCLD].p
+#define pd_focus_count predefvars[EVLANG].i
 #define mouseflag   predefvars[EVMSFLAG].i
 #define pd_predef   predefvars[EVLINE].i /* stolen */
 #define pd_sgarbf   predefvars[EVBUFHOOK].i

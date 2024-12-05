@@ -821,7 +821,7 @@ int Pascal name_mode(const char * s)
 
 {	struct stat stat_;
  	if (stat(s, &stat_) != OK)
- 	  return 0;
+ 	  return -1;
 	return stat_.st_mode;
 }
 

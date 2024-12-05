@@ -1,8 +1,7 @@
 /*	FILE.C:   for MicroEMACS
 
 	The routines in this file handle the reading, writing
-	and lookup of disk files.  All of details about the
-	reading and writing of the disk are in "fileio.c".
+	and lookup of disk files.
 */
 #include	<stdio.h>
 #include	<stdlib.h>
@@ -24,8 +23,10 @@
 
 #if S_WIN32
 extern Filetime g_file_time;
+#define Filetime_date __int64
 #else
 #include	<unistd.h>
+#define Filetime_date time_t
 Filetime g_file_time;
 #endif
 
@@ -543,12 +544,39 @@ void io_message(const char * txt, int nline)
 { int row = ttrow;			// unfortunately the window can be scrolled down by 1
   int col = ttcol;
   tcapmove(0,0);
-	Sleep(5);
+	Sleep(4);
   tcapmove(row,col);
 }
 #endif
 }
 
+
+// Results: -1: file not found, OK: OK, 1: R/O File, 2: File changed, 8 Multiple Links
+
+Cc do_ftime(BUFFER * bp,
+#if S_WIN32 == 0
+						FILE * ffp,
+#endif
+						Bool update)
+{
+#if S_MSDOS
+#define datetime g_file_time
+	Cc cc = name_mode(bp->b_fname);
+	if (cc <= 0)
+		return -1;
+#else
+	Cc cc = OK;
+	Filetime datetime = ffp == NULL ? g_file_time : ffiletime(ffp);
+#endif
+	if (*(Filetime_date*)&datetime != *(Filetime_date*)&(bp->b_utime)
+	 && *(Filetime_date*)&bp->b_utime != 0)
+		cc = 2;
+
+	if (update)
+		bp->b_utime = datetime;
+
+	return cc & ~4;
+}
 
 /*	Read file "fname" into the curbp, blowing away any text
   	found there.  Called by both the read and find commands.
@@ -643,7 +671,7 @@ int Pascal readin(char const * fname, int props)
   if (cc < 0)
     return FALSE;
 
-	if ((props & FILE_NMSG) == 0)
+	if (!(props & FILE_NMSG))
 														/* read the file in */
 		mlwrite(cc > 0 ? TEXT138 :
     	    	ins    ? TEXT153 : TEXT139);
@@ -668,12 +696,11 @@ int Pascal readin(char const * fname, int props)
   }
   
 {	int   nline = 0;
-#if S_MSDOS
-	extern Filetime g_file_time;
-	Filetime datetime = (name_mode(fname), g_file_time);
-#else
-	Filetime datetime = ffp == NULL ? g_file_time : ffiletime(ffp);
+	Cc tcc = do_ftime(bp,		// Set the file date
+#if S_WIN32 == 0
+									 ffp,
 #endif
+									 TRUE);
 	if (diry)
 	{ bp->b_flag |= MDDIR;
 		msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
@@ -786,8 +813,6 @@ out:
 	  tcapkopen();								/* open the keyboard again (Unix only) */
 //  swb_luct = topluct() + 1;
 //  bp->b_luct = swb_luct;
-		if (!(props & FILE_NMSG))
-			bp->b_utime = datetime;
 	  bp->b_dotp = lforw(&bp->b_baseline);
 	  bp->b_wlinep = bp->b_dotp;
 
@@ -865,7 +890,7 @@ int Pascal filewrite(int f, int n)
 /*		       "Write file: " */
 		return cc;
 
-	return writeout(fname, TRUE);
+	return writeout(fname);
 }
 
 
@@ -921,7 +946,7 @@ int Pascal filesave(int f, int n)
 //  ++fn;
   }}
 
-{	int rc = writeout(fn,TRUE);
+{	int rc = writeout(fn);
 	if (rc > FALSE)
 	{ 
 	  if (cmd != NULL)
@@ -978,10 +1003,9 @@ int Pascal filesave(int f, int n)
  * a user specifyable routine (in $writehook) can be run.
  */
 
-int Pascal writeout(const char * fn, Bool original)
+int Pascal writeout(const char * fn)
 				/* name of file to write current buffer to */
 { Cc cc;
-  struct stat stat_;
   LINE *lp;
   int nline;	  /* number of lines written */
 	char tname[NSTRING+100];	/* temporary file name */
@@ -999,16 +1023,22 @@ int Pascal writeout(const char * fn, Bool original)
   int caution = 0;
 #elif S_MSDOS
 	int w;
-  int caution = name_mode(fn);  // & (1+8);
-  if (caution & (1+8))
-	{ int yn = mlyesno(caution & 8 ? TEXT218 : TEXT221);
+	Cc caution = do_ftime(bp, TRUE); // & (1+8);
+  if (caution & (1+2+8))
+	{ int yn = mlyesno(caution & 2 ? TEXT29 : caution & 8 ? TEXT218 : TEXT221);
 	  if (yn < 0)
   	  return yn;
   	if ((caution & 8) && !yn)
   		caution = -1;
   }
   
+//if (*(__int64*)&g_file_time != *(__int64*)&bp->b_utime)
+//{ int yn = mlyesno(TEXT29);
+//  if (yn <= 0)
+// 	  return yn;
+//}
 #else
+  struct stat stat_;
   int caution = stat(fn , &stat_);
 { int w = (stat_.st_mode & (getuid() == stat_.st_uid ? 0200 :
                             getgid() == stat_.st_gid ? 020  : 02
@@ -1026,7 +1056,7 @@ int Pascal writeout(const char * fn, Bool original)
   
   if (stat_.st_mtime != bp->b_utime)
 	{ int yn = mlyesno(TEXT29);
-	  if (yn < 0)
+	  if (yn <= 0)
   	  return yn;
 	}
 }
@@ -1076,7 +1106,7 @@ good:
 	fclose(op);
 	upmode();		/* Update mode lines.	*/
 	
-{ extern char deltaf[];
+{	extern char deltaf[];
 	#define mesg deltaf 
 //mesg[0] = 0;		/* message buffer */
 
@@ -1092,15 +1122,12 @@ good:
 	}}
 //repl_bfname(bp, fn);		// destroys fn
 
-	if (original)
-	{
-#if S_WIN32
-		bp->b_utime = g_file_time;
-#else
-		bp->b_utime = ffiletime(op);
+	(void)do_ftime(bp,
+#if S_WIN32 == 0
+								ffp,
 #endif
-		bp->b_flag &= ~BFCHG;
-	}
+								TRUE);
+	bp->b_flag &= ~BFCHG;
 																					 /* report on status of file write */
 	io_message(strcpy(tname, TEXT149), nline);
 															/* "[Wrote 999 line" */

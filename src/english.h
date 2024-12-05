@@ -79,11 +79,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 				       "Arrows	Previous\n"\
 				       ".*^$[\\	Magic\n"
 #define	TEXT28	"Buffer in use"
-#if S_MSDOS
-#define	TEXT29	"File has changed externally"
-#else
 #define	TEXT29	"File has changed externally. Save anyway?"
-#endif
 #define	TEXT30	"ACT   Modes      Size Buffer          File"
 #define	TEXT31	"         Global Modes"
 #define	TEXT32	"Discard changes"
@@ -132,6 +128,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT76	"No mark set in this window"
 #define	TEXT77	"Bug:lost mark"
 #define	TEXT78	"No pattern set"
+#define	TEXT79	"File has changed externally"
 #define	TEXT80	"Reverse Search"
 #define	TEXT80_O 8
 #define	TEXT82  "Query Replace"

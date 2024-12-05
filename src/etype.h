@@ -46,6 +46,11 @@ char * Pascal repl_bfname(BUFFER*, const char *);
 Cc run_make(LINE * ln);
 void run_trim(BUFFER * bp, int lim);
 char *Pascal bytecopy();
+Cc do_ftime(BUFFER * bp,
+#if S_WIN32 == 0
+						FILE * ffp,
+#endif
+						Bool update);
 char *Pascal envval();
 //void Pascal expandp(char *, char *, char *, int);
 //const char * USE_FAST_CALL fixnull(const char * s);
@@ -471,7 +476,7 @@ int Pascal wordcount(int, int);
 int Pascal wordsearch(int, int);
 int Pascal wrapword(int, int);
 int Pascal writemsg(int, int);
-int Pascal writeout(const char * fn, Bool original);
+int Pascal writeout(const char * fn);
 int Pascal yank(int, int);
 int Pascal zotbuf(BUFFER*);
 void Pascal MySetCoMo();
