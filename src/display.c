@@ -1303,11 +1303,11 @@ int Pascal upmode()	/* update all the mode lines */
 { return orwindmode(WFMODE);
 }
 
-
+																/* force hard updates on all windows */
 #if MEMMAP
-int Pascal upwind_()	/* force hard updates on all windows */
+int Pascal upwind_()			/* drop the parameter */
 #else
-int Pascal upwind(int garbage)	/* force hard updates on all windows */
+int Pascal upwind(int garbage)
 #endif
 { 
 #if MEMMAP == 0

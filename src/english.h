@@ -79,11 +79,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 				       "Arrows	Previous\n"\
 				       ".*^$[\\	Magic\n"
 #define	TEXT28	"Buffer in use"
-#if S_MSDOS
-#define	TEXT29	"File has changed externally"
-#else
 #define	TEXT29	"File has changed externally. Save anyway?"
-#endif
 #define	TEXT30	"ACT   Modes      Size Buffer          File"
 #define	TEXT31	"         Global Modes"
 #define	TEXT32	"Discard changes"
@@ -169,6 +165,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 #define	TEXT117	"Execute buffer: "
 #define	TEXT118	"No such buffer"
 #define TEXT121 "In %s mismatched:%s%p"
+#define	TEXT122	"File has changed externally"
 #define	TEXT124	"%%Unknown Directive%p"
 #define	TEXT125	"Oo memory storing macro"
 #define	TEXT126	"%%While loop int.error%p"

@@ -282,10 +282,10 @@ FALSE, /* EVCWLINE */		  /* */
 0,		 /* EVINCLD */			/* */
 0,     /* EVKEYCT */		  /* consec key ct */
 CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
-0,		 /* EVLANG */  			/* */
+0,		 /* EVLANG */  			/* actual g_focus_ct */
 0,     /* EVLASTDIR */	  /* actual: prefix- current pending prefix bits*/
 0,     /* EVLASTKEY */    /* last keystoke */
-0,     /* EVLASTMESG */   /* not in use */
+0,     /* EVLASTMESG */   /* last message */
 TRUE,  /* EVLINE */       /* not in use */
 0,     /* EVMATCH */      /* actual: saveflag - Flags, saved with $target var */
 1,     /* EVMSFLAG */     /* use the mouse? */
@@ -762,7 +762,9 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		  case EVREADHK:   --ix;
 							   		   return getfname(ix);
 		  when EVVERSION:  return VERSION;
+#if 0		  
 		  when EVLANG:	   return LANGUAGE;
+#endif
 	    when EVZCMD:     return g_ll.lastline[g_ll.ll_ix & MLIX];
 #if S_WIN32
 		  when EVWINTITLE: return null;	// getconsoletitle();

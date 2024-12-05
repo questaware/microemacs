@@ -58,36 +58,29 @@ int reload_buffers(void)
 {	int ct = -1;
 	BUFFER *bp;
 
-//return ct;
-
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
-		if ((bp->b_flag & (BFINVS+MDDIR) == 0) && bp->b_fname)
-		{	Filetime dt;
+	{	if ((bp->b_flag & (BFINVS+MDDIR)) || bp->b_fname == NULL)
+			continue;		
+	{	
 #if S_WIN32
-			extern Filetime g_file_time;
-			if (!name_mode(bp->b_fname))
-				continue;
-			dt = g_file_time;
-		  if (*(__int64*)&dt == *(__int64*)&(bp->b_utime)
-		  &&  *(__int64*)&(bp->b_utime) != 0)
-		  	continue;
+		Cc cc = do_ftime(bp,ct < 0);
 #else
-		  FILE * ffp = ffropen(bp->b_fname);
-			if (!ffp)
-				continue;
+	  FILE * ffp = ffropen(bp->b_fname);
+		if (!ffp)
+			continue;
 				
-		  dt = ffiletime(ffp);
-		  if (dt == bp->b_utime && bp->b_utime != 0)
-		  	continue;
-		  	
-		  fclose(ffp);
+		Cc cc = do_ftime(bp,ffp, ct < 0);
+	  	
+	  fclose(ffp);
 #endif
-			if (++ct == 0)
-			{	bp->b_utime = dt;
-				if (bp != curbp)
-					swbuffer(bp);
-			}
+		if (cc <= OK)
+			continue;
+
+		if (++ct == 0)
+		{	if (bp != curbp)
+				swbuffer(bp);
 		}
+	}}
 
 	return ct;
 }

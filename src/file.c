@@ -1,8 +1,7 @@
 /*	FILE.C:   for MicroEMACS
 
 	The routines in this file handle the reading, writing
-	and lookup of disk files.  All of details about the
-	reading and writing of the disk are in "fileio.c".
+	and lookup of disk files.
 */
 #include	<stdio.h>
 #include	<stdlib.h>
@@ -24,8 +23,10 @@
 
 #if S_WIN32
 extern Filetime g_file_time;
+#define Filetime_date __int64
 #else
 #include	<unistd.h>
+#define Filetime_date time_t
 Filetime g_file_time;
 #endif
 
@@ -45,6 +46,7 @@ Filetime g_file_time;
 #endif
 
 static int g_crlfflag;
+#define g_crout g_crlfflag
 
 /*extern int sp_langprops;			** inherited */
 
@@ -315,12 +317,12 @@ int Pascal USE_FAST_CALL ffputline(int/* bool*/crypt, int nbuf, char buf[], FILE
   	}
   }
 
-	cc |= fputs(g_crlfflag ? "\r\n" : "\n", op);
+  cc |= fputs("\r\n" + 1 - g_crout, op);
+//cc |= fputs(g_crout ? "\r\n" : "\n", op);
 
 	if (cc < 0)
-	{ mlwrite(TEXT157 "%x", cc);
+		mlwrite(TEXT157 "%x", cc);
 					/* "Write I/O error" */
-	}
 
 	return cc;
 }
@@ -543,12 +545,39 @@ void io_message(const char * txt, int nline)
 { int row = ttrow;			// unfortunately the window can be scrolled down by 1
   int col = ttcol;
   tcapmove(0,0);
-	Sleep(5);
+	Sleep(4);
   tcapmove(row,col);
 }
 #endif
 }
 
+
+// Results: -1: file not found, OK: OK, 1: R/O File, 2: File changed, 8 Multiple Links
+
+Cc do_ftime(BUFFER * bp,
+#if S_WIN32 == 0
+						FILE * ffp,
+#endif
+						Bool update)
+{
+#if S_MSDOS
+#define datetime g_file_time
+	Cc cc = name_mode(bp->b_fname);
+	if (cc <= 0)
+		return -1;
+#else
+	Cc cc = OK;
+	Filetime datetime = ffp == NULL ? g_file_time : ffiletime(ffp);
+#endif
+	if (*(Filetime_date*)&datetime != *(Filetime_date*)&(bp->b_utime)
+	 && *(Filetime_date*)&bp->b_utime != 0)
+		cc = 2;
+
+	if (update)
+		bp->b_utime = datetime;
+
+	return cc & ~4;
+}
 
 /*	Read file "fname" into the curbp, blowing away any text
   	found there.  Called by both the read and find commands.
@@ -643,7 +672,7 @@ int Pascal readin(char const * fname, int props)
   if (cc < 0)
     return FALSE;
 
-	if ((props & FILE_NMSG) == 0)
+	if (!(props & FILE_NMSG))
 														/* read the file in */
 		mlwrite(cc > 0 ? TEXT138 :
     	    	ins    ? TEXT153 : TEXT139);
@@ -668,12 +697,11 @@ int Pascal readin(char const * fname, int props)
   }
   
 {	int   nline = 0;
-#if S_MSDOS
-	extern Filetime g_file_time;
-	Filetime datetime = (name_mode(fname), g_file_time);
-#else
-	Filetime datetime = ffp == NULL ? g_file_time : ffiletime(ffp);
+	Cc tcc = do_ftime(bp,		// Set the file date
+#if S_WIN32 == 0
+									  ffp,
 #endif
+									  TRUE);
 	if (diry)
 	{ bp->b_flag |= MDDIR;
 		msd_init(fname, MSD_REPEAT | MSD_STAY | MSD_HIDFILE | MSD_SYSFILE);
@@ -688,6 +716,13 @@ int Pascal readin(char const * fname, int props)
 //g_flen = 0;
 
 { LINE * nextline = &bp->b_baseline;
+#if	CRYPT
+	Bool crypt = !CRYPT ? 0 : bp->b_flag & MDCRYPT;
+	if (crypt)
+	{
+	 	resetkey(&bp->b_key);													/* set up for decryption */
+	}
+#endif
 
 	if (ins)
 	{ 				                          /* back up a line and save the mark here */
@@ -729,17 +764,39 @@ int Pascal readin(char const * fname, int props)
 	  	ln = g_line;
 	  }
 	  
-	  lp1 = mk_line(ln,cc,cc,(g_paren.in_mode & Q_IN_CMT));
+	  lp1 = mk_line(ln,cc,cc,g_paren.in_mode & Q_IN_CMT);
 	  if (lp1 == NULL)
 	  {	cc = FIOMEM;
 	    break;
 	  }
 
-	  ibefore(nextline, lp1);
-	  ++nline;
-
+	{ int len = llength(lp1);
+#if	CRYPT
+		if (crypt)
+		{	ucrypt(lp1->l_text, len);
+//		if (bp->b_flag & BCRYPT2)
+			if (bp->b_flag < 0)
+				double_crypt(lp1->l_text, len);
+		}
+#endif
     scan_par_line(lp1);
-	}
+	  ++nline;
+		if (nline < 5 &&
+				len > 6 && lp1->l_text[2] == 't' && lp1->l_text[3] == 'a'
+								&& lp1->l_text[4] == 'b' && lp1->l_text[5] == ' '
+								&&(lp1->l_text[0] == '/' && lp1->l_text[1] == '*' ||
+                   lp1->l_text[0] == '/' && lp1->l_text[1] == '/' ||
+                   lp1->l_text[0] == '-' && lp1->l_text[1] == '-'))
+	  { int tabw = lp1->l_text[6] - '0';
+	    if (tabw > 0)
+	    { if (bp->b_tabsize < 0)	// expand tabs
+	    		tabw = -tabw;
+	    	bp->b_tabsize = tabw;
+	    }
+	  }
+
+	  ibefore(nextline, lp1);
+	}}
 //curwp->w_dotp = topline;
 #if 0
 	if (!line)
@@ -764,7 +821,7 @@ int Pascal readin(char const * fname, int props)
 	  io_message(TEXTS_+txt_o, nline);
 	}
 out:
-	bp->b_flag |= g_crlfflag;
+	bp->b_flag |= g_crlfflag & MDMS;
 
 //readin_lines = nline;
 	if (ins)
@@ -786,8 +843,6 @@ out:
 	  tcapkopen();								/* open the keyboard again (Unix only) */
 //  swb_luct = topluct() + 1;
 //  bp->b_luct = swb_luct;
-		if (!(props & FILE_NMSG))
-			bp->b_utime = datetime;
 	  bp->b_dotp = lforw(&bp->b_baseline);
 	  bp->b_wlinep = bp->b_dotp;
 
@@ -803,45 +858,8 @@ out:
   }
 }}
 
-{	LINE * lp;
- 	int clamp = 3;
-
-#if	CRYPT
-	if (bp->b_flag & MDCRYPT)
-	{
-	 	resetkey(&bp->b_key);													/* set up for decryption */
-		clamp = 0;
-	}
-#endif
-
-	for (lp = &bp->b_baseline; 
-			 !l_is_hd((lp=lforw(lp))) && --clamp != 0; )
-	{ int len = lused(lp->l_dcr);
-#if	CRYPT
-		if (clamp < 0)
-		{	
-			ucrypt(lp->l_text, len);
-//		if (bp->b_flag & BCRYPT2)
-			if (bp->b_flag < 0)
-				double_crypt(lp->l_text, len);
-		}
-#endif
-		if (len > 6 &&(lp->l_text[0] == '/' && lp->l_text[1] == '*' ||
-                   lp->l_text[0] == '/' && lp->l_text[1] == '/' ||
-                   lp->l_text[0] == '-' && lp->l_text[1] == '-')
-					      && lp->l_text[2] == 't' && lp->l_text[3] == 'a'
-								&& lp->l_text[4] == 'b' && lp->l_text[5] == ' ')
-	  { int tabw = lp->l_text[6] - '0';
-	    if (tabw > 0)
-	    { if (bp->b_tabsize < 0)	// expand tabs
-	    		tabw = -tabw;
-	    	bp->b_tabsize = tabw;
-	    }
-	  }
-	}
-
 	return cc < 0;	/* FIOEOF */ /* False if error.	*/
-}}}}}}
+}}}}}
 
 
 
@@ -865,7 +883,7 @@ int Pascal filewrite(int f, int n)
 /*		       "Write file: " */
 		return cc;
 
-	return writeout(fname, TRUE);
+	return writeout(fname);
 }
 
 
@@ -921,7 +939,7 @@ int Pascal filesave(int f, int n)
 //  ++fn;
   }}
 
-{	int rc = writeout(fn,TRUE);
+{	int rc = writeout(fn);
 	if (rc > FALSE)
 	{ 
 	  if (cmd != NULL)
@@ -978,10 +996,9 @@ int Pascal filesave(int f, int n)
  * a user specifyable routine (in $writehook) can be run.
  */
 
-int Pascal writeout(const char * fn, Bool original)
+int Pascal writeout(const char * fn)
 				/* name of file to write current buffer to */
 { Cc cc;
-  struct stat stat_;
   LINE *lp;
   int nline;	  /* number of lines written */
 	char tname[NSTRING+100];	/* temporary file name */
@@ -999,18 +1016,24 @@ int Pascal writeout(const char * fn, Bool original)
   int caution = 0;
 #elif S_MSDOS
 	int w;
-  int caution = name_mode(fn);  // & (1+8);
-  if (caution & (1+8))
-	{ int yn = mlyesno(caution & 8 ? TEXT218 : TEXT221);
+	Cc caution = do_ftime(bp, TRUE); // & (1+8);
+  if (caution & (1+2+8))
+	{ int yn = mlyesno(caution & 2 ? TEXT29 : caution & 8 ? TEXT218 : TEXT221);
 	  if (yn < 0)
   	  return yn;
   	if ((caution & 8) && !yn)
   		caution = -1;
   }
   
+//if (*(__int64*)&g_file_time != *(__int64*)&bp->b_utime)
+//{ int yn = mlyesno(TEXT29);
+//  if (yn <= 0)
+// 	  return yn;
+//}
 #else
+  struct stat stat_;
   int caution = stat(fn , &stat_);
-{ int w = (stat_.st_mode & (getuid() == stat_.st_uid ? 0200 :
+  int w = (stat_.st_mode & (getuid() == stat_.st_uid ? 0200 :
                             getgid() == stat_.st_gid ? 020  : 02
                            ));
   if 			(caution < 0)
@@ -1026,15 +1049,14 @@ int Pascal writeout(const char * fn, Bool original)
   
   if (stat_.st_mtime != bp->b_utime)
 	{ int yn = mlyesno(TEXT29);
-	  if (yn < 0)
+	  if (yn <= 0)
   	  return yn;
 	}
-}
 #endif
   if (pd_ssave && caution >= 0)
     caution = 1;
 
-	g_crlfflag = bp->b_flag & MDMS;
+	g_crout = (bp->b_flag & MDMS) >> 9;
 	if (bp->b_flag & MDCRYPT)
 		resetkey(&bp->b_key);
     						   /* Perform Safe Save..... */
@@ -1072,11 +1094,11 @@ good:
 			break;
 		++nline;
 	}
-		
+
 	fclose(op);
 	upmode();		/* Update mode lines.	*/
 	
-{ extern char deltaf[];
+{	extern char deltaf[];
 	#define mesg deltaf 
 //mesg[0] = 0;		/* message buffer */
 
@@ -1092,15 +1114,12 @@ good:
 	}}
 //repl_bfname(bp, fn);		// destroys fn
 
-	if (original)
-	{
-#if S_WIN32
-		bp->b_utime = g_file_time;
-#else
-		bp->b_utime = ffiletime(op);
+	bp->b_flag &= ~BFCHG;
+	(void)do_ftime(bp,
+#if S_WIN32 == 0
+								 ffp,
 #endif
-		bp->b_flag &= ~BFCHG;
-	}
+								 TRUE);
 																					 /* report on status of file write */
 	io_message(strcpy(tname, TEXT149), nline);
 															/* "[Wrote 999 line" */

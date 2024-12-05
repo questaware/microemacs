@@ -1083,6 +1083,7 @@ diagflag	./src/epredef.h
 discmd	./src/epredef.h
 disinp	./src/epredef.h
 dispvar	./src/eval.c
+do_ftime	./src/file.c
 dobuf	./src/exec.c
 docmd	./src/exec.c
 dofile	./src/exec.c

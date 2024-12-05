@@ -111,7 +111,7 @@ void Pascal rpl_all(int wh, int noffs, int offs, LINE * old, LINE * new_)
 			if			(wh <= 0)
 			{ if (wh < 0)
 				{ wp->w_flag |= (WFHARD|WFMODE);
-					wp->w_linep = new_;
+				//wp->w_linep = new_;
 				}
 				m->marko = noffs;
 				goto newww;
@@ -1000,18 +1000,18 @@ int Pascal yank(int notused, int n)
     { 
       sp = ClipPasteStart();
       if (sp != NULL)
-	      len = strlen(sp);
+	    { len = strlen(sp);
+	    	goto gots;
+	    }
     }
 #endif
-		if (sp == NULL)
-    { sp = kills[ix].mem;
-      len = kills[ix].size;
-    }
- 
+    sp = kills[ix].mem;
+    len = kills[ix].size;
+gots: 
     while (--len >= 0)
     { char ch = *sp;
     	++sp;
-      if (sp[-1] == 'M' - '@' && sp[0] == '\n')
+      if (ch == 'M' - '@' && sp[0] == '\n')
         continue;
       if (linsert(1, ch) == FALSE)
         return FALSE;

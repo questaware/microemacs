@@ -265,13 +265,6 @@ void Pascal dcline(int argc, char * argv[])
 //openwind(curwp);
 
 { Cc cc = startup(startfile);
-#if 0
-	if (pd_gflags & MD_NO_MMI)
-	{ writeout(null,FALSE);
-		return 1;
-	}
-#endif
-
 	if (cc <= FALSE)
 	{ if (cc == -32000)
 			mbwrite(TEXT22);
@@ -378,10 +371,8 @@ int main(int argc, char * argv[])
 
 	(void)dcline(argc, argv);
 	do
-	{ extern int g_focus_count;
-		g_lastflag = 0; 								/* Fake last flags.*/
-
-	{	int ct = g_focus_count <= 0 ? -1 : reload_buffers();
+	{	g_lastflag = 0; 								/* Fake last flags.*/
+	{	int ct = pd_focus_count <= 0 ? -1 : reload_buffers();
 
 																	/* execute the "command" macro, normally null*/
 		execwrap(2);  // cmdhook	** used to push/pop lastflag **
@@ -389,9 +380,9 @@ int main(int argc, char * argv[])
 		update(FALSE);		/* Fix up the screen	*/
 		
 		if (ct >= 0)
-		{	mbwrite(TEXT29);
+		{	mbwrite(TEXT122);
 			if (ct == 0)
-				g_focus_count = -2;
+				pd_focus_count = -2;
 		}
 
 	{	int	c = getkey(); 	/* get the next command from the keyboard */

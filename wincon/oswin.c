@@ -33,8 +33,6 @@ static int nbuttons;	/* number of buttons on the mouse */
 static int oldbut;	/* Previous state of mouse buttons */
 #endif
 
-int g_focus_count;
-
 #define millisleep(n) Sleep(n)
 
 
@@ -1042,7 +1040,8 @@ int ttgetc()
 				++g_chars_since_ctrl;
 	    }}
 	    else if (r->EventType == FOCUS_EVENT)
-	    { ++g_focus_count;
+	    { // tcapbeep();
+	      ++pd_focus_count;
 	    }
 	    else if (r->EventType == MENU_EVENT)
 	    { /*loglog1("Menu %x", r->Event.MenuEvent.dwCommandId);*/
@@ -1085,6 +1084,36 @@ error error
 #endif
 
 
+// Results: 0: Cannot access file, 1: read Only, 8 multiple links
+
+FILETIME g_file_time;
+
+int Pascal name_mode(const char * s)
+
+{	char filen[NFILEN+1];
+	char * t;
+	for (t = strpcpy(filen, s, NFILEN+1)-1; *++t != 0; )
+		if (*t == '/')
+			*t = '\\';
+
+{	BY_HANDLE_FILE_INFORMATION fileinfo;
+	int res = 4;
+  HANDLE myfile = Create(0, filen);
+	if ((int)myfile < 0)
+		return 0;
+	if (GetFileInformationByHandle(myfile, &fileinfo))
+	{ g_file_time = fileinfo.ftLastWriteTime;
+		res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
+	  if (fileinfo.nNumberOfLinks > 1)
+	  	res |= 8;
+	}
+	
+  CloseHandle(myfile);
+
+	return res;
+}}
+
+
 static char * mkTempCommName(char suffix, /*out*/char *filename)
 {
 #ifdef _CONVDIR_CHAR
@@ -1102,7 +1131,7 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
 	
 	for (iter = 25; --iter >= 0; )
 	{
-		if (!name_mode(ss))
+		if (name_mode(ss) <= 0)
 			break;
 		
 		ss[tail-2] = 'A' + 24 - iter;				// File should not exist anyway
@@ -1166,36 +1195,6 @@ again:
 	return status;
 }
 #endif
-
-// Results: 1: read Only, 8 multiple links
-
-FILETIME g_file_time;
-
-int Pascal name_mode(const char * s)
-
-{	char filen[NFILEN+1];
-	char * t;
-	for (t = strpcpy(filen, s, NFILEN+1)-1; *++t != 0; )
-		if (*t == '/')
-			*t = '\\';
-
-{	BY_HANDLE_FILE_INFORMATION fileinfo;
-	int res = 0x04;
-  HANDLE myfile = Create(0, filen);
-	if ((int)myfile < 0)
-		return 0;
-	if (GetFileInformationByHandle(myfile, &fileinfo))
-	{ g_file_time = fileinfo.ftLastWriteTime;
-		res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
-	  if (fileinfo.nNumberOfLinks > 1)
-	  	res |= 8;
-	}
-	
-  CloseHandle(myfile);
-
-	return res;
-}}
-
 
 //#if _MSC_VER < 1900
 #undef VS_CHAR8
@@ -1638,7 +1637,7 @@ int pipefilter(char wh)
 	{ 			
 		fnam1 = mkTempCommName('i', pipeInFile);
 
-		if (writeout(fnam1,FALSE) <= FALSE)		/* write it out, checking for errors */
+		if (writeout(fnam1) <= FALSE)		/* write it out, checking for errors */
 		{ // mlwrite(TEXT2);
 																			/* "[Cannot write filter file]" */
 			return FALSE;

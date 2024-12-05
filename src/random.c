@@ -1517,7 +1517,7 @@ double evalexpr(char * s, int * adv_ref)
 	{ char op = s[++tot_adv];
 		if (op == ' ')
 			continue;
-	 	if (op == ')' || op == 0)
+	 	if (op == ')' || op == '#' || op == 0)
 		{	*adv_ref = tot_adv+!!op;
 			return res;
 		}
