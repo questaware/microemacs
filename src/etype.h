@@ -100,7 +100,7 @@ int Pascal name_mode(const char *);
 #if S_BSD | S_UNIX5 | S_XENIX | S_SUN | S_HPUX
  int Pascal fexist(const char *);
 #else
-#define fexist(fn) name_mode(fn)
+#define fexist(fn) (name_mode(fn) >= 0)
 #endif
 char * fex_up_dirs(const char * dir, const char * file);
 void Pascal flook_init(char *);

@@ -339,6 +339,7 @@ btk execute-macro-21 ^XV
 	set $hp22 "4 #ifdef"
 	set $hp23 "4 #else"
 	set $hp24 "4 #endif"
+	set hp25 "4 #elif"
 ;	set %ri &rig $cbufname 3
 ;	set %oo @&cat "Buffhook " %ri
   !if &not &equ &ban $cblang 31 0

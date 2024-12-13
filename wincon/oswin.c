@@ -1091,16 +1091,16 @@ FILETIME g_file_time;
 int Pascal name_mode(const char * s)
 
 {	char filen[NFILEN+1];
-	char * t;
-	for (t = strpcpy(filen, s, NFILEN+1)-1; *++t != 0; )
-		if (*t == '/')
-			*t = '\\';
+//char * t;
+//for (t = strpcpy(filen, s, NFILEN+1)-1; *++t != 0; )
+//	if (*t == '/')
+//		*t = '\\';
 
 {	BY_HANDLE_FILE_INFORMATION fileinfo;
 	int res = 4;
-  HANDLE myfile = Create(0, filen);
+  HANDLE myfile = Create(0, s);
 	if ((int)myfile < 0)
-		return 0;
+		return -1 << 8;
 	if (GetFileInformationByHandle(myfile, &fileinfo))
 	{ g_file_time = fileinfo.ftLastWriteTime;
 		res |= fileinfo.dwFileAttributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_DIRECTORY);
@@ -1707,6 +1707,7 @@ int pipefilter(char wh)
 	}}
 	else													/* on failure, escape gracefully */ 		
 	{ BUFFER * bp = curbp;
+		*(Filetime*)&bp->b_utime = 0;
 		rc = readin(fnam2, FILE_NMSG);
 		bp->b_flag |= MDVIEW | BFCHG; 			/* flag it as changed */
 		flush_typah();

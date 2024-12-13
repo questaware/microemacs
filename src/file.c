@@ -23,10 +23,8 @@
 
 #if S_WIN32
 extern Filetime g_file_time;
-#define Filetime_date __int64
 #else
 #include	<unistd.h>
-#define Filetime_date time_t
 Filetime g_file_time;
 #endif
 
@@ -563,14 +561,14 @@ Cc do_ftime(BUFFER * bp,
 #if S_MSDOS
 #define datetime g_file_time
 	Cc cc = name_mode(bp->b_fname);
-	if (cc <= 0)
-		return -1;
+	if (cc < 0)
+		return 0;
 #else
 	Cc cc = OK;
 	Filetime datetime = ffp == NULL ? g_file_time : ffiletime(ffp);
 #endif
-	if (*(Filetime_date*)&datetime != *(Filetime_date*)&(bp->b_utime)
-	 && *(Filetime_date*)&bp->b_utime != 0)
+	if (*(Filetime*)&datetime != *(Filetime*)&(bp->b_utime)
+	 && *(Filetime*)&bp->b_utime != 0)
 		cc = 2;
 
 	if (update)

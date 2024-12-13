@@ -8,11 +8,10 @@
 
 #if S_WIN32
 #include <windows.h>
-#define Filetime FILETIME
+#define Filetime __int64
 #else
 #define Filetime time_t
 #endif
-
 
 #define CTRL	 0x0100		/* Control flag, or'ed in		*/
 #define META	 0x0200		/* Meta flag, or'ed in			*/
@@ -407,6 +406,7 @@ typedef struct UNDO
 	struct LINE * u_llost;/* Link to lost lines */
 	int						u_offs;
 	int 	        u_dcr; 	/* Used(24) spare(6) incomment(1) append(1) */
+	struct LINE * u_held_lp;	/* Line which cannot be freed yet */
 	char	        u_text[16]; /* A bunch of characters.	*/
 }	UNDO;
 

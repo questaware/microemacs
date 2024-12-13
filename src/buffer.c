@@ -59,7 +59,7 @@ int reload_buffers(void)
 	BUFFER *bp;
 
 	for (bp = bheadp; bp != NULL; bp = bp->b_next)
-	{	if ((bp->b_flag & (BFINVS+MDDIR)) || bp->b_fname == NULL)
+	{	if ((bp->b_flag & (BFINVS+MDDIR)) || bp->b_fname[0] == 0)
 			continue;		
 	{	
 #if S_WIN32
@@ -89,46 +89,47 @@ static
 void Pascal customise_buf(BUFFER * bp)
 
 {		int zero = 0;
-	  const char * fsuffix = "";
-		const char *fn;
-		for ( fn = bp->b_bname - 1; *++fn != 0; )
-      if (*fn == '.')
-      {	fsuffix = fn;
-				if (fsuffix[1] == 'e' && fsuffix[2] == '2')
-					zero |= BCRYPT2;
-//     	if (fsuffix[1] == 's' && fsuffix[2] == 'q')
-//     		zero = BCSTRNL;
-      }
+	  int fsuffix = 0;
+	  int ix;
 
 		init_buf(bp);
+
+		for ( ix = -1; ++ix, bp->b_bname[ix] != 0; )
+      if (bp->b_bname[ix] == '.')
+      {	fsuffix = ix;
+				if (bp->b_bname[ix+1] == 'e' && bp->b_bname[ix+2] == '2')
+					zero |= BCRYPT2;
+//     	if (bp->b_bname[ix+1] == 's' && bp->b_bname[ix+2] == 'q')
+//     		zero = BCSTRNL;
+      }
 
 {		int tabsize = pd_tabsize;
 		if (pd_file_prof != NULL)
     {	
-    	char * pr = pd_file_prof - 1;
-      while (*++pr != 0)
-      { if (*pr != '.') continue;
+    	char * prof = pd_file_prof - 1;
+      while (*++prof != 0)
+      { if (*prof != '.') continue;
         
-      { const char * p = fsuffix;
+      { const char * p = &bp->b_bname[fsuffix];
 
-        while (*++p != 0 && *++pr == *p)
+        while (*++p != 0 && *++prof == *p)
           ;
 
-        if (*p != 0 || pr[1] != '=') continue;
+        if (*p != 0 || prof[1] != '=') continue;
 
 //			bp->b_flag &= ~ MDIGCASE;
-			  if (pr[2] == '^')
-        { pr += 1;
+			  if (prof[2] == '^')
+        { prof += 1;
 				  zero |= MDIGCASE;
 				}
       { int six;
         for (six = 6; --six >= 0; )
-        	if (((suftag[six] ^ pr[2]) & ~0x20) == 0)
+        	if (((suftag[six] ^ prof[2]) & ~0x20) == 0)
 	        { bp->b_langprops = (1 << six);
-	          ++pr;
+	          ++prof;
 					}
           
-        six = atoi(pr+2);
+        six = atoi(prof+2);
         if (six != 0)
         	tabsize = six;
         break;
@@ -165,9 +166,8 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
 		if (cc > 0)
 			break;
 		if (!(cflag & 2))
-			return sb->b_next;
-		cc = 1;					// Case greater than existing, need unique : dont return NULL
-	{	
+			return sb->b_next;						
+	{										// Case greater than existing, need unique : dont return NULL
 #if 0
 		char *sp = strlast(bname+1, '.') - 1;
 #else
@@ -186,11 +186,11 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
 			*sp = 'Z';
 	}}
 	
-	g_bfindmade = cc;
-	
 	if (!(cflag & 1))
 		return null;
 
+	g_bfindmade = TRUE;
+	
 {	BUFFER *bp = (BUFFER *)mallocz(sizeof(BUFFER)+strlen(bname)+10); //can grow by 2
 	if (bp != NULL)
 	{	strcpy(bp->b_bname, bname);
@@ -725,12 +725,11 @@ int Pascal dropbuffer(int f, int n)
 	if (nb == bp)
 		nb = nextbuf(1);
 	
-	if (nb == NULL /*|| nb == bp */)			/* fake deletion of last buffer */
+{ Cc cc = swbuffer(nb);		/* fake deletion of last buffer */
+	if (cc < OK)
 		return TRUE;
-
-	swbuffer(nb);
 	return zotbuf(bp);
-}}}}
+}}}}}
 
 
 

@@ -21,10 +21,6 @@
 #define BSIZE(a)  (a + NBLOCK - 1) & (~(NBLOCK - 1))
 
 #if DO_UNDO
-void run_move(LINE * olp, LINE * lp);
-UNDO * run_destroy(UNDO*ud);
-//void run_release(int ct);
-static Cc run_validate(LINE * lp);
 
 #define SHOW_UNDO 1
 
@@ -33,7 +29,7 @@ Bool   g_inhibit_undo;
 #endif
 
 #if 0
-	struct LINE * u_lp;		/* Link to LINE */
+	struct LINE * u_lp;		/* Link to LINE before the change */
 	struct LINE * u_llost;/* Link to lost lines */
 	int 	        u_dcr; 	/* Used(24) spare(6) incomment(1) header(1) */
 #endif
@@ -152,33 +148,34 @@ LINE * USE_FAST_CALL lextract(int noffs, LINE * lp)
 	return nlp;
 }
 
+/* Undo cannot undo a previous change if you change the line before it. */
+/* Attempting such an undo will result in a beep */
+
 
 /* Delete line "lp". Fix all of the links that might point at it (they are
  * moved to offset 0 of the next line. Unlink the line from whatever buffer it
  * might be in. Release the memory. The buffers are updated too; the magic
  * conditions described in the above comments don't hold here.
  */
-//					n == -1: 
  
 LINE * Pascal USE_FAST_CALL lfree(int noffs, LINE * lp)
 
-{	LINE * nlp = lextract(noffs, lp);
-
-  free((char *) lp);
+{	LINE * plp = lback(lp);	
+	LINE * nlp = lextract(noffs, lp);
 
 #if DO_UNDO
-{ UNDO * * bud = (UNDO**)&curbp->b_undo;
-	UNDO * ud = *bud;
-	for (; ud != NULL && ud->u_lp != lp; ud = ud->u_bp)
-		bud = (UNDO**)ud;
+{	UNDO * ud = curbp->b_undo;
 	
-	if (ud)
-	{ *bud = NULL;
-		while (ud)
-			ud = run_destroy(ud);
-	}
+//free(ud->u_held_lp);		allow the memory leak
+  ud->u_held_lp = lp;
+	for (; ud != NULL; ud = ud->u_bp)
+		if (ud->u_lp == lp)
+			ud->u_lp = plp;
 }
+#else
+	free((char *) lp);
 #endif
+
   return nlp;
 }
 
@@ -253,42 +250,6 @@ int Pascal lchange(int flag)
 	return TRUE;
 }
 
-/*
- * Delete a newline. Join the current line with the next line. If the next line
- * is the magic header line always return TRUE; merging the last line with the
- * header line can be thought of as always being a successful operation, even
- * if nothing is done, and this makes the kill buffer work "right". Easy cases
- * can be done by shuffling data around. Hard cases require that lines be moved
- * about in memory. Return FALSE on error and TRUE if all looks ok. Called by
- * "ldelchrs" only.
- */
-#if 0
-
-static int Pascal ldelnewline()
-
-{	LINE * lp = curwp->w_dotp;
-	int    in_cmt = lp->l_dcr & Q_IN_CMT;
-	LINE * lp2 = lforw(lp);
-	int used1 = lused(lp->l_dcr); 
-
-	if (used1 > 0)
-	{ if (l_is_hd(lp2))		/* not at buffer end.	*/
-			return TRUE;
-	{ int nsz = lused(lp2->l_dcr) + used1;
-		LINE * lp3 =  mk_line(&lp->l_text[0], used1, nsz, in_cmt);
-
-	  memcpy(&lp3->l_text[used1], &lp2->l_text[0], lused(lp2->l_dcr)); // nsz - used1
-	  ibefore(lp2, lp3);
-
-    lfree(used1,lp2);
-	}}
-
-  lfree(used1,lp);
-  return lchange(WFHARD);
-}
-
-#endif
-
 #define EXPANSION_SZ 8
 
 /* Insert a newline into the buffer at the current location of dot in the
@@ -434,7 +395,7 @@ int Pascal linsert(int ins, char c)
 	  if (lp != newlp)
 		{	ibefore(lp, newlp);				/* Link in */
 			if (!l_is_hd(lp))					/* remove lp */
-	   		lfree(0, lp);						/* No mark points to lp */
+	   		lfree(0, lp);					/* No mark points to lp */
   	}
 	}
 
@@ -687,7 +648,6 @@ typedef struct t_kill
 
 static t_kill kills[NOOKILL+1];
 
-/* doregion */
 static
 int Pascal doregion(int wh, char * t)
 	
@@ -748,11 +708,7 @@ int Pascal doregion(int wh, char * t)
 	      loffs = -1;
 	      ch = '\n';
 	    } 
-	    if      (wh < 0)		// was 0
-	    { if (--space >= 0)
-	        *t++ = ch;
-	    }
-	    else if (wh == 0)		// was 1
+	    if (wh == 0)		// was 1
 	    { ch = kinsert((char)ch);
 	      if (ch <= FALSE)
 	        return ch;
@@ -823,7 +779,7 @@ int Pascal upperregion(int f, int n)
 { return doregion(0x20 + 1, NULL);
 }
 
-
+//															wh != 0
 int to_kill_buff(int wh, int n)
 
 { if (wh == -2)
@@ -1050,6 +1006,67 @@ int rdonly()
 
 #if DO_UNDO
 
+#if SHOW_UNDO == 0
+#define run_var_update(n)
+#else
+
+static
+void run_var_update(int ct)
+
+{	int nv = predefvars[EVUNDOS].i + ct;
+//if (nv < 0)
+//	nv = 0;
+	predefvars[EVUNDOS].i = nv;
+}
+
+#endif
+
+static Cc run_validate(LINE * lp)
+
+{ LINE * probef = curbp->b_dotp;
+	LINE * probeb = probef;
+	LINE * lpstop = probeb;
+	while (TRUE)
+	{ probeb = lback(probeb);
+		probef = lforw(probef);
+		if (probef == lp || probeb == lp)
+			break;
+		if (probeb != lpstop)
+			continue;
+			
+//	adb(33);
+		tcapbeep();
+		return 1;
+	}
+	
+	return OK;
+}
+
+
+UNDO * run_destroy(UNDO * ud)
+
+{	free(ud->u_held_lp);
+{	LINE * lp = ud->u_llost;
+	while (lp != NULL)
+	{	LINE * nlp = lp->l_fp;
+#ifdef _DEBUG
+		if (l_is_hd(lp))
+		{ adb(88);
+			break;
+		}
+#endif
+		free(lp);
+		lp = nlp;
+	}
+
+{	UNDO * nud = ud->u_bp;
+	free(ud);
+	run_var_update(-1);
+
+	return nud;
+}}}
+
+
 int undochange(int notused, int n)
 
 { UNDO * ud = curbp->b_undo;
@@ -1074,10 +1091,10 @@ int undochange(int notused, int n)
 		if (run_validate(next) != OK)
 			goto esc;
 
-		ibefore(next, newln);
+		ibefore(lp, newln);
 		lextract(ud->u_offs,lp);
 			
-		free(lp);
+		lfree(0,lp);
 	}
 	
 	if (prepend)
@@ -1105,28 +1122,13 @@ esc:
 }}}}}
 
 
-#if SHOW_UNDO
-
-static
-void run_var_update(int ct)
-
-{	int nv = predefvars[EVUNDOS].i + ct;
-//if (nv < 0)
-//	nv = 0;
-	predefvars[EVUNDOS].i = nv;
-}
-
-#endif
-
 Cc run_make(LINE * lp)
 
 {	LINE * lb = lback(lp);
 	if (/*g_inhibit_undo > 0 || */ curbp->b_undo && curbp->b_undo->u_lp == lb)
 		return 1;
 
-#if SHOW_UNDO
 	run_var_update(1);
-#endif
 
 { int len = llength(lp);
   UNDO *ud = (UNDO *)mallocz(sizeof(UNDO)-sizeof(ud->u_text)+len+4); // 4 say
@@ -1150,51 +1152,6 @@ void run_move(LINE * olp, LINE * lp)
 { if (curbp->b_undo && curbp->b_undo->u_lp == olp)
 		curbp->b_undo->u_lp = lp;
 }
-
-
-static Cc run_validate(LINE * lp)
-
-{ LINE * probef = curbp->b_dotp;
-	LINE * probeb = probef;
-	LINE * lpstop = probeb;
-	while (TRUE)
-	{ probeb = lback(probeb);
-		probef = lforw(probef);
-		if (probef == lp || probeb == lp)
-			break;
-		if (probeb != lpstop)
-			continue;
-			
-		adb(33);
-		return 1;
-	}
-	
-	return OK;
-}
-
-
-UNDO * run_destroy(UNDO * ud)
-
-{	LINE * lp = ud->u_llost;
-	while (lp != NULL)
-	{	LINE * nlp = lp->l_fp;
-#ifdef _DEBUG
-		if (l_is_hd(lp))
-		{ adb(88);
-			break;
-		}
-#endif
-		free(lp);
-		lp = nlp;
-	}
-
-{	UNDO * nud = ud->u_bp;
-	free(ud);
-#if SHOW_UNDO
-	run_var_update(-1);
-#endif
-	return nud;
-}}
 
 
 //void run_release(int ct)

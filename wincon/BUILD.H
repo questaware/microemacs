@@ -138,6 +138,7 @@
 typedef int   Vint;       /* set this to short int if it is more efficient */
 
 #define DO_UNDO 1
+#define DO_UNDO_V2 1
 
 //#define USE_DIR 1
 #define USE_DIR 0
