@@ -42,7 +42,6 @@ const NBIND names[] =
 	{"case-word-lower",			lowerword},
 	{"case-word-upper",			upperword},
 	{"change-file-name",		filename},
-	{"clear-message-line",	clrmes},
 	{"copy-region",					copyregion},
 	{"copy-word",						copyword},
 #if	WORDPRO

@@ -391,9 +391,8 @@ static short Pascal USE_FAST_CALL plinecpy(void)
   
   short res = 0;
 
-  if (curwp->w_linep != NULL)
-	{ LINE * pline = curwp->w_dotp;
-
+	LINE * pline = curwp->w_dotp;
+  if (pline != NULL)
     while (pline != curwp->w_linep)
     { pline = lback(pline);
     { int offs = getgoal(getccol(), pline);
@@ -402,7 +401,7 @@ static short Pascal USE_FAST_CALL plinecpy(void)
         break;
       }
     }}
-  }
+
   return res;
 }
 

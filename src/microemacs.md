@@ -216,7 +216,6 @@ case-word-capitalize     M-C  Make the first letter of word upper case
 case-word-lower          M-L
 case-word-upper          M-U
 change-file-name         ^XN  Change the file name of the current buffer
-clear-message-line
 copy-region              ^XC  Copy the region into the n.th kill buffer.
 copy-word                A-W  Copy the word into the n.th kill buffer.
 count-words              M-^C

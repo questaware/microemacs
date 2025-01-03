@@ -906,10 +906,9 @@ int Pascal toggmode(int f, int n) 	/* prompt and set a global editor mode */
 	return adjustmode(2, TRUE);
 }
 
-
-
-/*			This function simply clears the message line,
-								mainly for macro usage									*/
+#if FLUFF
+/* This function simply clears the message line,
+		 mainly for macro usage	*/
 
 int Pascal clrmes(int notused, int n)
 
@@ -918,8 +917,10 @@ int Pascal clrmes(int notused, int n)
 	return TRUE;
 }
 
-/*	This function writes a string on the message line
-			mainly for macro usage									*/
+#endif
+
+/* This function writes a string on the message line
+			mainly for macro usage */
 
 int Pascal writemsg(int notused, int n)
 
@@ -1010,7 +1011,7 @@ int USE_FAST_CALL got_f_key(fdcr * fd, int tabsz, int fs_cmt)			// Fortran or SQ
 
 	fs_cmt &= BCSQL;
 
-	if (! fs_cmt)
+	if (! fs_cmt)				// Fortran
 	{	if (choffs < 6)
 		{ if (choffs < 5)
 				 return -3;
@@ -1188,22 +1189,25 @@ int Pascal getfence(int f, int n)
 	{	if      (s_cmt) 	// search backwards for begin
 		{ --dir;
 			g_paren.complex = true;
+		  g_paren.nest = 1;
 		  g_paren.ch = 'E';
 		  g_paren.fence = 'B';
-		  g_paren.nest = 1;
 		}
-		else if (dir)
-		{	if (n <= 0)
-				dir = init_paren((char*)&g_paren.fence,0);	// little endian
-		}
-		else
-		{	mlwrite(TEXT35);
-			answer[0] = ttgetc();
-			dir = init_paren(answer, 1);
+		else 
+		{	if (dir)
+			{	if (n <= 0)
+					dir = init_paren((char*)&g_paren.fence,0);	// little endian
+			}
+			else
+			{	mlwrite(TEXT35);
+				answer[0] = ttgetc();
+				dir = init_paren(answer, 1);
+			}
+			goto simple;
 		}
 	}
 
-	while (g_paren.complex && len >= 2) /* ! simple */	 // once only 
+	while (len >= 2) /* ! simple */	 // once only 
 	{ char ch_ = lstr[0];
 		int ix = ch_ == '#';
 		if (c_cmt > ix)
@@ -1224,7 +1228,7 @@ int Pascal getfence(int f, int n)
 				break;
 
 		{ char ch = lstr[ix] | 0x20;	// lower
-			fd.blk_type[0] = ch & ~0x20;	// upper
+			fd.blk_type[0] = ch_ & ~0x20;	// upper
 				
 			if (fd.blk_type[0] == 'E' && ch == 'n')   // END DO, END LOOP, etc
 			{ int nix = 0;
@@ -1279,6 +1283,7 @@ int Pascal getfence(int f, int n)
 		break;
 	}
 
+simple:
 	g_paren.sdir = dir;
 
 {	int stt_ko = lastko;
@@ -1305,16 +1310,26 @@ int Pascal getfence(int f, int n)
 		ch = toupper(lp->l_text[offs]);
 		if (ch <= ' ') 
 			continue;
-		if (offs > 0)
+
+		if (offs == 0)
+		{	if			(lastko >= 0 && ch == 'C' && dir > 0)	// Fortran comment
+			{ curwp->w_doto = len;
+				continue;
+			}
+		}
+		else
 		 if ((in_range(ch,'A','Z') || ch == '_')
 			&& in_range(/*toupper*/(lp->l_text[offs-1] | 0x20),'a','z'))			// inside word
 				continue;
 
 		if (ps_cmt && ch == 'C')
-				ch = 'B';
+			ch = 'B';
 
 		if (scan_paren(ch))
 			continue;
+
+		if (f_cmt && in_range(g_paren.fence, 'A', 'Z'))
+			f_cmt |= BCSIMP;
 
 		if (g_paren.nest <= 0 && !g_paren.complex)	/* simple */
 		{	g_paren.nest = 1;
@@ -1324,15 +1339,9 @@ int Pascal getfence(int f, int n)
 			spos = *(Lpos_t*)&curwp->w_dotp;						// last match
 		}
 
-/*	  char buf[6];
-			buf[2] = 0;
-			buf[4] = 0;*/																					// Fortran comment
-		if			(lastko >= 0 && ch == 'C' && offs == 0 && dir > 0)	
-		{ curwp->w_doto = len;
-		}
-		else if (ch == g_paren.ch)
+		if (ch == g_paren.ch)
 		{ 
-			if (c_cmt && offs + 2 < len)
+			if      (c_cmt && offs + 2 < len)
 			{ char ch1 = (lp->l_text[offs+1] | 0x20) - 'i';
 			  char ch2 = (lp->l_text[offs+2] | 0x20);
 				if ((ch1 == 0       &&  ch2 =='f'
@@ -1342,10 +1351,10 @@ int Pascal getfence(int f, int n)
 					mbwrite(buf);*/
 				}
 			}
-			else if (f_cmt && in_range(g_paren.fence, 'A','Z'))
+			else if (f_cmt & BCSIMP)
 			{ ch = got_f_key(&fd, tabsz, f_cmt);
-				if (ch < 0 && ch > -2 && g_paren.nest == 2 
-				 && fd.koffs - 9 <= lastko)
+				if      (ch < 0 && ch > -2 && g_paren.nest == 2 
+				      && fd.koffs - 9 <= lastko)
 				{ 
 					lastko = fd.koffs;
 					break;
@@ -1363,7 +1372,7 @@ int Pascal getfence(int f, int n)
 					lastko = fd.koffs;
 			}
 		}
-		else if (ch == g_paren.fence && in_range(g_paren.fence, 'A','Z') && f_cmt != 0)
+		else if (ch == g_paren.fence && (f_cmt & BCSIMP))
 		{ ch = got_f_key(&fd, tabsz, f_cmt);
 			if (ch <= 0 || s_cmt == 0 && fd.koffs - 8 > lastko)
 			{ ++g_paren.nest;  // undo it
@@ -1586,6 +1595,7 @@ int Pascal calculator(int f, int n)
 	  char buf[256*2+1];
 
 		int ix = 0;
+		int ixeq = 0;
 		int len = llength(spos.curline) - spos.curoff;
 		if (len <= 0)
 			return TRUE;
@@ -1593,30 +1603,28 @@ int Pascal calculator(int f, int n)
 		if (len > 256) 
 			len = 256;
 
+		if (*s == '#')
+			goto next;
+
 		while (++ix < len)
 	  	if (s[ix] == '=')
-			{	int ix_ = ix;
+			{	ixeq = ix + 1;
+	  		len -= ixeq;
 				while (ix > 0 && s[ix-1] <= ' ')
 				  --ix;
 				((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
-	  		s += ix_ + 1;														// new source
-	  		len -= ix_ + 1;
-	  		ix = 0;
 	  		break;
 	  	}
 
 	{	int adj;
-		((char*)memcpy(buf+256+1, s, len))[len] = 0;
+		((char*)memcpy(buf+256+1, s+ixeq, len))[len] = 0;
 	  buf[0] = '%';
 		buf[256] = '(';
 	{	double res = evalexpr(buf+256, &adj);
 		const char * all = adj <= 0 ? "Error" : float_asc(res);
 
-		if (ix <= 0)
-		{	set_var(buf, all);
-			if (!forwline(1,1))
-				return TRUE;
-		}	
+		if (ixeq > 0)
+			set_var(buf, all);
 		else
 		{	if (!f)
 				mbwrite(all);
@@ -1628,6 +1636,9 @@ int Pascal calculator(int f, int n)
 	
 			return rc;
 		}}
+next:		
+		if (!forwline(1,1))
+			return TRUE;
 	}}}
 }
 

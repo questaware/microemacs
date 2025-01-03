@@ -163,21 +163,22 @@ LINE * Pascal USE_FAST_CALL lfree(int noffs, LINE * lp)
 {	LINE * plp = lback(lp);	
 	LINE * nlp = lextract(noffs, lp);
 
+{
 #if DO_UNDO
-{	UNDO * ud = curbp->b_undo;
-	
-//free(ud->u_held_lp);		allow the memory leak
-  ud->u_held_lp = lp;
-	for (; ud != NULL; ud = ud->u_bp)
-		if (ud->u_lp == lp)
-			ud->u_lp = plp;
-}
-#else
-	free((char *) lp);
+	UNDO * ud = curbp->b_undo;
+	if (ud)	
+	{	//free(ud->u_held_lp);		allow the memory leak
+	  ud->u_held_lp = lp;
+		for (; ud != NULL; ud = ud->u_bp)
+			if (ud->u_lp == lp)
+				ud->u_lp = plp;
+	}
+  else
 #endif
+	  free((char *) lp);
 
   return nlp;
-}
+}}
 
 static
 void Pascal USE_FAST_CALL lunlink(int noffs, LINE * lp)

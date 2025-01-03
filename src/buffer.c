@@ -646,7 +646,8 @@ int Pascal bclear(BUFFER * bp)
 { WINDOW * wp;
 	for (wp = wheadp; wp != NULL; wp = wp->w_next)
 		if (wp->w_bufp == bp)
-		{	wp->w_dotp = &bp->b_baseline;
+		{	wp->w_dotp = 
+			wp->w_linep = &bp->b_baseline;
 			memset(&wp->w_doto, 0, sizeof(int)*2 + sizeof(wp->mrks));	
 		}
 

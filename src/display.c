@@ -877,15 +877,16 @@ void Pascal updline()
 		lines. This is the only update for simple moves.
 */
 {	WINDOW * wp = curwp;
+	LINE * dotp = wp->w_dotp;
  static LINE * g_up_lp = NULL;
-				int flag = g_up_lp != wp->w_dotp ? WFHARD /*| WFTXTU|WFTXTD*/ | WFMODE | WFMOVE : 0;
-	g_up_lp = wp->w_dotp;
+	int flag = g_up_lp != dotp ? WFHARD | WFMODE | WFMOVE /*| WFTXTU|WFTXTD*/ : 0;
+	g_up_lp = dotp;
 {	int fcol = wp->w_fcol; // < pd_fcol ? pd_fcol : wp->w_fcol;
 	int row = wp->w_toprow;
  	LINE * lp;
 
 	for (lp = wp->w_linep; 
-			 lp != g_up_lp && row + 1 < term.t_nrowm1;
+			 lp != dotp && row + 1 < term.t_nrowm1;
 			 lp = lforw(lp))
 		row = row + 1;
 
@@ -937,7 +938,7 @@ void Pascal updline()
 											/* scan through the line copying to the virtual screen*/
 											/* once we reach the left edge						*/
 											/* start scanning offscreen */
-		{ VIDEO * vp = vtmove(row, g_lbound + fcol, 1, g_up_lp);
+		{ VIDEO * vp = vtmove(row, g_lbound + fcol, 1, dotp);
 			
 //		vp->v_text[0] = /*BG(C_BLUE)+FG(C_WHITE)+*/'$';
 								 			/* and put a '$' in column 1 */
@@ -962,7 +963,7 @@ void Pascal updline()
 	for (p = wheadp; p != NULL; p = p->w_next)
 	{	updall(-1, p);
 		if (p == wp)
-			p->w_dotp = g_up_lp;
+			p->w_dotp = dotp;
 		if (p->w_flag & WFMODE)
 			modeline(p);
 		p->w_flag = 0; 		/* we are done */
