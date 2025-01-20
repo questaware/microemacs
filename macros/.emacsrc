@@ -56,7 +56,7 @@ btk execute-macro-2 M-\
 btk execute-macro-2 M-`
 btk execute-macro-2 M-/
 
-3 store-macro
+3 store-macro					; move to end of word
 	set %ch &chr $curchar
 
 	!while &or &not &seq &low %ch &upp %ch &seq &xla %ch "0123456789" "__________" "_"

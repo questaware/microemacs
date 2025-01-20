@@ -107,7 +107,7 @@ void Pascal rpl_all(int wh, int noffs, int offs, LINE * old, LINE * new_)
 			if			(wh <= 0)
 			{ if (wh < 0)
 				{ wp->w_flag |= (WFHARD|WFMODE);
-				//wp->w_linep = new_;
+				  wp->w_linep = new_;
 				}
 				m->marko = noffs;
 				goto newww;
@@ -262,52 +262,29 @@ int Pascal lchange(int flag)
  */
 int Pascal USE_FAST_CALL lnewline(int wh)
 
+{	curwp->w_line_no += wh;
 { LINE * lp = curwp->w_dotp;   /* Get the address and  */
-  int    l_dcr = lp->l_dcr;
-	int    in_cmt = l_dcr & (Q_IN_CMT+1);
-	int    used = lused(l_dcr); 
-	if (0)													// ldelnewline
-	{	if (used > 0)
-		{	LINE * lp2 = lforw(lp);
-		  if (l_is_hd(lp2))		/* not at buffer end.	*/
-				return TRUE;
-		{ int nsz = lused(lp2->l_dcr) + used;
-			LINE * inslp =  mk_line(&lp->l_text[0], used, nsz, in_cmt);
-
-		  memcpy(&inslp->l_text[used], &lp2->l_text[0], lused(lp2->l_dcr)); // nsz - used
-
-		  ibefore(lp2, inslp);
-#if DO_UNDO
-			if (wh < 0)
-				lunlink(0, lp2);
-			else
-				lfree(0, lp2);
-#endif
-//    run_move(lp, inslp);
-		}}
-
-	  lfree(used,lp);
+  int   l_dcr = lp->l_dcr;
+	int   in_cmt = l_dcr & (Q_IN_CMT+1);
+	int   used = lused(l_dcr); 
+	int   doto = curwp->w_doto;   /* offset of "."        */
+	int   nsz = used - doto;
+ 	if (l_dcr)
+	{ l_dcr += (nsz << 2);
+		lp->l_dcr = (l_dcr & 0xfc) + (doto << (SPARE_SZ+2)) + in_cmt;
+ //  					 + (((nsz << 2) + l_dcr) & SPARE_MASK) + in_cmt;	
 	}
-	else
-	{	curwp->w_line_no += wh;
-	{	int doto = curwp->w_doto;   /* offset of "."        */
-		int nsz = used - doto;
-	 	if (l_dcr)
-		{ lp->l_dcr = (doto << (SPARE_SZ+2))
-		  					 + (((nsz << 2) + l_dcr) & SPARE_MASK) + in_cmt;	
-		}
 
-		while (--wh >= 0)
-		{	LINE * inslp = mk_line(&lp->l_text[doto], nsz, nsz, EXPANSION_SZ*4+in_cmt);
-		
-	   rpl_all(2, 0, doto, lp, inslp);
+	while (--wh >= 0)
+	{	LINE * inslp = mk_line(&lp->l_text[doto], nsz, nsz, EXPANSION_SZ*4+in_cmt);
+
+    rpl_all(2, 0, doto, lp, inslp);
 																						/* trim line and update spare */
-	   ibefore(!l_dcr ? lp : lforw(lp), inslp);
-	   nsz = 0;
-	  }
-  }}
+    ibefore(!l_dcr ? lp : lforw(lp), inslp);
+    nsz = 0;
+  }
   return lchange(WFHARD);
-}
+}}
 
 #if 0
 
@@ -329,8 +306,6 @@ void line_openclose(LINE * to, LINE * from, int gap, int len)
 }
 
 #endif
-
-int g_overmode;
 
 /* Insert n copies of the character "c" at the current location of dot. 
  * In the easy case all that happens is that the text is stored in the line.  
@@ -355,7 +330,8 @@ int Pascal linsert(int ins, char c)
     return lnewline(ins);
   }
 
-{	int tabsize = curbp->b_tabsize;
+{	int overmode = (curbp->b_flag & MDOVER) >> 5;
+	int tabsize = curbp->b_tabsize;
 	if (tabsize < 0)
 	{	tabsize = - tabsize;
 		if (ins == 1 && c == '\t')
@@ -372,7 +348,7 @@ int Pascal linsert(int ins, char c)
 	if (g_inhibit_undo <= 0)
 		(void)run_make(lp);
 #endif
-	if ( doto < used  && g_overmode >= ins &&
+	if ( doto < used  && overmode >= ins &&
 			(lgetc(lp, doto) != '\t' ||
 			(unsigned short)doto % tabsize == (tabsize - 1)))
 	{	lp->l_text[doto] = c;
@@ -463,9 +439,10 @@ const char * stoi_msg[] = {TEXT68, TEXT69};
 
 int Pascal istring(int f, int n)	/* ask for and insert a string into the
 																	   current buffer at the current point */
-{ char tstring[NPAT+1];	/* string to add */
+{	int overmode = (curbp->b_flag & MDOVER) >> 5;
+  char tstring[NPAT+1];	/* string to add */
 
-	int status = mlreply(stoi_msg[g_overmode & 1], tstring, NPAT);
+	int status = mlreply(stoi_msg[overmode], tstring, NPAT);
 											/* "String to insert<META>: " */
 											/* "String to overwrite<META>: " */
 	if (status > FALSE)
@@ -486,9 +463,10 @@ int Pascal istring(int f, int n)	/* ask for and insert a string into the
 int Pascal ovstring(int f, int n_) /* ask for and overwite a string into the current
 			       buffer at the current point */
 				/* ignored arguments */
-{ g_overmode = true;
+{	int overmode = curbp->b_flag;
+	curbp->b_flag |= MDOVER;
 { int cc = istring(f, n_);
-  g_overmode = false;
+	curbp->b_flag = overmode;
   return cc;
 }}
 
@@ -511,12 +489,15 @@ int kinsert_n;		/* parameter to kinsert, used in region.c */
  * deleted, and FALSE if they were not (because dot ran into the end of the
  * buffer. The "tokill" is TRUE if the text should be put in the kill buffer.
  */
-int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill)
+int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
 								 /* Int n; 		  * # of chars to delete */
 								 /* int tokill;	* put killed text in kill buffer flag */
 {	if (rdonly())
 		return FALSE;
 
+	if (killflag)
+		g_thisflag = CFKILL;			/* this command is a kill */
+	
 //--g_overmode;
 //++g_inhibit_scan;
 
@@ -637,7 +618,7 @@ char * Pascal getctext(char * t)
 	return memcpy(t, sp, size);
 }
 
-extern REGION g_region;
+// extern REGION g_region;
 
 /* The kill buffer abstraction */
 

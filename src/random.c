@@ -695,22 +695,33 @@ int Pascal forwdel(int f, int n)
 
 {// if (rdonly())
  //		return FALSE;
+	int s = 0;
 
-	g_thisflag = CFKILL;
-
-	if (f != FALSE) 											/* Really a kill. 			*/
-	{ if ((g_lastflag & CFKILL) == 0)
-			kdelete(0,0);
-	}
 	if (n < 0)
 	{ n = -n;
-	{ int s = backbychar(n);
-		if (s <= FALSE)
+	  s = backbychar(n);
+		if (s <= 0)
 			return s;
-	}}
+	}
 
-	return ldelchrs((Int)n, f);
-}
+	if (f != FALSE  											/* Really a kill. 			*/
+	  && (g_lastflag & CFKILL) == 0)
+			kdelete(0,0);
+
+{	int overmode = curbp->b_flag & MDOVER;
+	if (overmode && n <= llength(curwp->w_dotp))
+	{ curbp->b_flag -= MDOVER;
+		backbychar(-n);
+	{ int there = getccol();
+		backbychar(n);
+		linsert(there - getccol(), ' ');
+		if (s)
+		  backbychar(n);
+	  curbp->b_flag += MDOVER;
+	}}
+	
+	return ldelchrs((Int)n, f, TRUE);
+}}
 
 /* Delete backwards. This is quite easy too, because it's all done with other
  * functions. Just move the cursor back, and delete forwards. Like delete
@@ -748,7 +759,6 @@ int Pascal killtext(int f, int n)
 //{ kinsert_n = -n;
 //	n = 1;
 //}
-	g_thisflag = CFKILL;
 { Int chunk = -curwp->w_doto;
 
 	if			(f == FALSE)
@@ -775,7 +785,7 @@ int Pascal killtext(int f, int n)
 			nextp = lforw(nextp);
 		}
 	}} 
-	return ldelchrs(chunk, TRUE);
+	return ldelchrs(chunk, TRUE, TRUE);
 }}
 
 static 
@@ -851,8 +861,8 @@ int USE_FAST_CALL adjustmode(int kind, int global) /* change the editor mode */
 			if (x == MDCRYPT)
 			{ char ** k = g_gflag & MDCRYPT ? &g_bat_b_key : &curbp->b_key;
 				if ((md & MDCRYPT) && *k == null)
-				{ setekey(k);
-					curbp->b_flag |= BFCHG;
+				{	curbp->b_flag |= BFCHG;
+					setekey(k);
 				}
 			}
 #endif																	
@@ -1128,7 +1138,7 @@ int USE_FAST_CALL got_f_key(fdcr * fd, int tabsz, int fs_cmt)			// Fortran or SQ
 
 																/* the cursor is moved to a matching fence */
 int Pascal getfence(int f, int n)
-				/* int f;		** not used */
+
 { int tabsz = curbp->b_tabsize;
 	int c_cmt = (curbp->b_langprops & BCCOMT);
 	int f_cmt = (curbp->b_langprops & (BCFOR+BCSQL));
@@ -1136,6 +1146,7 @@ int Pascal getfence(int f, int n)
 	int s_cmt = (f_cmt							& BCSQL);
 	int ps_cmt = s_cmt+p_cmt;
 
+	char ch = 0;
 	int ct = 0;
 	Lpos_t spos = *(Lpos_t*)&curwp->w_dotp;						/* original line pointer */
 	int len;
@@ -1147,6 +1158,7 @@ int Pascal getfence(int f, int n)
   	if (len <= 0 || ct)
   		break;		
   
+  	ch = *lstr;
 		if (!f_cmt)
 			break;
 
@@ -1166,16 +1178,20 @@ int Pascal getfence(int f, int n)
 		}
 	}
 
+	if (ch == '{' && n <= 0)
+		*lstr = '}';
+
 {	char answer[10];
   int rc = -1;
 	int lastko = -1;
 
-	Paren_t s_paren = g_paren;
+  Paren_t s_paren = g_paren;
 	
 	int dir = init_paren(lstr,len);										// The only call with len > 1
-  char ch;
 	fdcr fd;
 
+	if (ch != 0)
+		*lstr = ch;
 	n *= 128;
 
 //if (g_paren.fence == '#')
@@ -1194,11 +1210,7 @@ int Pascal getfence(int f, int n)
 		  g_paren.fence = 'B';
 		}
 		else 
-		{	if (dir)
-			{	if (n <= 0)
-					dir = init_paren((char*)&g_paren.fence,0);	// little endian
-			}
-			else
+		{	if (!dir)
 			{	mlwrite(TEXT35);
 				answer[0] = ttgetc();
 				dir = init_paren(answer, 1);
@@ -1384,13 +1396,13 @@ simple:
 		}
 	}	/* while */
 	
-  g_paren = s_paren;
-
 	if (n < 0)
 	{ rc = TRUE;
 		rest_l_offs(&spos);
 	}
 																				
+  g_paren = s_paren;
+
 	if (rc)														// not at EOF
 	{ curwp->w_flag |= WFMOVE;
 		if (stt_ko >= 0)

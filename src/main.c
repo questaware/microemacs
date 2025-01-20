@@ -41,7 +41,6 @@
 
 extern char * getenv();
 
-extern int g_overmode;		/* from line.c */
 extern Bool g_key_;				/* from crypt.c */
 
 
@@ -535,9 +534,7 @@ ret:
 									 && getccol() > pd_fillcol)
 				execwrap(1); // &wraphook
 	
-			g_overmode = curbp->b_flag & MDOVER;
 			status = linsert(n, (char)c); 	/* do the insertion */
-			g_overmode = FALSE;
 #if 0
 																		 /* check for CMODE fence matching */
 			if ((c == '}' || c == ')' || c == ']') &&

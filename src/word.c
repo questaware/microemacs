@@ -292,8 +292,6 @@ int Pascal delfword(int notused, int n)
 	  return TRUE;
 
 {	Lpos_t save = *(Lpos_t*)&curwp->w_dotp;
-
-	g_thisflag = CFKILL;			/* this command is a kill */
         
 								      /* Clear the kill buffer if last command wasn't a kill */
 	if ((g_lastflag & CFKILL) == 0)
@@ -306,7 +304,7 @@ int Pascal delfword(int notused, int n)
 	if (n > 0)
 	  rest_l_offs(&save);
 
-	return ldelchrs(g_f_size, TRUE);
+	return ldelchrs(g_f_size, TRUE, FALSE);
 }}
 
 /*
@@ -457,7 +455,7 @@ Pascal killpara(int f, int n)/* delete n paragraphs starting with the current on
 		if (cc <= FALSE)
 		  return cc;
 					   /* and clean up the 2 extra lines */
-		ldelchrs(2L, TRUE);
+		ldelchrs(2L, TRUE, FALSE);
 	}
 	return TRUE;
 }
@@ -507,7 +505,7 @@ int Pascal wordcount(int notused, int n)
 	}
 							/* and report on the info */
 	mlwrite(TEXT100,
-					/* "Words %D Chars %D Lines %d Avg chars/word %f" */
+					/* "Words %d Chars %d Lines %d Avg chars/word %f" */
 					nwords, nchars, nlines, 
 					(int)((100L * nchars) / nwords));
 	return TRUE;

@@ -195,6 +195,7 @@ typedef struct	LINE {
 }	LINE;
 
 #define l_is_hd(lp) (!(lp->l_dcr))
+#define l_not_hd(lp)  (lp->l_dcr & 1)
 
 #define lforw(lp)	((lp)->l_fp)
 #define lback(lp)	((lp)->l_bp)

@@ -763,10 +763,10 @@ int Pascal readin(char const * fname, int props)
 	  }
 	  
 	  lp1 = mk_line(ln,cc,cc,g_paren.in_mode & Q_IN_CMT);
-	  if (lp1 == NULL)
-	  {	cc = FIOMEM;
-	    break;
-	  }
+//  if (lp1 == NULL)
+//  {	cc = FIOMEM;
+//    break;
+//  }
 
 	{ int len = llength(lp1);
 #if	CRYPT

@@ -82,6 +82,8 @@ BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 	return bfind(ebuffer, create);
 }
 
+#if 0
+
 static
 char * Pascal skipleadsp(char * s, int len)
 	
@@ -91,6 +93,7 @@ char * Pascal skipleadsp(char * s, int len)
   return s;
 }
 
+#endif
 
 #if _DEBUG
 int g_rc_lineno;
@@ -138,14 +141,13 @@ int Pascal dobuf(BUFFER * bp, int iter, const char * name)
 	g_rc_lineno = 0;
 #endif
 
-	g_dobuf = bp;
 	g_univct = iter;
 
   while (--iter >= 0 && cc > FALSE)
 	{ LINE *lp;						/* pointer to line to execute */
-		char *ebuf = smalleline;	/* initial value of eline */
 		char *eline;				/* text of line to execute */
 		char tkn[NSTRING];	/* buffer to evaluate an expresion in */
+		char ebuf[1025];
 
   	WHBLOCK *whlist = NULL; /* ptr to !WHILE list */
 		WHBLOCK *scan = NULL;		/* ptr during scan */
@@ -154,15 +156,18 @@ int Pascal dobuf(BUFFER * bp, int iter, const char * name)
 		int msg = 0;
 		int exec_level = 0;			/* clear IF level flags/while ptr */
 
+		g_dobuf = bp;
+
 		for (lp = &bp->b_baseline; !l_is_hd((lp=lforw(lp))); ) 
 		{ 					   													/* scan the current line */
 																						/* trim leading whitespace */
+			int offs = find_nch(-1, -1, lp);
 		  int len = lused(lp->l_dcr);
-		  eline = skipleadsp(lp->l_text, len);
-		  
-		  if (len + (lp->l_text - eline) < 4)
+		  if (len - offs < 4)
 		  	continue;
-																/* if is a while directive, make a block... */
+
+		  eline = lp->l_text + offs;
+		  														/* if is a while directive, make a block... */
 			if (eline[0] != '!')
 				continue;
 	  
@@ -176,7 +181,7 @@ int Pascal dobuf(BUFFER * bp, int iter, const char * name)
 				WHBLOCK * whtemp = (WHBLOCK *)mallocz(sizeof(WHBLOCK));
 #endif
 		 		if (whtemp == NULL ||
-	     															/* "%%!BREAK outside of any !WHILE loop" */
+	     														/* "%%!BREAK outside of any !WHILE loop" */
 	         (scan == NULL && ch != 0))
 					goto failexit;
 
@@ -210,6 +215,8 @@ failexit:
 	    mlwrite(TEXT121, bp->b_bname, eline);
 		  cc = FALSE;
 		}
+
+		g_dobuf = NULL;
 								/* let the first command inherit the flags from the last one..*/
 		g_thisflag = g_lastflag;
 																	/* starting at the beginning of the buffer */
@@ -217,11 +224,8 @@ failexit:
 		while (1)
 		{	if (msg)
 			{ mlwrite(msg > 0 ? TEXT124 : TEXT126);
-				msg = 0;
 	      cc = FALSE;
 			}
-			if (ebuf != smalleline)
-		    free(ebuf);
 
 	    if (g_eexitflag || cc <= FALSE ||
 				  l_is_hd((lp = lforw(lp))))
@@ -233,22 +237,19 @@ failexit:
 #endif
 													/* allocate eline and copy macro line to it */
 		{ char golabel[20];
+			int offs;
 			int dirnum = -1;		/* directive index */
 			int linlen = lused(lp->l_dcr)+1;
-		  if (linlen < sizeof(smalleline))
-			  ebuf = smalleline;
-	    else 
-		  { ebuf = (char *)malloc(linlen);
-		    if (ebuf == NULL)
-		    { cc = FALSE;
-		      break;
-		    }
-		  }
+			if (linlen > sizeof(ebuf)-1)
+				linlen = sizeof(ebuf)-1;
 																						/* trim leading whitespace */
-		  eline = skipleadsp(strpcpy(ebuf, lp->l_text, linlen), linlen);
-																				   
-		  if (*eline == 0 || *eline == ';' ||		/* dump comments and blank lines */
-		  		*eline == '*')
+//	  eline = skipleadsp(strpcpy(offs ? smalleline : ebuf, lp->l_text, linlen), linlen);
+
+		  offs = find_nch(-1, -1, lp);
+			eline = strpcpy(ebuf, lp->l_text+offs, linlen-offs);
+
+		  if (*ebuf == 0 || *ebuf == ';' ||		/* dump comments and blank lines */
+		  		*ebuf == '*')
 		    continue;
 
 #if LOGFLG
@@ -257,17 +258,17 @@ failexit:
 																				/* only do this if we are debugging */
 #if	DEBUGM
 		  if (pd_macbug && g_bstore == null && exec_level == 0)
-		    if (debug(bp, eline) == FALSE)
+		    if (debug(bp, ebuf FALSE)
 		    { mlwrite("%!"TEXT54); /*	"[Macro aborted]" */
 		      cc = FALSE;
 		      continue;
 		    }
 #endif
 																				/* Parse directives here.... */
-		  if (*eline == '!')								/* Find out which directive this is */
+		  if (*ebuf == '!')								/* Find out which directive this is */
 		  {
 		    for (dirnum = NUMDIRS; --dirnum >= 0; )
-		      if (strcmp_right(eline+1, dname[dirnum]) == 0)
+		      if (strcmp_right(ebuf+1, dname[dirnum]) == 0)
 						goto jover__;
 																	/* bitch if it's illegal */
 		    msg += 1;		    					/* "%%Unknown Directive" */
@@ -407,7 +408,6 @@ jover_:							  									/* reset the line pointer back.. */
 	}
 
 	g_execstr = s_execstr;
-	g_dobuf = NULL;
   return cc;
 #undef tkn
 }

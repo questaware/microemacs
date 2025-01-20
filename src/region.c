@@ -10,6 +10,7 @@
 #include "etype.h"
 #include "elang.h"
 
+static
 REGION g_region;
 
 /* This routine figures out the bounds of the region in the current
@@ -33,7 +34,7 @@ REGION * Pascal getregion()
   if (mark_line == NULL)
   {	mlwrite(TEXT76);
 					/* "No mark set in this window" */
-	  size = 0;
+	  size = 0; 
 	}
 	else
 		while (true)
@@ -132,9 +133,9 @@ int Pascal killregion(int f, int n)
 
 /*if ((g_lastflag&CFKILL) == 0)		** This is a kill type	**
     kdelete() */;								/* command, so do magic */
-	g_thisflag = CFKILL;					/* kill buffer stuff.	*/
+
 	kinsert_n = chk_k_range(n);
-	return ldelchrs(g_region.r_size, TRUE);
+	return ldelchrs(g_region.r_size, TRUE, TRUE);
 }
 
 /*	Narrow-to-region (^X-<) makes all but the current region in
@@ -187,7 +188,7 @@ int Pascal narrow(int f, int n)
 	  }
 }
 #endif
-	setcline();
+//setcline();		Dont use narrowed numbers
 
 	mlwrite(TEXT73); /* "[Buffer is narrowed]" */
 				 
@@ -199,7 +200,7 @@ int Pascal narrow(int f, int n)
 int Pascal widen(int notused, int n)
 
 {		      								/* find the proper buffer and ensure we are narrow */
-	BUFFER * bp = curwp->w_bufp;
+	BUFFER * bp = curbp;    // curwp->w_bufp;
 	if ((bp->b_flag & BFNAROW) == 0)
 	{ mlwrite(TEXT74);
 					/* "%%This buffer is not narrowed" */

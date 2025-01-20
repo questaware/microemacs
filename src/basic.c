@@ -48,6 +48,28 @@ char* Pascal remallocstr(char** res_ref, const char* val, int len)
 
 
 
+// wh: -1: Non space : ch to search for
+
+int USE_FAST_CALL find_nch(int wh, int cix, const LINE * lp)
+
+{ int len = llength(lp);
+	
+  while ( ++cix >= 0 && cix < len )
+  { char ch = lp->l_text[cix];
+		if (ch <= ' ')
+			continue;
+		if (wh > 0 && ch != wh)
+	    continue;
+    return cix;
+//  if (! isword(ch) )
+//   	break;
+	}
+
+  return -1;
+}
+
+
+
 BUFFER * Pascal prevele(int wh, BUFFER * bp)
 
 {	BUFFER * bl = g_heads[wh];
@@ -225,12 +247,12 @@ int Pascal gotoeob(int notused, int n)
   wp->w_dotp = lp;
   wp->w_doto = 0;
   wp->w_flag |= WFHARD;
-  setcline();
   for (ct = wp->w_ntrows; --ct >= 0; )
     lp = lp->l_bp;
 
   wp->w_linep = lp;
 
+  setcline();
   return TRUE;
 }
 
@@ -314,7 +336,7 @@ int Pascal gotoeop(int notused, int n)  /* go forword to end of current paragrap
       ln = lforw(ln);
 				 		     				/* and scan forword until we hit a <NL><NL> or <NL><TAB>
 				  			  				 or a <NL><SPACE>				*/
-    while (!l_is_hd(ln))
+    while (1)
     { if (llength(ln) == 0 ||
 				  (suc = lgetc(ln, 0)) == '\t' || suc == ' ')
 				break;

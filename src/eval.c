@@ -450,18 +450,18 @@ int USE_FAST_CALL stol(const char * val)					/* convert a string to a numeric lo
 
 #define INTWIDTH (sizeof(int) * 3)
 
-static char result[90];
+static char g_result[90];
 
 				/* output integer as radix r */
 char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix, char fill)
 
 {	static const char hexdigits[] = "0123456789ABCDEF";
 
-	memset(&result, fill, INTWIDTH);
-	result[INTWIDTH] = 0;
-//result[INTWIDTH+1] = 0;	
+	memset(&g_result, fill, INTWIDTH);
+	g_result[INTWIDTH] = 0;
+//g_result[INTWIDTH+1] = 0;	
 
-{	char *sp = &result[INTWIDTH+1];
+{	char *sp = &g_result[INTWIDTH+1];
 	int v = i;		/* sign of resulting number */
 
 	if (v < 0)
@@ -488,10 +488,10 @@ char *Pascal USE_FAST_CALL int_asc(int i)
 
 char * float_asc(double x)
 
-{ int sign = 0;
+{ int sign = 1;
 	if (x < 0.0)
 	{	x = -x;
-		--sign;
+		sign -= 2;
 	}
 
 { int shift = 0;
@@ -511,16 +511,16 @@ char * float_asc(double x)
   
 {	int val = (int)x;
   x -= val;
-  result[19] = '-';
-{ char * res = int_asc(val);
-  strcpy(result+20, res);
+{ char * res = int_asc(val*sign);
+  strcpy(g_result+20, res);
 { int after = (int)(x * 10000000);
   char * aft = int_radix_asc(after, 10, '0');
-  strcpy(result+40, result+6);
+  strcpy(g_result+40, g_result+6);
 {	char * exp = shift == 0 ? NULL : "e";
 	char * shft = int_asc(shift);
 
-  return concat(result+60, result+20+sign, ".", result+40, exp, shft, NULL);
+//g_result[19] = '-';
+  return concat(g_result+60, g_result+20, ".", g_result+40, exp, shft, NULL);
 }}}}}}
 
 
@@ -565,9 +565,12 @@ static
 const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/function */
 
 { BUFFER * bp = curbp;
-	int ix = 0;
+	int hookix = 0;
 
 	int vnum = binary_const(typ == TOKENV, fname);
+
+	if (vnum < 0)
+		return g_logm[2];
 
 	if (typ == TOKFUN)
 	{	int iarg1;
@@ -590,8 +593,8 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		  iarg1 = atoi(arg1);
 		}
 
-		if (vnum < 0)
-			return NULL;
+//	if (vnum < 0)
+//		return NULL;
 											/* and now evaluate it! */
 
 		if      (funcs[vnum].f_kind < RINT)
@@ -614,7 +617,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 											{ 
 			when UFGTKEY:
 			default: // UFCHR
-												arg1[0] = vnum == UFGTKEY ? iarg1 : tgetc();
+												arg1[0] = vnum == UFGTKEY ? tgetc() : iarg1;
 							          arg1[1] = 0;
 											}
 					          }
@@ -705,10 +708,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		}
 	}
 	else
-	{ if (vnum < 0)
-			return g_logm[2];
- 
-		if (in_range(vnum, EVHLIGHT1, EVHLIGHT9))
+	{	if (in_range(vnum, EVHLIGHT1, EVHLIGHT9))
 			goto ret_str;
 
 		switch (vnum)
@@ -754,12 +754,12 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 	//  when EVFCOL:	   res = pd_fcol;
 
 		  when EVBUFHOOK:
-		  case EVEXBHOOK:  --ix;
-		  case EVWRITEHK:  --ix;
-		  case EVCMDHK:    --ix;
-		  case EVWRAPHK:   --ix;
-		  case EVREADHK:   --ix;
-							   		   return getfname(ix);
+		  case EVEXBHOOK:  --hookix;
+		  case EVWRITEHK:  --hookix;
+		  case EVCMDHK:    --hookix;
+		  case EVWRAPHK:   --hookix;
+		  case EVREADHK:   --hookix;
+							   		   return getfname(hookix);
 		  when EVVERSION:  return VERSION;
 #if 0		  
 		  when EVLANG:	   return LANGUAGE;
@@ -966,7 +966,7 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 			  						 curbp->b_flag = hookix;
 //	when EVSRES:	   cc = TTrez(value);
 
-	  when EVCURCHAR:	 ldelchrs(1, FALSE);		/* delete 1 char */
+	  when EVCURCHAR:	 ldelchrs(1, FALSE, FALSE);		/* delete 1 char */
 		                 linsert(1, (char)val);
 			               backbychar(1);
 										 update(FALSE);
@@ -1262,12 +1262,12 @@ int Pascal listvars(int f, int n)
 //curbp->b_tabsize = 0;
 	curbp->b_flag |= BFCHG;										/* Suppress the beep */
   
-  --pd_discmd;
+//--pd_discmd;
 				      												/* build the environment variable list */
   for (uindex = -1; ++uindex < NEVARS; )
   {	BUFFER * sbp = curbp;
   	curbp = bp;
-  {	char * val = gtenvfun(TOKENV, g_envars[uindex]);
+  {	const char * val = gtenvfun(TOKENV, g_envars[uindex]);
     curbp = sbp;
     fmt_desv('$', g_envars[uindex], val);
   }}
@@ -1277,7 +1277,7 @@ int Pascal listvars(int f, int n)
 	for (uindex = MAXVARS; --uindex >= 0 && g_uv[uindex].u_name[0] != 0; )
     fmt_desv('%', g_uv[uindex].u_name, g_uv[uindex].u_value);
 
-  ++pd_discmd;
+//++pd_discmd;
 
   return mkdes();
 }

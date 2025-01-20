@@ -904,11 +904,11 @@ qprompt:
 static
 int Pascal delins(int dlength, char * instr, int use_meta)
 						       					
-{	extern int g_overmode;
-	--g_overmode;							/* Zap what we gotta, and insert its replacement. */
+{	int overmode = curbp->b_flag;
+	curbp->b_flag &= ~MDOVER;						/* Zap what we gotta, and insert its replacement. */
 
 {	int len = 0;
-  int cc = ldelchrs((Int)dlength, FALSE);
+  int cc = ldelchrs((Int)dlength, FALSE, FALSE);
 	if (cc > FALSE)
 	{ int ix = -1;
 	  char buf[120];
@@ -943,7 +943,8 @@ int Pascal delins(int dlength, char * instr, int use_meta)
 	  }
 	}
 
-	++g_overmode;
+	overmode |= curbp->b_flag & BFCHG;
+	curbp->b_flag = overmode;
 
 	return len;
 }}

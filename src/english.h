@@ -145,7 +145,7 @@ const char TEXT64a [][8] = { "delete:", "add:", "toggle:",};
 //#define	TEXT95	"%%mceq: what is %d?"
 #define	TEXT97	"%%Missing ]"
 #define	TEXT98	"No fill column set"
-#define	TEXT100	"Words %D Chars %D Lines %d Avg chars/word %f"
+#define	TEXT100	"Words %d Chars %d Lines %d Avg chars/word %f"
 #define TEXT101 "Password? "
 #define TEXT102 "Only one save allowed"
 #define	TEXT103	"[Saving %s]\n"
