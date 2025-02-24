@@ -398,7 +398,7 @@ BUFFER * Pascal bufflink(const char * filename, int create)
 	    break;
   } /* while */
 
-	if (create & 64)
+	if ((create & 64) && !(bp_first->b_flag & MDSRCHC))
 		swbuffer(bp_first);
 
   return bp_first;

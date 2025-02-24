@@ -137,7 +137,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
  	lpos->curoff = off;
 	lpos->line_no += adj;
 
-  return c & 0xff;
+  return c;
 }
 
 

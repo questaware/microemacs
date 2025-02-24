@@ -1465,7 +1465,8 @@ mlp:								mlputs(width, sp);
 	}
 #if MEMMAP
 	else
-	{	mlputs(term.t_ncol-scol,NULL);
+	{	tcapeeol();
+	// mlputs(term.t_ncol-scol,NULL);
   	tcapmove(ttrow, scol);
 //	memset(&vscreen[term.t_nrowm1]->v_text[ttcol], 0, (term.t_ncol-ttcol)*2);
 	}

@@ -23,13 +23,12 @@
 #define DYNAMIC 	1
 #define TRINAMIC	2
 
-#define RRET (-1)
+#define RRET 255
 #define RINT  0
 #define RSTR  1
 
 typedef struct UFUNC
-{	signed char f_type;	/* 0 = monamic, 1 = dynamic */
-	char  			f_kind;
+{	short 			f_type_kind;	/* 0 = monamic, 1 = dynamic */
 	char  			f_name[4];  /* name of function */
 } UFUNC;
 
@@ -39,54 +38,54 @@ typedef struct UFUNC
 #define UNDEF 0
 															/*	list of recognized user functions	*/
 static const UFUNC funcs[] = {
-	MONAMIC, RINT, "abs", 	/* absolute value of a number */
-	DYNAMIC, RINT, "add",   /* add two numbers together */
-	DYNAMIC, RSTR, "and", 	/* logical and */
-	MONAMIC, RINT, "asc", 	/* char to integer conversion */
-	DYNAMIC, RINT, "ban", 	/* bitwise and */
-	MONAMIC, RRET, "bin", 	/* loopup what function name is bound to a key */
-	MONAMIC, RINT, "bno", 	/* bitwise not */
-	DYNAMIC, RINT, "bor", 	/* bitwise or	 */
-	DYNAMIC, RINT, "bxo", 	/* bitwise xor */
-	DYNAMIC, RRET, "cat", 	/* concatenate string */
-	MONAMIC, RRET, "chr", 	/* integer to char conversion */
-	DYNAMIC, RRET, "dir",		/* replace tail of filename with filename */
-	NILNAMIC,RRET, "dit",		/* the character in the line above */
-	DYNAMIC, RINT, "div", 	/* division */
-	MONAMIC, RRET, "env", 	/* retrieve a system environment var */
-	DYNAMIC, RSTR, "equ", 	/* logical equality check */
-	MONAMIC, RSTR, "exi", 	/* check if a file exists */
-	MONAMIC, RRET, "fin", 	/* look for a file on the path... */
-	DYNAMIC, RSTR, "gre", 	/* logical greater than */
-	NILNAMIC,RRET, "gtc",		/* get 1 emacs command */
-	NILNAMIC,RRET, "gtk",		/* get 1 charater */
-	MONAMIC, RRET, "ind", 	/* evaluate indirect value */
-	DYNAMIC, RRET, "lef", 	/* left string(string, len) */
-	MONAMIC, RINT, "len", 	/* string length */
-	DYNAMIC, RSTR, "les", 	/* logical less than */
-	MONAMIC, RRET, "low", 	/* lower case string */
-	TRINAMIC,RRET, "mid",		/* mid string(string, pos, len) */
-	DYNAMIC, RINT, "mod", 	/* mod */
-	MONAMIC, RINT, "neg", 	/* negate */
-	MONAMIC, RSTR, "not", 	/* logical not */
-	DYNAMIC, RSTR, "or",		/* logical or */
-	DYNAMIC, RRET, "rig", 	/* right string(string, pos) */
-	MONAMIC, RINT, "rnd", 	/* get a random number */
-	DYNAMIC, RSTR, "seq", 	/* string logical equality check */
-	DYNAMIC, RSTR, "sgr", 	/* string logical greater than */
-	DYNAMIC, RINT, "sin", 	/* find the index of one string in another */
-	DYNAMIC, RSTR, "sle", 	/* string logical less than */
+	MONAMIC*256+RINT, "abs", 	/* absolute value of a number */
+	DYNAMIC*256+RINT, "add",   /* add two numbers together */
+	DYNAMIC*256+RSTR, "and", 	/* logical and */
+	MONAMIC*256+RINT, "asc", 	/* char to integer conversion */
+	DYNAMIC*256+RINT, "ban", 	/* bitwise and */
+	MONAMIC*256+RRET, "bin", 	/* loopup what function name is bound to a key */
+	MONAMIC*256+RINT, "bno", 	/* bitwise not */
+	DYNAMIC*256+RINT, "bor", 	/* bitwise or	 */
+	DYNAMIC*256+RINT, "bxo", 	/* bitwise xor */
+	DYNAMIC*256+RRET, "cat", 	/* concatenate string */
+	MONAMIC*256+RRET, "chr", 	/* integer to char conversion */
+	DYNAMIC*256+RRET, "dir",	/* replace tail of filename with filename */
+	NILNAMIC*256+RRET, "dit",	/* the character in the line above */
+	DYNAMIC*256+RINT, "div", 	/* division */
+	MONAMIC*256+RRET, "env", 	/* retrieve a system environment var */
+	DYNAMIC*256+RSTR, "equ", 	/* logical equality check */
+	MONAMIC*256+RSTR, "exi", 	/* check if a file exists */
+	MONAMIC*256+RRET, "fin", 	/* look for a file on the path... */
+	DYNAMIC*256+RSTR, "gre", 	/* logical greater than */
+	NILNAMIC*256+RRET, "gtc",		/* get 1 emacs command */
+	NILNAMIC*256+RRET, "gtk",		/* get 1 charater */
+	MONAMIC*256+RRET, "ind", 	/* evaluate indirect value */
+	DYNAMIC*256+RRET, "lef", 	/* left string(string, len) */
+	MONAMIC*256+RINT, "len", 	/* string length */
+	DYNAMIC*256+RSTR, "les", 	/* logical less than */
+	MONAMIC*256+RRET, "low", 	/* lower case string */
+	TRINAMIC*256+RRET, "mid",		/* mid string(string, pos, len) */
+	DYNAMIC*256+RINT, "mod", 	/* mod */
+	MONAMIC*256+RINT, "neg", 	/* negate */
+	MONAMIC*256+RSTR, "not", 	/* logical not */
+	DYNAMIC*256+RSTR, "or",		/* logical or */
+	DYNAMIC*256+RRET, "rig", 	/* right string(string, pos) */
+	MONAMIC*256+RINT, "rnd", 	/* get a random number */
+	DYNAMIC*256+RSTR, "seq", 	/* string logical equality check */
+	DYNAMIC*256+RSTR, "sgr", 	/* string logical greater than */
+	DYNAMIC*256+RINT, "sin", 	/* find the index of one string in another */
+	DYNAMIC*256+RSTR, "sle", 	/* string logical less than */
 #if DIACRIT
-	DYNAMIC, RRET, "slo",		/* set lower to upper char translation */
+	DYNAMIC*256+RRET, "slo",		/* set lower to upper char translation */
 #endif
-	DYNAMIC, RINT, "sub", 	/* subtraction */
+	DYNAMIC*256+RINT, "sub", 	/* subtraction */
 #if DIACRIT
-	DYNAMIC, RRET, "sup",		/* set upper to lower char translation */
+	DYNAMIC*256+RRET, "sup",		/* set upper to lower char translation */
 #endif
-	DYNAMIC, RINT, "tim", 	/* multiplication */
-	MONAMIC, RRET, "tri",		/* trim whitespace off the end of a string */
-	MONAMIC, RRET, "upp", 	/* uppercase string */
-	TRINAMIC,RRET, "xla",		/* XLATE character string translation */
+	DYNAMIC*256+RINT, "tim", 	/* multiplication */
+	MONAMIC*256+RRET, "tri",		/* trim whitespace off the end of a string */
+	MONAMIC*256+RRET, "upp", 	/* uppercase string */
+	TRINAMIC*256+RRET, "xla",		/* XLATE character string translation */
 };
 
 #define NFUNCS	sizeof(funcs) / sizeof(UFUNC)
@@ -438,7 +437,7 @@ static char * USE_FAST_CALL push_arg(int fnum, const char * src)
 		rc = macarg(tgt+strlen(tgt)+1);
 	g_stk.top -= sl;
 	return rc < 0 ? tgt - sl :
-				 rc 		? tgt			 : NULL;
+				 rc > 0	? tgt			 : NULL;
 }}
 
 
@@ -575,15 +574,19 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 	if (typ == TOKFUN)
 	{	int iarg1;
 		int iarg2;
+		int sl1;
 		char * arg2 = NULL;
 		char * arg1 = push_arg(0,"");					/* to initialise area */
+		int type_kind = funcs[vnum].f_type_kind;
 
-		if (funcs[vnum].f_type >= MONAMIC)	/* retrieve the first argument */
+		if (type_kind >= MONAMIC)	/* retrieve the first argument */
 		{ 
 		  if (macarg(arg1) <= 0)
 		    return null;
+
+			sl1 = strlen(arg1);
 													 /* if needed, retrieve the second and third arguments */
-		  if (funcs[vnum].f_type >= DYNAMIC)
+		  if (type_kind >= DYNAMIC*256)
 		  { arg2 = push_arg(vnum, arg1);// arglen: length of arg1
 				if (arg2 == NULL)
 		      return null;
@@ -595,14 +598,14 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 
 //	if (vnum < 0)
 //		return NULL;
-											/* and now evaluate it! */
-
-		if      (funcs[vnum].f_kind < RINT)
+																				/* and now evaluate it! */
+		if      (type_kind & 0x80) // < RINT
 		 switch (vnum)
 		 {case UFDIT:		*(short*)arg1 = plinecpy();
 		 								return arg1;
-		  when UFRIGHT: iarg2 -= strlen(arg1);
-					        	return strcpy(arg1, &arg1[-iarg2 < 0 ? 0 : -iarg2]);
+		  when UFRIGHT: if ((unsigned)iarg2 > (unsigned)sl1)
+		  								iarg2 = sl1; 
+		  							return strcpy(arg1, &arg1[iarg2]);
 			when UFDIR:		return pathcat(arg1, NSTRING-1, arg1, arg2);
 			when UFIND:		return getval(arg1, arg1);
 
@@ -612,7 +615,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 			            	  arg1[iarg2] = 0;
 										if (0)
 			            	{
-			when UFTRIM:    (void)trimstr(strlen(arg1),arg1);
+			when UFTRIM:    (void)trimstr(sl1,arg1);
 											if (0)
 											{ 
 			when UFGTKEY:
@@ -648,7 +651,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 										return ""
 #endif
 		 }
-		else if (funcs[vnum].f_kind == RINT)
+		else if ((type_kind & 0xff) == RINT)
 		{switch (vnum)
 		 {case UFADD:	  	iarg1 += iarg2;
 			when UFSUB:	  	iarg1 -= iarg2;
@@ -666,7 +669,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 			when UFBOR:	  	iarg1 |= iarg2;
 			when UFBNOT:		iarg2 = -1;
 			case UFBXOR:		iarg1 ^= iarg2;
-			when UFLENGTH:	iarg1  = strlen(arg1);
+			when UFLENGTH:	iarg1  = sl1;
 			otherwise		  	return "";
 		 }
 		 return int_asc(iarg1);
@@ -1207,16 +1210,25 @@ char *Pascal xlat(char * srctgt, char * lookup, char * trans)
 	/* char *lookup;	* characters to translate */
 	/* char *trans;		* resulting translated characters */
 {
-	char *sp;	/* pointer into source table */
-	char *lp;	/* pointer into lookup table */
+	int six, tix = -1;
 
-	for (sp = srctgt; *sp; ++sp)
-	{ for (lp = lookup; *lp; ++lp)
-	    if (*sp == *lp)
-	    { *sp = trans[lp - lookup];
+	for (six = -1; ; )
+	{	char ch = srctgt[++six];
+	  srctgt[++tix] = ch;
+	  if (ch == 0)
+	  	break;
+	  	
+	{ int lix;
+	
+		for (lix = -1; lookup[++lix] != 0; )
+	    if (ch == lookup[lix])
+	    { if (trans[0] == 0)
+	    		--tix;
+	    	else
+		  		srctgt[tix] = trans[lix];
 	      break;
 	    }
-	}
+	}}
 
 	return srctgt;
 }

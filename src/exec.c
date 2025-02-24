@@ -125,7 +125,7 @@ static
 int Pascal dobuf(BUFFER * bp, int iter, const char * name)
 			 /* iter:   # times to do it */
 {
-	char smalleline[80];
+//char smalleline[80];
 #if	LOGFLG
 	FILE *fp;		/* file handle for log file */
 #endif
@@ -439,9 +439,8 @@ static Cc finddo(int f, int n, Command fnc, char * tkn, const char * diag)
 		fnc = fncmatch(tkn);					/* match the token to see if it exists */
 
 	if (fnc != NULL)
-	{ 
-		cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
-																	 : (*fnc)(f, n);			/* call the function */
+	{ return in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
+																		 : (*fnc)(f, n);			/* call the function */
 	}
 	else													/* find the pointer to that buffer */
 	{ BUFFER *bp = bfind(tkn, FALSE); 
@@ -450,10 +449,8 @@ static Cc finddo(int f, int n, Command fnc, char * tkn, const char * diag)
 						/* "[No such Function]" */
 			return FALSE;
 		}
-		cc = dobuf(bp,n,tkn);
+		return dobuf(bp,n,tkn);
 	}
-
-	return cc;
 }
 #endif
 

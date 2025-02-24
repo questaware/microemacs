@@ -113,7 +113,6 @@ class Sinc
 					 F_SCT, F_CLASS, F_PARAM, F_DERIVED };
 	
 		static int sparen_nest;
-		static int sparen_nc;		/* nest clamped */
 		
 //	static int prev_block;		/* not in use */
 
@@ -144,7 +143,6 @@ class Sinc
 };
 
 int Sinc::sparen_nest;
-int Sinc::sparen_nc;
 
 // int Sinc::prev_block;
 
@@ -201,21 +199,22 @@ int Pascal Sinc::strxct_mtch(int wh, int offs, const LINE * lp )
 
 void USE_FAST_CALL Sinc::bufappline(int indent, const char * str)
 
-{ int  sz = strlen(str);
-	if (Sinc::g_outbuffer)
-	{	LINE * inslp = mk_line(str, indent+sz, indent+sz, 1);
+{	if (Sinc::g_outbuffer)
+	{ int  sz = strlen(str);
+		LINE * inslp = mk_line(str, indent+sz, indent+sz, 1);
 	   
+		ibefore(Sinc::g_outbuffer->b_baseline.l_fp, inslp);
 		memset(&inslp->l_text[0], ' ', indent);
 		strcpy( inslp->l_text+indent, str);
-		ibefore(Sinc::g_outbuffer->b_baseline.l_fp, inslp);
 	}
 }
 
 
 int Sinc::doit_forward(const LINE* lp, const char * s, 
-											 short from_w_good_cl, int spn, int obrace_dpth)
+											 short from_w_good_cl, int spn, int spnc)
 
-{ // int  word_ct = M_NOGO;
+{	
+//int  word_ct = M_NOGO;
 
   for (int ix = BEFORE_WINDOW_LEN+1; --ix > 0; )
   {
@@ -339,7 +338,7 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 	       	    word_ct += 1;
 							if (lp->l_text + cix == s)
 //             	brace_nm = brace_dpth;
-							{	if (sparen_nc > 1)
+							{	if (spnc > 1)
 				        	return F_NF;
 
 	            	paren_nm = paren_dpth;		// is >= 0
@@ -414,8 +413,7 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 	    			{ loglog("ANM0");
 				      return F_NF;
 	    			}
-	    		  if (paren_dpth * obrace_dpth < 0 &&
-	        			sparen_nc != 0 &&
+	    		  if (paren_dpth * spnc < 0 &&
 	       			 (state & (M_GOT_NM+M_IN_DCL+M_NO_BODY)) == (M_GOT_NM+M_IN_DCL))
 	      		{	state |= M_NEED_BODY;
 	      			state &= ~M_NEED_B2;
@@ -427,7 +425,7 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 
 				    	if ((state & (M_GOT_NM+M_NEED_BODY+M_PRE_SCT))==M_GOT_NM)	
 				    	{	if (paren_dpth == 0 && paren_nm == 0 &&
-	          		  	sparen_nc <= 0)
+	          		  	spnc <= 0)
 	          		  return F_DCL;
 	          		if ((state & M_NEED_BODY) == 0)
 	          			return F_NF;
@@ -457,9 +455,9 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 	  			else if (ch == ';' || ch == '}'/* rbrace */)
 	  			{ if (state & M_GOT_NM)
 	    			{/*char buf[120];
-	      			sprintf(buf, "sparen_nc %d state %x paren_nm %d", sparen_nc, state, paren_nm);
+	      			sprintf(buf, "spnc %d state %x paren_nm %d", spnc, state, paren_nm);
 	      			mbwrite(buf);*/
-	      			if (sparen_nc < 0 || !(state & (M_NEED_BODY+M_PRE_SCT)) && !paren_nm)
+	      			if (spnc < 0 || !(state & (M_NEED_BODY+M_PRE_SCT)) && !paren_nm)
 	      			{ int res = word_ct > 1 ? F_SCT : F_NF;
 	        			return res;
 	      			}
@@ -534,13 +532,13 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 					        return -F_ENUM;
 					      if (word_ct > 1)
 					      { if (paren_dpth == 0)
-					          if (sparen_nc < 0 || !((state & (M_NEED_BODY+M_PRE_SCT))||paren_nm))
+					          if (spnc < 0 || !((state & (M_NEED_BODY+M_PRE_SCT))||paren_nm))
 					            return F_DCLINIT;
 				          if (from_w_good_cl || !(state & M_AFTER_CC))
 					        { if (state & M_IN_SCT)
 					            return F_FLD;
 					          if ((state & M_NEED_BODY) == 0 &&
-							          (paren_dpth == 0 || sparen_nc < 0))
+							          (paren_dpth == 0 || spnc < 0))
 									    return F_OMETH;
 						      }
 					      }
@@ -601,7 +599,7 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
   {	const char * fcp = (char*)flook(Q_LOOKI, fname);
   
     if (fcp != NULL)
-    {	bp = bufflink(fcp, TRUE);
+    {	bp = bufflink(fcp, TRUE+64);
 			bf_made = g_bfindmade;
     }
 
@@ -622,10 +620,10 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
     return 0;
 
 { Paren_t sparen = g_paren;
-  pd_discmd -= 2;
+//pd_discmd -= 2;
 //pd_discmd = 0;
-  swbuffer(bp);
-  pd_discmd += 2;
+//swbuffer(bp);
+//pd_discmd += 2;
   g_paren = sparen;
 }
 
@@ -934,8 +932,8 @@ scan:
 															 got_prochead <= 0)
 															&& best_nest == NO_BEST)
 											{ 
+												int sparen_nc = g_paren.nestclamped;
 											  sparen_nest = g_paren.nest;
-												sparen_nc = g_paren.nestclamped;
 //											sprintf(buf, "Try %d %d %50.50s", sparen_nest, sparen_nc, cp);
 //											mbwrite(buf);
 											{ int wh = doit_forward(lp, cp, from_wh+good_class, sparen_nest, sparen_nc);

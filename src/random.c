@@ -695,32 +695,40 @@ int Pascal forwdel(int f, int n)
 
 {// if (rdonly())
  //		return FALSE;
-	int s = 0;
-
+	int s = -1;
+	int overmode = curbp->b_flag & MDOVER;
+	
 	if (n < 0)
 	{ n = -n;
-	  s = backbychar(n);
-		if (s <= 0)
-			return s;
+		s = overmode ? 1 : backbychar(1);
+//	if (s <= 0)
+//		return s;
+	}
+
+	if (overmode)
+	{	while (--n >= 0)
+		{	int left = curwp->w_doto - llength(curwp->w_dotp);
+			int there = getccol();
+			backbychar(s);
+			if ((s > 0 ? there : left) == 0)
+				continue;
+			there -= getccol();
+			if (s < 0)
+				backbychar(1);
+			linsert(there*s, ' ');
+			if (s > 0)
+					backbychar(s);
+		}
+
+		return TRUE;
 	}
 
 	if (f != FALSE  											/* Really a kill. 			*/
 	  && (g_lastflag & CFKILL) == 0)
 			kdelete(0,0);
 
-{	int overmode = curbp->b_flag & MDOVER;
-	if (overmode && n <= llength(curwp->w_dotp))
-	{ curbp->b_flag -= MDOVER;
-		backbychar(-n);
-	{ int there = getccol();
-		backbychar(n);
-		linsert(there - getccol(), ' ');
-		if (s)
-		  backbychar(n);
-	  curbp->b_flag += MDOVER;
-	}}
-	
-	return ldelchrs((Int)n, f, TRUE);
+{ int rc = ldelchrs((Int)n, f, TRUE);
+	return rc;
 }}
 
 /* Delete backwards. This is quite easy too, because it's all done with other
@@ -996,6 +1004,14 @@ typedef struct
 } fdcr;
 
 
+static int USE_FAST_CALL inc_col(char ch, int tabsz, int offs)
+
+{ offs += 1;
+	if (ch == '\t')
+		offs = (offs + tabsz - 1) & -tabsz;
+	return offs;
+}
+
 // static int g_s_cmt, g_ps_cmt;
 
 /* -1: else by itself
@@ -1014,9 +1030,7 @@ int USE_FAST_CALL got_f_key(fdcr * fd, int tabsz, int fs_cmt)			// Fortran or SQ
 
 	for (start = -1; ++start < pos && (ch = lp->l_text[start]) <= ' '; )
 	{ 
-		choffs = choffs + 1;
-		if (ch == '\t')
-			choffs = (choffs + tabsz - 1) & -tabsz;
+		choffs = inc_col(ch, tabsz, choffs);
 	}
 
 	fs_cmt &= BCSQL;
@@ -1219,9 +1233,10 @@ int Pascal getfence(int f, int n)
 		}
 	}
 
+{	char ch0 = lstr[0];
+
 	while (len >= 2) /* ! simple */	 // once only 
-	{ char ch_ = lstr[0];
-		int ix = ch_ == '#';
+	{ int ix = ch0 == '#';
 		if (c_cmt > ix)
 		{ dir = 0;
 			break;
@@ -1240,7 +1255,7 @@ int Pascal getfence(int f, int n)
 				break;
 
 		{ char ch = lstr[ix] | 0x20;	// lower
-			fd.blk_type[0] = ch_ & ~0x20;	// upper
+			fd.blk_type[0] = ch0 & ~0x20;	// upper
 				
 			if (fd.blk_type[0] == 'E' && ch == 'n')   // END DO, END LOOP, etc
 			{ int nix = 0;
@@ -1287,9 +1302,7 @@ int Pascal getfence(int f, int n)
 
 			while (--ct >= 0 && ((ch = *++start) <= ' ' || lastko == 5))
 			{ 
-				lastko = lastko + 1;
-				if (ch == '\t')
-					lastko = (lastko + tabsz - 1) & -tabsz;
+				lastko = inc_col(ch, tabsz, lastko);
 			}
 		}
 		break;
@@ -1304,9 +1317,9 @@ simple:
 	mbwrite(&fd.blk_type);*/
 													 			/* until we find it or reach the end of file */
 	while (rc && g_paren.nest > 0 && (rc = forwbychar(dir)))
-	{ LINE * lp = curwp->w_dotp;
+	{	int offs = curwp->w_doto;
+		LINE * lp = curwp->w_dotp;
 		int len = llength(lp);
-		int offs = curwp->w_doto;
 		if (offs == len)
 		{ scan_paren('\n');
 			if (dir < 0)
@@ -1323,19 +1336,18 @@ simple:
 		if (ch <= ' ') 
 			continue;
 
-		if (offs == 0)
-		{	if			(lastko >= 0 && ch == 'C' && dir > 0)	// Fortran comment
-			{ curwp->w_doto = len;
-				continue;
-			}
-		}
-		else
-		 if ((in_range(ch,'A','Z') || ch == '_')
+		if ((in_range(ch,'A','Z') || ch == '_')
 			&& in_range(/*toupper*/(lp->l_text[offs-1] | 0x20),'a','z'))			// inside word
 				continue;
 
-		if (ps_cmt && ch == 'C')
-			ch = 'B';
+		if (ch == 'C')
+		{ if (offs == 0 && lastko >= 0 && dir > 0)	// Fortran comment
+			{ curwp->w_doto = len;
+				continue;
+			}
+			if (ps_cmt)
+				ch = 'B';
+		}
 
 		if (scan_paren(ch))
 			continue;
@@ -1405,25 +1417,25 @@ simple:
 
 	if (rc)														// not at EOF
 	{ curwp->w_flag |= WFMOVE;
-		if (stt_ko >= 0)
+		if (stt_ko >= 0 &&
+			  ch0 != '(' && ch0 != ')' && ch0 != '[' && ch0 != ']')
 		{	int offs = curwp->w_doto;
 			LINE * lp = curwp->w_dotp;
 			int len = lused(lp->l_dcr);
-			int ix = -1;
-		  int ko = 0;
 		  
-		  char ch;
+			if (lp->l_text[offs] != lp->l_text[offs-1])
+			{ char ch;
+				int ix = -1;
+			  int ko = 0;
 
-			while (--len >= 0 && ((ch = lp->l_text[++ix]) <= ' ' || lastko >= 0 && ko == 5))
-			{ ko = ko + 1;
-				if (ch == '\t')
-					ko = (ko + tabsz - 1) & -tabsz;
+				while (++ix < len && ((ch = lp->l_text[ix]) <= ' ' || lastko >= 0 && ko == 5))
+				{
+				  ko = inc_col(ch, tabsz, ko);
+				}
+
+				if (in_range(ko - stt_ko,-4,4))
+					goto keepbeeper;
 			}
-
-			if (*lstr != '(' && *lstr != ')' && *lstr != '[' && *lstr != ']')
-			if (in_range(ko - stt_ko,-4,4) && (lp->l_text[offs] != 		// l_dcr[3] == 0
-																				  lp->l_text[offs-1] ))
-				goto keepbeeper;
 		}
 	}
 
@@ -1435,7 +1447,7 @@ keepbeeper:
 			tcapbeep();
 	}
 	return rc;
-}}}
+}}}}
 
 #endif
 
@@ -1604,9 +1616,9 @@ int Pascal calculator(int f, int n)
 {	while (1)
 	{	Lpos_t spos = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
 		char * s = lgets(spos.curline, spos.curoff);
-	  char buf[256*2+1];
 
-		int ix = 0;
+		int ix = -1;
+		char  sch = 0;
 		int ixeq = 0;
 		int len = llength(spos.curline) - spos.curoff;
 		if (len <= 0)
@@ -1615,43 +1627,59 @@ int Pascal calculator(int f, int n)
 		if (len > 256) 
 			len = 256;
 
-		if (*s == '#')
-			goto next;
-
 		while (++ix < len)
-	  	if (s[ix] == '=')
-			{	ixeq = ix + 1;
-	  		len -= ixeq;
+		{	char ch = s[ix];
+
+			if (ch == '=' || ch == '#')
+			{	if (ch == '=')
+			  {	ixeq = ix + 1;
+	  			len -= ixeq;
+	  		}
+
 				while (ix > 0 && s[ix-1] <= ' ')
-				  --ix;
-				((char*)memcpy(buf+1, s, ix))[ix] = 0;	// save variable
-	  		break;
+			  	--ix;
+
+				if (ch != '=')
+					len -= (len - ix);
+  			break;
 	  	}
+	  }
 
-	{	int adj;
-		((char*)memcpy(buf+256+1, s+ixeq, len))[len] = 0;
-	  buf[0] = '%';
-		buf[256] = '(';
-	{	double res = evalexpr(buf+256, &adj);
-		const char * all = adj <= 0 ? "Error" : float_asc(res);
+		if (len > 0)
+		{ char buf[256+1];
 
-		if (ixeq > 0)
-			set_var(buf, all);
-		else
-		{	if (!f)
-				mbwrite(all);
-			kdelete(0, 0);
-		{	int rc = kinsstr(all, strlen(all));
-	#if S_MSDOS
-			ClipSet(0);
-	#endif
-	
-			return rc;
+			((char*)memcpy(buf+1, s+ixeq, len))[len] = 0;
+			buf[0] = '(';
+							
+		{	int adj;
+			double res = evalexpr(buf, &adj);
+			const char * all = adj <= 0 ? "Error" : float_asc(res);
+
+			if (ixeq > 0)
+			{ char tch = s[-1];
+				char sch = s[ix];
+			  s[ix] = 0;
+				s[-1] = '%';
+				set_var(s-1, all);
+				s[-1] = tch;
+				s[ix] = sch;
+			}
+			else
+			{	if (!f)
+					mbwrite(all);
+				kdelete(0, 0);
+			{	int rc = kinsstr(all, strlen(all));
+		#if S_MSDOS
+				ClipSet(0);
+		#endif
+		
+				return rc;
+			}}
 		}}
-next:		
+
 		if (!forwline(1,1))
 			return TRUE;
-	}}}
+	}
 }
 
 #endif

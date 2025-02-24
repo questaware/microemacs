@@ -166,6 +166,8 @@ int  ctlxe(int f, int n)
 			return FALSE;
 		}
 
+		mlwrite("%!%s", lastmesg);
+
 		pd_kbdrep = n; 			/* remember how many times to execute */
 		pd_kbdrd = 1;				/* at the beginning */
 	}

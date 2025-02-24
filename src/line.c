@@ -346,7 +346,7 @@ int Pascal linsert(int ins, char c)
 
 #if DO_UNDO
 	if (g_inhibit_undo <= 0)
-		(void)run_make(lp);
+		run_make(lp);
 #endif
 	if ( doto < used  && overmode >= ins &&
 			(lgetc(lp, doto) != '\t' ||
@@ -504,32 +504,33 @@ int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
 {	LINE * dotp = curwp->w_dotp;
   int    doto = curwp->w_doto;
 	int res = TRUE;
-  int n = ct;
 
-	if (n == 0)
+	if (ct == 0)
 		return res;
 
  	if (tokill)
-	  while (n > 0)
+  {	int n = ct;
+		while (n > 0)
 	  {	int l_dcr = dotp->l_dcr;
 	  	if (l_dcr == 0)					   /* Hit end of buffer.   */
 	      break;
 
 		{	int chunk = get_chunk(l_dcr, doto, n);
+	    n -= chunk + 1;
 			res &= kinsstr(&dotp->l_text[doto], chunk);
 
-	    n -= chunk + 1;
 	    if (n < 0)
 	    	break;
 
-	    res &= kinsert('\n');
-
     	doto = 0;
     	dotp = lforw(dotp);
+
+	    res &= kinsert('\n');
     }}
     
-	if (!res)
-  	return res;
+		if (!res)
+  		return res;
+  }
 
 	dotp = curwp->w_dotp;
   doto = curwp->w_doto;
@@ -545,8 +546,8 @@ int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
  	memmove(&dotp->l_text[doto], &dotp->l_text[doto+chunk],
  				  used-chunk-doto);
 
-  n = ct - chunk;
-{	Bool all = n == 1 && doto == 0;
+{ int n = ct - chunk;
+	Bool all = n == 1 && doto == 0;
 	if (!all)
 		dotp->l_dcr = (used - chunk) << (SPARE_SZ+2) | spare | (dotp->l_dcr & 3);
 	
@@ -860,10 +861,9 @@ int Pascal USE_FAST_CALL kinsert(char ch)
   }
   
 { char * mem = kills[n].mem;
-  mem[sz-1] = ch;
   mem[sz] = 0;
-  if (inc > 1)
-    mem[sz-2] = '\r';
+  mem[sz-inc] = '\r';
+  mem[sz-1] = ch;
 
   return TRUE;
 }}}
@@ -926,24 +926,23 @@ int Pascal yank(int notused, int n)
   
 //last_was_yank = true;
 				/* make sure there is something to yank */
-  while (n--)
+  while (--n >= 0)
   { g_header_scan = 1;
     g_inhibit_scan += 1;
 
-  {	int	len = 0;
-  	char	*sp = NULL;		/* pointer into string to insert */
+  { char * sp;			/* pointer into string to insert */
+    int len;
 
 #if S_WIN32
     if (ix == 0 && gtusr("NOPASTE") == NULL)
-    { 
-      sp = ClipPasteStart();
+    { sp = ClipPasteStart();
       if (sp != NULL)
 	    { len = strlen(sp);
 	    	goto gots;
 	    }
     }
 #endif
-    sp = kills[ix].mem;
+  	sp = kills[ix].mem;			/* pointer into string to insert */
     len = kills[ix].size;
 gots: 
     while (--len >= 0)
@@ -977,7 +976,7 @@ int rdonly()
 
 #if DO_UNDO
 	if (g_inhibit_undo <= 0)
-	{	(void)run_make(curwp->w_dotp);
+	{	run_make(curwp->w_dotp);
  		run_trim(curbp, 32);
 	}
 #endif
@@ -1104,11 +1103,11 @@ esc:
 }}}}}
 
 
-Cc run_make(LINE * lp)
+void run_make(LINE * lp)
 
 {	LINE * lb = lback(lp);
 	if (/*g_inhibit_undo > 0 || */ curbp->b_undo && curbp->b_undo->u_lp == lb)
-		return 1;
+		return;
 
 	run_var_update(1);
 
@@ -1123,8 +1122,6 @@ Cc run_make(LINE * lp)
 	ud->u_offs = curwp->w_doto;
 	ud->u_bp = curbp->b_undo;
 	curbp->b_undo = ud;
-
-	return OK;
 }}
 
 
@@ -1150,13 +1147,11 @@ void run_move(LINE * olp, LINE * lp)
 void run_trim(BUFFER * bp, int lim)
 
 {	UNDO * cud = bp->b_undo;
-	int cud_ct = 0;
+	int deduct = -lim;
 	while (cud != NULL)
-	{ ++cud_ct;
+	{ ++deduct;
 		cud = cud->u_bp;
 	}
-
-{ int deduct = cud_ct - lim;
 
   while (--deduct >= 0)
 	{ UNDO * ud = bp->b_undo;
@@ -1174,6 +1169,6 @@ void run_trim(BUFFER * bp, int lim)
 		else
 			pud->u_bp = NULL;
 	}
-}}
+}
 
 #endif

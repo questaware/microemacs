@@ -107,9 +107,9 @@ int Pascal nmlze_fname(char * tgt, const char * s, char * tmp)
   if (cwd_ == null)
     cwd_ = "/";
 	
-{ const Char * cw = &cwd_[strlen(cwd_)];
+{	const Char * cw = &cwd_[strlen(cwd_)];
 	int num_dirs = 0;
-  int root = 0;
+	int root = 0;
 	char * t = tgt;
 
   while (!root && strcmp_right(t, "../") == 0)
@@ -330,30 +330,20 @@ static int g_flen;
  * Read a line from a file, and store the bytes in the supplied buffer. The
  * "nbuf" is the length of the buffer. Complain about long lines and lines
  * at the end of the file that don't have a newline present. Check for I/O
- * errors too. Return status.
+ * errors too. Return number of characters in the line.
  */
 static
 Cc Pascal USE_FAST_CALL ffgetline(int flen, char * * line_ref, FILE * ffp)
 	
 { char * line = *line_ref;
-	int i = -1; 				/* current index into g_fline */
+	int i = -1; 					/* current index into g_fline */
   int c; 							/* current character read */
 											
 	do
-	{ c = getc(ffp);		    /* if it's longer, get more room */
-											/* test for any errors that may have occured */
-		if (c < 0)
-			break;
-
-	  if (c == '\r')
-	  { g_crlfflag = MDMS;
-	    if (!is_opt('X'))
-	      continue;
-	  } 
-	  if (++i >= flen)
-	  {														/* lines longer than 16Mb get truncated */
+	{	if (i+1 >= flen)					/* if it's longer, get more room */
+	  {													/* lines longer than 16Mb get truncated */
 	    flen += NSTRING;
-		  line = remallocstr(line_ref, *line_ref, flen+1);
+		  line = remallocstr(line_ref, *line_ref, flen+2);
 			if (line == NULL)
 	      return FIOMEM;
 
@@ -368,11 +358,20 @@ Cc Pascal USE_FAST_CALL ffgetline(int flen, char * * line_ref, FILE * ffp)
 //    }
 //    line = tmpline;
 	  }
-	  line[i] = c;
-	} while (c != '\n');
 
-	if (c < 0)
-		return i >= 0 ? i + 1 : feof(ffp) ? FIOEOF : FIOERR;
+		c = getc(ffp);
+	  if (c == '\r')
+	  { g_crlfflag = MDMS;
+	    if (!is_opt('X'))
+	      continue;
+	  } 
+
+	  line[++i] = c;
+
+	} while (c >= 0 && c != '\n');
+
+	if (c < 0 && i <= 0)
+		return feof(ffp) ? FIOEOF : FIOERR;
 
 //line[i] = 0;
 
@@ -694,7 +693,8 @@ int Pascal readin(char const * fname, int props)
   	execwrap(0);  // readhook
   }
   
-{	int   nline = 0;
+{	int  nline = 0;
+  int tabw = 0;
 	Cc tcc = do_ftime(bp,		// Set the file date
 #if S_WIN32 == 0
 									  ffp,
@@ -752,7 +752,8 @@ int Pascal readin(char const * fname, int props)
 	    cc = strlen(ln);
 	  }
 	  else 
-		{	if (g_flen > NSTRING)		/* dump g_fline if it ended up too big */
+		{ ++nline;
+			if (g_flen > NSTRING)		/* dump g_fline if it ended up too big */
 	  		g_flen = 0;
 
 	  	cc = ffgetline(g_flen, &g_line, ffp);
@@ -778,18 +779,17 @@ int Pascal readin(char const * fname, int props)
 		}
 #endif
     scan_par_line(lp1);
-	  ++nline;
 		if (nline < 5 &&
-				len > 6 && lp1->l_text[2] == 't' && lp1->l_text[3] == 'a'
-								&& lp1->l_text[4] == 'b' && lp1->l_text[5] == ' '
-								&&(lp1->l_text[0] == '/' && lp1->l_text[1] == '*' ||
-                   lp1->l_text[0] == '/' && lp1->l_text[1] == '/' ||
-                   lp1->l_text[0] == '-' && lp1->l_text[1] == '-'))
-	  { int tabw = lp1->l_text[6] - '0';
+				len > 6 && ln[2] == 't' && ln[3] == 'a'
+								&& ln[4] == 'b' && ln[5] <= ' '
+								&&(ln[0] == ln[1]
+									 || ln[1] == '*') &&
+								  (ln[0] == '/' || ln[0] == '-'))
+                   
+	  { tabw = atoi(ln+6);
 	    if (tabw > 0)
-	    { if (bp->b_tabsize < 0)	// expand tabs
+	    { if (tabw < 0)	// expand tabs
 	    		tabw = -tabw;
-	    	bp->b_tabsize = tabw;
 	    }
 	  }
 
@@ -843,6 +843,8 @@ out:
 //  bp->b_luct = swb_luct;
 	  bp->b_dotp = lforw(&bp->b_baseline);
 	  bp->b_wlinep = bp->b_dotp;
+		if (tabw != 0)
+	  	bp->b_tabsize = tabw;
 
 	  for (wp = wheadp; wp != NULL; wp=wp->w_next)
 	    if (wp->w_bufp == bp)

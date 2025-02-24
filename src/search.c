@@ -475,13 +475,13 @@ int Pascal backsearch(int f, int n)
 int USE_FAST_CALL myeq(int a, int b)
 
 {
-  return a==b ||
-        (curbp->b_flag & MDIGCASE) && isletter(a)
-     && ((a ^ b) & ~0x20) == 0;         
+	int mask = (curbp->b_flag & MDIGCASE) && isletter(a) ? (~0x20 & 0xff) : 0xff;
+  a = ((a^b) & mask) == 0;
+  return a;
 }
  
  
-#define eq(a, b) (((a ^ b) & ~0x20) == 0 && myeq(a,b))
+#define eq(a, b) ((((a ^ b) & (~0x20 & 0xff))) == 0 && myeq(a,b))
 
 /* mceq -- meta-character equality with a character.  In Kernighan & Plauger's
  *	Software Tools, this is the function omatch(), but i felt there
@@ -492,7 +492,7 @@ static int mceq(int bc, int mctype, int lchar)
 	int result;
 
 	if      (bc < 0)
-		return 0;
+		return bc;
 	else if ((mctype & MASKPAT) <= EOL)
 		result = eq(bc, (int)lchar);
 	else
@@ -569,7 +569,7 @@ int Pascal amatch(MC * mcptr, int direct, Lpos_t * pcwlpos, int matchlen)
 	  else												/* Try to match as many characters as possible */
 																/* A newline never matches a closure. */
 	  {	ct = 0;
-	    while (mceq(nextch(&lpos, direct), type, mcptr->lchar))
+	    while (mceq(nextch(&lpos, direct), type, mcptr->lchar) > 0)
 	    { ++ct;
 	  		if ((type & CLOSURE) == 0)
 	  			break;
@@ -580,14 +580,14 @@ int Pascal amatch(MC * mcptr, int direct, Lpos_t * pcwlpos, int matchlen)
 	  		if (ct == 0)
 	  			return 0;
 	    	continue;
-	    }											/* We are now at the character that made us fail.
-														 * Try to match the rest of the pattern, shrinking
-														 * the closure by one for each failure.
-														 * Since closure matches *zero* or more occurences
-														 * of a pattern, a match may start even if the */
-	    while (1)							/* previous loop matched no characters. */
-	    { nextch(&lpos, -direct);
-
+	    }																	 /* We are now at the character that made us fail.
+																					* Try to match the rest of the pattern, shrinking
+																					* the closure by one for each failure.
+																					* Since closure matches *zero* or more occurences
+																					* of a pattern, a match may start even if the */
+	    while (1)													 /* previous loop matched no characters. */
+	    {	nextch(&lpos, -direct);
+ 
 	      matchlen = amatch(mcptr+direct, direct, &lpos, matchlen);
 	      if (matchlen)
 	        goto success;
@@ -638,18 +638,18 @@ int Pascal scanner(int direct, int again)
   if (pats_top <= 0)
 	  return pats_top;
 
-{ MC * mcptr = &g_pats[direct > 0 ? 1 : pats_top];
+{ MC * mcptr = &g_pats[direct > 0 ? direct : pats_top];
  	Lpos_t lpos = *(Lpos_t*)&curwp->w_dotp;
   Lpos_t sm; //  = lpos;			/* match line and offs */
-
-  int skip = (again & 2) * g_clring;
-  if ((again & 1) ? direct > 0 : l_is_hd(lpos.curline))
-    nextch(&lpos, direct);    /* Advance the cursor.*/
 
   init_paren("", 0);
   g_paren.sdir = direct;
 
-{	int matchlen = 0;
+  if ((again & 1) ? direct > 0 : l_is_hd(lpos.curline))
+    nextch(&lpos, direct);    /* Advance the cursor.*/
+
+{ int skip = (again & 2) * g_clring;
+	int matchlen = 0;
 	int ch = 0;
 									 /* Scan each character until we hit the head link record. */
   while (true)
@@ -658,7 +658,7 @@ int Pascal scanner(int direct, int again)
 		 	  :  ** lpos.curoff == 0	&& */
 			     /* lpos.curline  == lforw(&curbp->b_baseline) && */
     if (ch < 0)
-      return -1;
+      return ch;
 		  	   /* Save the current position in case we need to restore it on a match. 
 		    		* Initialize g_Dmatchlen to zero for any search for replacement.
 		  	  	*/
@@ -693,15 +693,15 @@ int Pascal scanner(int direct, int again)
 		  scan_paren((char)ch);
   }}
 	   
-  if (direct > 0)     /* at beginning of string */
-    lpos = sm;
-
-  rest_l_offs(&lpos);
-
 	if (matchlen > 0)
 	{ extern int macro_start_col;
 		macro_start_col = -1;
 	}
+
+  if (direct > 0)     /* at beginning of string */
+    lpos = sm;
+
+  rest_l_offs(&lpos);
 
   curwp->w_flag |= WFMOVE; /* flag that we have moved */
   free(pd_patmatch);
@@ -868,8 +868,8 @@ qprompt:
 			   /* Delete the sucker, and insert its replacement. */
 		lenold = matchlen;
 	  lastins = delins(lenold, &rpat[0], MC_DITTO);
-	  if (lastins < 0)
-	    return FALSE;
+//  if (lastins < 0)
+//    return FALSE;
 	  			  /* Save our position, since we may undo this*/
 		if (last.curline == curl)
 		{ // --g_inhibit_scan;

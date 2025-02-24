@@ -43,7 +43,7 @@ BUFFER * getcbuf(int createflag, BUFFER * bp, const char *prompt);
 BUFFER * Pascal bufflkup(const char * filename);
 BUFFER *Pascal bufflink(const char *, int);
 char * Pascal repl_bfname(BUFFER*, const char *);
-Cc run_make(LINE * ln);
+void run_make(LINE * ln);
 void run_trim(BUFFER * bp, int lim);
 char *Pascal bytecopy();
 Cc do_ftime(BUFFER * bp,

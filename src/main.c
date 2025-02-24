@@ -573,7 +573,7 @@ void Pascal editloop(int c)
 
 										/* if there is something on the command line, clear it */
 	if (pd_got_msg != FALSE)
-	{ mlerase();
+	{ // mlerase();  For now
 		update(FALSE);
 	}
 										/* override the arguments if prefixed */
