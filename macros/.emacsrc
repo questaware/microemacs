@@ -15,7 +15,7 @@ add-mode black
 
 1 store-macro		; change case one character
   set %ccc $curchar
-  !if &gre %ccc 96 
+	!if &and &gre %ccc 96 &les %ccc 123
     set $curchar &sub %ccc 32
   !else
     !if &and &gre %ccc 64 &les %ccc 91
@@ -342,17 +342,24 @@ btk execute-macro-21 ^XV
 	set hp25 "4 #elif"
 ;	set %ri &rig $cbufname 3
 ;	set %oo @&cat "Buffhook " %ri
+	set %lang &not &equ &ban $cblang 31 0
   !if &not &equ &ban $cblang 31 0
     set $hp2 "4 if "
     set $hp3 "4 else "
     set $hp4 "4 while "
-    set $hp5 "4 break "
+    set $hp5 "4 break"
     set $hp6 "4 for "
     set $hp7 "4 return "
     set $hp8 "4 continue"
 		set $hp9 "4 endif"
   !endif
-  !if &seq &rig $cbufname 3 ".py"
+  
+	set %bl &len $cbufname
+	set %suf2 &rig $cbufname &sub %bl 2
+	set %suf3 &rig $cbufname &sub %bl 3
+	set %suf4 &rig $cbufname &sub %bl 4
+
+  !if &seq %suf3 ".py"
     set $hp3 "4 else:"
     set $hp10 "4 elif "
     set $hp11 "4 def "
@@ -361,7 +368,7 @@ btk execute-macro-21 ^XV
     set $hp14 "4 except "
     set $hp15 "4 class "
   !endif
-  !if &or &seq &rig $cbufname 2 ".c" &seq &rig $cbufname 4 ".cpp"
+  !if &or &seq %suf2 ".c" &seq %suf4 ".cpp"
     set $hp5 "4 break;"
     set $hp8 "4 continue;"
     set $hp10 "4 switch "
@@ -378,7 +385,7 @@ btk execute-macro-21 ^XV
     set $hp13 "4 call "
 		set $hp14 "4 then "
   !endif
-  !if &or &seq &rig $cbufname 4 ".adb" &seq &rig $cbufname 4 ".ads"
+  !if &or &seq %suf4 ".adb" &seq %suf4 ".ads"
     set %oo @"Ada"
     set $hp10 "4 elif "
     set $hp11 "4 case "
@@ -400,11 +407,10 @@ set $exbhook execute-macro-22
 	!if &seq %itot "ERROR"
 		set %itot 0
 	!endif
-;	set %resp @&cat "Sum " %itot
-	search-forward [0-9-][0-9]*
-	set %itot &add %itot $match
-	end-of-word
-	print &cat "Sum " %itot
+	search-forward [0-9-][0-9,.]*
+	set %itot &add %itot &xla $match "," ""
+	search-forward [^0-9.,]
+	print &cat "Is " %itot
 !endm
 
 btk execute-macro-23 A-A

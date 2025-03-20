@@ -543,7 +543,7 @@ int spawn(int f, int n)
 
 
 
-static char * mkTempCommName(char suffix, /*out*/char *filename)
+char * mkTempCommName(char suffix, /*out*/char *filename)
 {
 #define DIRY_CHAR '/'
   char * td = getenv("HOME");
@@ -553,20 +553,18 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
   if (td[strlen(td)-1] != DIRY_CHAR)
     c2[0] = DIRY_CHAR;
 
-{ char *ss = concat(filename,td,c2,g_emacsdir+10, "me",int_asc(getpid()),NULL);
-  int tail = strlen(ss);
-  int iter;
-  ss[tail] = suffix;
-  ss[tail+1] = 0;
+{ int iter;
 
   for (iter = 25; --iter >= 0; )
-  {
+	{	char s[2];
+		*(short*)&s = suffix;		// little endian
+
+	{ char *ss = concat(filename,td,c2,g_emacsdir+10, "me",int_asc(getpid()),s,NULL);
     if (!fexist(ss))
       break;
 
-    ss[tail-3] = 'A' + 24 - iter;       // File should not exist anyway
-    ss[tail-2] = '~';
-  }
+    suffix = 'A' + 24 - iter;       // File should not exist anyway
+  }}
   return filename;
 }}
 

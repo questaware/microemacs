@@ -131,7 +131,7 @@
 #define	NLOCKS	100			/* max # of file locks active	*/
 #define	KBLOCK	250			/* sizeof kill buffer chunks	*/
 #define	NBLOCK	16			/* line block chunk size	*/
-#define	NVSIZE	10			/* max #chars in a var name	*/
+#define	NVSIZE	12			/* max #chars in a var name	*/
 #define NMARKS	 8			/* number of marks must be 2**n  */
 #define MAXVARS 64
 

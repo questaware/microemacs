@@ -135,7 +135,7 @@ int Pascal dobuf(BUFFER * bp, int iter, const char * name)
 	WHBLOCK whiles[LIM_WHILE];
 	int topwh = LIM_WHILE-1;
 #endif
-	char *s_execstr = g_execstr; 		/* original exec string */
+//char *s_execstr = g_execstr; 		/* original exec string */
 
 #if _DEBUG
 	g_rc_lineno = 0;
@@ -407,20 +407,20 @@ jover_:							  									/* reset the line pointer back.. */
 		freewhile(whlist);
 	}
 
-	g_execstr = s_execstr;
+//g_execstr = NULL; // s_execstr;
   return cc;
 #undef tkn
 }
 
 
-static Cc finddo(int f, int n, Command fnc, char * tkn, const char * diag)
+static Cc finddo(int f, int n, int interactive, char * tkn,const char * diag)
 
-#if 0
-{	if (fnc == NULL)
+{ Command fnc = !interactive ? NULL : getname(0);/* and get the function name to execute */
+
+	if (fnc == NULL)
 		fnc = fncmatch(tkn);					/* match the token to see if it exists */
-
-{	Cc cc;
-	KEYTAB kt;
+#if 0
+{	KEYTAB kt;
 	kt.k_code = 1;
 //kt.k_type = BINDFNC;
 	kt.k_ptr.fp = fnc;
@@ -433,11 +433,6 @@ static Cc finddo(int f, int n, Command fnc, char * tkn, const char * diag)
 	return execkey(&kt, f, n);
 }}
 #else
-{	Cc cc;
-
-	if (fnc == NULL)
-		fnc = fncmatch(tkn);					/* match the token to see if it exists */
-
 	if (fnc != NULL)
 	{ return in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
 																		 : (*fnc)(f, n);			/* call the function */
@@ -445,14 +440,14 @@ static Cc finddo(int f, int n, Command fnc, char * tkn, const char * diag)
 	else													/* find the pointer to that buffer */
 	{ BUFFER *bp = bfind(tkn, FALSE); 
 	  if (bp == NULL) 
-		{ mlwrite(TEXT16, *tkn ? tkn : diag);
+		{ mlwrite(TEXT16, diag);
 						/* "[No such Function]" */
 			return FALSE;
 		}
 		return dobuf(bp,n,tkn);
 	}
-}
 #endif
+}
 
 /*	docmd:	take a passed string as a command line and translate
 		it to be executed as a command. This function will be
@@ -468,7 +463,7 @@ static
 int Pascal docmd(char * cline)
 			/* command line to execute */
 {	  	  	  	  		     /* if we are scanning and not executing..go back here */
-	char *s_execstr = g_execstr; 		/* original exec string */
+//char *s_execstr = g_execstr; 		/* original exec string */
 
 	g_execstr = cline;	      						/* and set this one as current */
 
@@ -496,30 +491,12 @@ int Pascal docmd(char * cline)
 
 	if (cc > FALSE)
 	{	
-#if 1
-		cc = finddo(f,n,NULL,tkn, cline);
-#else
-		if (fnc != NULL)
-		{ 
-			cc = in_range((int)fnc, 1, 40) ? execporb((int)fnc, n)
-																		 : (*fnc)(f, n);			/* call the function */
-		}
-		else													/* find the pointer to that buffer */
-		{ BUFFER *bp = bfind(tkn, FALSE); 
-		  if (bp == NULL) 
-			{ mlwrite(TEXT16, "???");
-							/* "[No such Function]" */
-				cc = FALSE;
-			}
-			else 												/* execute the buffer */
-				cc = dobuf(bp,n, tkn);
-		}
-#endif
+		cc = finddo(f,n,FALSE,tkn, cline);
 		pd_cmdstatus = cc;						/* save the status */
 //	g_lastfnc = fnc;
 	}
 	--g_macargs;										/* restore g_macargs flag */
-	g_execstr = s_execstr;
+	g_execstr = NULL; // s_execstr;
 	return cc;
 #undef tkn
 }}}}
@@ -530,42 +507,11 @@ int Pascal docmd(char * cline)
 int Pascal namedcmd(int f, int n)
 	  /* command arguments [passed through to command executed] */
 {
-	int (Pascal *kfunc)(int, int);/* ptr to the function to execute */
 	int scle = g_macargs;
-	int cc;
+	if (scle)										// corresponds to execute-named-command apropo
+		return FALSE;
 
-	if (! scle)
-																	/* prompt the user to type a named command */
-	  kfunc = getname(0);						/* and get the function name to execute */
-	else
-	{	char ebuffer[40];
-																						/* grab token and advance past */
-	  (void)token(ebuffer, sizeof(ebuffer));
-							     /* evaluate it */
-	{ const char * fnm = getval(ebuffer, ebuffer);
-	  if (fnm == g_logm[2])
-	    return FALSE;
-																								/* and look it up */
-	  kfunc = NULL;
-	}}
-
-#if 1
-	cc = finddo(f,n,kfunc,"", "?");
-#else
-	if (kfunc != NULL)
-	{ // g_macargs = FALSE;
-																												/* call the function */
-		cc = in_range((int)kfunc, 1, 40) ? execporb((int)kfunc, n)
-																		 : (*kfunc)(f, n);
-	  // g_macargs = scle;
-	}
-	else
-	{ mlwrite(TEXT16, "???");
-					/* "[No such function]" */
-	  cc = FALSE;
-	}
-#endif
-	return cc;
+	return finddo(f,n,TRUE,"", "?");
 }
 
 #if FLUFF || DEBUGM
@@ -674,14 +620,6 @@ char *Pascal token(char * tok, int size)
 }
 
 
-int Pascal macarg(char * tok) /* get a macro line argument */
-				/* buffer to place argument */
-{ ++g_macargs;
-{	int res = nextarg(null, tok, NSTRING);
-  --g_macargs;
-	return res;      
-}}
-
 /*	nextarg:	get the next argument	*/
 
 int Pascal nextarg(const char * prompt, char * buffer, int size)
@@ -699,6 +637,15 @@ int Pascal nextarg(const char * prompt, char * buffer, int size)
 	return getval(buffer, buffer) != getvalnull;/* evaluate it ** no protection!*/
 }
 
+
+
+int Pascal macarg(char * tok) /* get a macro line argument */
+				/* buffer to place argument */
+{ ++g_macargs;
+{	int res = nextarg(null, tok, NSTRING);
+  --g_macargs;
+	return res;      
+}}
 
 
 static int USE_FAST_CALL common_return(BUFFER * bp)

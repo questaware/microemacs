@@ -370,7 +370,7 @@ int main(int argc, char * argv[])
 
 	(void)dcline(argc, argv);
 	do
-	{	g_lastflag = 0; 								/* Fake last flags.*/
+	{	// g_lastflag = 0; 								/* Fake last flags.*/
 	{	int ct = pd_focus_count <= 0 ? -1 : reload_buffers();
 
 																	/* execute the "command" macro, normally null*/
@@ -736,7 +736,7 @@ int Pascal cex(int f, int n)	/* set ^X prefixing pending */
 
 int Pascal uniarg(int f, int n) /* set META prefixing pending */
 
-{ char buff[8+2];
+{ char buff[40];
 
 	if (g_macargs > 0)
 	{ Cc cc = mlreply("", &buff[0], 8);

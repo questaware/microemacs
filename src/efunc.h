@@ -231,6 +231,7 @@ const NBIND names[] =
 #if	S_BSD
 	{"suspend-emacs",				bktoshell},
 #endif
+	{"to-kill",							to_kill},
 #if FLUFF
 	{"transpose-characters",twiddle},
 #endif

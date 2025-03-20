@@ -1061,13 +1061,11 @@ int Pascal writeout(const char * fn)
 		resetkey(&bp->b_key);
     						   /* Perform Safe Save..... */
               		 /* duplicate original file name, and find where to trunc it */
-//sp = makename(tname+NSTRING, fn);
 #if S_MSDOS == 0
 	for (nline = 4; --nline >= 0; )/* mk unique name using random numbers */
 #endif
-	{	strpcpy(tname, fn, NSTRING-30);		/* overwrite the makename */
-		if (caution > 0)
-			concat(tname, "tqfn", int_asc(ernd()), null);
+	{	char * s = caution <= 0 ? strpcpy(tname, fn, NSTRING-30)
+														: mkTempCommName('o', tname);
 		op = fopen(tname, S_WIN32 ? "wb" : caution > 0 ? "wb" : "wbx"); // why does wb not work?
 		if (op != NULL)
 			goto good;

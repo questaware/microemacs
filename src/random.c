@@ -1495,7 +1495,8 @@ int Pascal fmatch(ch)
 
 #if OPT_CALCULATOR
 
-double evalexpr(char * s, int * adv_ref)
+static 
+long double evalexpr(char * s, int * adv_ref)
 
 { *adv_ref = -1;
 { char ch = *s;
@@ -1514,7 +1515,7 @@ double evalexpr(char * s, int * adv_ref)
 	  if (ss == NULL)
 	  	return 0.0;
 	{ int that_adv;
-	  double res = evalexpr(strpcpy(buf,ss,119), &that_adv);
+	  long double res = evalexpr(strpcpy(buf,ss,119), &that_adv);
 	 	if (that_adv > 0)
 	  	*adv_ref = v_adv+1;
 	 	return res;
@@ -1542,7 +1543,7 @@ double evalexpr(char * s, int * adv_ref)
   if (ch == 0)
 		return 0.0;
 			
-{	double res = evalexpr(s+1, &tot_adv);
+{	long double res = evalexpr(s+1, &tot_adv);
 //if (tot_adv < 0)
 //	return 0.0;
 
@@ -1556,7 +1557,7 @@ double evalexpr(char * s, int * adv_ref)
 		}
 
 	{	int adv2;
-	  double res2 = evalexpr(s+tot_adv+1, &adv2);
+	  long double res2 = evalexpr(s+tot_adv+1, &adv2);
 		if (adv2 < 0)
 			return 0.0;
 
@@ -1652,7 +1653,7 @@ int Pascal calculator(int f, int n)
 			buf[0] = '(';
 							
 		{	int adj;
-			double res = evalexpr(buf, &adj);
+			MYFLOAT res = evalexpr(buf, &adj);
 			const char * all = adj <= 0 ? "Error" : float_asc(res);
 
 			if (ixeq > 0)
@@ -1667,14 +1668,9 @@ int Pascal calculator(int f, int n)
 			else
 			{	if (!f)
 					mbwrite(all);
-				kdelete(0, 0);
-			{	int rc = kinsstr(all, strlen(all));
-		#if S_MSDOS
-				ClipSet(0);
-		#endif
-		
-				return rc;
-			}}
+			
+			  return kinsstr(all, -1, 0);
+			}
 		}}
 
 		if (!forwline(1,1))

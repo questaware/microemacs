@@ -1153,8 +1153,7 @@ findTag	./src/tag.cpp
 findTagExec	./src/tag.cpp
 findTagInFile	./src/tag.cpp
 findTagSearch	./src/tag.cpp
-find_nch	./src/search.c
-find_nch	./src/sinc.cpp
+find_nch	./src/basic.c
 findvar	./src/eval.c
 fisearch	./src/isearch.c
 fixnull	./src/eval.c

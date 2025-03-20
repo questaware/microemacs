@@ -17,6 +17,28 @@
 #include <windows.h>
 #endif
 
+static
+char *Pascal xlat(char * srctgt, char * lookup, char * trans);
+
+#if USE_FLOAT
+#define FA1 farg1
+#define FA2 farg2
+
+#define X_ASC(x) float_asc(x)
+
+#if _MSC_VER < 1600
+#define ATOLDBL(t,s) t = atof(s)
+#else
+#define ATOLDBL(t,s) t = strtold(s, NULL)
+#endif
+
+#else
+#define FA1 iarg1
+#define FA2 iarg2
+
+#define X_ASC(x) int_asc(x)
+#endif
+
 // extern char *getenv();
 #define NILNAMIC	-1
 #define MONAMIC 	0
@@ -50,42 +72,41 @@ static const UFUNC funcs[] = {
 	DYNAMIC*256+RRET, "cat", 	/* concatenate string */
 	MONAMIC*256+RRET, "chr", 	/* integer to char conversion */
 	DYNAMIC*256+RRET, "dir",	/* replace tail of filename with filename */
-	NILNAMIC*256+RRET, "dit",	/* the character in the line above */
+	NILNAMIC*256+RRET,"dit",	/* the character in the line above */
 	DYNAMIC*256+RINT, "div", 	/* division */
 	MONAMIC*256+RRET, "env", 	/* retrieve a system environment var */
 	DYNAMIC*256+RSTR, "equ", 	/* logical equality check */
 	MONAMIC*256+RSTR, "exi", 	/* check if a file exists */
 	MONAMIC*256+RRET, "fin", 	/* look for a file on the path... */
 	DYNAMIC*256+RSTR, "gre", 	/* logical greater than */
-	NILNAMIC*256+RRET, "gtc",		/* get 1 emacs command */
-	NILNAMIC*256+RRET, "gtk",		/* get 1 charater */
+	NILNAMIC*256+RRET,"gtc",	/* get 1 emacs command */
+	NILNAMIC*256+RRET,"gtk",	/* get 1 charater */
 	MONAMIC*256+RRET, "ind", 	/* evaluate indirect value */
-	DYNAMIC*256+RRET, "lef", 	/* left string(string, len) */
+	DYNAMIC*256+RRET, "lef", 	/* left len chars */
 	MONAMIC*256+RINT, "len", 	/* string length */
 	DYNAMIC*256+RSTR, "les", 	/* logical less than */
 	MONAMIC*256+RRET, "low", 	/* lower case string */
-	TRINAMIC*256+RRET, "mid",		/* mid string(string, pos, len) */
+	TRINAMIC*256+RRET,"mid",	/* mid string(string, pos, len) */
 	DYNAMIC*256+RINT, "mod", 	/* mod */
 	MONAMIC*256+RINT, "neg", 	/* negate */
 	MONAMIC*256+RSTR, "not", 	/* logical not */
 	DYNAMIC*256+RSTR, "or",		/* logical or */
-	DYNAMIC*256+RRET, "rig", 	/* right string(string, pos) */
-	MONAMIC*256+RINT, "rnd", 	/* get a random number */
+	DYNAMIC*256+RRET, "rig", 	/* chars from pos */
 	DYNAMIC*256+RSTR, "seq", 	/* string logical equality check */
 	DYNAMIC*256+RSTR, "sgr", 	/* string logical greater than */
 	DYNAMIC*256+RINT, "sin", 	/* find the index of one string in another */
 	DYNAMIC*256+RSTR, "sle", 	/* string logical less than */
 #if DIACRIT
-	DYNAMIC*256+RRET, "slo",		/* set lower to upper char translation */
+	DYNAMIC*256+RRET, "slo",  /* set lower to upper char translation */
 #endif
 	DYNAMIC*256+RINT, "sub", 	/* subtraction */
 #if DIACRIT
 	DYNAMIC*256+RRET, "sup",		/* set upper to lower char translation */
 #endif
 	DYNAMIC*256+RINT, "tim", 	/* multiplication */
-	MONAMIC*256+RRET, "tri",		/* trim whitespace off the end of a string */
+	MONAMIC*256+RRET, "tri",	/* trim whitespace off the end of a string */
 	MONAMIC*256+RRET, "upp", 	/* uppercase string */
-	TRINAMIC*256+RRET, "xla",		/* XLATE character string translation */
+	TRINAMIC*256+RRET,"xla",		/* XLATE character string translation */
 };
 
 #define NFUNCS	sizeof(funcs) / sizeof(UFUNC)
@@ -123,25 +144,24 @@ static const UFUNC funcs[] = {
 #define UFNOT			29
 #define UFOR			30
 #define UFRIGHT 	31
-#define UFRND			32
-#define UFSEQUAL	33
-#define UFSGREAT	34
-#define UFSINDEX	35
-#define UFSLESS 	36
+#define UFSEQUAL	32
+#define UFSGREAT	33
+#define UFSINDEX	34
+#define UFSLESS 	35
 #if DIACRIT
-#define	UFSLOWER	37
-#define UFSUB		  38
-#define	UFSUPPER	39
-#define UFTIMES 	40
-#define	UFTRIM		41
-#define UFUPPER 	42
-#define UFXLATE 	43
-#else
+#define	UFSLOWER	36
 #define UFSUB		  37
-#define UFTIMES 	38
-#define	UFTRIM		39
-#define UFUPPER 	40
-#define UFXLATE 	41
+#define	UFSUPPER	38
+#define UFTIMES 	39
+#define	UFTRIM		40
+#define UFUPPER 	41
+#define UFXLATE 	42
+#else
+#define UFSUB		  36
+#define UFTIMES 	37
+#define	UFTRIM		38
+#define UFUPPER 	39
+#define UFXLATE 	40
 #endif
 
 /*	list of recognized environment variables	*/
@@ -316,6 +336,22 @@ UNDEF, /* EVWRITEHK */
 
 //char * g_file_prof = NULL;
 
+
+#ifdef _DEBUG
+char * dbg_val(const char * banner, const char * val)
+
+{ const char * dbg = gtusr("dbg");
+	if (dbg && dbg[0] > '0')
+	{ char buf[60];
+		strcat(strcpy(buf, banner), val);
+		mbwrite(buf);
+	}
+	return dbg;
+}
+#else
+#define dbg_val(a,b) NULL
+#endif
+
 void Pascal varinit()	/* initialize the user variable list */
 
 {	int ix;
@@ -343,15 +379,13 @@ Pascal varclean()	/* initialize the user variable list */
       free(uv[i].u_value);
 }
 
-#endif
-
-
 static int USE_FAST_CALL absv(int x) /* take the absolute value of an integer */
 	
 {
   return x < 0 ? -x : x;
 }
 
+#endif
 
 static 
 const char * USE_FAST_CALL ltos(int val)	/* numeric logical to string logical */
@@ -381,7 +415,6 @@ char *Pascal mkul(int wh, char * str)	/* make a string lower or upper case */
 	}
 	return str;
 }
-
 
 
 static short Pascal USE_FAST_CALL plinecpy(void)
@@ -449,24 +482,24 @@ int USE_FAST_CALL stol(const char * val)					/* convert a string to a numeric lo
 
 #define INTWIDTH (sizeof(int) * 3)
 
-static char g_result[90];
+static char g_result[INTWIDTH+40];
 
 				/* output integer as radix r */
 char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix, char fill)
 
 {	static const char hexdigits[] = "0123456789ABCDEF";
 
-	memset(&g_result, fill, INTWIDTH);
-	g_result[INTWIDTH] = 0;
-//g_result[INTWIDTH+1] = 0;	
+	memset(g_result+1, fill, INTWIDTH);
+	g_result[INTWIDTH+2] = 0;
+//g_result[INTWIDTH+3] = 0;
 
-{	char *sp = &g_result[INTWIDTH+1];
-	int v = i;		/* sign of resulting number */
+{	char *sp = &g_result[INTWIDTH+2];		/* 13 places from g_result[1] */
+	int v = i;
 
 	if (v < 0)
 	  v = -v;
 
-	do 
+	do
 	{ *(--sp) = hexdigits[v % radix];	/* and install the new digit */
 	  v = v / radix;
 	} while (v);
@@ -485,13 +518,22 @@ char *Pascal USE_FAST_CALL int_asc(int i)
 }
 
 
-char * float_asc(double x)
+char * float_asc(MYFLOAT x)
 
-{ int sign = 1;
+{ char b_shift[6];
+	char b_mid[41];
+	int sign = 1;
 	if (x < 0.0)
 	{	x = -x;
 		sign -= 2;
 	}
+
+#if _DEBUG
+  if (dbg_val("SINIT ", int_asc((int)x)))
+  {	sprintf(b_mid, "FLOAT_ASC %10.10lf", x);
+  	mbwrite(b_mid);
+  }
+#endif
 
 { int shift = 0;
   while (x > 2000000000)
@@ -499,7 +541,7 @@ char * float_asc(double x)
     x /= 10;
   }
 
-	if (x > 0.0 && x < 0.00001)
+	if (x >= 0.00000001 && x < 0.00001)
 	{		//	shift -= 2;
 		while (x < 1.0)
 		{
@@ -507,20 +549,64 @@ char * float_asc(double x)
 			x *= 10;
 		}
 	}
-  
+
+	b_mid[0] = 0;
+	b_shift[0] = !!shift * 'e';
+{	char * shft = int_asc(shift);
+	strcpy(b_shift+1, shft);
+	
 {	int val = (int)x;
   x -= val;
-{ char * res = int_asc(val*sign);
-  strcpy(g_result+20, res);
-{ int after = (int)(x * 10000000);
+{ char * mid = int_asc(val*sign);
+  strcpy(b_mid+1, mid);
+{	int after = (int)(x * 1000000001.1F);
   char * aft = int_radix_asc(after, 10, '0');
-  strcpy(g_result+40, g_result+6);
-{	char * exp = shift == 0 ? NULL : "e";
-	char * shft = int_asc(shift);
+	int nines = 0;
+	int dix = 0;
+	g_result[4] = '.';
 
-//g_result[19] = '-';
-  return concat(g_result+60, g_result+20, ".", g_result+40, exp, shft, NULL);
-}}}}}}
+{	int ix = strlen(strcat(b_mid+1, g_result+4));
+//char last = b_mid[ix+1-1];
+#if 1
+	while (--ix >= 0)
+	{	if (b_mid[ix+1] == '.')
+	  {
+		  dix = ix+1;
+			if (b_mid[ix+2] == 0) 
+				b_mid[ix+1] = 0;
+			continue;
+		}
+		if (b_mid[ix+1] == '0')
+		{	if (nines + dix > 0)
+				break;
+			b_mid[ix+1] = 0;
+		}
+		else 
+		{	if (b_mid[ix+1] != '9')
+				break;
+			++nines;
+		}
+	}
+
+	if (nines > 5)			// five nines
+	{	if (ix < 0)
+			b_mid[0] = '1';
+
+		b_mid[ix+1] += 1;
+		
+		if      (dix > 0)
+		{ strcpy(b_mid+ix+1+1, "0000000000000");
+		  ix = dix - 2;
+		}	
+		if (ix >= 0)
+			b_mid[ix+1+1] = 0;
+	}
+}
+#endif
+{ char * res = concat(g_result, b_mid+!b_mid[0], b_shift, NULL);
+  dbg_val("FA ", res);
+	return res;
+}}}}}}}
 
 
 static 
@@ -566,18 +652,22 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 { BUFFER * bp = curbp;
 	int hookix = 0;
 
+	signed char tk;
+	int iarg1;
 	int vnum = binary_const(typ == TOKENV, fname);
-
 	if (vnum < 0)
 		return g_logm[2];
 
 	if (typ == TOKFUN)
-	{	int iarg1;
-		int iarg2;
+	{	int iarg2 = -1;
+#if USE_FLOAT
+		MYFLOAT farg1, farg2;
+#endif
 		int sl1;
 		char * arg2 = NULL;
 		char * arg1 = push_arg(0,"");					/* to initialise area */
 		int type_kind = funcs[vnum].f_type_kind;
+		dbg_val("TK ", int_asc(type_kind));
 
 		if (type_kind >= MONAMIC)	/* retrieve the first argument */
 		{ 
@@ -592,14 +682,21 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		      return null;
 
 	      iarg2 = atoi(arg2);
+#if USE_FLOAT	      
+	      ATOLDBL(farg2, arg2);
+#endif
 		  }
 		  iarg1 = atoi(arg1);
+#if USE_FLOAT	      
+		  ATOLDBL(farg1, arg1);
+#endif
 		}
 
 //	if (vnum < 0)
 //		return NULL;
+		tk = type_kind;
 																				/* and now evaluate it! */
-		if      (type_kind & 0x80) // < RINT
+		if      (tk < RINT)
 		 switch (vnum)
 		 {case UFDIT:		*(short*)arg1 = plinecpy();
 		 								return arg1;
@@ -651,26 +748,39 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 										return ""
 #endif
 		 }
-		else if ((type_kind & 0xff) == RINT)
+		else if (tk == RINT)
 		{switch (vnum)
-		 {case UFADD:	  	iarg1 += iarg2;
-			when UFSUB:	  	iarg1 -= iarg2;
-			when UFTIMES: 	iarg1 *= iarg2;
-			when UFDIV:	  	iarg1 /= iarg2;
+		 {case UFADD:	  	dbg_val("+A1 ", arg1);
+											dbg_val("+A2 ", arg2);
+		 									return X_ASC(FA1 + FA2);
+			when UFSUB:	  	
+											dbg_val("-A1 ", arg1);
+										{	char * t = dbg_val("-A2 ", arg2);
+#if _DEBUG
+											MYFLOAT arg = FA1 - FA2;
+											if (t)
+											{	char buff[200];
+											  sprintf(buff, "S_A %10.10lf  %10.10lf  %10.10lf", arg, FA1, FA2);
+										  	mbwrite(buff);
+										  }
+#endif
+											return X_ASC(FA1 - FA2);
+										}
+			when UFTIMES: 	return X_ASC(FA1 * FA2);
+			when UFDIV:	  	return X_ASC(FA1 / FA2);
+			when UFNEG:	  	return X_ASC(-FA1);
 			when UFMOD:	  	iarg1 = iarg1 % iarg2;
-			when UFNEG:	  	iarg1 = -iarg1;
 			
-			when UFASCII:		iarg1 = (int)arg1[0];
-			when UFGTKEY: 	  
-		  when UFABS:			iarg1 = absv(iarg1);
-			when UFRND:   	iarg1 = (ernd() % absv(iarg1)) + 1;
-			when UFSINDEX:	iarg1 = sindex(arg1, arg2);
+		  when UFABS:			if (arg1 < 0)
+		  									iarg1 = -iarg1;
 			when UFBAND:		iarg1 &= iarg2;
 			when UFBOR:	  	iarg1 |= iarg2;
-			when UFBNOT:		iarg2 = -1;
+			when UFBNOT:
 			case UFBXOR:		iarg1 ^= iarg2;
+			when UFASCII:		iarg1 = (int)arg1[0];
+			when UFSINDEX:	iarg1 = sindex(arg1, arg2);
 			when UFLENGTH:	iarg1  = sl1;
-			otherwise		  	return "";
+//		otherwise		  	return "";
 		 }
 		 return int_asc(iarg1);
 		}
@@ -724,27 +834,27 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		}
 
 #define result (&deltaf[NSTRING / 2])   /* leave beginning for extra safety */
-	{	int res = predefvars[vnum].i;
+	  iarg1 = predefvars[vnum].i;
 
 		switch (vnum)
-		{ case EVPAGELEN:  res = term.t_nrowm1 + 1;
-		  when EVPAGEWIDTH:res = term.t_ncol;
-		  when EVCURCOL:   res = getccol();
-		  when EVCURLINE:	 res = setcline();
-		  when EVHARDTAB:  res = bp->b_tabsize;
-	//	when EVUSESOFTTAB:res = bp->b_mode & BSOFTTAB ? 1 : 0;
-		  when EVCBFLAGS:  res = bp->b_flag;
-		  when EVCBLANG:	 res = bp->b_langprops;;
+		{ case EVPAGELEN:  iarg1 = term.t_nrowm1 + 1;
+		  when EVPAGEWIDTH:iarg1 = term.t_ncol;
+		  when EVCURCOL:   iarg1 = getccol();
+		  when EVCURLINE:	 iarg1 = setcline();
+		  when EVHARDTAB:  iarg1 = bp->b_tabsize;
+	//	when EVUSESOFTTAB:iarg1 = bp->b_mode & BSOFTTAB ? 1 : 0;
+		  when EVCBFLAGS:  iarg1 = bp->b_flag;
+		  when EVCBLANG:	 iarg1 = bp->b_langprops;;
 		  when EVCBUFNAME: return bp->b_bname;
 		  when EVCFNAME:   return bp->b_fname;
-		  when EVCMODE:    res = res >> NUMFLAGS;
+		  when EVCMODE:    iarg1 = iarg1 >> NUMFLAGS;
 	//  when EVSRES:	   return sres;
 	//  when EVPALETTE:  return palstr;
 	//  when EVFILEPROF: return g_file_prof;
-		  when EVCURCHAR:  res = llength(curwp->w_dotp) == curwp->w_doto 
+		  when EVCURCHAR:  iarg1 = llength(curwp->w_dotp) == curwp->w_doto 
 	                    								? '\n' : lgetc(curwp->w_dotp, curwp->w_doto);
-		  when EVWLINE:    res = curwp->w_ntrows;
-		  when EVCWLINE:   res = getwpos();
+		  when EVWLINE:    iarg1 = curwp->w_ntrows;
+		  when EVCWLINE:   iarg1 = getwpos();
 		  when EVSEARCH:   return pat;
 	//  when EVHIGHLIGHT:return highlight;
 		  when EVREPLACE:  return rpat;
@@ -754,7 +864,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		  
 		  when EVLINE:	   return getctext(&result[0]);
 		  when EVLASTMESG: return strpcpy(result,lastmesg,NPAT);
-	//  when EVFCOL:	   res = pd_fcol;
+	//  when EVFCOL:	   iarg1 = pd_fcol;
 
 		  when EVBUFHOOK:
 		  case EVEXBHOOK:  --hookix;
@@ -771,27 +881,28 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 #if S_WIN32
 		  when EVWINTITLE: return null;	// getconsoletitle();
 #endif
-			when EVWORK:		 res = lastbuffer(0,0) & 0xff;
+			when EVWORK:		 iarg1 = lastbuffer(0,0) & 0xff;
 		  when EVPENDING:
 #if	GOTTYPAH
-										   res = typahead();
+										   iarg1 = typahead();
 #endif
 		  case EVDEBUG:   
 		  case EVSTATUS:  
 		  case EVDISCMD:  
 		  case EVDISINP:  
 		  case EVSSAVE:   
-		  case EVMSFLAG:   return ltos(res);
+		  case EVMSFLAG:   return ltos(iarg1);
 
-		  default:	       loglog2("Var %d = %x", vnum, res);
+		  default:	       loglog2("Var %d = %x", vnum, iarg1);
 		}
-		return int_asc(res);
+		return int_asc(iarg1);
 #undef result
 
 	ret_str:
 		return predefvars[vnum].p;
-		}
 	}
+
+	return int_asc(iarg1);
 }
 
 
@@ -922,42 +1033,39 @@ static
 static
 int Pascal svar(int var, const char * value)	/* set a variable */
 
-{	Cc cc = TRUE;
+{	BUFFER * bp = curbp;
+	Cc cc = TRUE;
   int vnum = var & 0x7ff;
-  char ** varref;
+  char ** varref = &predefvars[vnum].p;;
 
   if (var - vnum == (TKVAR << 11))
 	{ varref = &g_uv[vnum].u_value;
   	goto remalloc;
   }
 
-	if (value == null)
-		return TRUE;
+	if (in_range(vnum, EVHLIGHT1, EVHLIGHT9))
+		goto remalloc;
 
 { int val = atoi(value);
   int hookix = 0;		  /* set an environment variable */
-
-	varref = &predefvars[vnum].p;
-	if (in_range(vnum, EVHLIGHT1, EVHLIGHT9))
-		goto remalloc;
 
   switch (vnum) 
   {
 #if S_WIN32
 //  when EVWINTITLE: setconsoletitle( value );
 #endif
-//	when EVUSESOFTTAB:curbp->b_mode &= ~BSOFTTAB;
+//	when EVUSESOFTTAB:bp->b_mode &= ~BSOFTTAB;
 //									 if (val)
-//										 curbp->b_mode |= BSOFTTAB;
-	  when EVPAGELEN:	 cc = newdims(0, val);
-	  when EVPAGEWIDTH:cc = newdims(val, 0);
-	  when EVCURCOL:	 cc = setccol(val);
+//										 bp->b_mode |= BSOFTTAB;
+	  when EVPAGELEN:	 newdims(0, val);
+	  when EVPAGEWIDTH:newdims(val, 0);
+	  when EVCURCOL:	 (void)setccol(val);
 	  when EVCURLINE:	 cc = gotoline(TRUE, val);
 	  when EVCBFLAGS:	 lchange(WFMODE);
                    /*if (val & BFCHG)
                        mbwrite("EVAL");*/
 	  case EVCMODE:
-	      						 hookix = curbp->b_flag;
+	      						 hookix = bp->b_flag;
 	       						 if (vnum == EVCBFLAGS)
 	   	  						   hookix = (hookix & ~(BFCHG|BFINVS))
 										          | (val & (BFCHG|BFINVS));
@@ -966,7 +1074,7 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 			  						   hookix |= val << NUMFLAGS;
 			  						   curwp->w_flag |= WFMODE;
 		 	  						 }
-			  						 curbp->b_flag = hookix;
+			  						 bp->b_flag = hookix;
 //	when EVSRES:	   cc = TTrez(value);
 
 	  when EVCURCHAR:	 ldelchrs(1, FALSE, FALSE);		/* delete 1 char */
@@ -995,7 +1103,7 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 	                   pd_fcol = val;
 	                   curwp->w_fcol = val;
 	                   if (0)
-	  when EVCFNAME:	 	 repl_bfname(curbp, value);
+	  when EVCFNAME:	 	 repl_bfname(bp, value);
 			               curwp->w_flag |= WFHARD | WFMODE;
 	  when EVBUFHOOK:
 	  case EVEXBHOOK: ++hookix;
@@ -1019,22 +1127,21 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 										goto storeint;
 
 		when EVHARDTAB:	if (val != 0)
-                 	    curbp->b_tabsize = val;
+                 	    bp->b_tabsize = val;
 
 	                  upwind(TRUE);
 //									goto storeint;
 										if (0)
     when EVHJUMP:   if (val > term.t_ncol - 1)
 				              val = term.t_ncol - 1;
-    default:	      goto storeint;
+    default:
+storeint:
+		predefvars[vnum].i = val;
+
+		return TRUE;
   }
 
   return cc;
-
-storeint:
-	predefvars[vnum].i = val;
-
-	return TRUE;
 
 remalloc:
 	return remallocstr(varref, value, 0) != null;
@@ -1083,7 +1190,7 @@ int Pascal set_var(char var[NVSIZE+1], const char * value)	/* set a variable */
 fvar:	vix = -1;
 	switch (var[0])
 	{ default:
-		case '$':			/* check for legal enviromnent var */
+														/* check for legal enviromnent var */
 	      vix = binary_const(1, &var[var[0] == '$'])|(TKENV << 11);
 
 	  when '%':		  /* check for existing legal user variable */
@@ -1109,6 +1216,9 @@ fvar:	vix = -1;
 					/* "%%No such variable as '%s'" */
 	  return FALSE;
 	}
+
+	if (value == NULL)
+		return FALSE;
 
 #if DEBUGM == 0
 	return svar(vix, value);	/* and set the appropriate value */
@@ -1136,27 +1246,26 @@ const char getvalnull[] = "";
 
 				/* the oob checks are faulty */
 					/* find the value of a token */
-const char *Pascal getval(char * tgt, char * tok)
+const char *Pascal getval(char * tgt, const char * src)
 														/* token: token to evaluate */
 {	int blen = NSTRING-1;
-	const char * src = (const char *)tok;
-	char * tokp1 = tok + 1;
-//int typ = gettyp(tok);
+//const char * src = (const char *)s;
+	char * srcp1 = src + 1;
 
-	switch (*tok)
+	switch (*src)
 	{ case TOKARG:															/* interactive argument */
-						if (tok[1] == TOKARG)
-						{	++tok;
+						if (src[1] == TOKARG)
+						{	++src;
 							blen = 0;
 						}
-						getval(&tok[0], &tok[1]);
+						getval(&src[0], &src[1]);
 			      ++pd_discmd;							/* echo it always! */
-					{	Cc cc = getstring(&tgt[0], blen, tok);
+					{	Cc cc = getstring(&tgt[0], blen, src);
 						--pd_discmd;
 							return cc < 0 ? getvalnull : tgt;
 			    }
 	  case TOKBUF:															/* buffer contents fetch */
-					{ BUFFER * bp = bfind(getval(tgt, tokp1), FALSE);
+					{ BUFFER * bp = bfind(getval(tgt, srcp1), FALSE);
 						if (bp == NULL)
 						  return getvalnull;
 						  
@@ -1172,14 +1281,14 @@ const char *Pascal getval(char * tgt, char * tok)
 							blen = lused(lp->l_dcr);
 							              /* grab the line as an argument */
 		      }}
-	  when TOKVAR:  src = gtusr(tokp1);
+	  when TOKVAR:  src = gtusr(srcp1);
 									if (src == NULL)
 									  src = g_logm[2];	// "ERROR"
 
-	  when TOKFUN: tokp1[3] = 0;				    /* look the function up in the function table */
-								 (void)mkul(0, tokp1);		/* only first 3 chars significant */
+	  when TOKFUN: srcp1[3] = 0;				    /* look the function up in the function table */
+								 (void)mkul(0, srcp1);		/* only first 3 chars significant */
 	  	
-	  case TOKENV: src = gtenvfun(*tok, tokp1);
+	  case TOKENV: src = gtenvfun(*src, srcp1);
 //  when TOKLIT:
 //  case TOKCMD:                             // do nothing
 	  when TOKSTR: ++src;
@@ -1194,7 +1303,7 @@ const char *Pascal getval(char * tgt, char * tok)
 	return strpcpy(tgt, src == NULL ? "" : src, blen+1);
 }
 
-
+#if 0
 
 int Pascal ernd()	/* returns a random integer */
 
@@ -1202,43 +1311,13 @@ int Pascal ernd()	/* returns a random integer */
 	return pd_seed;
 }
 
-
-/*	Filter a string through a translation table	*/
-
-char *Pascal xlat(char * srctgt, char * lookup, char * trans)
-	/* char *srctgt;	* string to filter */
-	/* char *lookup;	* characters to translate */
-	/* char *trans;		* resulting translated characters */
-{
-	int six, tix = -1;
-
-	for (six = -1; ; )
-	{	char ch = srctgt[++six];
-	  srctgt[++tix] = ch;
-	  if (ch == 0)
-	  	break;
-	  	
-	{ int lix;
-	
-		for (lix = -1; lookup[++lix] != 0; )
-	    if (ch == lookup[lix])
-	    { if (trans[0] == 0)
-	    		--tix;
-	    	else
-		  		srctgt[tix] = trans[lix];
-	      break;
-	    }
-	}}
-
-	return srctgt;
-}
-
+#endif
 
 static
 void fmt_desv(char pfx, const char * v, const char * val)
 	
 {					/* and add it as a line to the buffer */
-#if NVSIZE > 12
+#if NVSIZE > 20
 error error
 #endif
   (void)mlwrite("%!%>%c%12s %s\n", pfx, v, val);
@@ -1252,6 +1331,7 @@ int Pascal mkdes()
   curbp->b_flag &= ~BFCHG;										/* don't flag this as a change */
   curwp->w_dotp = lforw(&curbp->b_baseline);     /* back to the beginning */
   curwp->w_doto = 0;
+  curwp->w_line_no = 1;
 //upmode();
 //mlerase();					/* clear the mode line */
 
@@ -1342,3 +1422,37 @@ int Pascal dispvar(int f, int n)	/* display a variable's value */
 }
 
 #endif
+
+/*	Filter a string through a translation table	*/
+static
+char *Pascal xlat(char * srctgt, char * lookup, char * trans)
+	/* char *srctgt;	* string to filter */
+	/* char *lookup;	* characters to translate */
+	/* char *trans;		* resulting translated characters */
+{
+	int six, tix = -1;
+
+	for (six = -1; ; )
+	{
+retry:
+	{	char lch;
+	  char ch = srctgt[++six];
+		int lix;
+	
+		for (lix = -1; (lch = lookup[++lix]) != 0; )
+			if (ch == lch)
+	  	{ if (trans[0] == 0)
+	   			goto retry;
+	   		
+		 		ch = trans[lix];
+		 		break;
+		 	}
+
+	  srctgt[++tix] = ch;
+	  if (ch == 0)
+	  	break;
+	}}
+
+	return srctgt;
+}
+

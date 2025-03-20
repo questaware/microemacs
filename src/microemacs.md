@@ -171,6 +171,13 @@
   *The Commands*
   (The commands may be listed by pressing M-A CR.)
   (All commands can be aborted by pressing ^G)
+	Commands can be invoked from the command line or in a script.
+	Use on the command line can be by for example ESC 7 ESC x backward-line
+  to go back 7 lines (which is the same as ESC 7 <up-arrow>).
+	Use in a script can be preceded by a number or a variable so for example
+  7 backward-line
+   or
+	%count backward-line
 
   *Strings in scripts*
   Arguments to commands are strings delimited by white space.
@@ -657,7 +664,6 @@ In Unix EMACS uses the command infocmp to read the keyboard codes.
   MONAMIC, RSTR, "not",   /* logical not */
   DYNAMIC, RSTR, "or",    /* logical or */
   DYNAMIC, RINT, "rig",   /* right string(string, pos) rightmost pos chars */
-  MONAMIC, RINT, "rnd",   /* get a random number */
   DYNAMIC, RSTR, "seq",   /* string logical equality check */
   DYNAMIC, RSTR, "sgr",   /* string logical greater than */
   DYNAMIC, RINT, "sin",   /* find the index of one string in another */

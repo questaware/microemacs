@@ -102,7 +102,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 {	int adj = 0;
 	LINE * lp = lpos->curline;
   int	off = lpos->curoff;
-	char c = '\n';
+	unsigned char c = '\n';
 
   if (dir >= 0)
 	{	if (dir == 0)
@@ -218,7 +218,7 @@ int Pascal gotoline(int f, int n)	/* move to a particular line.
   		return gotomark(n, n);
   }
   else
-  { char arg[20];
+  { char arg[30];
   	int cc = mlreply(TEXT7, arg, sizeof(arg)-1);
 									/* "Line to GOTO: " */
     if (cc <= FALSE)

@@ -12,6 +12,11 @@
 #else
 #define WinChar void
 #endif
+
+#define USE_FLOAT 1
+
+#define MYFLOAT long double
+
 											/* ALL global function declarations */
 extern int rubbish;
 
@@ -57,7 +62,8 @@ char *Pascal envval();
 int USE_FAST_CALL find_nch(int wh, int cix, const LINE * lp);
 time_t ffiletime(FILE * ffp);
 FILE* Pascal ffropen(const char * fn);
-char * float_asc(double x);
+_CRTIMP long double __cdecl atold(const char *);
+char * float_asc(MYFLOAT x);
 const char * Pascal flook(char, const char *);
 char * Pascal flookdown(char *, char *);
 char *Pascal flooknear();
@@ -67,7 +73,7 @@ const char *Pascal getfname(int);
 char *Pascal getkill(void);
 const char *Pascal getreg(char * t);
 extern const char getvalnull[];
-const char *Pascal getval(char *, char *);
+const char *Pascal getval(char *, const char *);
 
 char * gtfilename(int wh);
 const char *Pascal gtusr(char * vname);			/* look up a user var's value */
@@ -76,8 +82,9 @@ void  Pascal ibefore(LINE*, LINE*);
 void init_fncmatch(void);
 char *Pascal USE_FAST_CALL int_asc(int);
 char * Pascal USE_FAST_CALL int_radix_asc(int i, int r, char fill);
-int kinsstr(const char * s, int len);
+int kinsstr(const char * s, int len, int bno);
 int Pascal makename(char *, const char *);
+char * mkTempCommName(char suffix, /*out*/char *filename);
 char *Pascal mkkey(const char *);
 char *Pascal mkul(int, char *);
 char *Pascal namval();
@@ -306,11 +313,11 @@ int Pascal mvdnwind(int, int);
 int Pascal mvupwind(int, int);
 int Pascal namebuffer();
 int Pascal namedcmd(int, int);
+int Pascal nextarg(const char * prompt, char * buffer, int size);
 int Pascal replace_file(const char * s);
 int Pascal narrow(int, int);
 int Pascal ins_newline(int, int);
-int Pascal USE_FAST_CALL newdims(int, int);
-int Pascal nextarg(const char * prompt, char * buffer, int size);
+void Pascal USE_FAST_CALL newdims(int, int);
 int Pascal nextbuffer(int, int);
 int Pascal nextch(Lpos_t * lpos, int dir);
 int Pascal nextdown(int, int);
@@ -427,6 +434,7 @@ int Pascal getboard();
 int Pascal egaopen();
 int Pascal egaclose();
 int Pascal fnclabel();
+int Pascal to_kill(int, int);
 #if S_WIN32
 #define thread_id() (int)GetCurrentProcess()
 #else
@@ -496,14 +504,6 @@ WINDOW *Pascal wpopup();
 #endif
 
 char * Pascal remallocstr(char **, const char *, int);
-
-/*
-#if	S_MSDOS & (TURBO | MSC)
-int Pascal binary(char *, char *(Pascal *)(), int);
-#else
-int Pascal binary();
-#endif
-*/
 
 #if	DIACRIT
 int Pascal islower();

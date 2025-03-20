@@ -440,7 +440,7 @@ const char * stoi_msg[] = {TEXT68, TEXT69};
 int Pascal istring(int f, int n)	/* ask for and insert a string into the
 																	   current buffer at the current point */
 {	int overmode = (curbp->b_flag & MDOVER) >> 5;
-  char tstring[NPAT+1];	/* string to add */
+  char tstring[NPAT+10];	/* string to add */
 
 	int status = mlreply(stoi_msg[overmode], tstring, NPAT);
 											/* "String to insert<META>: " */
@@ -517,7 +517,7 @@ int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
 
 		{	int chunk = get_chunk(l_dcr, doto, n);
 	    n -= chunk + 1;
-			res &= kinsstr(&dotp->l_text[doto], chunk);
+			res &= kinsstr(&dotp->l_text[doto], chunk, kinsert_n);
 
 	    if (n < 0)
 	    	break;
@@ -530,6 +530,10 @@ int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
     
 		if (!res)
   		return res;
+#if S_WIN32
+	  if (kinsert_n <= 0)
+  	  ClipSet(0);
+#endif
   }
 
 	dotp = curwp->w_dotp;
@@ -594,10 +598,6 @@ int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
 		}
 	}
 
-#if S_WIN32
-  if (tokill && kinsert_n <= 0)
-    ClipSet(0);
-#endif
   lchange(WFEDIT|WFHARD);
 //++g_overmode;
 //--g_inhibit_scan;
@@ -765,18 +765,17 @@ int Pascal upperregion(int f, int n)
 //															wh != 0
 int to_kill_buff(int wh, int n)
 
-{ if (wh == -2)
-	{	kinsert_n = NOOKILL;
-	  kills[NOOKILL].size = 0;
-	}
-	else
-	{ kinsert_n = chk_k_range(n);
-	  if (kinsert_n < 0)
-	    return 1;
-	}
+{ Cc cc;
+	if (wh == -2)
+		n = NOOKILL;
 
 	if (wh < 0)
-	  (void)kdelete(wh, kinsert_n);
+		if ((cc = kdelete(wh, n)) < 0)
+			return cc;
+
+  kinsert_n = chk_k_range(n);
+	if (kinsert_n < 0)
+		return kinsert_n;  
 
 { int cc = doregion(wh, NULL);
   if (cc <= FALSE)
@@ -809,7 +808,7 @@ int Pascal USE_FAST_CALL chk_k_range(int n)
  * new kill context is being created. The kill buffer array is released.
  * No errors.
  */
-int Pascal kdelete(int f, int n)
+int Pascal kdelete(int not_used, int n)
 
 {				/* first, delete all the chunks */
   n = chk_k_range(n);
@@ -821,6 +820,8 @@ int Pascal kdelete(int f, int n)
   { ClipSet(-1);
   }
 #endif
+  kinsert_n = n;
+
   free(kills[n].mem);
 																			/* and reset all the kill buffer pointers */
   memset(&kills[n], 0, sizeof(kills[0]));
@@ -870,14 +871,39 @@ int Pascal USE_FAST_CALL kinsert(char ch)
 
 
 
-int kinsstr(const char * s, int len)
+int kinsstr(const char * s, int len, int bno)
 
-{ while (--len >= 0)
+{	if (len < 0)
+	{	len = strlen(s);
+		if (kdelete(bno, bno) <= 0)
+    	return FALSE;
+  }
+
+  while (--len >= 0)
     if (kinsert(*s++) == FALSE)
       return ABORT;
   
+#if S_WIN32
+  if (bno == 0)
+ 		ClipSet(0);
+#endif
+
   return TRUE;
 } 
+
+
+int to_kill(int not_used, int n)
+
+{ char val[133];
+	int cc = mlreply(TEXT53, val, 132);
+	if (cc < 0)
+  	return cc;
+
+	getval(val,val);
+
+{ int ix = chk_k_range(n);
+	return kinsstr(val, -1, ix);
+}}
 
 
 /* shift up all the kill buffers

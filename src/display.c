@@ -11,6 +11,7 @@
 #if 0
 #include	<io.h>
 #endif
+#define MEMMAP	S_MSDOS
 #define 	IN_DISPLAY_C
 #include	"estruct.h"
 #include	"edef.h"
@@ -26,8 +27,16 @@
 
 //extern int   g_cursor_on;
 
-#define MARGIN	8 		/* size of minimim margin and */
-#define SCRSIZ	64			/* scroll size for extended lines */
+#define MARGIN	8 		  /* size of minimim margin and */
+#define SCRSIZE	64			/* scroll size for extended lines */
+
+#if MEMMAP
+#define T_MARGIN 0
+#define T_SCRSIZE 0
+#else
+#define T_MARGIN term.t_margin
+#define T_SCRSIZE term.t_scrsize
+#endif
 
 /* Standard terminal interface dispatch table. Most of the fields point into
  * "termio" code.
@@ -41,7 +50,7 @@ TERM		term		= {
 #endif
 #if MEMMAP == 0
 	MARGIN,
-	SCRSIZ,
+	SCRSIZE,
 #endif
 };
 
@@ -67,8 +76,6 @@ typedef struct	VIDEO
 #else
 #define V_BLANK 0
 #endif
-
-#define MEMMAP	S_MSDOS
 
 static VIDEO	 **vscreen; 	/* Virtual screen. */
 #if MEMMAP == 0
@@ -828,24 +835,21 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
 #endif
 
 {	int lenm1 = wp->w_ntrows-1;
+	int ct = lenm1;
 	int stt = wp->w_toprow;
-	VIDEO * vp = vscreen[stt+n*lenm1];
+	int tgt = stt + n * lenm1;
 
-#if 0
-	memmove(&vscreen[stt+n], &vscreen[stt+(n^1)], lenm1 * sizeof(VIDEO*));
-#else
+	VIDEO * vp = vscreen[tgt];
+
 	int dec = n * 2 - 1;
-	int tgt = stt + n * lenm1 + dec;
 
-	while (1)
+	while (--ct >= 0)
 	{	tgt -= dec;
-		if ((unsigned)tgt > (unsigned)lenm1)
-			break;
-		vscreen[tgt] = vscreen[tgt - dec];
+		vscreen[tgt + dec] = vscreen[tgt];
 	} 
-#endif
+
 	vp->v_flag = VFCHG;
-	vscreen[tgt + dec] = vp;
+	vscreen[tgt] = vp;
 
 #if MEMMAP == 0
 	n = n * 2 - 1;
@@ -932,7 +936,7 @@ void Pascal updline()
 								 the cursor is. Called only in non Hscroll mode.
 							*/
 		{ 				/* calculate what column the real cursor will end up in */
-			g_lbound = col - ((rhs - 1) % term.t_scrsiz) - term.t_margin + 1;
+			g_lbound = col - ((rhs - 1) % T_SCRSIZE) - T_MARGIN + 1;
 			col -= g_lbound;
 
 											/* scan through the line copying to the virtual screen*/

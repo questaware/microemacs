@@ -54,7 +54,6 @@ void Pascal  openwind(WINDOW * wp)
 //wp->w_linep   = lforw(bp->b_baseline);
 //wp->w_dotp    = bp->b_dotp;
 //wp->w_doto    = bp->b_doto;
-//wp->w_line_no = 1;
   wp->w_flag    = WFMODE|WFHARD|WFFORCE;
 //memset(&wp->mrks, 0, sizeof(MARKS));
 }
@@ -65,7 +64,7 @@ WINDOW * USE_FAST_CALL leavewind(int dec, WINDOW * wp_)
 { WINDOW * wp = wp_ == NULL ? curwp : wp_;
   BUFFER * bp = wp->w_bufp;
 	if (bp != NULL)
-		*(WUFFER*)bp = *(WUFFER*)wp;
+	  *(WUFFER*)bp = *(WUFFER*)wp;
 
 	if (dec)
 		free((char *)wp);
@@ -93,8 +92,10 @@ void openwindbuf(char * bname)
 //  bp->b_flag |= BFACTIVE;
 		bp->b_luct = ++g_top_luct;
     
-    openwind(leavewind(0, NULL));
-  }
+  { WINDOW* wp = leavewind(0, NULL);
+  	curwp = wp->w_next;
+    openwind(curwp);
+  }}
   
 #if DO_UNDO
 	g_inhibit_undo = TRUE;
@@ -368,26 +369,26 @@ int Pascal splitwind(int f, int n)
 	curwp->w_flag |= WFMODE|WFHARD;
 	*wp = *curwp;
 
-{	int	ntrd = wp->w_ntrows - 1;
+{	int	ntra = wp->w_ntrows;
 				     /* make sure we have enough space */
-	if (ntrd <= 3)
-	{ mlwrite(TEXT205, ntrd+1);
+	if (ntra <= 4)
+	{ mlwrite(TEXT205, ntra);
 					/* "Cannot split a %d line window" */
 	  return FALSE;
 	}
 
-{	int	ntru = ntrd >> 1; 	/* Upper size */
-	int	ntrl = ntrd - ntru;	/* Lower size */
+{	int	ntru = ntra >> 1; 	/* Upper size */
+	int	ntrl = ntra - ntru - 1;	/* Lower size */
 
-	ntrd = getwpos() - 1 - ntru;
+	ntra = getwpos() - 1 - ntru;
 
-	if (1 ||(f == FALSE ? ntrd <= 0 : n > 0))
+	if (1 ||(f == FALSE ? ntra <= 0 : n > 0))
 	{ 					     									/* Old is upper window. */
 	  wp->w_toprow += ntru+1;
 	  wp->w_ntrows = ntrl;
 	  wp->w_next = curwp->w_next;
 	  curwp->w_next = wp;
-		ntrl = ntru;
+//	ntrl = ntru;
 	} 
 	else					      							/* Old is lower window */
 	{ WINDOW * wp1 = (WINDOW*)prevele(0,(BUFFER*)curwp);
@@ -398,12 +399,12 @@ int Pascal splitwind(int f, int n)
 
 	  wp->w_next = curwp;
 	  wp->w_ntrows = ntru;
-	  ntrd = ntru;
+	  ntra = ntru;
 	  curwp->w_toprow += ntru + 1;
 	}
-	curwp->w_ntrows = ntrl;
+	curwp->w_ntrows = ntru;
 {	LINE* lp = curwp->w_linep;
-	for  (; ntrd-- >= 0;)
+	for  (; ntra-- >= 0;)
 	  lp = lforw(lp);
 
 	wp->w_linep = lp;					/* if necessary.	*/
@@ -541,7 +542,7 @@ int Pascal nextdown(int f, int n)	/* scroll next window down (forward) a page*/
 const static char text209[] = TEXT209;
 #endif
 
-int Pascal USE_FAST_CALL newdims(int wid, int dpth)	/* resize screen re-writing the screen */
+void Pascal USE_FAST_CALL newdims(int wid, int dpth)	/* resize screen re-writing the screen */
 
 { // int inr = true;
                       					     /* make sure it's in range */
@@ -560,7 +561,7 @@ int Pascal USE_FAST_CALL newdims(int wid, int dpth)	/* resize screen re-writing 
 	vtinit(wid,dpth-1);
 
 	if (term.t_ncol == wid && term.t_nrowm1 == dpth - 1)
-		return true;
+		return;
 
 	term.t_nrowm1 = dpth-1;
 	term.t_ncol = wid;
@@ -591,5 +592,4 @@ int Pascal USE_FAST_CALL newdims(int wid, int dpth)	/* resize screen re-writing 
 					/* "Impossible screen size" */
 	}
 #endif
-	return true /*inr*/;
 }

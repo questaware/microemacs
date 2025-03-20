@@ -653,6 +653,7 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 
 int Pascal tcapbeep()
 
+
 { Beep( 500, 250 /*millisecs*/);
 //mbwrite("BEEP\n");
   return OK;
@@ -681,20 +682,18 @@ void Pascal scwrite(row, outstr, color)	/* write a line out */
  * 8 : Use line foreground
  * An attribute of 0 therefore means the attributes for the line/new foreground
  */
-    int wh = outstr[col] & 0xf000;
-    if (wh != 0)
-    { wh = wh >> 12;
-      if      (wh & 4)
-      {	attr = color & 0xf0 | (outstr[col] >> 8) & 0xf;
-      	if (wh & 8)
-					attr |= COMMON_LVB_UNDERSCORE;
-      }
-      else if (wh & 8)
-        attr = color;
-
-      if (wh & 1)						// Cannot do underline so bold (which is faint!)
-				attr |= 0x8;
+    int wh = (outstr[col] & 0xf000) >> 12;
+    if      (wh & 4)
+    {	attr = color & 0xf0 | (outstr[col] >> 8) & 0xf;
+     	if (wh & 8)
+				attr |= COMMON_LVB_UNDERSCORE;
     }
+    else if (wh & 8)
+      attr = color;
+
+    if (wh & 1)						// Cannot do underline so bold (which is faint!)
+		attr |= 0x8;
+ 
 		cuf[col] = attr;
 		buf[col] = (outstr[col] & 0xff);
 	}
@@ -1114,7 +1113,7 @@ int Pascal name_mode(const char * s)
 }}
 
 
-static char * mkTempCommName(char suffix, /*out*/char *filename)
+char * mkTempCommName(char suffix, /*out*/char *filename)
 {
 #ifdef _CONVDIR_CHAR
  #define DIRY_CHAR _CONVDIR_CHAR
@@ -1122,22 +1121,21 @@ static char * mkTempCommName(char suffix, /*out*/char *filename)
  #define DIRY_CHAR DIRSEPCHAR
 #endif
 	const char * td = gettmpfn();
-	
-{	char *ss = concat(filename,td,"/me"+(td[strlen(td)-1] == DIRY_CHAR),int_asc(thread_id()),NULL);
-	int tail = strlen(ss);
 	int iter; 
-	ss[tail] = suffix;
-	ss[tail+1] = 0;
 	
 	for (iter = 25; --iter >= 0; )
-	{
+	{	char s[2];
+		*(short*)&s = suffix;		// little endian
+
+	{	char *ss = concat(filename,td,"/me"+(td[strlen(td)-1] == DIRY_CHAR),int_asc(thread_id()),s,NULL);
+
 		if (name_mode(ss) <= 0)
 			break;
 		
-		ss[tail-2] = 'A' + 24 - iter;				// File should not exist anyway
-	}
+		suffix = 'A' + 24 - iter;				// File should not exist anyway
+	}}
 	return filename;
-}}
+}
 
 #ifdef _WIN32s
 error error
@@ -1821,15 +1819,9 @@ Cc OpenClip()
 {	HWND mwh = GetTopWindow(NULL);
 	if (mwh == NULL)
 		return -1;
-{ Cc cc = OpenClipboard(mwh);
-	if (cc == 0)
-		return 0;
-//{ DWORD ec = GetLastError();
-//	return ec == ERROR_ACCESS_DENIED ? 0 : -1;
-//}
-	
-	return 1;
-}}
+
+	return OpenClipboard(mwh);
+}
 
 
 static 

@@ -701,7 +701,7 @@ int Pascal macrotokey(int f, int n)
 #endif
 
 static 
-int Pascal append_keys(const char * name, Emacs_cmd * addr, const char * filt)
+void append_keys(const char * name, Emacs_cmd * addr, const char * filt)
 
 { char outseq[80];
   KEYTAB * ktp;
@@ -712,10 +712,10 @@ int Pascal append_keys(const char * name, Emacs_cmd * addr, const char * filt)
 	for (sp = name-1; *++sp != 0 && *strmatch(filt, sp) != 0; )
 	   ;
 	if (*sp == 0)
-		return 1;
+		return;
 #endif
 																			/* search down any keys bound to this */
-  for (c = 0; ++c < NOTKEY; )
+  for (c = 0; (short)++c > 0; )
   { ktp = getbind(c);
     if (ktp->k_ptr.fp == addr)
     {																		/* pad out some spaces */
@@ -727,7 +727,7 @@ int Pascal append_keys(const char * name, Emacs_cmd * addr, const char * filt)
   if (name[0] != 0)	   			/* if no key was bound, we need to dump it anyway */
   	mlwrite("%>%s\n", name);
 
-  return OK;
+  return;
 }
 
 	/* Describe bindings:
@@ -752,16 +752,14 @@ int Pascal apro(int f, int n)	/*Apropos (List functions that match a substring)*
 																    	 /* build a binding list(limited or full)*/
 int Pascal buildlist(int wh)
 											/* 0 => linstr, -1 => filter, 1 => dont filter */
-{ openwindbuf(TEXT21);
+{ char mstring[NSTRING];	/* string to match cmd names to */
+  mstring[0] = 0;
+	openwindbuf(TEXT21);
 
 	if (wh == 0)
-  { 
-  	(void)linstr(TEXT27);
-  }
-  else
- 	{ char mstring[NSTRING];	/* string to match cmd names to */
-	  mstring[0] = 0;
-    if (wh < 0)
+	  (void)linstr(TEXT27);
+	else
+  { if (wh < 0)
 		{ int cc =  mlreply(TEXT20, mstring, NSTRING - 1);
 /*			 "Apropos string: " */
 			if (cc < 0)
@@ -771,8 +769,7 @@ int Pascal buildlist(int wh)
   {	const NBIND *nptr;	/* pointer into the name binding table */
   	for (nptr = &names[0]-1; (++nptr)->n_func != NULL; )
 		{
-			if (append_keys(nptr->n_name, nptr->n_func, mstring) < 0)
-				break;
+			append_keys(nptr->n_name, nptr->n_func, mstring);
 		}
   }}
 
@@ -1055,7 +1052,7 @@ Map_t g_namemap = mk_const_map(T_DOMSTR, 0, names, 1);	//-1: last entry not want
 int (Pascal *Pascal USE_FAST_CALL fncmatch(const char * fname))(int, int)
 	/* char *fname;	** name to attempt to match */
 		
-{ int last_fnum = binary_const(-1, fname);
+{ int last_fnum = binary(-1, fname);
 
 	return last_fnum < 0 ? NULL : names[last_fnum].n_func;
 }
