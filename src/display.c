@@ -115,9 +115,9 @@ unsigned short USE_FAST_CALL refresh_colour(int row, int col)
   unsigned short attr = line_attr;
   int icol;
   for (icol = -1; ++icol <= col; )
-    if (scl[icol] & 0xf000)
-		{	int wh = (scl[icol] & 0xff00) >> 8;
-      if      (wh & 0x40)
+	{	int wh = (scl[icol] & 0xffff) >> 8;
+    if (wh & 0xf0)
+    { if      (wh & 0x40)
       { attr = line_attr & 0xf0 | wh & 0xf;
 #if S_WIN32 == 0
 											// Does not work in wincon. does not compile in vs2019
@@ -134,6 +134,7 @@ unsigned short USE_FAST_CALL refresh_colour(int row, int col)
 				attr |= COMMON_LVB_UNDERSCORE;
 #endif
     }
+  }
 
 	return attr;
 }  
@@ -393,12 +394,8 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 	while (--len >= 0)
 	{	int chrom = chrom_nxt;
-		if (vtc >= term.t_ncol)
-		{ // tgt[term.t_ncol] = (short)(chrom + '$');
-			break;
-		}
-		
 		chrom_nxt = CHR_0;
+		
 	{ int c = *++str;
 		if (c == 0)
 			;
@@ -536,6 +533,16 @@ eolcmt:
 nop:
 		if (++vtc > 0)
 			tgt[vtc] = c | chrom;
+
+		if (vtc >= term.t_ncol && len > 0)
+		{
+#if MEMMAP == 0
+		  tgt[vtc] = (short)(chrom + '$');
+#else
+			tgt[vtc] |= palcol(3) | CHR_NEW;
+#endif
+			break;
+		}
 	}}}
 
 { int ct = term.t_ncol - vtc;
@@ -1326,7 +1333,7 @@ int Pascal upwind(int garbage)
  * Set the "message line" flag TRUE.	
  * Don't write beyond the end of the current terminal width.
  */
-void Pascal mlout(char c)
+void Pascal mlout(UNSIGNED char c)
 
 { if (c == '\b')
 	{ if (ttcol <= 0)
@@ -1350,7 +1357,7 @@ void Pascal mlout(char c)
 		 * This assumes that the characters in the string all have width "1";
 		 * if this is not the case things will get screwed up a little.
 		 */ 
-void Pascal mlputs(int wid, const char * s)
+void Pascal mlputs(int wid, const UNSIGNED char * s)
 
 {	if (s != NULL)
 	{	char ch;
@@ -1427,7 +1434,7 @@ int mlwrite(const char * fmt, ...)
 	{ if (ch != FMTCH)
 			mlout((char)ch);
 		else 
-		{	char * sp = NULL;
+		{	UNSIGNED char * sp = NULL;
 			int width = 0;
 			while (((unsigned)(ch = *++fmt - '0')) <= 9)
 				width = width * 10 + ch;

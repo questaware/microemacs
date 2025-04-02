@@ -149,7 +149,7 @@ void Pascal dcline(int argc, char * argv[])
   tcap_init();
 #endif
 	varinit();		/* user variables */
-	set_var("$incldirs", getenv("INCLUDE"));
+	svar(EVINCLD, getenv("INCLUDE"));
 #if DIACRIT
 	initchars();		/* character set definitions */
 #endif

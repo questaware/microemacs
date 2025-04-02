@@ -186,6 +186,12 @@ long unsigned int thread_id(void)
 { return (int)GetCurrentProcess(); // + 29 * GetCurrentThreadId();
 }
 
+static int get_dims()
+
+{	return ((g_csbi.srWindow.Right -g_csbi.srWindow.Left+1) << 8) +
+				   g_csbi.srWindow.Bottom-g_csbi.srWindow.Top+1;
+}
+
 #endif
 
 static UINT g_codepage;
@@ -202,9 +208,8 @@ static void USE_FAST_CALL FCOC(int sz)
 {	DWORD     Dummy;
 	if (sz == 0)
 	{ int plen = g_csbi.srWindow.Bottom-g_csbi.srWindow.Top+1;
-  	int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+2;	/* why 2 ? */
-//	sz = g_csbi.dwMaximumWindowSize.X * g_csbi.dwMaximumWindowSize.Y;
-		sz = plen*pwid;
+    int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+1;	/* why 2 ? */
+		sz = pwid * plen;
 	}
 
   FillConsoleOutputCharacter(g_ConsOut, ' ',sz,g_coords,&Dummy );
@@ -229,18 +234,21 @@ void CheckProcess()
 
 //static int g_buffsize;
 
-static
-void SetBufferWindow(int wid, int dpth)
+void tcapsetsize(int wid, int dpth)
 
 {	int rc;
-  HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
 //SMALL_RECT rect = { 0, 0, wid-1, dpth }; // was dpth-1
-	SMALL_RECT rect = { 0, 0, 1, 1 }; // was dpth-1
+	SMALL_RECT rect = { 0, 0, 0, 0 }; // was dpth-1
 	COORD size;
   size.X = wid;
   size.Y = dpth;
 
 	CheckProcess();
+
+{ HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
+
+	g_ConsOut = h;
+
 	if (wid)
 	{ rc = SetConsoleScreenBufferSize( h, size );// size);
 #if _DEBUG 
@@ -252,7 +260,6 @@ void SetBufferWindow(int wid, int dpth)
 #endif
 	}
 
-	g_ConsOut = h;
 #if 1
 //mlwrite("%p Doing %d", dpth);
 	rc = GetConsoleScreenBufferInfo( h, &g_csbi); // Do we need this?
@@ -299,7 +306,7 @@ void SetBufferWindow(int wid, int dpth)
 //SetFocus(h);
 //mbwrite("About to fail");
 	CheckProcess();
-}
+}}
 
 void init_wincon()
 
@@ -325,7 +332,7 @@ void init_wincon()
 //SetConsoleTextAttribute(h, BG_GREY);
 	g_codepage = GetConsoleOutputCP();
   setcp(1252);
-	SetBufferWindow(0, 0);
+	tcapsetsize(0, 0);
 
 #if CALLED
   g_coords.X = 0;
@@ -431,6 +438,8 @@ void Pascal setconsoletitle(char * title)
 // }
 
 
+#if 0
+
 void Pascal tcapsetsize(int wid, int dpth)
 
 {
@@ -450,7 +459,6 @@ void Pascal tcapsetsize(int wid, int dpth)
 #endif
 {
 #if 1
-  HANDLE h = g_ConsOut;
 	SetBufferWindow(wid, dpth);
 #else
  	SMALL_RECT rect = { 0, 0, wid-1, dpth }; // was dpth
@@ -499,6 +507,8 @@ void Pascal tcapsetsize(int wid, int dpth)
 }
 #endif
 }}
+
+#endif
 
 #if 0
 //		 int   g_cursor_on = 0;
@@ -815,17 +825,18 @@ void Pascal MySetCoMo()
 int Pascal tcapopen()
 
 { int plen = g_csbi.srWindow.Bottom-g_csbi.srWindow.Top+1;
-  int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+2;	/* why 2 ? */
+  int pwid = g_csbi.srWindow.Right -g_csbi.srWindow.Left+1;
 
   newdims(pwid, plen);
 
 { HANDLE h = setMyConsoleIP();
 //SetFocus(h);								// Sometimes focus is lost
+	return 0;
 
-{	BY_HANDLE_FILE_INFORMATION fileinfo;
-	DWORD rc = GetFileInformationByHandle(h, &fileinfo);
-	return !rc;
-}}}
+//{	BY_HANDLE_FILE_INFORMATION fileinfo;
+//	DWORD rc = GetFileInformationByHandle(h, &fileinfo);
+//	return !rc;
+}}
 
 
 /*
@@ -1089,7 +1100,7 @@ FILETIME g_file_time;
 
 int Pascal name_mode(const char * s)
 
-{	char filen[NFILEN+1];
+{	//char filen[NFILEN+1];
 //char * t;
 //for (t = strpcpy(filen, s, NFILEN+1)-1; *++t != 0; )
 //	if (*t == '/')

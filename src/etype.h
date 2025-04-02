@@ -145,6 +145,7 @@ int Pascal setvar(int, int);
 int Pascal set_var(char *, const char *);
 int Pascal shiftkill(int f, int n);
 int USE_FAST_CALL stol(const char * s);
+int Pascal svar(int var, const char * value);
 int Pascal trim_white(int, int);
 void Pascal tcap_init();
 void tcapsetfgbg(int chrom);
@@ -296,10 +297,11 @@ void Pascal mbwrite(const char *);
 int Pascal meta(int, int);
 void Pascal mlerase();
 void Pascal mlforce(const char *);
-void Pascal mlout(char);
+#define UNSIGNED
+void Pascal mlout(UNSIGNED char);
 void Pascal mlputf(int);
 int Pascal mlputi(int);
-void Pascal mlputs(int, const char *);
+void Pascal mlputs(int, const UNSIGNED char *);
 #define mlreply(a,b,c) nextarg(a,b,c)
 int Pascal USE_FAST_CALL mlyesno(const char *);
 int Pascal mouseoffset();

@@ -194,6 +194,7 @@ const char * const g_envars[] = {
 	"gmode",			/* global modes (buffer flags )*/
 	"hardtab",		/* current hard tab size */
 	"hjump",			/* horizontal screen jump size */
+#if 0
 	"hp1",		/* highlighting string */
 	"hp10",		
 	"hp11",		
@@ -224,6 +225,7 @@ const char * const g_envars[] = {
 	"hp7",		
 	"hp8",		
 	"hp9",
+#endif
 	"incldirs",		/* directories to search */
 	"keycount",		/* consecutive times key has been pressed */
 	"kill", 			/* kill buffer (read only) */
@@ -233,7 +235,6 @@ const char * const g_envars[] = {
 	"lastmesg",		/* last string mlwrite()ed */
 	"line", 			/* text of current line */
 	"match",			/* last matched magic pattern */
-	"msflag",			/* activate mouse? */
 	"noindent",		/* dont copy space from line above */
 	"pagelen",		/* number of lines used by editor */
 	"pagewidth",	/* current screen width */
@@ -263,7 +264,7 @@ const char * const g_envars[] = {
 	"zcmd"				/* last command */
 };
 
-#define NEVARS	(sizeof(g_envars) / sizeof(g_envars[0]))
+#define NEVARS	(sizeof(g_envars) / sizeof(g_envars[0])+30)
 
 PD_VAR predefvars[NEVARS+2] =
 
@@ -297,7 +298,6 @@ FALSE, /* EVCWLINE */		  /* */
 8,     /* EVHARDTAB */		/* default tab size */
 0,     /* EVHIGHLIGHT */	/* */
 1,     /* EVHJUMP */		  /* horizontal jump size */
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,		 /* EVINCLD */			/* */
 0,     /* EVKEYCT */		  /* consec key ct */
 CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
@@ -352,12 +352,33 @@ char * dbg_val(const char * banner, const char * val)
 #define dbg_val(a,b) NULL
 #endif
 
+
+static
+int USE_FAST_CALL need_realloc(int vnum)
+
+{	if (vnum >= EVHLIGHT1)
+		return TRUE;		
+
+	switch (vnum)
+	{ 
+	  case EVINCLD:	 
+	  case EVPALETTE:
+	  case EVFILEPROF:
+		case EVMATCH:
+				return TRUE;
+	}
+	
+	return FALSE;
+}
+
+
 void Pascal varinit()	/* initialize the user variable list */
 
 {	int ix;
-	for (ix = 31; --ix >= 0; )
-		predefvars[ix > 0  ? EVHLIGHT1-1+ix :
-							           EVMATCH].p = mallocz(2);
+	for (ix = EVHLIGHT1+30 ; --ix >= 0; )
+		if (need_realloc(ix))
+			predefvars[ix] .p = mallocz(2);
+
 #if S_MSDOS == 0
   predefvars[EVPALETTE].p = strdup("426153789abcdef0");
 #endif
@@ -424,15 +445,16 @@ static short Pascal USE_FAST_CALL plinecpy(void)
   short res = 0;
 
 	LINE * pline = curwp->w_dotp;
-  if (pline != NULL)
-    while (pline != curwp->w_linep)
-    { pline = lback(pline);
-    { int offs = getgoal(getccol(), pline);
-      if (offs < llength(pline))
-      { res = pline->l_text[offs];
-        break;
-      }
-    }}
+  while (1)
+  { pline = lback(pline);
+  	if (l_is_hd(pline))
+  		break;
+  { int offs = getgoal(getccol(), pline);
+    if (offs < llength(pline))
+    { res = pline->l_text[offs];
+      break;
+    }
+  }}
 
   return res;
 }
@@ -572,9 +594,9 @@ char * float_asc(MYFLOAT x)
 	{	if (b_mid[ix+1] == '.')
 	  {
 		  dix = ix+1;
-			if (b_mid[ix+2] == 0) 
-				b_mid[ix+1] = 0;
-			continue;
+			if (b_mid[ix+2] != 0)
+				continue;
+			b_mid[ix+1] = 0;
 		}
 		if (b_mid[ix+1] == '0')
 		{	if (nines + dix > 0)
@@ -582,13 +604,13 @@ char * float_asc(MYFLOAT x)
 			b_mid[ix+1] = 0;
 		}
 		else 
-		{	if (b_mid[ix+1] != '9')
+		{	++nines;
+			if (b_mid[ix+1] != '9')
 				break;
-			++nines;
 		}
 	}
 
-	if (nines > 5)			// five nines
+	if (nines > 6)			// five nines
 	{	if (ix < 0)
 			b_mid[0] = '1';
 
@@ -646,6 +668,68 @@ Map_t g_fnamemap = mk_const_map(T_DOMCHAR0+4, 2, funcs, 0);
 
 Map_t g_evmap = mk_const_map(T_DOMSTR, 0, g_envars, 0);
 
+
+/*	structure to hold user variables and their definitions	*/
+
+typedef struct UVAR
+{	char u_name[NVSIZE + 1];	       /* name of user variable */
+	char *u_value;				/* value (string) */
+} UVAR;
+
+/*	current user variables (This structure will probably change)	*/
+
+static
+UVAR NOSHARE g_uv[MAXVARS + 1];	/* user variables */
+
+static int g_uv_vnum;
+
+
+static
+int Pascal var_index(int tag, char var[NVSIZE+1])
+												/* name of variable to fetch */
+{ int vix;
+
+fvar:	vix = -1;
+{	int wh = var[0] == '$';
+	switch (tag)
+	{ case '&': 
+		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
+		    {			  /* grab token, and eval it */
+		      (void)token(var, NVSIZE+1);
+		      getval(&var[0], var);
+		      goto fvar;
+		    }
+		    vix = 0;
+		otherwise
+				if (var[wh] == 'h' && var[wh+1] == 'p')
+				{ tag = atoi(var+wh+2)-1;
+					if (in_range(tag, 0, 29))
+						return (EVHLIGHT1 + tag) | (TKENV << 11);
+				}
+				vix = (TKENV << 11);
+
+	  when '%':		  /* check for existing legal user variable */
+	  	  (void)gtusr(&var[1]);
+		  	vix = g_uv_vnum;
+			  if (vix >= 0)
+			  {	strcpy(g_uv[vix].u_name, &var[1]);
+					return vix | (TKVAR << 11);
+		    }				/* indirect operator? */
+	}
+
+	if (vix >= 0)
+ 		vix = binary_const(vix, &var[wh]) | vix;
+
+	if (vix < 0)
+	{ mlwrite(TEXT52, var);
+					/* "%%No such variable as '%s'" */
+	  return -1;
+	}
+
+	return vix;
+}}
+
+
 static 
 const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/function */
 
@@ -654,7 +738,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 
 	signed char tk;
 	int iarg1;
-	int vnum = binary_const(typ == TOKENV, fname);
+	int vnum = var_index(typ, fname);
 	if (vnum < 0)
 		return g_logm[2];
 
@@ -821,17 +905,9 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		}
 	}
 	else
-	{	if (in_range(vnum, EVHLIGHT1, EVHLIGHT9))
-			goto ret_str;
-
-		switch (vnum)
-		{ 
-		  case EVINCLD:	 
-		  case EVPALETTE:
-		  case EVFILEPROF:
-			case EVMATCH:
-				goto ret_str;
-		}
+	{	vnum &= 0xff;
+		if (need_realloc(vnum))
+			return predefvars[vnum].p;
 
 #define result (&deltaf[NSTRING / 2])   /* leave beginning for extra safety */
 	  iarg1 = predefvars[vnum].i;
@@ -890,35 +966,17 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		  case EVSTATUS:  
 		  case EVDISCMD:  
 		  case EVDISINP:  
-		  case EVSSAVE:   
-		  case EVMSFLAG:   return ltos(iarg1);
+		  case EVSSAVE:    return ltos(iarg1);
 
 		  default:	       loglog2("Var %d = %x", vnum, iarg1);
 		}
 		return int_asc(iarg1);
 #undef result
-
-	ret_str:
-		return predefvars[vnum].p;
 	}
 
 	return int_asc(iarg1);
 }
 
-
-/*	structure to hold user variables and their definitions	*/
-
-typedef struct UVAR
-{	char u_name[NVSIZE + 1];	       /* name of user variable */
-	char *u_value;				/* value (string) */
-} UVAR;
-
-/*	current user variables (This structure will probably change)	*/
-
-static
-UVAR NOSHARE g_uv[MAXVARS + 1];	/* user variables */
-
-static int g_uv_vnum;
 
 const char *Pascal gtusr(char * vname)			/* look up a user var's value */
 																						/* name of user variable to fetch */
@@ -1030,24 +1088,27 @@ static
 }
 
 
-static
+/*static*/
 int Pascal svar(int var, const char * value)	/* set a variable */
+
+{	if (value == NULL)
+		return FALSE;
+
+{ int val = atoi(value);
+  int hookix = 0;		  /* set an environment variable */
 
 {	BUFFER * bp = curbp;
 	Cc cc = TRUE;
   int vnum = var & 0x7ff;
-  char ** varref = &predefvars[vnum].p;;
+  char ** varref = &predefvars[vnum].p;
 
   if (var - vnum == (TKVAR << 11))
 	{ varref = &g_uv[vnum].u_value;
   	goto remalloc;
   }
 
-	if (in_range(vnum, EVHLIGHT1, EVHLIGHT9))
+	if (vnum >= EVHLIGHT1)
 		goto remalloc;
-
-{ int val = atoi(value);
-  int hookix = 0;		  /* set an environment variable */
 
   switch (vnum) 
   {
@@ -1122,8 +1183,7 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 	  case EVSTATUS:	
 	  case EVDISCMD:	
 	  case EVDISINP:	
-	  case EVSSAVE:	
-    case EVMSFLAG:  val = stol(value);
+	  case EVSSAVE:		val = stol(value);
 										goto storeint;
 
 		when EVHARDTAB:	if (val != 0)
@@ -1137,15 +1197,13 @@ int Pascal svar(int var, const char * value)	/* set a variable */
     default:
 storeint:
 		predefvars[vnum].i = val;
-
-		return TRUE;
   }
 
   return cc;
 
 remalloc:
 	return remallocstr(varref, value, 0) != null;
-}}
+}}}
 
 
 
@@ -1183,42 +1241,11 @@ fvar:	vix = -1;
 
 
 int Pascal set_var(char var[NVSIZE+1], const char * value)	/* set a variable */
-					/* name of variable to fetch */
-					/* value to set variable to */
-{	int vix;	/* type to return */
-
-fvar:	vix = -1;
-	switch (var[0])
-	{ default:
-														/* check for legal enviromnent var */
-	      vix = binary_const(1, &var[var[0] == '$'])|(TKENV << 11);
-
-	  when '%':		  /* check for existing legal user variable */
-				if (strlen(var) < NVSIZE)
-	  	  {	(void)gtusr(&var[1]);
-		  	  vix = g_uv_vnum;
-			    if (vix >= 0)
-			    {	strcpy(g_uv[vix].u_name, &var[1]);
-						vix |= TKVAR << 11;
-		    	}				/* indirect operator? */
-		    }
-	  when '&': 
-		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
-		    {			  /* grab token, and eval it */
-		      (void)token(var, NVSIZE+1);
-		      getval(&var[0], var);
-		      goto fvar;
-		    }
-	}
-
+													/* name of variable to fetch */
+													/* value to set variable to */
+{	int vix = var_index(var[0],var);
 	if (vix < 0)
-	{ mlwrite(TEXT52, var);
-					/* "%%No such variable as '%s'" */
-	  return FALSE;
-	}
-
-	if (value == NULL)
-		return FALSE;
+		return vix;
 
 #if DEBUGM == 0
 	return svar(vix, value);	/* and set the appropriate value */
@@ -1348,7 +1375,10 @@ int Pascal mkdes()
 int Pascal listvars(int f, int n)
 
 { int uindex; // = curbp->b_tabsize;   /* index into uvar table */
+	char buf[6];
 	BUFFER * bp = curbp;
+	buf[0] = 'h';
+	buf[1] = 'p';
         
   openwindbuf(TEXT56);
 //curbp->b_tabsize = 0;
@@ -1359,9 +1389,11 @@ int Pascal listvars(int f, int n)
   for (uindex = -1; ++uindex < NEVARS; )
   {	BUFFER * sbp = curbp;
   	curbp = bp;
-  {	const char * val = gtenvfun(TOKENV, g_envars[uindex]);
+		strcpy(buf+2, int_asc(uindex - EVHLIGHT1 + 1));
+	{ const char * nm = uindex <= EVZCMD ? g_envars[uindex] : buf;
+  	const char * val = gtenvfun(TOKENV, nm);
     curbp = sbp;
-    fmt_desv('$', g_envars[uindex], val);
+    fmt_desv('$', nm, val);
   }}
 
   lnewline(1);

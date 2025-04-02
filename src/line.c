@@ -330,54 +330,54 @@ int Pascal linsert(int ins, char c)
     return lnewline(ins);
   }
 
-{	int overmode = (curbp->b_flag & MDOVER) >> 5;
+{	int ccol = getccol();
+	int overmode = (curbp->b_flag & MDOVER) >> 5;
 	int tabsize = curbp->b_tabsize;
 	if (tabsize < 0)
 	{	tabsize = - tabsize;
 		if (ins == 1 && c == '\t')
-		{ ins = tabsize - (getccol() % tabsize);
+		{ ins = tabsize - (ccol % tabsize);
 			c = ' ';
 		}
 	}
 
 {	int doto = curwp->w_doto;
   LINE * lp = curwp->w_dotp;		/* Current line */
-	int used = lused(lp->l_dcr);
 
 #if DO_UNDO
 	if (g_inhibit_undo <= 0)
 		run_make(lp);
 #endif
+
+{ LINE * olp = lp;
+	int used = lused(lp->l_dcr);
+
 	if ( doto < used  && overmode >= ins &&
-			(lgetc(lp, doto) != '\t' ||
-			(unsigned short)doto % tabsize == (tabsize - 1)))
-	{	lp->l_text[doto] = c;
-	  curwp->w_doto = doto + 1;
-  }
+			(lgetc(lp, doto) != '\t' || ccol % tabsize == tabsize-1))
+//		(unsigned short)doto % tabsize == (tabsize - 1)))
+	  ; // curwp->w_doto += 1;
 	else
-  {	LINE * newlp = lp;
-  	if (ins * 4 <= (lp->l_dcr & (((1 << SPARE_SZ)-1) << 2)))
+  {	if (ins * 4 <= (lp->l_dcr & (((1 << SPARE_SZ)-1) << 2)))
 	  	lp->l_dcr += (ins << (SPARE_SZ+2)) - (ins * 4);		// more used less spare
 	  else
-	  	newlp = mk_line(&lp->l_text[0], used, used + ins, EXPANSION_SZ*4+(lp->l_dcr & Q_IN_CMT));
+	  	lp = mk_line(&lp->l_text[0], used, used+ins, EXPANSION_SZ*4+(lp->l_dcr & Q_IN_CMT));
 	  
 //  line_openclose(newlp, lp, ins, (Int)lp->l_used-doto);
   	if (used - doto > 0)
   	{
-   		memmove(&newlp->l_text[doto+ins],&lp->l_text[doto],used-doto);
+   		memmove(&lp->l_text[doto+ins],&olp->l_text[doto],used-doto);
 		}
-	  rpl_all(1, ins, doto, lp, newlp);
-	  memset(&newlp->l_text[doto],c,ins);
-
-	  if (lp != newlp)
-		{	ibefore(lp, newlp);				/* Link in */
-			if (!l_is_hd(lp))					/* remove lp */
-	   		lfree(0, lp);					/* No mark points to lp */
-  	}
 	}
 
+  rpl_all(1, ins, doto, olp, lp);
+  memset(&lp->l_text[doto],c,ins);
+  if (olp != lp)
+	{	ibefore(olp, lp);				/* Link in */
+		if (!l_is_hd(olp))					/* remove lp */
+   		lfree(0, olp);					/* No mark points to lp */
+ 	}
   return lchange(WFEDIT);
-}}}
+}}}}
 
 
 #if _MSC_VER < 1600 && 0
@@ -463,10 +463,10 @@ int Pascal istring(int f, int n)	/* ask for and insert a string into the
 int Pascal ovstring(int f, int n_) /* ask for and overwite a string into the current
 			       buffer at the current point */
 				/* ignored arguments */
-{	int overmode = curbp->b_flag;
+{	int s_overmode = curbp->b_flag;
 	curbp->b_flag |= MDOVER;
 { int cc = istring(f, n_);
-	curbp->b_flag = overmode;
+	curbp->b_flag = s_overmode;
   return cc;
 }}
 
@@ -634,7 +634,7 @@ static t_kill kills[NOOKILL+1];
 static
 int Pascal doregion(int wh, char * t)
 	
-{ if (wh < 0)
+{ if (wh < 0)	/* copy word */
 	{	int offs =  curwp->w_doto + 1;
 		LINE * ln = curwp->w_dotp;
 		int len = lused(ln->l_dcr);

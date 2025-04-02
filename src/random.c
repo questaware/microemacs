@@ -701,12 +701,12 @@ int Pascal forwdel(int f, int n)
 	if (n < 0)
 	{ n = -n;
 		s = overmode ? 1 : backbychar(1);
-//	if (s <= 0)
-//		return s;
 	}
 
 	if (overmode)
-	{	while (--n >= 0)
+	{	int ct = n;
+		n = 0;
+		while (--ct >= 0)
 		{	int left = curwp->w_doto - llength(curwp->w_dotp);
 			int there = getccol();
 			backbychar(s);
@@ -715,12 +715,11 @@ int Pascal forwdel(int f, int n)
 			there -= getccol();
 			if (s < 0)
 				backbychar(1);
+			n += there*s - 1;
 			linsert(there*s, ' ');
 			if (s > 0)
 					backbychar(s);
 		}
-
-		return TRUE;
 	}
 
 	if (f != FALSE  											/* Really a kill. 			*/

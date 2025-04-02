@@ -425,13 +425,13 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
   return cpos;
 }}
 
-static int USE_FAST_CALL redrawln(int clamp, char buf[])
+static int USE_FAST_CALL redrawln(int clamp, unsigned char buf[])
 
 { if (clamp)
 		clamp = term.t_ncol-ttcol;
 { int len = clamp;
   char * s;
-  char c;
+  unsigned char c;
 
   for (s = &buf[-1]; (c = *++s) != 0; )
   {

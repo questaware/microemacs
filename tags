@@ -1718,6 +1718,7 @@ ttgetraw	./unix/unix.c
 ttopen	./unix/terminal.c
 ttopen	./wincon/oswin.c
 ttputc	./unix/unix.c
+ttputc	./wincon/oswin.c
 ttscupdn	./unix/terminal.c
 ttsystem	./wincon/oswin.c
 ttsystem	./unix/unix.c
