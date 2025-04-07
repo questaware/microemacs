@@ -229,7 +229,6 @@ const char * const g_envars[] = {
 	"incldirs",		/* directories to search */
 	"keycount",		/* consecutive times key has been pressed */
 	"kill", 			/* kill buffer (read only) */
-	"language",		/* language of text messages */
 	"lastdir",		/* last direction of search */
 	"lastkey",		/* last keyboard char struck */
 	"lastmesg",		/* last string mlwrite()ed */
@@ -301,7 +300,6 @@ FALSE, /* EVCWLINE */		  /* */
 0,		 /* EVINCLD */			/* */
 0,     /* EVKEYCT */		  /* consec key ct */
 CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
-0,		 /* EVLANG */  			/* actual g_focus_ct */
 0,     /* EVLASTDIR */	  /* actual: prefix- current pending prefix bits*/
 0,     /* EVLASTKEY */    /* last keystoke */
 0,     /* EVLASTMESG */   /* last message */
@@ -512,10 +510,10 @@ char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix, char fill)
 {	static const char hexdigits[] = "0123456789ABCDEF";
 
 	memset(g_result+1, fill, INTWIDTH);
-	g_result[INTWIDTH+2] = 0;
+	*(short*)&g_result[INTWIDTH+2] = 0;
 //g_result[INTWIDTH+3] = 0;
 
-{	char *sp = &g_result[INTWIDTH+2];		/* 13 places from g_result[1] */
+{	char * sp = &g_result[INTWIDTH+2];		/* 13 places from g_result[1] */
 	int v = i;
 
 	if (v < 0)
@@ -1359,8 +1357,10 @@ int Pascal mkdes()
   curwp->w_dotp = lforw(&curbp->b_baseline);     /* back to the beginning */
   curwp->w_doto = 0;
   curwp->w_line_no = 1;
-//upmode();
-//mlerase();					/* clear the mode line */
+#if S_MSDOS == 0
+	mlerase();					/* clear the mode line */
+	lastmesg[0] = 0;
+#endif
 
 #if DO_UNDO
 	g_inhibit_undo = 0;

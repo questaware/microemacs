@@ -190,7 +190,7 @@ struct termios  g_savetty;
 																			/* Open a file for reading. */ 
 FILE* Pascal ffropen(const char * fn)
 
-{ if (fn[0] != ' ')
+{	if (fn[0] != ' ')
 		return fopen(fn, "rb");
   else
   { int pipefd = dup(0);
@@ -1066,7 +1066,7 @@ int Pascal writeout(const char * fn)
 #endif
 	{	char * s = caution <= 0 ? strpcpy(tname, fn, NSTRING-30)
 														: mkTempCommName('o', tname);
-		op = fopen(tname, S_WIN32 ? "wb" : caution > 0 ? "wb" : "wbx"); // why does wb not work?
+		op = fopen(tname, S_WIN32 ? "wb" : "w"); // why does wb not work?
 		if (op != NULL)
 			goto good;
 	}
@@ -1093,7 +1093,19 @@ good:
 		++nline;
 	}
 
+#if S_WIN32
 	fclose(op);
+#endif
+
+	bp->b_flag &= ~BFCHG;
+	(void)do_ftime(bp,
+#if S_WIN32 == 0
+								 op,
+#endif
+								 TRUE);
+#if S_WIN32 == 0
+	fclose(op);
+#endif
 	upmode();		/* Update mode lines.	*/
 	
 {	extern char deltaf[];
@@ -1111,13 +1123,6 @@ good:
 		}
 	}}
 //repl_bfname(bp, fn);		// destroys fn
-
-	bp->b_flag &= ~BFCHG;
-	(void)do_ftime(bp,
-#if S_WIN32 == 0
-								 ffp,
-#endif
-								 TRUE);
 																					 /* report on status of file write */
 	io_message(strcpy(tname, TEXT149), nline);
 															/* "[Wrote 999 line" */

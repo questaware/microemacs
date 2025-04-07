@@ -11,7 +11,8 @@
     <LocalDebuggerWorkingDirectory>$(ProjectDir)\debug</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>interest.txt</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>
+    </LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>c:\gener\microemacs\wincon\release</LocalDebuggerWorkingDirectory>
   </PropertyGroup>

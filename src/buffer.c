@@ -584,8 +584,7 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 
 	{ char * fn = bp->b_fname;
 		if (fn[0])
-		{
-			readin(fn, 0);
+		{	readin(fn, 0);
 #if S_WIN32 && 0
 			setconsoletitle(fn);
 #endif

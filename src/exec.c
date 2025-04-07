@@ -258,7 +258,7 @@ failexit:
 																				/* only do this if we are debugging */
 #if	DEBUGM
 		  if (pd_macbug && g_bstore == null && exec_level == 0)
-		    if (debug(bp, ebuf FALSE)
+		    if (debug(bp, ebuf) <= 0)
 		    { mlwrite("%!"TEXT54); /*	"[Macro aborted]" */
 		      cc = FALSE;
 		      continue;

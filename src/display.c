@@ -35,7 +35,7 @@
 #define T_SCRSIZE 0
 #else
 #define T_MARGIN term.t_margin
-#define T_SCRSIZE term.t_scrsize
+#define T_SCRSIZE term.t_scrsiz
 #endif
 
 /* Standard terminal interface dispatch table. Most of the fields point into
@@ -200,7 +200,7 @@ void Pascal vtinit(int cols, int dpthm1)
   	int lines = 0;
 		char * v = getenv("COLUMNS");
 		v = v != NULL ? v : use_cmd(buf, sizeof(buf), "tput cols");
-		cols = v == NULL ? NCOL : atoi(v);
+		cols = (v == NULL ? NCOL : atoi(v))-1;
 		
 		if (cols > 0)
 		{ term.t_ncol = cols;
@@ -316,7 +316,7 @@ const unsigned char ctrans_[] = 	/* ansi to ibm color translation table */
 
 static int palcol(int ix)
 
-{ int clr = pd_palstr[ix & 0xf] | 0x20;
+{ int clr = pd_palstr[(ix & 7)*2+1] | 0x20;
 	return (in_range(clr,'0','9') ? clr - '0' :
  				  in_range(clr,'a','f') ? clr - 'a' + 10 : 0) << 8;
 }
@@ -537,9 +537,10 @@ nop:
 		if (vtc >= term.t_ncol && len > 0)
 		{
 #if MEMMAP == 0
-		  tgt[vtc] = (short)(chrom + '$');
+//	  tgt[vtc] = (short)(chrom + '$');
+		  tgt[vtc] |= 0x100 | CHR_NEW;
 #else
-			tgt[vtc] |= palcol(3) | CHR_NEW;
+			tgt[vtc] |= 0xf000 | CHR_NEW; // palcol(3)
 #endif
 			break;
 		}
@@ -890,8 +891,7 @@ void Pascal updline()
 {	WINDOW * wp = curwp;
 	LINE * dotp = wp->w_dotp;
  static LINE * g_up_lp = NULL;
-	int flag = g_up_lp != dotp ? WFHARD | WFMODE | WFMOVE /*| WFTXTU|WFTXTD*/ : 0;
-	g_up_lp = dotp;
+	int flag = WFHARD | WFMODE | WFMOVE; /*| WFTXTU|WFTXTD*/
 {	int fcol = wp->w_fcol; // < pd_fcol ? pd_fcol : wp->w_fcol;
 	int row = wp->w_toprow;
  	LINE * lp;
@@ -910,9 +910,12 @@ void Pascal updline()
 //	if (fcol < pd_fcol)
 //		fcol = pd_fcol;
 		col -= diff;
-		flag = WFHARD | WFMODE | WFMOVE;
 	}
+	else if (g_up_lp == dotp)
+		flag = 0;
 	
+	g_up_lp = dotp;
+
 	diff = pd_fcol - fcol;
 	if (diff > 0)
 	{ fcol += diff;
@@ -929,12 +932,12 @@ void Pascal updline()
 #endif							
 	int rhs = col - term.t_ncol + 1;
   if (rhs >= 0)
+	{	flag = WFHARD | WFMODE | WFMOVE;
 	{	if (pd_hjump)				/* if horizontal scrolling is enabled, shift if needed */
 		{ int mv = rhs + pd_hjump;
 			fcol += mv;
 			col -= mv;
 			rhs -= mv;
-			flag = WFHARD | WFMODE | WFMOVE;
 		}
 		else								// Not used in Windows
 						 /*  updext: update the extended line which the cursor is currently
@@ -955,7 +958,7 @@ void Pascal updline()
 								 			/* and put a '$' in column 1 */
 			vp->v_flag |= (VFEXT | VFCHG);
 		}}
-	}
+	}}
 
 	if (rhs < 0)			// allow deextension on this line
 		wp->w_dotp = NULL;
@@ -1188,7 +1191,7 @@ void Pascal updateline(int row)
 	short *cp9 = &cp1[term.t_ncol];
 	int revreq = vp1->v_flag & VFREQ;		/* reverse video flags */
 	int caution = (((revreq ^ ph->v_flag) & VFREQ) ||
-										vp1->v_color != pscreen[row]->v_color) && !pd_sgarbf;
+										vp1->v_color != pscreen[row]->v_color) && (curwp->w_flag & WFHARD);
 
 	vp1->v_flag &= ~(VFCHG+VFREQ/*+VFML*/);/* flag this line is unchanged */
 
@@ -1197,10 +1200,10 @@ void Pascal updateline(int row)
 
 	pscreen[row]->v_color = prechrom;
 	pscreen[row]->v_flag = vp1->v_flag;
-
+#if 0
 	if (pd_sgarbf)
 		caution = FALSE;
-
+#endif
 /* 0 : No special effect
  * 1 : underline
  * 2 : bold
@@ -1256,7 +1259,7 @@ void Pascal updateline(int row)
 	++ph9;
 #endif
  	--cp1;
-	while (++cp1 <= cp9 /* cpend */)		/* Ordinary. */
+	while (++cp1 < cp9 /* cpend */)		/* Ordinary. */
 	{	*ph1++ = *cp1;
 		if (*cp1 & 0xff00)
 		{ int wh = (*cp1) >> 8;
@@ -1291,11 +1294,13 @@ void Pascal updateline(int row)
 
 	if ((vp1->v_flag & VFML) == 0 )
 	{ extern short scbot;
+		int doeol = ph1 + 1 < phz;
 
 		while (++ph1 < phz /* cpend */)		/* Ordinary. */
 			*ph1++ = *++cp1;
 	//millisleep(300);
-		tcapeeol();
+		if (doeol)
+			tcapeeol();
 		if (row < scbot)					/* CRLF is required so that highlight- 		 */
 		{	//millisleep(300);			/* copy can recognise line ends. 					 */
 		  ttputc(13);							/* It cannot be done ahead of the modeline */
@@ -1372,7 +1377,11 @@ void Pascal mlputs(int wid, const UNSIGNED char * s)
 		mlout(' ');
 }
 
-#if S_WIN32 == 0
+#if S_WIN32
+
+#define reverse_cursor(x) 
+
+#else
 
 static COORD g_tcursor;
 

@@ -482,6 +482,8 @@ NOSHARE extern int cryptflag;		/* currently encrypting?	*/
 //NOSHARE extern int g_newest;  /* choose newest file           */
 NOSHARE extern Int envram;			/* # of bytes current in use by malloc */
 
+extern int g_focus_count;
+
 const extern char g_logm[3][8];
 
 //NOSHARE extern char palstr[49];		/* palette string		*/

@@ -147,6 +147,8 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 
 #define REVISION "1.1"
 
+#define DO_UNDO 1
+
 #define USE_MAPSTREAM 0
 #define MINIMAP
 

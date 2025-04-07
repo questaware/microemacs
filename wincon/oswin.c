@@ -693,7 +693,9 @@ void Pascal scwrite(row, outstr, color)	/* write a line out */
  * An attribute of 0 therefore means the attributes for the line/new foreground
  */
     int wh = (outstr[col] & 0xf000) >> 12;
-    if      (wh & 4)
+		if      (wh == 0xf)
+			attr = 0x9f;
+    else if (wh & 4)
     {	attr = color & 0xf0 | (outstr[col] >> 8) & 0xf;
      	if (wh & 8)
 				attr |= COMMON_LVB_UNDERSCORE;
@@ -702,7 +704,7 @@ void Pascal scwrite(row, outstr, color)	/* write a line out */
       attr = color;
 
     if (wh & 1)						// Cannot do underline so bold (which is faint!)
-		attr |= 0x8;
+		  attr |= 0x8;
  
 		cuf[col] = attr;
 		buf[col] = (outstr[col] & 0xff);
@@ -831,12 +833,11 @@ int Pascal tcapopen()
 
 { HANDLE h = setMyConsoleIP();
 //SetFocus(h);								// Sometimes focus is lost
-	return 0;
 
-//{	BY_HANDLE_FILE_INFORMATION fileinfo;
-//	DWORD rc = GetFileInformationByHandle(h, &fileinfo);
-//	return !rc;
-}}
+{	BY_HANDLE_FILE_INFORMATION fileinfo;
+	DWORD rc = GetFileInformationByHandle(h, &fileinfo);
+	return !rc;
+}}}
 
 
 /*
@@ -1051,7 +1052,7 @@ int ttgetc()
 	    }}
 	    else if (r->EventType == FOCUS_EVENT)
 	    { // tcapbeep();
-	      ++pd_focus_count;
+	      ++g_focus_count;
 	    }
 	    else if (r->EventType == MENU_EVENT)
 	    { /*loglog1("Menu %x", r->Event.MenuEvent.dwCommandId);*/

@@ -254,8 +254,7 @@ void Pascal dcline(int argc, char * argv[])
 	if (firstbp == null)
 	{	firstbp = bfind(def_bname, TRUE);
 		if  (nopipe == 0)
-		{ 
-			firstbp->b_flag |= g_gflag;
+		{	firstbp->b_flag |= g_gflag;
 			firstbp->b_fname = strdup(" ");
 		}
 	}
@@ -347,6 +346,8 @@ void Pascal dcline(int argc, char * argv[])
 	subprocess would require a similar entrypoint.
 */
 
+int g_focus_count;
+
 #if CALLED
 int emacs(int argc, char * argv[])
 #else
@@ -371,7 +372,7 @@ int main(int argc, char * argv[])
 	(void)dcline(argc, argv);
 	do
 	{	// g_lastflag = 0; 								/* Fake last flags.*/
-	{	int ct = pd_focus_count <= 0 ? -1 : reload_buffers();
+	{	int ct = g_focus_count <= 0 ? -1 : reload_buffers();
 
 																	/* execute the "command" macro, normally null*/
 		execwrap(2);  // cmdhook	** used to push/pop lastflag **
@@ -381,7 +382,7 @@ int main(int argc, char * argv[])
 		if (ct >= 0)
 		{	mbwrite(TEXT122);
 			if (ct == 0)
-				pd_focus_count = -2;
+				g_focus_count = -2;
 		}
 
 	{	int	c = getkey(); 	/* get the next command from the keyboard */

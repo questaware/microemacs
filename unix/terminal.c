@@ -960,6 +960,7 @@ void tcapchrom(short chroms)
     chromattrs.d.rest = chroma.d.rest;
     last_chm = chm;
     putpad(chroma.c+2);
+	  millisleep(10);
   }
 }
 

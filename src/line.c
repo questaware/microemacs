@@ -182,7 +182,10 @@ LINE * Pascal USE_FAST_CALL lfree(int noffs, LINE * lp)
 
 static
 void Pascal USE_FAST_CALL lunlink(int noffs, LINE * lp)
-
+#if DO_UNDO == 0
+{ 
+}
+#else
 {	LINE * nlp = lextract(noffs, lp);
   UNDO * ud = curbp->b_undo;
 	if (ud)
@@ -194,6 +197,7 @@ void Pascal USE_FAST_CALL lunlink(int noffs, LINE * lp)
 		lp->l_fp = llost;
 	}}
 }
+#endif
 
 static 
 int g_inhibit_scan = 0;
@@ -1139,15 +1143,14 @@ void run_make(LINE * lp)
 
 { int len = llength(lp);
   UNDO *ud = (UNDO *)mallocz(sizeof(UNDO)-sizeof(ud->u_text)+len+4); // 4 say
-  if (ud == NULL)
-  	return -1;
-
-	ud->u_lp = lb;
-	ud->u_dcr = lp->l_dcr;
-	memcpy(ud->u_text, lp->l_text, len);
-	ud->u_offs = curwp->w_doto;
-	ud->u_bp = curbp->b_undo;
-	curbp->b_undo = ud;
+  if (ud != NULL)
+	{	ud->u_lp = lb;
+		ud->u_dcr = lp->l_dcr;
+		memcpy(ud->u_text, lp->l_text, len);
+		ud->u_offs = curwp->w_doto;
+		ud->u_bp = curbp->b_undo;
+		curbp->b_undo = ud;
+	}
 }}
 
 

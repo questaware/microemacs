@@ -62,7 +62,9 @@ char *Pascal envval();
 int USE_FAST_CALL find_nch(int wh, int cix, const LINE * lp);
 time_t ffiletime(FILE * ffp);
 FILE* Pascal ffropen(const char * fn);
+#if S_MSDOS
 _CRTIMP long double __cdecl atold(const char *);
+#endif
 char * float_asc(MYFLOAT x);
 const char * Pascal flook(char, const char *);
 char * Pascal flookdown(char *, char *);
@@ -83,7 +85,7 @@ void init_fncmatch(void);
 char *Pascal USE_FAST_CALL int_asc(int);
 char * Pascal USE_FAST_CALL int_radix_asc(int i, int r, char fill);
 int kinsstr(const char * s, int len, int bno);
-int Pascal makename(char *, const char *);
+//int Pascal makename(char *, const char *);
 char * mkTempCommName(char suffix, /*out*/char *filename);
 char *Pascal mkkey(const char *);
 char *Pascal mkul(int, char *);
@@ -94,7 +96,6 @@ char *Pascal token(char * tok, int size);
 int to_kill_buff(int wh, int n);
 const char *Pascal transbind(char *);
 int Pascal USE_FAST_CALL trimstr(int from, char * s);
-char *Pascal xlat(char *, char *, char *);
 int (Pascal *Pascal USE_FAST_CALL fncmatch(const char *))(int, int);
 Command getname(int wh);
 char * Pascal getconsoletitle();
@@ -126,7 +127,6 @@ char * Pascal pathcat(char *, int, const char *, const char *);
 #if S_MSDOS
 unsigned short USE_FAST_CALL refresh_colour(int row, int col);
 #endif
-int Pascal reglines(Bool ask);
 void Pascal release(char * mp);
 int reload_buffers(void);
 int Pascal remmark(int, int);
@@ -353,11 +353,6 @@ int Pascal resize(int, int);
 int Pascal resizm(int,int);
 void USE_FAST_CALL rest_l_offs(Lpos_t*);
 int        resterr();
-#if S_WIN32
-#define reverse_cursor(x) 1
-#else
-void reverse_cursor(int x);
-#endif
 int Pascal rmcclear();
 void Pascal rvstrcpy(char *, char *);
 int Pascal savematch();

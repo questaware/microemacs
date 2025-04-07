@@ -1277,6 +1277,7 @@ int	./mtgdi/estruct.h
 int	./unix/estruct.h
 int	./wincon/estruct.h
 int_asc	./src/eval.c
+int_radix_asc	./src/eval.c
 intdos	./mtgdi/estruct.h
 intdos	./unix/estruct.h
 intdos	./wincon/estruct.h
