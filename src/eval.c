@@ -1164,13 +1164,12 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 	                   if (0)
 	  when EVCFNAME:	 	 repl_bfname(bp, value);
 			               curwp->w_flag |= WFHARD | WFMODE;
-	  when EVBUFHOOK:
+	  when EVBUFHOOK: ++hookix;
 	  case EVEXBHOOK: ++hookix;
 	  case EVWRITEHK: ++hookix;
 	  case EVCMDHK:   ++hookix;
 	  case EVWRAPHK:  ++hookix;
-    case EVREADHK:  ++hookix;
-										hooks[hookix].k_code = 1;
+    case EVREADHK:  hooks[hookix].k_code = 1;
 								//	hooks[hookix].k_type = BINDFNC;
 										hooks[hookix].k_ptr.fp = fncmatch(value);
 //									setktkey(BINDFNC, value, &hooks[hookix]);

@@ -470,7 +470,15 @@ static int Pascal execkey(KEYTAB * key, int f, int n)
 
 int execwrap(int wh)
 
-{ return execkey(&hooks[wh], FALSE, 1);
+{ int rc = FALSE;
+	static int g_in_wrap;
+	if (!g_in_wrap)
+	{ ++g_in_wrap;
+		rc = execkey(&hooks[wh], FALSE, 1);
+		--g_in_wrap;
+	}
+
+  return rc;
 }
 
 /* This is the general command execution routine. It handles the fake binding

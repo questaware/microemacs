@@ -407,7 +407,7 @@ jover_:							  									/* reset the line pointer back.. */
 		freewhile(whlist);
 	}
 
-//g_execstr = NULL; // s_execstr;
+	g_execstr = NULL; // s_execstr;
   return cc;
 #undef tkn
 }
