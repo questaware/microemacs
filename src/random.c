@@ -409,11 +409,13 @@ int Pascal twiddle(int f, int n)
 int Pascal quote(int notused, int n)
 
 { int c = tgetc();
-	int tabsz = curbp->b_tabsize;
-	if (c == 'I'-'@')
-		curbp->b_tabsize = 1;
+//int tabsz = curbp->b_tabsize;
+//if (c == 'I'-'@')
+//	curbp->b_tabsize = 1;
+	if (n <= 0)
+		return TRUE;
 {	int cc = linsert(n, (char)c);
-	curbp->b_tabsize = tabsz;	
+//curbp->b_tabsize = tabsz;	
 	return cc;
 }}
 
@@ -1503,7 +1505,7 @@ long double evalexpr(char * s, int * adv_ref)
 //if (ch == '-')
 //	ch = *++s;
 	if (ch == '%')
-	{ char buf[257];
+	{ char buf[2570];
 		int v_adv = 0;
 	  strcpy(buf, s+1);
 	  while (in_range(buf[v_adv], 'a', 'z') || in_range(buf[v_adv], '0', '9'))
@@ -1528,7 +1530,7 @@ long double evalexpr(char * s, int * adv_ref)
 	{
 		if (ch == ',')
 		{
-			memmove(s+tot_adv, s+tot_adv+1, 20);
+			memmove(s+tot_adv, s+tot_adv+1, 200);
 			--tot_adv;
 		}
 		got = 1;
@@ -1646,7 +1648,7 @@ int Pascal calculator(int f, int n)
 	  }
 
 		if (len > 0)
-		{ char buf[256+1];
+		{ char buf[2560+1];
 
 			((char*)memcpy(buf+1, s+ixeq, len))[len] = 0;
 			buf[0] = '(';

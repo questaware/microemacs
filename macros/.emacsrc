@@ -369,7 +369,6 @@ btk execute-macro-21 ^XV
     set $hp15 "4 class "
   !endif
   !if &or &seq %suf2 ".c" &seq %suf4 ".cpp"
-    set $hp5 "4 break;"
     set $hp8 "4 continue;"
     set $hp10 "4 switch "
     set $hp11 "4 case "
@@ -441,6 +440,6 @@ set $discmd 1
 
 set %istrl 64
 
-set $hardtab 2
+set $hardtab -2
 set $fileprof ".c=c2.cpp=c2.cxx=c2.cs=c2.h=c2.pc=c2.js=c2.jav=c2.htm=c2.htm=c2.html=c2.prl=p2.pl=p2.for=f2.fre=f2.inc=f2.pre=f2.f=f2.sql=^q4.adb=^q4.ads=^q4.pas=a2.md=m2.py=p-2"
 

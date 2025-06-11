@@ -48,7 +48,7 @@ BUFFER * getcbuf(int createflag, BUFFER * bp, const char *prompt);
 BUFFER * Pascal bufflkup(const char * filename);
 BUFFER *Pascal bufflink(const char *, int);
 char * Pascal repl_bfname(BUFFER*, const char *);
-void run_make(LINE * ln);
+UNDO * run_make(LINE * ln);
 void run_trim(BUFFER * bp, int lim);
 char *Pascal bytecopy();
 Cc do_ftime(BUFFER * bp,
@@ -449,7 +449,7 @@ int Pascal unarg(int, int);
 int Pascal undochange(int notused, int n);
 int Pascal unbindkey(int, int);
 int Pascal uniarg(int, int);
-void Pascal USE_FAST_CALL updall(int, WINDOW *);
+//void Pascal USE_FAST_CALL updall(WINDOW *, int);
 void Pascal updallwnd(int);
 int /*Pascal*/ update(int);
 int Pascal updone();

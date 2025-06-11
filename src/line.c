@@ -160,6 +160,9 @@ LINE * USE_FAST_CALL lextract(int noffs, LINE * lp)
  
 LINE * Pascal USE_FAST_CALL lfree(int noffs, LINE * lp)
 
+{ if (l_is_hd(lp))					/* remove lp */
+		return lp;
+
 {	LINE * plp = lback(lp);	
 	LINE * nlp = lextract(noffs, lp);
 
@@ -178,7 +181,7 @@ LINE * Pascal USE_FAST_CALL lfree(int noffs, LINE * lp)
 	  free((char *) lp);
 
   return nlp;
-}}
+}}}
 
 static
 void Pascal USE_FAST_CALL lunlink(int noffs, LINE * lp)
@@ -249,7 +252,7 @@ int Pascal lchange(int flag)
 		  }
 		}
 
-		updall(all, curwp);
+//	updall(curwp, all);
   }}
   
 	return TRUE;
@@ -325,14 +328,8 @@ int Pascal linsert(int ins, char c)
 /*if (! (curbp->b_flag & BFCHG)	&& pd_discmd > 0)
     TTbeep();		
 */
-	if (ins <= 0)
-		return TRUE;
-
-  if (c == '\n')
-  { if (g_inhibit_scan)				/* Go back by more when reenabled */
-  		++g_header_scan;
-    return lnewline(ins);
-  }
+//if (ins <= 0)
+//	return TRUE;
 
 {	int ccol = getccol();
 	int overmode = (curbp->b_flag & MDOVER) >> 5;
@@ -349,12 +346,23 @@ int Pascal linsert(int ins, char c)
   LINE * lp = curwp->w_dotp;		/* Current line */
 
 #if DO_UNDO
+	UNDO * ud;
 	if (g_inhibit_undo <= 0)
-		run_make(lp);
+		ud = run_make(lp);
 #endif
 
 { LINE * olp = lp;
 	int used = lused(lp->l_dcr);
+
+  if (c == '\n')
+  { if (g_inhibit_scan)				/* Go back by more when reenabled */
+  		++g_header_scan;
+#if DO_UNDO
+		if (g_inhibit_undo <= 0)
+			ud->u_delct = ins;
+#endif
+    return lnewline(ins);
+  }
 
 	if ( doto < used  && overmode >= ins &&
 			(lgetc(lp, doto) != '\t' || ccol % tabsize == tabsize-1))
@@ -377,8 +385,7 @@ int Pascal linsert(int ins, char c)
   memset(&lp->l_text[doto],c,ins);
   if (olp != lp)
 	{	ibefore(olp, lp);				/* Link in */
-		if (!l_is_hd(olp))					/* remove lp */
-   		lfree(0, olp);					/* No mark points to lp */
+   	lfree(0, olp);					/* No mark points to lp */
  	}
   return lchange(WFEDIT);
 }}}}
@@ -405,7 +412,7 @@ _CRTIMP void *  __cdecl memmove(void * tgt, const void * src, size_t len)
 
 int Pascal insspace(int f, int n)/* insert spaces forward into text */
 
-{	Cc cc = linsert(n, ' ');
+{	Cc cc = n <= 0 ? TRUE : linsert(n, ' ');
 	if (cc <= OK)
 		return cc;
 	return backbychar(n);
@@ -1084,7 +1091,7 @@ int undochange(int notused, int n)
 	if (ud == NULL)
 		return 1;
 
-{ LINE * lb = ud->u_lp;
+{	LINE * lb = ud->u_lp;
 	if (run_validate(lb) != OK)
 		return 1;
 
@@ -1108,6 +1115,10 @@ int undochange(int notused, int n)
 		lfree(0,lp);
 	}
 	
+{ int delct = ud->u_delct;
+	while (--delct >= 0)
+		lfree(0, lforw(lp));
+
 	if (prepend)
 		next = lback(next);
 
@@ -1130,10 +1141,10 @@ esc:
 	curbp->b_undo = ud->u_bp;
 	run_destroy(ud);
 	return lchange(WFEDIT|WFHARD);
-}}}}}
+}}}}}}
 
 
-void run_make(LINE * lp)
+UNDO * run_make(LINE * lp)
 
 {	LINE * lb = lback(lp);
 	if (/*g_inhibit_undo > 0 || */ curbp->b_undo && curbp->b_undo->u_lp == lb)
@@ -1151,6 +1162,8 @@ void run_make(LINE * lp)
 		ud->u_bp = curbp->b_undo;
 		curbp->b_undo = ud;
 	}
+	
+	return ud;
 }}
 
 

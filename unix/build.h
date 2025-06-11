@@ -89,7 +89,7 @@
 #define CVMVAS	1	/* arguments to page forward/back in pages	*/
 #define	CFENCE	1	/* fench matching in CMODE			*/
 #define	TYPEAH	1	/* type ahead causes update to be skipped	*/
-#define DEBUGM	1	/* $debug triggers macro debugging		*/
+#define DEBUGM	0	/* $debug triggers macro debugging		*/
 #define	LOGFLG	0	/* send all executed commands to EMACS.LOG	*/
 #define	VISMAC	0	/* update display during keyboard macros	*/
 #define	CTRLZ	0	/* add a ^Z at end of files under MSDOS only	*/

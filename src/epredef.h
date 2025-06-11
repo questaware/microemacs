@@ -114,7 +114,6 @@ extern PD_VAR predefvars[];
 					/* overloading variables */
 X#define xxx	       predefvars[EVREADHK]
 X#define g_execlevel predefvars[EVCMDHK]
-X#define g_abortc    predefvars[EVKILL]
 X#define g_prefix    predefvars[EVLASTDIR]
 X#define prenum      predefvars[EVLASTMESG]
 X#define cryptflag   predefvars[EVVERSION]

@@ -11,7 +11,7 @@
     <LocalDebuggerWorkingDirectory>$(ProjectDir)\debug</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>-k @/bin/emacs78.rc \users\user\contacts\mylogins</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>tt</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>c:\gener\microemacs\wincon\release</LocalDebuggerWorkingDirectory>
   </PropertyGroup>

@@ -372,7 +372,7 @@ int Pascal forwpage(int f, int n)
 
 { register WINDOW * wp = curwp;
 
-  if (!f) 
+  if (!f)
   { int n_ = n;
     n = wp->w_ntrows - 2;	 /* Default scroll.	 */
     if (n <= 0) 		    /* Forget the overlap   */

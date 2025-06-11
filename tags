@@ -1169,6 +1169,7 @@ fmtch	./src/display.c
 fncmatch	./src/bind.c
 forward	./mtgdi/base.h
 forward	./src/base.h
+forwbyline	./src/etype.h
 forwchar	./src/basic.c
 forwdel	./src/random.c
 forwhunt	./src/search.c

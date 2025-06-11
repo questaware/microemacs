@@ -242,18 +242,18 @@ int Pascal mvupwind(int notused, int n)
       else
       { LINE * p = lforw(&wp->w_bufp->b_baseline);
         ++i;
-        while (lp != p && --i > 0)
+        while (--i > 0 && lp != p)
           lp = lback(lp);
       }
 
       wp->w_flag |= WFHARD;
       wp->w_linep = lp;
-            
+      
       if (getwpos() < 0 && wpos >= 0)
-      { wp->w_line_no += i - n - wpos;
-        wp->w_dotp = lp;
+      {	wp->w_dotp = lp;
+        wp->w_line_no += i - n - wpos;
 	      (void)forwbyline(wp->w_ntrows >> 1);
-      }
+	    }
     }
 	  return TRUE;
 }

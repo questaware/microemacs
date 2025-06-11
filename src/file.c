@@ -368,10 +368,14 @@ Cc Pascal USE_FAST_CALL ffgetline(int flen, char * * line_ref, FILE * ffp)
 
 	  line[++i] = c;
 
-	} while (c >= 0 && c != '\n');
+		if (c < 0)
+		{ 
+			if (i <= 0)
+				return feof(ffp) ? FIOEOF : FIOERR;
+			break;
+		}
 
-	if (c < 0 && i <= 0)
-		return feof(ffp) ? FIOEOF : FIOERR;
+	} while (c != '\n');
 
 //line[i] = 0;
 
@@ -504,7 +508,8 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 	mlwrite(TEXT139);	/* "Reading file" */
 
 { char * cmd = fullcmd + strlen(fullcmd) + 1;
-	const char * cmdnm = gtusr("scp");
+	//cmd[-1] = 1;
+{	const char * cmdnm = gtusr("scp");
 	int clen = strlen(concat(cmd, cmdnm == NULL ? PSCP_CMD : cmdnm, /*pw,*/" ", cmdbody," ",0));
 	const char * tmp = gettmpfn();
 
@@ -520,8 +525,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 		if (bp == NULL)
 			bp = bufflink(cmd+clen, 0);
 		if (bp != NULL)
-		{ cmd[-1] = 1;
-		  bp->b_remote = strdup(fullcmd);											  // allow leak
+		{ bp->b_remote = strdup(fullcmd);											  // allow leak
 	    bp->b_key = props & Q_INHERIT ? curbp->b_key : NULL;
 	  }
 	}
@@ -530,7 +534,7 @@ BUFFER * get_remote(int props, BUFFER * bp, const char * pw, const char * cmdbod
 
   memset(fullcmd, 0, sizeof(fullcmd));
 	return bp;
-}}
+}}}
 
 
 
@@ -780,18 +784,12 @@ int Pascal readin(char const * fname, int props)
 #endif
     scan_par_line(lp1);
 		if (nline < 5 &&
-				len > 6 && ln[2] == 't' && ln[3] == 'a'
-								&& ln[4] == 'b' && ln[5] <= ' '
+				len > 6 && ln[2] == 't' && ln[3] == 'a' && ln[4] == 'b' 
 								&&(ln[0] == ln[1]
 									 || ln[1] == '*') &&
 								  (ln[0] == '/' || ln[0] == '-'))
                    
-	  { tabw = atoi(ln+6);
-	    if (tabw > 0)
-	    { if (tabw < 0)	// expand tabs
-	    		tabw = -tabw;
-	    }
-	  }
+	  	tabw = atoi(ln+5);
 
 	  ibefore(nextline, lp1);
 	}}
@@ -1200,13 +1198,13 @@ int Pascal fetchfile(int f, int n)
 { BUFFER * bp = get_remote(encrypt | f, NULL, pw, cmdline);
 
 	memset(cmdline, 0, len);
-  if (bp == NULL)
-    return -1;
                           // If the fetch failed continue with any file from last time
-  swbuffer(bp);
+{ int rc = swbuffer(bp);
+	if (rc < 0)
+		return rc;
 
 //sprintf(diag_p, "EKEY %x %s", tbp, tbp->b_key == NULL ? "()" : tbp->b_key);
 //mbwrite(diag_p);
 
 	return gotobob(0,0);
-}}}}
+}}}}}

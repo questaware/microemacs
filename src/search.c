@@ -387,8 +387,10 @@ int Pascal USE_FAST_CALL hunt(int n, int again)
 		while (--ct > 0 && lp != lim)
 			lp = lback(lp);
 
-		if (ct <= 2)
-			mvdnwind(1,2 + ct);
+		if (ct <= 0)
+		{	wp->w_linep = wp->w_dotp;
+			mvdnwind(1,- wp->w_ntrows / 2);
+		}
 	{ int pmlen = strlen(pd_patmatch) + 5;
 		int plen = pmlen;
 		int e = wp->w_doto + plen;
@@ -718,14 +720,14 @@ int Pascal scanner(int direct, int again)
   return matchlen;				 /* We found a match */
 }}}}
 
-static int Pascal replaces(int, int, int);
+static int replaces(int, int, int);
 /*
  * sreplace -- Search and replace.
  */
 int Pascal sreplace(int f, int n)
 
 {
-  return replaces(FALSE, f, n);
+  return replaces(TRUE, f, n);
 }
 
 /*
@@ -734,7 +736,7 @@ int Pascal sreplace(int f, int n)
 int Pascal qreplace(int f, int n)
 
 {
-  return replaces(TRUE, f, n);
+  return replaces(FALSE, f, n);
 }
 
 
@@ -742,7 +744,7 @@ int Pascal qreplace(int f, int n)
  *	string.  Query might be enabled (according to kind).
  */
 static
-int Pascal replaces(int kind, int f, int n)
+int replaces(int kind, int f, int n)
 	/* int	kind;	* Query enabled flag */
 	/* int	f;	    * default flag */
 	/* int	n;	    * # of repetitions wanted */
@@ -752,13 +754,8 @@ int Pascal replaces(int kind, int f, int n)
 
 	if (rdonly())
 	  return FALSE;
-
-	if      (!f)
-		n = 100000000;
-	else if (n < 0) 		  		/* Check for negative repetitions */
-	  return FALSE;
 														/* Ask the user for the text of a pattern. */
-	cc = readpattern(TEXT82 + (kind == FALSE ? TEXT82_O : 0), &pat[0]);
+	cc = readpattern(TEXT82 + (kind * TEXT82_O), &pat[0]);
 																	/* "Replace" */
 																	/* "Query replace" */
 	if (cc <= FALSE)
@@ -786,7 +783,7 @@ int Pascal replaces(int kind, int f, int n)
 													/* "' with '" */
 	expandp(NPAT-4, rpat, "'? ", t);
 
-	while (--n >= 0)
+	while (--n >= 0 || !f)
 	{ int matchlen = scanner(1, FALSE);
 		if (matchlen < 0)
 			break;
@@ -802,7 +799,7 @@ int Pascal replaces(int kind, int f, int n)
 	    n = -1;
 #endif
 
-	  if (kind)			/* Check for query */
+	  if (!kind)			/* Check for query */
 	  {	if (getwpos() + 2 >= wp->w_ntrows)
 			{ Lpos_t save = *(Lpos_t*)&wp->w_dotp;
 			  forwbyline(2);
@@ -824,10 +821,9 @@ qprompt:
 			  case 'y':			/* yes, substitute */
 			  case ' ':
 
-			  when '!':	kind = FALSE;	/* yes/stop asking */
+			  when '!':	kind = TRUE;	/* yes/stop asking */
 					
-			  when 'n':	forwbychar(1);	/* no, onword */
-					continue;
+			  when 'n':	goto no;
 
 			  when 'u':		   /* undo last and re-prompt */
 					if (last.curline != NULL)
@@ -863,10 +859,14 @@ qprompt:
 			}       
 	  }	/* end of "if kind" */
 
+	  numsub++;					/* increment # of substitutions */
+		lenold = matchlen;
+	  if (/*(unsigned)matchlen == strlen(rpat) && */ strcmp(pd_patmatch,rpat) == 0)
+	  	goto no;
+
 	{ LINE * curl = wp->w_dotp;
 
 			   /* Delete the sucker, and insert its replacement. */
-		lenold = matchlen;
 	  lastins = delins(lenold, &rpat[0], MC_DITTO);
 //  if (lastins < 0)
 //    return FALSE;
@@ -881,14 +881,16 @@ qprompt:
 										   * that we didn't replace an empty string
 										   * (possible in MAGIC mode), because we'll
 										   * infinite loop. */
-	  numsub++;					/* increment # of substitutions */
-	  if      (kind)
+	  if      (!kind)
 	    update(TRUE);			  /* show the change */
 	  else if (matchlen == 0)
-	  { mlwrite(TEXT91);
-						/* "Empty string replaced, stopping." */
-	    return FALSE;
+		{	mlwrite(TEXT91);				/* And report the results */
+				/* "Empty string replaced, stopping." */
+	  	return FALSE;
 	  }
+	  continue;
+no:	  
+	  forwbychar(1);	/* no, onword */
 	}} // Loop
 #if S_WIN32 == 0
 	update(TRUE);

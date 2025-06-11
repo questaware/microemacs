@@ -283,7 +283,7 @@ error error
 // -1: not found, 0: single, 1: double
 
 static
-int find_match(const char * src, int len)
+int USE_FAST_CALL find_match(const char * src, int len)
 
 { char ch = src[0];
   int dbl = len > 1 && src[1] == ch;
@@ -295,7 +295,7 @@ int find_match(const char * src, int len)
     }
   }
   
-  return -1;
+  return len;
 }
 
 
@@ -352,11 +352,6 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 	}
 #endif
 
-{	VIDEO *vp = vscreen[row];
-	short * tgt = &vp->v_text[-1];
-	int is_ml = ((char*)tgt)[1] & VFML;
-	int len = llength(lp); 		/* an upper limit */
-  unsigned char * str = (unsigned char *)&lp->l_text[-1];
 //unsigned char s_flags = *str;												/* layout dependent */
 //*str = 0;																						/* restored below */
 
@@ -370,7 +365,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 //int sec_cmt = c_sec_cmt[clring & 15];
 	
 {	int triad = clring & BCFOR ? -'C' : 0;
-  int chrom_nxt = 0;
+  int chrom_nxt = CHR_0;
 	if ((clring & BCD) && mode)
 		chrom_nxt = cmt_chrom;
 
@@ -378,7 +373,7 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 {	short vtc = -col; // window on the horizontally scrolled screen; 0 at screen lhs
   int atbeg = 1;
-	int  markuplen = 1;
+	int markuplen = 1;
 	char markupterm = 0;
 	int hix[30] = {0};
 	const char** high = ((const char**)&pd_hlight1);
@@ -392,10 +387,16 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 
 //memset(hix, 0, sizeof(hix));
 
+{	VIDEO *vp = vscreen[row];
+	short * tgt = &vp->v_text[-1];
+	int is_ml = ((char*)tgt)[1] & VFML;
+	int len = llength(lp); 		/* an upper limit */
+  unsigned char * str = (unsigned char *)&lp->l_text[-1];
+
 	while (--len >= 0)
 	{	int chrom = chrom_nxt;
-		chrom_nxt = CHR_0;
-		
+		if (vtc >= 0)
+			chrom_nxt = CHR_0;
 	{ int c = *++str;
 		if (c == 0)
 			;
@@ -481,8 +482,9 @@ static VIDEO * USE_FAST_CALL vtmove(int row, int col, int cmt_chrom, LINE * lp)
 eolcmt:
 					mode = c != '*' && !triad ? Q_IN_EOL : Q_IN_CMT;
 					chrom = cmt_chrom;
-//				if (((clring & (BCFOR | BCPRL)) == 0) && vtc-1 >= 0)
-						tgt[vtc] |= chrom;
+					chrom_nxt = chrom;
+					if (((clring & (BCFOR | BCPRL)) == 0) && vtc-1 >= 0)
+						tgt[vtc] |= chrom_nxt;
 				}
 		}
 		if (atbeg > 0 && toupper(c)== -triad)
@@ -534,7 +536,7 @@ nop:
 		if (++vtc > 0)
 			tgt[vtc] = c | chrom;
 
-		if (vtc >= term.t_ncol && len > 0)
+		if (term.t_ncol - vtc <= 0 && len > 0)
 		{
 #if MEMMAP == 0
 //	  tgt[vtc] = (short)(chrom + '$');
@@ -720,7 +722,8 @@ no_bn:
 
 /*	updall: update all the lines in a window on the virtual screen */
 
-void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
+static
+void Pascal USE_FAST_CALL updall(WINDOW * wp, int wh)
 																/* wh : < 0 => de-extend logic
 																				= 0 => only w_dotp
 																				> 0 =? all */
@@ -743,7 +746,9 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 #endif
 	
 	while (++row <= zrow)
-	{	if      (wh < 0)
+	{	
+#if MEMMAP == 0
+		if      (wh < 0)
 		{ if (vscreen[row]->v_flag & VFEXT)
 			{ VIDEO * vp = vtmove(row, wp->w_fcol, 1, lp);
 																		/* this line no longer is extended */
@@ -753,7 +758,9 @@ void Pascal USE_FAST_CALL updall(int wh, WINDOW * wp)
 				}
 			}
 		}	
-		else if (wh || lp == wp->w_dotp)	/* and update the virtual line */
+		else
+#endif
+		     if (wh || lp == wp->w_dotp)	/* and update the virtual line */
 		{
 			VIDEO * vp = vtmove(row, wp->w_fcol, 1, lp);
 
@@ -774,7 +781,7 @@ void Pascal updallwnd(int reload)
 { WINDOW * wp;
 
 	for (wp = wheadp; reload && wp != NULL; wp = wp->w_next)
-	{ updall(1, wp);
+	{ updall(wp, 1);
 		modeline(wp);
 	}
 
@@ -811,7 +818,7 @@ void Pascal ptclear()
 
 
 
-static void Pascal pscroll(int dir, int stt, int lenm1)
+static void pscroll(int dir, int stt, int lenm1)
 		/*	dir;			** < 0 => window down */
 		/*	stt;			** start target location */
 		/*	lenm1;									*/
@@ -834,7 +841,7 @@ static void Pascal pscroll(int dir, int stt, int lenm1)
 #endif
 
 
-static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN */
+static void scrollupdn(WINDOW * wp, int set)/* UP == window UP text DOWN */
 	 
 { int n = set & WFTXTU;
 
@@ -866,7 +873,7 @@ static void Pascal scrollupdn(int set, WINDOW * wp)/* UP == window UP text DOWN 
 	ttscupdn(n);
 	pscroll(n, stt, lenm1);
 #endif
-	updall(0, wp);
+	updall(wp, 0);
 /* updateline(n < 0 ? wp->w_toprow : wp->w_toprow+lenm1);*/
 }}
 	 
@@ -968,14 +975,17 @@ void Pascal updline()
 					 /* update the current window if we have to move it around */
 {	int hard = wp->w_flag & WFHARD;
 	if (hard)
-		updall(1, wp);
+		updall(wp, 1);
 
 //g_curcol = col;
 																/*	upddex: de-extend any line that deserves it */
 {	int i;
   WINDOW * p;
 	for (p = wheadp; p != NULL; p = p->w_next)
-	{	updall(-1, p);
+	{
+#if MEMMAP == 0
+		updall(p, -1);
+#endif
 		if (p == wp)
 			p->w_dotp = dotp;
 		if (p->w_flag & WFMODE)
@@ -1150,11 +1160,11 @@ int /*Pascal*/ update(int force)
 			{ int set = reframe(wp) & ~( WFMOVE+WFMODE);
 														 				/* check the framing */
 				if			(set & (WFTXTU+WFTXTD))
-					scrollupdn(set, wp);	
+					scrollupdn(wp, set);
 				else if (set & WFHARD)
-					updall(1, wp);			/* update all lines */
+					updall(wp, 1);			/* update all lines */
 				else if (set)
-					updall(0, wp);			/* update EDITed line */
+					updall(wp, 0);			/* update EDITed line */
 			}
 								/* update physical screen from virtual screen */
 								/* update the cursor and flush the buffers */
@@ -1455,7 +1465,7 @@ int mlwrite(const char * fmt, ...)
 				 when 'b':	(void)tcapbeep();
 #if MEMMAP == 0
 				 when 'w':  TTflush();
-									  millisleep(4800);
+									  millisleep(100);
 #endif
 				 when 'o':  radix = 8 - 6;
 				 case 'x':  radix += 6;
@@ -1491,6 +1501,7 @@ mlp:								mlputs(width, sp);
 //	memset(&vscreen[term.t_nrowm1]->v_text[ttcol], 0, (term.t_ncol-ttcol)*2);
 	}
 #else
+ 	tcapmove(ttrow, scol);
 	strpcpy(g_cmd_line, lastmesg, sizeof(lastmesg));
 #endif
 

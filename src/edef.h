@@ -405,6 +405,7 @@ typedef struct UNDO
 	struct UNDO * u_bp;		/* Link to the previous UNDO	*/
 	struct LINE * u_lp;		/* Link to LINE */
 	struct LINE * u_llost;/* Link to lost lines */
+	int						u_delct;
 	int						u_offs;
 	int 	        u_dcr; 	/* Used(24) spare(6) incomment(1) append(1) */
 	struct LINE * u_held_lp;	/* Line which cannot be freed yet */

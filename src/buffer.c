@@ -88,9 +88,12 @@ int reload_buffers(void)
 static
 void Pascal customise_buf(BUFFER * bp)
 
-{		int zero = 0;
+{		int zero = MDIGCASE;
 	  int fsuffix = 0;
 	  int ix;
+
+//	if (bp->b_color)
+//		return
 
 		init_buf(bp);
 
@@ -117,7 +120,8 @@ void Pascal customise_buf(BUFFER * bp)
 
         if (*p != 0 || prof[1] != '=') continue;
 
-//			bp->b_flag &= ~ MDIGCASE;
+				zero = 0;
+				bp->b_flag &= ~ MDIGCASE;
 			  if (prof[2] == '^')
         { prof += 1;
 				  zero |= MDIGCASE;
@@ -567,7 +571,6 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 {	if (bp == NULL)
 		return ABORT;
 		 /* let a user macro get hold of things...if he wants */
-	execwrap(4);	 // exbhook
 
 	curbp = bp; 			/* Switch. */
 	bp->b_luct = ++g_top_luct;
@@ -590,6 +593,8 @@ int Pascal USE_FAST_CALL swbuffer(BUFFER * bp) /* make buffer BP current */
 #endif
 		}
 	}}
+
+	execwrap(4);	 // exbhook
 
 { WINDOW * cwp = leavewind(0, NULL);
 	cwp->w_bufp	= bp;

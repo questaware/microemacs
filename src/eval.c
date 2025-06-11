@@ -274,8 +274,8 @@ PD_VAR predefvars[NEVARS+2] =
 1,     /* EVBUFHOOK */		/* actual: pd_sgarbf */
 STOP,  /* EVCBFLAGS */		/* actual: kbdmode - curr keyboard macro mode*/
 0,
-0,     /* EVCBUFNAME */		/* actual: kbdrd */
--1,    /* EVCFNAME */		  /* actual: kbdwr */
+0,     /* EVCBUFNAME */		/* not in use */
+0,     /* EVCFNAME */		  /* not in use */
 CLIP_LIFE,/*EVCLIPLIFE */	/* actual: cliplife */
 0,     /* EVCMDHK */ 		  /* actual: execlevel - execution IF level */
 0,     /* EVCMODE */ 	  	/* actual: kbdrep */
@@ -299,11 +299,11 @@ FALSE, /* EVCWLINE */		  /* */
 1,     /* EVHJUMP */		  /* horizontal jump size */
 0,		 /* EVINCLD */			/* */
 0,     /* EVKEYCT */		  /* consec key ct */
-CTRL |'G',/* EVKILL */  	/* actual: abortc- current abort command char*/
+0,		 /* EVKILL */  			/* Not in use */
 0,     /* EVLASTDIR */	  /* actual: prefix- current pending prefix bits*/
 0,     /* EVLASTKEY */    /* last keystoke */
 0,     /* EVLASTMESG */   /* last message */
-TRUE,  /* EVLINE */       /* not in use */
+0,  	 /* EVLINE */       /* not in use */
 0,     /* EVMATCH */      /* actual: saveflag - Flags, saved with $target var */
 1,     /* EVMSFLAG */     /* use the mouse? */
 0,		 /* EVNOINDENT */		/* dont copy space from line above */
@@ -325,8 +325,8 @@ UNDEF, /* EVSEARCH */
 UNDEF, /* EVVERSION */	
 UNDEF, /* EVWINTITLE */
 UNDEF, /* EVWLINE */ 	
-UNDEF, /* EVWRAPHK */	
-UNDEF, /* EVWRITEHK */	
+0,     /* EVWRAPHK */		/* actual: pd_kbdrd */
+-1,    /* EVWRITEHK */	/* actual: pd_kbdwr */
 0,     /* EVXPOS */			/* current column mouse is positioned to*/
 0,     /* EVYPOS */			/* current screen row	*/
 #endif
@@ -734,7 +734,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 { BUFFER * bp = curbp;
 	int hookix = 0;
 
-	signed char tk;
+  signed char tk;
 	int iarg1;
 	int vnum = var_index(typ, fname);
 	if (vnum < 0)
@@ -748,7 +748,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		int sl1;
 		char * arg2 = NULL;
 		char * arg1 = push_arg(0,"");					/* to initialise area */
-		int type_kind = funcs[vnum].f_type_kind;
+		short type_kind = funcs[vnum].f_type_kind;
 		dbg_val("TK ", int_asc(type_kind));
 
 		if (type_kind >= MONAMIC)	/* retrieve the first argument */
@@ -968,7 +968,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 
 		  default:	       loglog2("Var %d = %x", vnum, iarg1);
 		}
-		return int_asc(iarg1);
+//	return int_asc(iarg1);
 #undef result
 	}
 
@@ -1055,7 +1055,7 @@ int Pascal setvar(int f, int n)	/* set a variable */
 	if 	    (f != FALSE)
 	  strcpy(&var[cc+1], int_asc(n));
 	else if (var[cc+1] == 0)
-	{ if (mlreply(TEXT53, &var[cc+1], NSTRING-cc+1) <= 0)
+	{ if (mlreply(TEXT53, &var[cc+1], NSTRING/*-cc+1*/) <= 0)
 /*				 "Value: " */
 	    return ABORT;
 	}
@@ -1154,9 +1154,6 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 
 	  when EVPOPUP:    mbwrite(value);
 				           //  upwind();
-	  when EVKILL:
-		case EVCBUFNAME: 
-	  case EVLINE:	   return FALSE;						// read only
 	  when EVFCOL:	   if (val < 0)
 	                     val = curwp->w_doto;
 	                   pd_fcol = val;

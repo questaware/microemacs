@@ -288,11 +288,6 @@ void Pascal dcline(int argc, char * argv[])
   tcapkopen();    /* open the keyboard */
   tcaprev(FALSE);
 
-#if S_WIN32
-	(void)_getcwd(lastmesg, sizeof(lastmesg));
-	setconsoletitle(lastmesg);
-#endif
-
   curbp = firstbp;
 	swbuffer(firstbp);
 
@@ -355,6 +350,8 @@ int main(int argc, char * argv[])
 #endif
 {
 #if S_WIN32
+	(void)_getcwd(lastmesg, sizeof(lastmesg));
+	setconsoletitle(lastmesg);
 	init_wincon();
 #endif
 
