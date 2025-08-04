@@ -1541,7 +1541,7 @@ long double evalexpr(char * s, int * adv_ref)
 		return atof(s);
 	}
 
-  if (ch == 0)
+  if (ch != '%' && ch != '#' && ch != '(')
 		return 0.0;
 			
 {	long double res = evalexpr(s+1, &tot_adv);

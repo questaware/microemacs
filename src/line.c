@@ -1147,24 +1147,26 @@ esc:
 UNDO * run_make(LINE * lp)
 
 {	LINE * lb = lback(lp);
+	UNDO * ud;
 	if (/*g_inhibit_undo > 0 || */ curbp->b_undo && curbp->b_undo->u_lp == lb)
-		return;
+		ud = curbp->b_undo;
+	else
+	{	run_var_update(1);
 
-	run_var_update(1);
-
-{ int len = llength(lp);
-  UNDO *ud = (UNDO *)mallocz(sizeof(UNDO)-sizeof(ud->u_text)+len+4); // 4 say
-  if (ud != NULL)
-	{	ud->u_lp = lb;
-		ud->u_dcr = lp->l_dcr;
-		memcpy(ud->u_text, lp->l_text, len);
-		ud->u_offs = curwp->w_doto;
-		ud->u_bp = curbp->b_undo;
-		curbp->b_undo = ud;
-	}
+	{ int len = llength(lp);
+	  ud = (UNDO *)mallocz(sizeof(UNDO)-sizeof(ud->u_text)+len+4); // 4 say
+	  if (ud != NULL)
+		{	ud->u_lp = lb;
+			ud->u_dcr = lp->l_dcr;
+			memcpy(ud->u_text, lp->l_text, len);
+			ud->u_offs = curwp->w_doto;
+			ud->u_bp = curbp->b_undo;
+			curbp->b_undo = ud;
+		}
+	}}
 	
 	return ud;
-}}
+}
 
 
 static
