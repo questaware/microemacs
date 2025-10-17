@@ -293,7 +293,7 @@ int Pascal USE_FAST_CALL getgoal(int offs, LINE * dlp)
 		lim = llength(dlp);
 	else															// getccol
 	{	lim = -lim;
-		offs = 0x7fffffff;
+//	offs = 0x7fffffff;
 	}
 
 { int col = 0;
@@ -304,23 +304,27 @@ int Pascal USE_FAST_CALL getgoal(int offs, LINE * dlp)
 
 	for (dbo = -1; ++dbo < lim; )
 	{ short c = lgetc(dlp, dbo);
-		if (c < 0x20 || c == 0x7f)
-		{ if (c == '\t')
+	  if (c < 0x20 || c == 0x7f)
+	  {	if (c == '\t')
 				col += tabsize - 1 - (col % tabsize);
 			else if (c >= pd_col1ch && c <= pd_col2ch)
-			{ col -= 1;
+			{ if (col == offs)
+					break;
+				col -= 1;
+#if S_WIN32 == 0
 				if (c == 8)
 					col -= 1;
+#endif
 			}
 			else 
 				col += 1;
 		}
 		col += 1;
-		if (col > offs)
+		if ((unsigned)col > (unsigned)offs)
 			break;
 	}
 
-	return (offs & 0x40000000) ? col : dbo;
+	return offs < 0 /*(offs & 0x40000000)*/ ? col : dbo;
 }}
 
 

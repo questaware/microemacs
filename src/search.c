@@ -720,14 +720,14 @@ int Pascal scanner(int direct, int again)
   return matchlen;				 /* We found a match */
 }}}}
 
-static int replaces(int, int, int);
+static int replaces(int, int);
 /*
  * sreplace -- Search and replace.
  */
 int Pascal sreplace(int f, int n)
 
 {
-  return replaces(TRUE, f, n);
+  return replaces(0, n);
 }
 
 /*
@@ -736,7 +736,7 @@ int Pascal sreplace(int f, int n)
 int Pascal qreplace(int f, int n)
 
 {
-  return replaces(FALSE, f, n);
+  return replaces(1, n);
 }
 
 
@@ -744,7 +744,7 @@ int Pascal qreplace(int f, int n)
  *	string.  Query might be enabled (according to kind).
  */
 static
-int replaces(int kind, int f, int n)
+int replaces(int kind, int n)
 	/* int	kind;	* Query enabled flag */
 	/* int	f;	    * default flag */
 	/* int	n;	    * # of repetitions wanted */
@@ -783,7 +783,7 @@ int replaces(int kind, int f, int n)
 													/* "' with '" */
 	expandp(NPAT-4, rpat, "'? ", t);
 
-	while (--n >= 0 || !f)
+	while (--n >= 0 || kind)
 	{ int matchlen = scanner(1, FALSE);
 		if (matchlen < 0)
 			break;
@@ -799,7 +799,7 @@ int replaces(int kind, int f, int n)
 	    n = -1;
 #endif
 
-	  if (!kind)			/* Check for query */
+	  if (kind > 0)			/* Check for query */
 	  {	if (getwpos() + 2 >= wp->w_ntrows)
 			{ Lpos_t save = *(Lpos_t*)&wp->w_dotp;
 			  forwbyline(2);
@@ -814,14 +814,15 @@ qprompt:
    /* mlwrite("");			** and clear it */
 
 			switch (cc | 0x20)		/* And respond appropriately */
-			{ case 'l':   n = -1;
+			{ case 'l':   kind = n = 0;
+										
 #if	FRENCH
 		  	case 'o':			/* yes, substitute */
 #endif
 			  case 'y':			/* yes, substitute */
 			  case ' ':
 
-			  when '!':	kind = TRUE;	/* yes/stop asking */
+			  when '!':	kind = -1;	/* yes/stop asking */
 					
 			  when 'n':	goto no;
 
