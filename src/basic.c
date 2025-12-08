@@ -36,7 +36,7 @@ char* Pascal remallocstr(char** res_ref, const char* val, int len)
   if      (len <= 0)
     len = al;
   else if (al > len)
-     al = 0;
+    al = 0;
 { char* res = (char*)mallocz(len);
 
   if (res != NULL && al > 0)

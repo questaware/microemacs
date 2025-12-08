@@ -75,10 +75,10 @@ const char *Pascal getfname(int);
 char *Pascal getkill(void);
 const char *Pascal getreg(char * t);
 extern const char getvalnull[];
-const char *Pascal getval(char *, const char *);
+const char *Pascal getval(char *, char *);
 
 char * gtfilename(int wh);
-const char *Pascal gtusr(char * vname);			/* look up a user var's value */
+const char *Pascal gtusr(const char * vname);			/* look up a user var's value */
 char *Pascal ilook();
 void  Pascal ibefore(LINE*, LINE*);
 void init_fncmatch(void);

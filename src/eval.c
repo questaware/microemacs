@@ -334,6 +334,47 @@ UNDEF, /* EVWLINE */
 
 //char * g_file_prof = NULL;
 
+#undef MAXVARS
+#define MAXVARS 16
+
+/*	structure to hold user variables and their definitions	*/
+
+typedef struct UVAR
+{	char u_name[NVSIZE + 1];	       /* name of user variable */
+	char *u_value;				/* value (string) */
+} UVAR;
+
+typedef struct		/* user variables */
+{ int  top;
+	UVAR c[1];
+} UDICT;
+
+static UDICT * g_uv;
+
+static int g_uv_vnum;
+
+const char *Pascal gtusr(const char * vname)			/* look up a user var's value */
+																						/* name of user variable to fetch */
+{	int top = g_uv->top;
+	int vnum;
+																	/* scan the list looking for the user var name */
+	for (vnum = -1; ++vnum < top; )
+		if ( g_uv->c[vnum].u_name[0] == 0 ||
+	       strcmp(vname, g_uv->c[vnum].u_name) == 0)
+	    goto found;
+#if 1
+{ int sz = sizeof(int)*2+vnum*2*sizeof(UVAR);
+	UDICT * uv = (UDICT*)mallocz(sz);
+	g_uv = memcpy(uv, g_uv, sz - vnum * sizeof(UVAR));
+	uv->top = vnum * 2;
+}
+#endif
+
+found:
+	g_uv_vnum = vnum;
+	return g_uv->c[vnum].u_value;
+}
+
 
 #ifdef _DEBUG
 char * dbg_val(const char * banner, const char * val)
@@ -369,7 +410,6 @@ int USE_FAST_CALL need_realloc(int vnum)
 	return FALSE;
 }
 
-
 void Pascal varinit()	/* initialize the user variable list */
 
 {	int ix;
@@ -380,9 +420,9 @@ void Pascal varinit()	/* initialize the user variable list */
 #if S_MSDOS == 0
   predefvars[EVPALETTE].p = strdup("426153789abcdef0");
 #endif
-#if CALLED
-  for (i = MAXVARS; --i >= 0;)
-    uv[i].u_name[0] = 0;
+#if 1
+	g_uv = (UDICT*)mallocz(sizeof(int)*2+MAXVARS*sizeof(UVAR));
+	g_uv->top = MAXVARS;
 #endif
 }
 
@@ -393,7 +433,7 @@ Pascal varclean()	/* initialize the user variable list */
 
 { int i;
 
-  for (i = MAXVARS - 1; i >= 0; --i)
+  for (i = g_uv->top - 1; i >= 0; --i)
     if (uv[i].u_name[0] != 0)
       free(uv[i].u_value);
 }
@@ -511,7 +551,6 @@ char * Pascal USE_FAST_CALL int_radix_asc(int i, int radix, char fill)
 
 	memset(g_result+1, fill, INTWIDTH);
 	*(short*)&g_result[INTWIDTH+2] = 0;
-//g_result[INTWIDTH+3] = 0;
 
 {	char * sp = &g_result[INTWIDTH+2];		/* 13 places from g_result[1] */
 	int v = i;
@@ -666,28 +705,12 @@ Map_t g_fnamemap = mk_const_map(T_DOMCHAR0+4, 2, funcs, 0);
 
 Map_t g_evmap = mk_const_map(T_DOMSTR, 0, g_envars, 0);
 
-
-/*	structure to hold user variables and their definitions	*/
-
-typedef struct UVAR
-{	char u_name[NVSIZE + 1];	       /* name of user variable */
-	char *u_value;				/* value (string) */
-} UVAR;
-
-/*	current user variables (This structure will probably change)	*/
-
-static
-UVAR NOSHARE g_uv[MAXVARS + 1];	/* user variables */
-
-static int g_uv_vnum;
-
-
 static
 int Pascal var_index(int tag, char var[NVSIZE+1])
 												/* name of variable to fetch */
 { int vix;
 
-fvar:	vix = -1;
+fvar:	vix = 0;
 {	int wh = var[0] == '$';
 	switch (tag)
 	{ case '&': 
@@ -697,7 +720,6 @@ fvar:	vix = -1;
 		      getval(&var[0], var);
 		      goto fvar;
 		    }
-		    vix = 0;
 		otherwise
 				if (var[wh] == 'h' && var[wh+1] == 'p')
 				{ tag = atoi(var+wh+2)-1;
@@ -706,23 +728,22 @@ fvar:	vix = -1;
 				}
 				vix = (TKENV << 11);
 
-	  when '%':		  /* check for existing legal user variable */
+	  when '%':		  /* check for existing legal user variable (Not called from gtenfun) */
 	  	  (void)gtusr(&var[1]);
 		  	vix = g_uv_vnum;
-			  if (vix >= 0)
-			  {	strcpy(g_uv[vix].u_name, &var[1]);
-					return vix | (TKVAR << 11);
-		    }				/* indirect operator? */
+			  strcpy(g_uv->c[vix].u_name, &var[1]);
+				return vix | (TKVAR << 11);
+		    				  /* indirect operator? */
 	}
 
-	if (vix >= 0)
- 		vix = binary_const(vix, &var[wh]) | vix;
-
+ 	vix |= binary_const(vix, &var[wh]);
+#if 0
 	if (vix < 0)
 	{ mlwrite(TEXT52, var);
 					/* "%%No such variable as '%s'" */
 	  return -1;
 	}
+#endif
 
 	return vix;
 }}
@@ -975,22 +996,6 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 	return int_asc(iarg1);
 }
 
-
-const char *Pascal gtusr(char * vname)			/* look up a user var's value */
-																						/* name of user variable to fetch */
-{	char * vptr = NULL;
-	int vnum;
-																/* scan the list looking for the user var name */
-	for (vnum = MAXVARS; --vnum >= 0 && g_uv[vnum].u_name[0] != 0; )
-	  if (strcmp(vname, g_uv[vnum].u_name) == 0)
-	  { vptr = g_uv[vnum].u_value;
-	    break;
-	  }
-	
-	g_uv_vnum = vnum;
-	return vptr;
-}
-
 #if 0
 
 char *Pascal funval(i)
@@ -1101,7 +1106,7 @@ int Pascal svar(int var, const char * value)	/* set a variable */
   char ** varref = &predefvars[vnum].p;
 
   if (var - vnum == (TKVAR << 11))
-	{ varref = &g_uv[vnum].u_value;
+	{ varref = &g_uv->c[vnum].u_value;
   	goto remalloc;
   }
 
@@ -1213,13 +1218,10 @@ fvar:	vix = -1;
 	      vix = binary_const(1, &var[1])|(TKENV << 11);
 
 	  when '%':		  /* check for existing legal user variable */
-	  	  (void)gtusr(&var[1]);
-	  	  vix = g_uv_vnum;
-		    if (vix >= 0)
-		    {	strcpy(g_uv[vix].u_name, &var[1]);
+		    strcpy(gtusr(&var[1]), &var[1]);
 
-					vix |= TKVAR << 11;
-		    }				/* indirect operator? */
+				vix = g_uv_vnum | (TKVAR << 11);
+		    				/* indirect operator? */
 	  when '&': 
 		    if (var[1] == 'i' && var[2] == 'n' && var[3] == 'd')// && g_macargs > 0)
 		    {			  /* grab token, and eval it */
@@ -1267,11 +1269,11 @@ const char getvalnull[] = "";
 
 				/* the oob checks are faulty */
 					/* find the value of a token */
-const char *Pascal getval(char * tgt, const char * src)
+const char *Pascal getval(char * tgt, char * src)
 														/* token: token to evaluate */
 {	int blen = NSTRING-1;
 //const char * src = (const char *)s;
-	char * srcp1 = src + 1;
+	char * srcp1 = (char*)src + 1;
 
 	switch (*src)
 	{ case TOKARG:															/* interactive argument */
@@ -1394,8 +1396,8 @@ int Pascal listvars(int f, int n)
 
   lnewline(1);
 					    /* build the user variable list */
-	for (uindex = MAXVARS; --uindex >= 0 && g_uv[uindex].u_name[0] != 0; )
-    fmt_desv('%', g_uv[uindex].u_name, g_uv[uindex].u_value);
+	for (uindex = -1; ++ uindex < g_uv->top && g_uv->c[uindex].u_name[0] != 0; )
+    fmt_desv('%', g_uv->c[uindex].u_name, g_uv->c[uindex].u_value);
 
 //++pd_discmd;
 

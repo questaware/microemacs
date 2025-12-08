@@ -456,14 +456,14 @@ int Pascal detab(int f, int n) /* change tabs to spaces */
 {	int inc = n > 0 ? 1 : -1;				/* increment to next line [sign(n)] */
 
 	for (; n; n -= inc)
-	{	int tabsz = curbp->b_tabsize > 0 ? curbp->b_tabsize : -curbp->b_tabsize;
+	{	int inhibit = g_inhibit_undo-1;
+		int tabsz = curbp->b_tabsize > 0 ? curbp->b_tabsize : -curbp->b_tabsize;
 		LINE * dotp = curwp->w_dotp;
 		int l_dcr = dotp->l_dcr;
-		int inhibit = g_inhibit_undo-1;
 		int  offs;											/* detab line */
 
-//	if (l_dcr == 0)
-//		break;
+		if (l_dcr == 0)
+			break;
 		for (offs = -1; ++offs < lused(dotp->l_dcr); )
 		{ char ch;
 			if ((ch = lgetc(dotp, offs)) != '\t')
@@ -1617,66 +1617,69 @@ int Pascal arith(int f, int n)
 #if OPT_CALCULATOR
 																/* increment or decrement a number */
 int Pascal calculator(int f, int n)
-				/* int f, n;		** not used */
+				/* int f, n;		** n not used */
  
 {	while (1)
 	{	Lpos_t spos = *(Lpos_t*)&curwp->w_dotp;	/* original line pointer */
 		char * s = lgets(spos.curline, spos.curoff);
 
-		int ix = -1;
-		char  sch = 0;
-		int ixeq = 0;
 		int len = llength(spos.curline) - spos.curoff;
 		if (len <= 0)
-			return TRUE;
+		{ if (--n <= 0)
+				return TRUE;
+		}
+		else
+		{	int ix = -1;
+			int ixeq = 0;
+			if (len > 256) 
+				len = 256;
 
-		if (len > 256) 
-			len = 256;
+			while (++ix < len)
+			{	char ch = s[ix];
 
-		while (++ix < len)
-		{	char ch = s[ix];
+				if (ch == '=' || ch == '#')
+				{	if (ch == '=')
+				  {	ixeq = ix + 1;
+		  			len -= ixeq;
+		  		}
 
-			if (ch == '=' || ch == '#')
-			{	if (ch == '=')
-			  {	ixeq = ix + 1;
-	  			len -= ixeq;
-	  		}
+					while (ix > 0 && s[ix-1] <= ' ')
+				  	--ix;
 
-				while (ix > 0 && s[ix-1] <= ' ')
-			  	--ix;
+					if (ch != '=')
+						len -= (len - ix);
+	  			break;
+		  	}
+		  }
 
-				if (ch != '=')
-					len -= (len - ix);
-  			break;
-	  	}
-	  }
+			if (len > 0)
+			{ char buf[2560+1];
 
-		if (len > 0)
-		{ char buf[2560+1];
+				((char*)memcpy(buf+1, s+ixeq, len))[len] = 0;
+				buf[0] = '(';
+								
+			{	int adj;
+				MYFLOAT res = evalexpr(buf, &adj);
+				const char * all = adj <= 0 ? "Error" : float_asc(res);
 
-			((char*)memcpy(buf+1, s+ixeq, len))[len] = 0;
-			buf[0] = '(';
-							
-		{	int adj;
-			MYFLOAT res = evalexpr(buf, &adj);
-			const char * all = adj <= 0 ? "Error" : float_asc(res);
-
-			if (ixeq > 0)
-			{ char tch = s[-1];
-				char sch = s[ix];
-			  s[ix] = 0;
-				s[-1] = '%';
-				set_var(s-1, all);
-				s[-1] = tch;
-				s[ix] = sch;
-			}
-			else
-			{	if (!f)
-					mbwrite(all);
-			
-			  return kinsstr(all, -1, 0);
-			}
-		}}
+				if (ixeq > 0)
+				{ char tch = s[-1];
+					char sch = s[ix];
+				  s[ix] = 0;
+					s[-1] = '%';
+					set_var(s-1, all);
+					s[-1] = tch;
+					s[ix] = sch;
+				}
+				else
+				{	if (!f)
+						mbwrite(all);
+				
+				  if (n == 1)
+				  	return kinsstr(all, -1, 0);
+				}
+			}}
+		}
 
 		if (!forwline(1,1))
 			return TRUE;

@@ -620,10 +620,10 @@ int Pascal readin(char const * fname, int props)
   const char * s = fname-1;
   while (*++s != 0)
   { if (*s == '@')
-      got_at = 2;
+      got_at = 1;
+    if (*s == '/')
+      got_at = 0;
   }
-  if (s[-1] == '/')
-   --got_at;
 
 { Cc cc = FIOSUC;
 	BUFFER * bp = curbp;

@@ -89,7 +89,7 @@ void openwindbuf(char * bname)
 
   if (bclear(bp))
   { bp->b_flag &= ~MDVIEW;
-//  bp->b_flag |= BFACTIVE;
+	  bp->b_flag |= BFACTIVE;
 		bp->b_luct = ++g_top_luct;
     
   { WINDOW* wp = leavewind(0, NULL);
