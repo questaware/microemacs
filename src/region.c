@@ -203,7 +203,7 @@ int Pascal widen(int notused, int n)
 	BUFFER * bp = curbp;    // curwp->w_bufp;
 	if ((bp->b_flag & BFNAROW) == 0)
 	{ mlwrite(TEXT74);
-					/* "%%This buffer is not narrowed" */
+					/* "%%buffer is not narrowed" */
 	  return FALSE;
 	}
 
@@ -242,7 +242,7 @@ int Pascal widen(int notused, int n)
 	upwind(1);
 //orwindmode(WFHARD|WFMODE);
 
-	mlwrite(TEXT75);
+//mlwrite(TEXT75);
 				/* "[Buffer is widened]" */
 	return TRUE;
 }}

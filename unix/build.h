@@ -168,7 +168,7 @@ typedef int   Vint;       /* set this to short int if it is more efficient */
 #define	NLOCKS	100			/* max # of file locks active	*/
 #define	KBLOCK	250			/* sizeof kill buffer chunks	*/
 #define	NBLOCK	16			/* line block chunk size	*/
-#define	NVSIZE	10			/* max #chars in a var name	*/
+#define	NVSIZE	20			/* max #chars in a var name	*/
 #define NMARKS	 4			/* number of marks must be po2  */
 #define MAXVARS 64
 

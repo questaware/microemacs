@@ -1512,7 +1512,7 @@ long double evalexpr(char * s, int * adv_ref)
 	{ char buf[2570];
 		int v_adv = 0;
 	  strcpy(buf, s+1);
-	  while (in_range(buf[v_adv], 'a', 'z') || in_range(buf[v_adv], '0', '9'))
+	  while (in_range(buf[v_adv], 'a', 'z') || in_range(buf[v_adv], '0', '9') || buf[v_adv] == '_')
 	  	++v_adv;
 	  buf[v_adv] = 0;
 	  
@@ -1631,8 +1631,8 @@ int Pascal calculator(int f, int n)
 		else
 		{	int ix = -1;
 			int ixeq = 0;
-			if (len > 256) 
-				len = 256;
+			if (len > NVSIZE)
+				len = NVSIZE;
 
 			while (++ix < len)
 			{	char ch = s[ix];
@@ -1647,39 +1647,42 @@ int Pascal calculator(int f, int n)
 				  	--ix;
 
 					if (ch != '=')
-						len -= (len - ix);
+						len = ix;
 	  			break;
 		  	}
 		  }
 
-			if (len > 0)
-			{ char buf[2560+1];
+		{ char buf[2560+1];
 
-				((char*)memcpy(buf+1, s+ixeq, len))[len] = 0;
-				buf[0] = '(';
+			((char*)memcpy(buf+1, s+ixeq, len))[len] = 0;
+			buf[0] = '(';
 								
-			{	int adj;
-				MYFLOAT res = evalexpr(buf, &adj);
-				const char * all = adj <= 0 ? "Error" : float_asc(res);
+		{	int adj;
+			MYFLOAT res = evalexpr(buf, &adj);
+			const char * all = adj <= 0 ? "Error"  : float_asc(res);
 
-				if (ixeq > 0)
-				{ char tch = s[-1];
-					char sch = s[ix];
-				  s[ix] = 0;
+			if (ix >= NVSIZE)
+			{	all = TEXT166;
+				ixeq = 0;
+			}
+			if (ixeq > 0)
+			{ char tch = s[-1];
+				char sch = s[ix];
+				{ s[ix] = 0;
 					s[-1] = '%';
 					set_var(s-1, all);
 					s[-1] = tch;
 					s[ix] = sch;
 				}
-				else
-				{	if (!f)
-						mbwrite(all);
+			}
+			else
+			{	if (!f)
+					mbwrite(all);
 				
-				  if (n == 1)
-				  	return kinsstr(all, -1, 0);
-				}
-			}}
-		}
+			  if (n == 1)
+			  	return kinsstr(all, -1, 0);
+			}
+		}}}
 
 		if (!forwline(1,1))
 			return TRUE;
