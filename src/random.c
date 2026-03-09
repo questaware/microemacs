@@ -1631,8 +1631,8 @@ int Pascal calculator(int f, int n)
 		else
 		{	int ix = -1;
 			int ixeq = 0;
-			if (len > NVSIZE)
-				len = NVSIZE;
+			if (len > 256)
+				len = 256;
 
 			while (++ix < len)
 			{	char ch = s[ix];
@@ -1661,10 +1661,11 @@ int Pascal calculator(int f, int n)
 			MYFLOAT res = evalexpr(buf, &adj);
 			const char * all = adj <= 0 ? "Error"  : float_asc(res);
 
-			if (ix >= NVSIZE)
+			if (ixeq > 0 && ix >= NVSIZE)
 			{	all = TEXT166;
 				ixeq = 0;
 			}
+
 			if (ixeq > 0)
 			{ char tch = s[-1];
 				char sch = s[ix];
