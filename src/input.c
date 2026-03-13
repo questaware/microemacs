@@ -361,11 +361,11 @@ static int USE_FAST_CALL comp_name(int cpos, int wh, char * name)
 {
   if (wh == CMP_FILENAME)
 	{ strcpy(name+cpos, "*");
-    if (msd_init(name,
-        		     MSD_DIRY|MSD_REPEAT|MSD_STAY|MSD_HIDFILE|MSD_SYSFILE|MSD_USEPATH|MSD_MATCHED)
-	         != OK)
+	{	Cc cc = msd_init(name,
+        		     MSD_DIRY|MSD_REPEAT|MSD_STAY|MSD_HIDFILE|MSD_SYSFILE|MSD_USEPATH|MSD_MATCHED);
+    if (cc != OK)
 			return cpos;
-	}
+	}}
 
 {	int best = -1;
 	const Char * eny;

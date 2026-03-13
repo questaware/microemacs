@@ -1563,6 +1563,7 @@ long double evalexpr(char * s, int * adv_ref)
 
 	{	int adv2;
 	  long double res2 = evalexpr(s+tot_adv+1, &adv2);
+	  long double rest;
 		if (adv2 < 0)
 			return 0.0;
 
@@ -1573,7 +1574,11 @@ long double evalexpr(char * s, int * adv_ref)
 		 		res -= res2;
 		 	when '*':
 	 			res *= res2;
-		 	when '/':
+		 	when '`':
+		 		rest = res2;
+		 		res2 = res;
+		 		res = rest;
+		 	case '/':
 				if (res2 > -0.00000001 && res2 < 0.00000001)
 					*adv_ref = -2;
 				else
@@ -1629,59 +1634,56 @@ int Pascal calculator(int f, int n)
 				return TRUE;
 		}
 		else
-		{	int ix = -1;
-			int ixeq = 0;
-			if (len > 256)
-				len = 256;
+		{ char buf[2560+2];
+			if (len > 2560)
+				len = 2560;
 
-			while (++ix < len)
-			{	char ch = s[ix];
+			((char*)memcpy(buf+1, s, len))[len] = 0;
+								
+		{	int ix = 0;
+			int ixeq = 0;
+
+			while (TRUE)
+			{	char ch = buf[++ix];
+				if (ch == 0)
+					break;
 
 				if (ch == '=' || ch == '#')
 				{	if (ch == '=')
-				  {	ixeq = ix + 1;
-		  			len -= ixeq;
-		  		}
+				  	ixeq = ix;
+
+					buf[ix] = 0;
 
 					while (ix > 0 && s[ix-1] <= ' ')
 				  	--ix;
 
 					if (ch != '=')
-						len = ix;
-	  			break;
+	  				break;
 		  	}
 		  }
 
-		{ char buf[2560+1];
-
-			((char*)memcpy(buf+1, s+ixeq, len))[len] = 0;
-			buf[0] = '(';
-								
+			buf[ixeq] = '(';
 		{	int adj;
-			MYFLOAT res = evalexpr(buf, &adj);
+			MYFLOAT res = evalexpr(buf+ixeq, &adj);
 			const char * all = adj <= 0 ? "Error"  : float_asc(res);
 
-			if (ixeq > 0 && ix >= NVSIZE)
+			if (ixeq > 0 && ixeq >= NVSIZE)
 			{	all = TEXT166;
 				ixeq = 0;
 			}
-
-			if (ixeq > 0)
-			{ char tch = s[-1];
-				char sch = s[ix];
-				{ s[ix] = 0;
-					s[-1] = '%';
-					set_var(s-1, all);
-					s[-1] = tch;
-					s[ix] = sch;
-				}
+			if (ixeq > 0)				// We have assign
+			{	buf[0] = '%';
+				buf[ixeq] = 0;
+				set_var(buf, all);
 			}
 			else
 			{	if (!f)
 					mbwrite(all);
-				
-			  if (n == 1)
-			  	return kinsstr(all, -1, 0);
+			}
+		  if (n == 1)
+			{ int rc = kinsstr(all, -1, 0);
+				if (ixeq <= 0)
+					return rc;
 			}
 		}}}
 
