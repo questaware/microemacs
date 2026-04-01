@@ -1497,104 +1497,6 @@ int Pascal fmatch(ch)
 }
 
 #endif
-
-#if OPT_CALCULATOR
-
-static 
-long double evalexpr(char * s, int * adv_ref)
-
-{ *adv_ref = -1;
-{ char ch = *s;
-
-//if (ch == '-')
-//	ch = *++s;
-	if (ch == '%')
-	{ char buf[2570];
-		int v_adv = 0;
-	  strcpy(buf, s+1);
-	  while (in_range(buf[v_adv], 'a', 'z') || in_range(buf[v_adv], '0', '9') || buf[v_adv] == '_')
-	  	++v_adv;
-	  buf[v_adv] = 0;
-	  
-	{ const char * ss = gtusr(buf);
-	  if (ss == NULL)
-	  	return 0.0;
-	{ int that_adv;
-	  long double res = evalexpr(strpcpy(buf,ss,119), &that_adv);
-	 	if (that_adv > 0)
-	  	*adv_ref = v_adv+1;
-	 	return res;
-	}}}
-
-{ int tot_adv = -1;
-	int got = 0;
-	while ((ch = s[++tot_adv]) == ' ')
-		;
-	for (; ch == '.' || ch == ',' || in_range(ch, '0', '9'); ch = s[++tot_adv])
-	{
-		if (ch == ',')
-		{
-			memmove(s+tot_adv, s+tot_adv+1, 200);
-			--tot_adv;
-		}
-		got = 1;
-	}
-
-	if (got)
-	{	*adv_ref = tot_adv;
-		return atof(s);
-	}
-
-  if (ch != '%' && ch != '#' && ch != '(')
-		return 0.0;
-			
-{	long double res = evalexpr(s+1, &tot_adv);
-//if (tot_adv < 0)
-//	return 0.0;
-
-	while (1)
-	{ char op = s[++tot_adv];
-		if (op == ' ')
-			continue;
-	 	if (op == ')' || op == '#' || op == 0)
-		{	*adv_ref = tot_adv+!!op;
-			return res;
-		}
-
-	{	int adv2;
-	  long double res2 = evalexpr(s+tot_adv+1, &adv2);
-	  long double rest;
-		if (adv2 < 0)
-			return 0.0;
-
-		tot_adv += adv2;
-
-		switch (op)
-		{	case '-':
-		 		res -= res2;
-		 	when '*':
-	 			res *= res2;
-		 	when '`':
-		 		rest = res2;
-		 		res2 = res;
-		 		res = rest;
-		 	case '/':
-				if (res2 > -0.00000001 && res2 < 0.00000001)
-					*adv_ref = -2;
-				else
-					res /= res2;
-			when '+':
-		 		res += res2;
-			when '^':
-		 		res = pow(res, res2);
-		 	otherwise
-				return 0.0;
-		}
-	}}
-}}}}
-
-#endif
-
 																/* increment or decrement a number */
 int Pascal arith(int f, int n)
 				/* int f, n;		** not used */
@@ -1620,6 +1522,122 @@ int Pascal arith(int f, int n)
 }}
 
 #if OPT_CALCULATOR
+
+static 
+int evalexpr(char * s, int six, long double * res_ref)
+
+{	int occs = -1;
+	
+	int prev_hi = 0;
+	MYFLOAT result = 0.0;
+	char op = 0;
+	char ch;
+
+  while ((ch = s[++six]) != 0 && ch != ')')
+	{	int start = six;
+	  const char * ss = s+start;
+		int digit = 0;
+		int alpha = ch == '%';
+
+		--six;
+		while (TRUE)
+		{ ch = s[++six];
+			if (ch == 0)
+				break;
+#if 0
+			if (ch == ',')
+			{
+				memmove(s+six, s+six+1, 200);
+				--six;
+				continue;
+			}
+#endif
+			if	    (ch == '.' || in_range(ch, '0', '9'))
+			{	++digit;
+//			if (alpha)
+//				return 0;
+			}
+			else if (in_range(ch, 'a', 'z') || ch == '_')
+			{	
+				alpha = alpha*2;
+				if (!alpha)
+					return 0;
+			}
+			else if (ch != '%')
+				break;
+		}
+		
+		if (alpha > 1 || digit || ch == '(')
+		{	if (alpha > 1)
+			{	s[six] = 0;
+				ss = gtusr(ss+1);
+//			s[six] = ch;
+		 		if (ss == NULL)
+					return -start-1;
+			}
+			
+		{	MYFLOAT rest;
+			MYFLOAT opnd;
+			int high = ch == '*' || ch == '/' || ch == '`' ? 1 : ch == '^' ? 2 : 0;
+
+			++occs;
+			if (!alpha && (ch == '(' || occs > 0 && (high > prev_hi)))
+			{	six = evalexpr(s, high ? start-1 : ch == '(' ? six : start-1, &opnd);
+				ch = s[six];
+			}
+			else
+				opnd = atof(ss);
+		
+			if (!op)
+				result = opnd;
+			else
+			{ switch (op)
+				{	case '-':
+				 		result -= opnd;
+					when '+':
+				 		result += opnd;
+				 	when '*':
+			 			result *= opnd;
+				 	when '`':
+				 		rest = opnd;
+				 		opnd = result;
+				 		result = rest;
+				 	case '/':
+						if (opnd > -0.00000001 && opnd < 0.00000001)
+						{	// *res_ref = -2;
+							return 0;
+						}
+						else
+							result /= opnd;
+					when '^':
+				 		result = pow(result, opnd);
+				 	otherwise
+						return 0;
+				}
+			}
+			
+			if (ch == '(')
+			{ --six;
+				continue;
+			}
+
+			if      (ch == ')')
+				op = s[++six];
+			else if (ch == 0)
+				--six;
+			else
+			{	if (high < prev_hi)
+					break;
+
+				prev_hi = high;
+				op = ch;
+			}
+		}}
+	}
+	
+	*res_ref = result;
+	return six;
+}
 																/* increment or decrement a number */
 int Pascal calculator(int f, int n)
 				/* int f, n;		** n not used */
@@ -1638,47 +1656,49 @@ int Pascal calculator(int f, int n)
 			if (len > 2560)
 				len = 2560;
 
-			((char*)memcpy(buf+1, s, len))[len] = 0;
+//		((char*)memcpy(buf+1, s, len))[len] = 0;
 								
-		{	int ix = 0;
-			int ixeq = 0;
+		{	int six = -1;
+			int tix = 0;
+			int ixeq = -1;
 
-			while (TRUE)
-			{	char ch = buf[++ix];
-				if (ch == 0)
-					break;
+			while (--len >= 0)
+			{	char ch = s[++six];
+
+				if (ch == ' ')
+					continue;
+
+				if (ch == ',' && len > 0 && in_range(s[six+1], '0','9'))
+					continue;
 
 				if (ch == '=' || ch == '#')
-				{	if (ch == '=')
-				  	ixeq = ix;
-
-					buf[ix] = 0;
-
-					while (ix > 0 && s[ix-1] <= ' ')
-				  	--ix;
+				{	if (ch == '=' && ixeq < 0)
+					{	if (in_range(buf[1],'a','z'))
+				  		ixeq = tix;
+				  }
 
 					if (ch != '=')
 	  				break;
+	  			ch = 0;
 		  	}
+		  	buf[++tix] = ch;
 		  }
+			buf[++tix] = 0;
 
-			buf[ixeq] = '(';
-		{	int adj;
-			MYFLOAT res = evalexpr(buf+ixeq, &adj);
-			const char * all = adj <= 0 ? "Error"  : float_asc(res);
-
-			if (ixeq > 0 && ixeq >= NVSIZE)
-			{	all = TEXT166;
-				ixeq = 0;
-			}
-			if (ixeq > 0)				// We have assign
+		{	MYFLOAT res;
+			int adj = ixeq >= NVSIZE ? -1 : evalexpr(buf+1,ixeq, &res);
+			const char * all = adj < 0 ? TEXT52 : adj == 0 ? TEXT156a : float_asc(res);
+			if (adj * ixeq > 0)				// We have assign
 			{	buf[0] = '%';
-				buf[ixeq] = 0;
+//			buf[ixeq+1] = 0;
 				set_var(buf, all);
 			}
 			else
 			{	if (!f)
-					mbwrite(all);
+				{	mlwrite(all, buf-adj);
+				}
+				if (adj <= 0)
+					return FALSE;
 			}
 		  if (n == 1)
 			{ int rc = kinsstr(all, -1, 0);

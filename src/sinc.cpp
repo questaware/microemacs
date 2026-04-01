@@ -1116,7 +1116,7 @@ int Pascal getIncls(int f, int n)
   swbuffer(bp);
 
   Sinc::g_outbuffer = NULL;
-  gotobob(0,0);
+  gotobob_();
 
   return cc;
 }}

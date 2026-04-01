@@ -27,7 +27,7 @@ const NBIND names[] =
 #endif
 	{"backward-word",				backword},
 	{"begin-macro",					ctlxlp},
-	{"beginning-of-file",		gotobob},
+	{"beginning-of-file",		gotobob_},
 	{"beginning-of-line",		gotobol},
 	{"bind-to-key",					bindtokey},
 	{"btk",									bindtokey},
@@ -61,7 +61,7 @@ const NBIND names[] =
 #endif
 	{"drop-buffer",					dropbuffer},
 	{"end-macro",						ctlxrp},
-	{"end-of-file",					gotoeob},
+	{"end-of-file",					gotoeob_},
 	{"end-of-line",					gotoeol},
 	{"end-of-word",					endword},
 #if	AEDIT

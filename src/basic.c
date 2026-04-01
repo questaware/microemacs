@@ -189,7 +189,6 @@ int Pascal backchar(int notused, int n)
 }
 
 
-static
 int Pascal gotobob_()
 
 { WINDOW * wp = curwp;
@@ -239,8 +238,9 @@ int Pascal gotoline(int f, int n)	/* move to a particular line.
 }
 
 
-int Pascal gotoeob(int notused, int n)
+int Pascal gotoeob_()
 
+#if 0
 { WINDOW * wp = curwp;
   int ct;
   LINE * lp = &wp->w_bufp->b_baseline;
@@ -255,6 +255,10 @@ int Pascal gotoeob(int notused, int n)
   setcline();
   return TRUE;
 }
+#else
+{ return gotoline(1,20000000);
+}
+#endif
 
 
 int Pascal forwline(int notused, int n_)

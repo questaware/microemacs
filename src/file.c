@@ -950,9 +950,9 @@ int Pascal filesave(int f, int n)
 			g_disinp -= 7; 							/* turn command input echo off */
 //		char * pw = cmd;
 		{	int blank = -1;
-			while (((unsigned char *)cmd)[++blank] > 1)
+			while (((unsigned char *)cmd)[++blank] != 0)
 				;
-			cmd[blank] = 0;
+//		cmd[blank] = 0;
 //		--cmd;
 //    while (*++cmd != 0 && *cmd != 1)
 //    	;
@@ -1163,13 +1163,14 @@ int Pascal fetchfile(int f, int n)
 
 	int len = llength(lp) > 2*NFILEN ? 2*NFILEN : llength(lp);
 	char cmdline[2*NFILEN+1];
-	((char*)memcpy(cmdline, (char*)lp->l_text, len))[len] = 0;
+	char * cmd = (char*)memcpy(cmdline, (char*)lp->l_text, len);
+	cmd[len] = 0;
 	if (curbp->b_flag < 0) // BCRYPT2
-		double_crypt(cmdline, len);
+		double_crypt(cmd, len);
 
 //mbwrite(cmd);
 	
-{	char * s = cmdline;
+{	char * s = cmd;
 	while (*s != 0 && *s != '\t')					  // Go to first tab
 		++s;
 		
@@ -1206,5 +1207,5 @@ int Pascal fetchfile(int f, int n)
 //sprintf(diag_p, "EKEY %x %s", tbp, tbp->b_key == NULL ? "()" : tbp->b_key);
 //mbwrite(diag_p);
 
-	return gotobob(0,0);
+	return gotobob_();
 }}}}}

@@ -238,7 +238,6 @@ btk execute-macro-15 A-Q
 
 btk execute-macro-16 M-FND
 
-btk beginning-of-line FN<
 btk search-incls     M-FN<
 
 ;btk end-of-line FN>

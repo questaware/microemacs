@@ -1236,6 +1236,7 @@ gotobob_	./src/basic.c
 gotobol	./src/basic.c
 gotobop	./src/basic.c
 gotoeob	./src/basic.c
+gotoeob_	./src/basic.c
 gotoeol	./src/basic.c
 gotoeop	./src/basic.c
 gotoline	./src/basic.c

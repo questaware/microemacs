@@ -121,7 +121,8 @@ int Pascal nextword(int notused, int n)
 		mask = (dir >> 1) & 1;
 		if (mask)
 		{	++f_size;
-			(void)forwbychar(dir);
+			if (!forwbychar(dir))
+				return FALSE;
 		}
 #if 1
 		for (iter = 2; --iter >= 0; )
@@ -170,7 +171,7 @@ int Pascal nextword(int notused, int n)
 	      ch = nextch((Lpos_t*)curwp, dir);
 				if (ch < 0)
 				{	if (dir < 0)
-						gotobob(0,0);
+						gotobob_();
 
   	      return FALSE;
   	    }

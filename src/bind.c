@@ -90,7 +90,7 @@ static int Pascal cbuf40(int f, int n) { return execporb(40,n); }
 
 static KEYTAB keytab[NBINDS+1] = 
 {
-	{CTRL|'A',	gotobol},
+//{CTRL|'A',	gotobol},
 	{CTRL|'B',	backchar},
 	{CTRL|'E',	endword},
 	{CTRL|'H',	backdel},
@@ -107,7 +107,7 @@ static KEYTAB keytab[NBINDS+1] =
 	{CTRL|'S',	forwsearch},
 	{CTRL|'U',	uniarg},
 //{CTRL|'X',	cex},
-	{CTRL|'Z',	backpage},
+//{CTRL|'Z',	backpage},
 //{CTRL|'[',	meta},
 	{CTLX|CTRL|'B', listbuffers},
 	{CTLX|CTRL|'C', quit},
@@ -253,9 +253,9 @@ bind-to-key filter-buffer ^X|
 	{META|'!',	refresh},
 #endif
 	{META|'=',	setvar},
-	{META|'>',	gotoeob},
-	{META|'<',	gotobob},
-	{SPEC|CTRL|'<', gotobob},
+	{META|'>',	gotoeob_},
+	{META|'<',	gotobob_},
+	{SPEC|CTRL|'<', gotobob_},
 #if APROP
 	{META|'A',	apro},
 #endif
@@ -298,14 +298,14 @@ bind-to-key filter-buffer ^X|
 	{MUTA|'U',	undochange},
 	{MUTA|'Z',	wordsearch},
 	{META|',',	indentsearch},
-	{SPEC|'<',	gotobob},
+	{SPEC|'<',	gotobol},
+	{SPEC|'>',	gotoeol},
 	{SPEC|'P',	backline},
 	{META|SPEC|'<',searchIncls},
 	{META|SPEC|'N',nextwind},
 	{SPEC|'Z',	backpage},
 	{SPEC|'B',	backchar},
 	{SPEC|'F',	forwchar},
-	{SPEC|'>',	gotoeol},
 	{SPEC|'N',	forwline},
 	{SPEC|'V',	forwpage},
 //{SPEC|'C',	insspace},

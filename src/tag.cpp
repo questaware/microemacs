@@ -364,9 +364,9 @@ int USE_FAST_CALL Tag::findTagExec(const char key[], char * tagfile)
 	    {		  			/* if first char is '/' search forwards, '?' for backwards */
 			char typ = *file;
 			if (typ == '?')
-				gotoeob(0, 0);
+				gotoeob_();
 			else
-				gotobob(0, 0);
+				gotobob_();
 
 #if 0
 			strcpy(tagfile,pat);			/* save for restore */
