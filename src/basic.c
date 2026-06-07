@@ -115,16 +115,15 @@ int USE_FAST_CALL nextch(Lpos_t * lpos, int dir)
     } while (--dir > 0);
   }
   else		       								/* Reverse.*/
-  { if (l_is_hd(lp))
-	   	return -1;
-
-  	while (++dir <= 0)
+  { while (++dir <= 0)
   	{ if (off < llength(lp))
 				c = lgetc(lp, off);
 	    if (--off < 0)
 			{	adj -= 1;
 				lp = lback(lp);
 	      off = llength(lp);
+	      if (l_is_hd(lp))
+	   			return -1;
 	    }
 		}
   }
