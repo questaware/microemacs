@@ -841,8 +841,7 @@ out:
 //  bp->b_luct = swb_luct;
 	  bp->b_dotp = lforw(&bp->b_baseline);
 	  bp->b_wlinep = bp->b_dotp;
-		if (tabw != 0)
-	  	bp->b_tabsize = tabw;
+		set_buf_tab(bp,tabw);
 
 	  for (wp = wheadp; wp != NULL; wp=wp->w_next)
 	    if (wp->w_bufp == bp)

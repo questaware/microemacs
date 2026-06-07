@@ -43,27 +43,26 @@ extern PD_VAR predefvars[];
 #define EVPENDING  39
 #define EVPOPUP    40
 #define EVREADHK   41
-#define	EVREGION	 42
-#define EVREPLACE  43
-#define EVSEARCH   44
-#define EVSEED     45
-#define EVSSAVE    46
-#define EVSTATUS	 47
-#define EVUARG		 48
-#define EVUNDOS		 49
-#define EVVERSION	 50
-#define EVWINEW	   51
-#define EVWINTITLE 52
-#define EVWLINE 	 53
-#define EVWORK		 54
-#define EVWRAPHK	 55
-#define	EVWRITEHK	 56
+#define EVREPLACE  42
+#define EVSEARCH   43
+#define EVSEED     44
+#define EVSSAVE    45
+#define EVSTATUS	 46
+#define EVUARG		 47
+#define EVUNDOS		 48
+#define EVVERSION	 49
+#define EVWINEW	   50
+#define EVWINTITLE 51
+#define EVWLINE 	 52
+#define EVWORK		 53
+#define EVWRAPHK	 54
+#define	EVWRITEHK	 55
 #if 0
-#define EVXPOS		 57
-#define EVYPOS		 58
-#define EVZCMD		 59
+#define EVXPOS		 56
+#define EVYPOS		 57
+#define EVZCMD		 58
 #else
-#define EVZCMD		 57
+#define EVZCMD		 56
 #endif
 #define	EVHLIGHT1  (EVZCMD+1)
 

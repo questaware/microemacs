@@ -293,9 +293,9 @@ void tcapsetsize(int wid, int dpth)
 	if ((unsigned short)(dpth-1) >= g_csbi.dwMaximumWindowSize.Y)	
 		dpth = g_csbi.dwMaximumWindowSize.Y;
 	rect.Bottom = dpth-1;
-	if ((unsigned short)(wid-1) >= g_csbi.dwMaximumWindowSize.X)
-		wid = g_csbi.dwMaximumWindowSize.X;
-	rect.Right = wid-1;
+	if ((unsigned short)(--wid) > g_csbi.dwMaximumWindowSize.X-1)
+		wid = g_csbi.dwMaximumWindowSize.X-1;
+	rect.Right = wid;
 																	// set the screen buffer to be big enough
   rc = SetConsoleWindowInfo(h, 1, &rect);
 #if _DEBUG
@@ -599,13 +599,14 @@ void Pascal ttscup(int maxx, int maxy)/* direction the window moves*/
 
 void Pascal ttputc(unsigned char ch) /* put character at the current position in
 														   		      current colors */
-{	HANDLE cout = g_ConsOut;
+{	WORD 		cuf[2];
+	cuf[0] = FG_WHITE;
 
 /*GetConsoleScreenBufferInfo( cout, &ccInfo );*/
-	GetConsoleScreenBufferInfo( cout, &g_csbi );
+{	HANDLE cout = g_ConsOut;
+  GetConsoleScreenBufferInfo( cout, &g_csbi );
 
-{	WORD 		cuf[2];
-	unsigned long n_out;
+{	unsigned long n_out;
 	COORD curpos = g_csbi.dwCursorPosition;
   unsigned long  Dum;
 #if VS_CHAR8
@@ -613,7 +614,6 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 #else
 	wchar_t gch = ch;
 #endif
-	cuf[0] = FG_WHITE;
 																		/* write char to screen with current attrs */
   WriteConsoleOutputCharacter(cout, &gch,1, curpos, &Dum);
   WriteConsoleOutputAttribute(cout, cuf, 1, curpos, &n_out);
@@ -657,7 +657,7 @@ void Pascal ttputc(unsigned char ch) /* put character at the current position in
 	g_csbi.dwCursorPosition = curpos;
 //ttrow = row;
   SetConsoleCursorPosition( cout, curpos);
-}}
+}}}
 
 
 
@@ -714,13 +714,14 @@ void Pascal scwrite(row, outstr, color)	/* write a line out */
 	coords.X = 0;
 	coords.Y = row;
 			 
-	WriteConsoleOutputCharacter( g_ConsOut, buf, sclen, coords, &n_out );
-{ int cc = WriteConsoleOutputAttribute( g_ConsOut, cuf, sclen, coords, &n_out);
+{ HANDLE cout = g_ConsOut;
+	WriteConsoleOutputCharacter( cout, buf, col, coords, &n_out );
+{ int cc = WriteConsoleOutputAttribute( cout, cuf, col, coords, &n_out);
 #ifdef _DEBUG
-	if (cc == 0 || n_out != sclen)
+	if (cc == 0 || n_out != col)
 		adb(cc);
 #endif
-}}}
+}}}}
 
 
 #if	FLABEL

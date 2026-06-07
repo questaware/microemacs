@@ -213,9 +213,13 @@ int g_header_scan = 0;
  * if the buffer is displayed in more than 1 window we change EDIT to HARD.
  * Set MODE if the mode line needs to be updated (the "*" has to be set).
  */
-int Pascal lchange(int flag)
+int USE_FAST_CALL lchange(int flag)
 
 { BUFFER * bp = curbp;
+												   /* make sure all the needed windows get this flag */ 
+  window_ct(bp);
+  (void)orwindmode(bp->b_window_ct > 1 ? WFHARD : flag);
+
   if ((bp->b_flag & BFCHG) == 0)	/* First change, so	*/
 	{	bp->b_flag |= BFCHG;
 	  curwp->w_flag |= WFMODE;
@@ -223,12 +227,9 @@ int Pascal lchange(int flag)
     tcapbeep();
 //  flag = WFHARD;
   }
-												   /* make sure all the needed windows get this flag */ 
-  window_ct(bp);
-  (void)orwindmode(bp->b_window_ct > 1 ? WFHARD : flag);
 
   if (g_inhibit_scan <= 0)
-	{	int all = 0;
+	{	// int all = 0;
 		init_paren("\000", 0);
 
   {	LINE * lp = curwp->w_dotp;
@@ -238,9 +239,9 @@ int Pascal lchange(int flag)
 		  lp = lback(lp);
 
 		g_paren.in_mode = (lp->l_dcr & Q_IN_CMT);
-		g_header_scan = 0; // ct + 6;
+		g_header_scan = ct_; // ct + 6;
 
-    while (--ct_ > 0)
+    while (TRUE)
 		{ int mode = scan_par_line(lp);
 		  lp = lforw(lp);
 	  	if (l_is_hd(lp))
@@ -248,8 +249,11 @@ int Pascal lchange(int flag)
 		
 		  if ((lp->l_dcr ^ mode) & Q_IN_CMT)
 		  { lp->l_dcr ^= Q_IN_CMT;
-		    all = 1; // wp->w_flag |= WFEDIT;
+		    // all = 1; // wp->w_flag |= WFEDIT;
+		    continue;
 		  }
+		  if (--ct_ < 0)
+		  	break;
 		}
 
 //	updall(curwp, all);
@@ -321,7 +325,7 @@ void line_openclose(LINE * to, LINE * from, int gap, int len)
  * You update mark, and a dot in another window, if it is greater than the 
  * place where you did the insert.  Return TRUE if all is well.
  */
-int Pascal linsert(int ins, char c)
+int USE_FAST_CALL linsert(int ins, char c)
 
 {	if (rdonly())
 		return FALSE;
@@ -333,7 +337,7 @@ int Pascal linsert(int ins, char c)
 
 {	int ccol = getccol();
 	int overmode = (curbp->b_flag & MDOVER) >> 5;
-	int tabsize = curbp->b_tabsize;
+	int tabsize = curbp->b_exptab;
 	if (tabsize < 0)
 	{	tabsize = - tabsize;
 		if (ins == 1 && c == '\t')
@@ -514,13 +518,13 @@ int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
 
 {	LINE * dotp = curwp->w_dotp;
   int    doto = curwp->w_doto;
-	int res = TRUE;
 
 	if (ct == 0)
-		return res;
+		return TRUE;
 
  	if (tokill)
-  {	int n = ct;
+  {	int res = TRUE;
+  	int n = ct;
 		while (n > 0)
 	  {	int l_dcr = dotp->l_dcr;
 	  	if (l_dcr == 0)					   /* Hit end of buffer.   */
@@ -612,13 +616,13 @@ int Pascal USE_FAST_CALL ldelchrs(Int ct, int tokill, int killflag)
   lchange(WFEDIT|WFHARD);
 //++g_overmode;
 //--g_inhibit_scan;
-  return res;
+  return TRUE;
 }}}}
 
 /* getctext:	grab and return a string with the text of
 		the current line
 */
-char * Pascal getctext(char * t)
+char * getctext(char * t)
 
 {		     /* find the contents of the current line and its length */
 	LINE * lp = curwp->w_dotp;
@@ -643,7 +647,7 @@ typedef struct t_kill
 static t_kill kills[NOOKILL+1];
 
 static
-int Pascal doregion(int wh, char * t)
+int Pascal doregion(int wh)
 	
 { if (wh < 0)	/* copy word */
 	{	int offs =  curwp->w_doto + 1;
@@ -683,51 +687,27 @@ int Pascal doregion(int wh, char * t)
   else
 	{	int  space = NSTRING-1;
 		REGION * ion = getregion();
-	  LINE  *linep = ion->r_linep; 		/* Current line.	*/
+		Lpos_t lpos = *(Lpos_t*)&ion->r_linep;
 		int  sz = ion->r_size;
-	  if (sz == 0)
-	    return 0;
 
-	{ int	 loffs;
-				    /* don't let the region be larger than a string can hold */
-//  if (wh == 0 && sz > NSTRING - 1)
-//    sz = NSTRING - 1;
-
-	  for (loffs = ion->r_offset; sz--; ++loffs)
-	  { int ch;
-	  	if (loffs < llength(linep))		/* End of line. 	*/
-	      ch = lgetc(linep, loffs);
-	    else
-	    { linep = lforw(linep);
-	      loffs = -1;
-	      ch = '\n';
-	    } 
-	    if (wh == 0)		// was 1
+	  while (--sz >= 0)
+	  { int ch = nextch(&lpos, 1);
+	    if      (wh == 0)		// called as 1
 	    { ch = kinsert((char)ch);
 	      if (ch <= FALSE)
 	        return ch;
 	    }
 	    else
 	    { if (isalpha(ch) && (ch & 0x20) == (wh & ~2)) /* isupper */
-	      {	lputc(linep, loffs, chcaseunsafe(ch));
+	      {	lputc(lpos.curline, lpos.curoff, chcaseunsafe(ch));
 	      	lchange(WFHARD);
 	      }
 	    }
 	  }
-	  if (t != NULL)
-	    *t = 0;
-	}}
+	}
 	return TRUE;
 }
 
-/* return some of the contents of the current region
-*/
-const char *Pascal getreg(char * t)
-
-{ return doregion(1,t) <= FALSE ? g_logm[2] : t;
-}
-
-
 /* Append all of the characters in the region to the n.th kill buffer. 
  * Don't move dot at all. 
  * Bound to "^XC".
@@ -758,7 +738,7 @@ int copyword(int f, int n)
  */
 int Pascal lowerregion(int f, int n)
 
-{ return doregion(2 + 1, NULL);
+{ return doregion(2 + 1);
 }
 
 /* Upper case region. Zap all of the lower
@@ -770,7 +750,7 @@ int Pascal lowerregion(int f, int n)
  */
 int Pascal upperregion(int f, int n)
 
-{ return doregion(0x20 + 1, NULL);
+{ return doregion(0x20 + 1);
 }
 
 //															wh != 0
@@ -788,7 +768,7 @@ int to_kill_buff(int wh, int n)
 	if (kinsert_n < 0)
 		return kinsert_n;  
 
-{ int cc = doregion(wh, NULL);
+{ int cc = doregion(wh);
   if (cc <= FALSE)
     return cc;
   

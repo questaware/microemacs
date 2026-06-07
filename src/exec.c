@@ -65,11 +65,11 @@ static
 BUFFER * Pascal USE_FAST_CALL bmfind(int create, int n)
 
 { char ebuffer[NBUFN+1];
-	strcpy(ebuffer, "*Macroxx");
+	strcpy(ebuffer, "*Macro00");
   																			/* make the buffer name */
 	if (n > 0)					
-	{ ebuffer[6] = '0' + (n / 10);
-	  ebuffer[7] = '0' + (n % 10);
+	{ ebuffer[6] += (n / 10);
+	  ebuffer[7] += (n % 10);
 	}
 	else /* n is 0 or -1 */
 	{																				/* find buffer user wants to execute */

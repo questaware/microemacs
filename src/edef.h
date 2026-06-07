@@ -285,6 +285,7 @@ typedef struct	BUFFER
 	struct LINE   b_baseline ; /* the header LINE */
 	struct LINE * b_narlims[2];/*narrowed top, bottom text */
 	signed char   b_tabsize ;  /* size of hard t ab   */
+	char					b_exptab;
 	CRYPTKEY      b_key;
 	short         b_color;     /* current colo rs		*/
 	short         b_flag;      /* Flags and modes  */
@@ -379,16 +380,29 @@ typedef struct LL
 //char pat[NPAT+2];
 } LL;
 
+typedef struct Nest_t
+{ char nest;
+	char nestclamped;
+} Nest_t;
+
 typedef struct Paren_s
 { 
   char				  in_mode;
   signed char   complex;
   char          prev;
-  signed char   nest;
-  signed char   nestclamped;
   char          ch;
+  signed char 	sdir;
+  signed char   adj;
+#if 0
+	signed char   nest;
+  signed char   nestclamped;
+#else
+	union
+	{ Nest_t n;
+		short  x;
+	} n;
+#endif
   signed char		lang;
-  short					sdir;
   short         fence;
 } Paren_t, *Paren;
 

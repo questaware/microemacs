@@ -85,6 +85,20 @@ int reload_buffers(void)
 	return ct;
 }
 
+
+int USE_FAST_CALL set_buf_tab(BUFFER * bp, int tabsz)
+
+{ bp->b_exptab = tabsz;
+	if (tabsz < 0)
+    tabsz = -tabsz;
+
+	if (tabsz > 0)
+		bp->b_tabsize = tabsz;
+
+	return bp->b_tabsize;
+}
+
+
 static
 void Pascal customise_buf(BUFFER * bp)
 
@@ -144,8 +158,8 @@ void Pascal customise_buf(BUFFER * bp)
    		zero |= MDCRYPT;
 
 		bp->b_flag |= zero | g_gflag;
-    bp->b_tabsize = tabsize;
 		bp->b_color = g_bat_b_color;
+    set_buf_tab(bp, tabsize);
 }}
 
 
@@ -155,10 +169,10 @@ int g_bfindmade;						// result from bufflink()
 /* Find a buffer, by name.
  * If the buffer is not found and the cflag & 1 is TRUE, create it. 
  */
-BUFFER *Pascal bfind(const char * bname, int cflag)
+BUFFER * USE_FAST_CALL bfind(const char * bname, int cflag)
 										/* name of buffer to find */
 										/* cflag   1: create it 2: make buffer name unique */
-{	int cc = -1;
+{	int cc;
                       			/* find the place in the list to insert this buffer */
 	BUFFER * sb = backbyfield(g_bheadp_ref, BUFFER, b_next);
 
@@ -208,7 +222,7 @@ BUFFER *Pascal bfind(const char * bname, int cflag)
 	//bp->b_color = g_bat_b_color;
 
 // 	init_buf(bp);
-		customise_buf(bp);
+		customise_buf(bp); 		/* must set b_tabsize */
 // 	bp->b_flag &= ~BFACTIVE;
 	}
 	return bp;

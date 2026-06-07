@@ -241,7 +241,6 @@ const char * const g_envars[] = {
 	"pending",		/* type ahead pending flag */
 	"popup",			/* popup message */
 	"readhook",		/* read file execution hook */
-	"region",			/* current region (read only) */
 	"replace",		/* replacement pattern */
 	"search",			/* search pattern */
 	"seed", 			/* current random number seed */
@@ -415,7 +414,7 @@ void Pascal varinit()	/* initialize the user variable list */
 {	int ix;
 	for (ix = EVHLIGHT1+30 ; --ix >= 0; )
 		if (need_realloc(ix))
-			predefvars[ix] .p = mallocz(2);
+			predefvars[ix].p = mallocz(2);
 
 #if S_MSDOS == 0
   predefvars[EVPALETTE].p = strdup("426153789abcdef0");
@@ -936,7 +935,7 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		  when EVPAGEWIDTH:iarg1 = term.t_ncol;
 		  when EVCURCOL:   iarg1 = getccol();
 		  when EVCURLINE:	 iarg1 = setcline();
-		  when EVHARDTAB:  iarg1 = bp->b_tabsize;
+		  when EVHARDTAB:  iarg1 = bp->b_exptab;
 	//	when EVUSESOFTTAB:iarg1 = bp->b_mode & BSOFTTAB ? 1 : 0;
 		  when EVCBFLAGS:  iarg1 = bp->b_flag;
 		  when EVCBLANG:	 iarg1 = bp->b_langprops;;
@@ -946,8 +945,8 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 	//  when EVSRES:	   return sres;
 	//  when EVPALETTE:  return palstr;
 	//  when EVFILEPROF: return g_file_prof;
-		  when EVCURCHAR:  iarg1 = llength(curwp->w_dotp) == curwp->w_doto 
-	                    								? '\n' : lgetc(curwp->w_dotp, curwp->w_doto);
+		  when EVCURCHAR:  iarg1 = nextch((Lpos_t*)&curwp->w_dotp, 0);
+	                    												 
 		  when EVWLINE:    iarg1 = curwp->w_ntrows;
 		  when EVCWLINE:   iarg1 = getwpos();
 		  when EVSEARCH:   return pat;
@@ -955,7 +954,6 @@ const char * USE_FAST_CALL gtenvfun(char typ, char * fname)/* evaluate a var/fun
 		  when EVREPLACE:  return rpat;
 	//  when EVMATCH:    return patmatch;
 		  when EVKILL:	   return getkill();
-		  when EVREGION:   return getreg(&result[0]);
 		  
 		  when EVLINE:	   return getctext(&result[0]);
 		  when EVLASTMESG: return strpcpy(result,lastmesg,NPAT);
@@ -1185,8 +1183,7 @@ int Pascal svar(int var, const char * value)	/* set a variable */
 	  case EVSSAVE:		val = stol(value);
 										goto storeint;
 
-		when EVHARDTAB:	if (val != 0)
-                 	    bp->b_tabsize = val;
+		when EVHARDTAB:	set_buf_tab(bp,val);
 
 	                  upwind(TRUE);
 //									goto storeint;
@@ -1374,23 +1371,26 @@ int Pascal listvars(int f, int n)
 
 { int uindex; // = curbp->b_tabsize;   /* index into uvar table */
 	char buf[6];
-	BUFFER * bp = curbp;
+	WINDOW * wp = curwp;
 	buf[0] = 'h';
 	buf[1] = 'p';
-        
+
   openwindbuf(TEXT56);
+  
+{	WINDOW * nwp = curwp;
+	curwp = wp;  
 //curbp->b_tabsize = 0;
 	curbp->b_flag |= BFCHG;										/* Suppress the beep */
   
 //--pd_discmd;
 				      												/* build the environment variable list */
   for (uindex = -1; ++uindex < NEVARS; )
-  {	BUFFER * sbp = curbp;
-  	curbp = bp;
+  {	curwp = wp;
+  	curbp = wp->w_bufp;
 		strcpy(buf+2, int_asc(uindex - EVHLIGHT1 + 1));
 	{ const char * nm = uindex <= EVZCMD ? g_envars[uindex] : buf;
   	const char * val = gtenvfun(TOKENV, nm);
-    curbp = sbp;
+    curwp = nwp;
     fmt_desv('$', nm, val);
   }}
 
@@ -1399,10 +1399,12 @@ int Pascal listvars(int f, int n)
 	for (uindex = -1; ++ uindex < g_uv->top && g_uv->c[uindex].u_name[0] != 0; )
     fmt_desv('%', g_uv->c[uindex].u_name, g_uv->c[uindex].u_value);
 
+	curbp = nwp->w_bufp;
+
 //++pd_discmd;
 
   return mkdes();
-}
+}}
 
 									/*	describe-functions	Bring up a fake buffer and list the
 											names of all the functions */

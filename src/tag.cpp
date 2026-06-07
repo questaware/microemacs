@@ -298,7 +298,8 @@ int Tag::findTagInFile(const char *key, const char * tagfile)
 
 int USE_FAST_CALL Tag::findTagExec(const char key[], char * tagfile)
 
-{	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
+{	// char tagfile[TAGFILEN];
+	const int sl_ = NFILEN + 10; 	// Must allow fn to change for same key !!
 	const char * const tagfname = TAGFNAME;
 
 	if (Tag::g_LastName == NULL)
@@ -395,12 +396,12 @@ int USE_FAST_CALL Tag::findTagExec(const char key[], char * tagfile)
 			int smode = bp->b_flag;
 			bp->b_flag |= MDMAGIC;
 
-			int rc = hunt(typ != '?' ? 1 : -1, 0);
+			int rc = hunt(typ != '?' ? 1 : -1, 0) > 0;
 			bp->b_flag = smode;
-
+#if _DEBUG
 			if (rc == FALSE)
 	    		strcpy(pat,tagfile);
-
+#endif
 		    return rc;
 		}
 	}
@@ -453,9 +454,9 @@ findTag(int f, int n)
         	mkul(1, tag);
     }}
 
-{	char tagfile[TAGFILEN];
-	int res = Tag::findTagExec(tag, tagfile);
-	if (res != TRUE)
+	char tagfile[TAGFILEN];
+	int res = Tag::findTagExec(tag,tagfile);
+	if (res == 0)
 	{	char * s = tag - 1;
 		char ch;
 		while ((ch = *++s) != 0 && ch != ':')
@@ -463,9 +464,9 @@ findTag(int f, int n)
 		if (ch != 0)
 		{	*s = 0;
 			if (s[1] == ch && middle == 0)
-				res = Tag::findTagExec(s+2, tagfile);
+				res = Tag::findTagExec(s+2,tagfile);
 			if (res <= 0)
-				res = Tag::findTagExec(tag, tagfile);
+				res = Tag::findTagExec(tag,tagfile);
 		}
 	}
 //	if (res == TRUE)
@@ -478,7 +479,7 @@ findTag(int f, int n)
 		return FALSE;
 	}
 	return TRUE;
-}}
+}
 
 #if STANDALONE
 

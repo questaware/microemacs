@@ -111,13 +111,14 @@ class Sinc
 	private:
 		enum { F_NF, F_DCL, F_FLD, F_DCLINIT, F_ENUM, F_METH, F_OMETH, 
 					 F_SCT, F_CLASS, F_PARAM, F_DERIVED };
-	
-		static int sparen_nest;
+
+		static Nest_t sparen;
 		
 //	static int prev_block;		/* not in use */
 
 		static int strxct_mtch(int stt, int offs,   // const char * s_, 
 																		const LINE * lp); // const char * slim);
+		static int scan_for_kw(Lpos_t * lpos);
 		/*static Short srchdpth = 0;*/
 	public:
 	 static char * namelist;
@@ -137,12 +138,12 @@ class Sinc
 	 static BUFFER * best_bp;
                                             /* 0 or (+ve) type found */
    static int doit_forward(const LINE* lp, const char * s, 
-   													short from_w_good_cl, int spn, int ob_dpth);
+   													short from_w_good_cl, Nest_t nest);
 	 static int USE_FAST_CALL srchdeffile(int depth, short from_wh, const char * fname);
 	 static void USE_FAST_CALL bufappline(int indent, const char * str);
 };
 
-int Sinc::sparen_nest;
+Nest_t Sinc::sparen;
 
 // int Sinc::prev_block;
 
@@ -167,13 +168,15 @@ char Sinc::ops[] =
 //	  	"public","private","protected",
 				"\"C\"\000    namespace\000\000\000\000";
 
+#define STRX_CLASS 5
+
 const char * Sinc::target;
 
 int Pascal Sinc::strxct_mtch(int wh, int offs, const LINE * lp )
 															/* -1, 0, 1 */
 {	int t_ = wh * 16 - 8;
 	int ct = wh + 2;				// -1: just Sinc::target
-		;											// ct = 1
+		 											// ct = 1
 
 													// the first two    'include' is 0,   'define' is 1
 													// ct = 2
@@ -194,25 +197,58 @@ int Pascal Sinc::strxct_mtch(int wh, int offs, const LINE * lp )
 										/* < 0 : not found */
   return ct;
 }
+											/* skewed in that the first ch = is '{' */
+
+int Sinc::scan_for_kw(Lpos_t * lpos)
+
+{ // ext_c = *(Lpos_t*)&wp->w_dotp;
+	//Paren_t sparen = g_paren;
+	int got = 0;
+	char ch;
+	int clamp = 120;
+	while (--clamp != 0 && (ch = nextch(lpos, -1)) >= 0)
+  { if ((scan_paren((char)ch) & (Q_IN_CMT+Q_IN_CMT0)) != 0)
+  		continue;
+  	if (got)
+  	{ if (!isword(ch))
+  			break;
+  		got = 0;
+  	}
+		if (ch == ')' || ch == ';' || ch == '}')
+			break;
+	{	int wh = Sinc::strxct_mtch(1, lpos->curoff, lpos->curline);
+		if (!in_range(wh, 0, STRX_CLASS))	// class to namespace
+			continue;
+		got = wh;
+	}}							/* dont bother with if (x) // comment */
+				  				/*                  { int tgt }       */
+//g_paren = sparen;
+	return got;
+}
+
+int got_nb = 0;
 
 /* Append a line to a buffer */
 
 void USE_FAST_CALL Sinc::bufappline(int indent, const char * str)
 
 {	if (Sinc::g_outbuffer)
+	{ //if (strcmp(str, "nb30.h") == 0 || 1)
+		//{ mbwrite(str);
+		//	got_nb = 1;
+		//}
 	{ int  sz = strlen(str);
-		LINE * inslp = mk_line(str, indent+sz, indent+sz, 1);
+		LINE * inslp = mk_line(str, 0, indent+sz, 1);
+		memset(&inslp->l_text[0], ' ', indent);
+		memcpy( inslp->l_text+indent, str,sz);
 	   
 		ibefore(Sinc::g_outbuffer->b_baseline.l_fp, inslp);
-		memset(&inslp->l_text[0], ' ', indent);
-		strcpy( inslp->l_text+indent, str);
-	}
+	}}
 }
 
 
 int Sinc::doit_forward(const LINE* lp, const char * s, 
-											 short from_w_good_cl, int spn, int spnc)
-
+											 short from_w_good_cl, Nest_t nest) // int spn, int spnc)
 {	
 //int  word_ct = M_NOGO;
 
@@ -294,7 +330,7 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 //         	continue;
 //			}
       }
-      else if (g_paren.nest == 0 && in_mode == 0 && directive <= 0)
+      else if (g_paren.n.n.nest == 0 && in_mode == 0 && directive <= 0)
       { if (paren_dpth < 2 && isword((char)ch))
         {
           if ((state & M_IN_W) == 0)
@@ -338,7 +374,7 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 	       	    word_ct += 1;
 							if (lp->l_text + cix == s)
 //             	brace_nm = brace_dpth;
-							{	if (spnc > 1)
+							{	if (nest.nestclamped > 1)
 				        	return F_NF;
 
 	            	paren_nm = paren_dpth;		// is >= 0
@@ -355,7 +391,7 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 		      			  continue;
 	            	}
 
-	      				if ((state & M_IN_P) && spn < 0   ||
+	      				if ((state & M_IN_P) && nest.nest < 0   ||
 	          				word_ct < 0		 /* set back */ ||
 		          		  rp_line == lines_left  /* a (x)..tgt; ignored */)
 	      	      { loglog("Arft RP");
@@ -413,19 +449,14 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 	    			{ loglog("ANM0");
 				      return F_NF;
 	    			}
-	    		  if (paren_dpth * spnc < 0 &&
-	       			 (state & (M_GOT_NM+M_IN_DCL+M_NO_BODY)) == (M_GOT_NM+M_IN_DCL))
-	      		{	state |= M_NEED_BODY;
-	      			state &= ~M_NEED_B2;
-	      		}	
 						word_ct = 0;
 	    			if (ch == ',')
 				    { if ((state & M_IN_ENUM) && (state & M_AFTER_NM))
 	        			return -F_ENUM;
 
 				    	if ((state & (M_GOT_NM+M_NEED_BODY+M_PRE_SCT))==M_GOT_NM)	
-				    	{	if (paren_dpth == 0 && paren_nm == 0 &&
-	          		  	spnc <= 0)
+				    	{	if (paren_dpth == paren_nm &&
+	          		  	nest.nestclamped <= 0)
 	          		  return F_DCL;
 	          		if ((state & M_NEED_BODY) == 0)
 	          			return F_NF;
@@ -438,7 +469,12 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 								word_ct = M_NOGO;
 	    			}
 				    else
-	    			{ state |= (save_a_cc & M_AFTER_CC);
+	    		  {	if (//paren_dpth * nest.nestclamped < 0 &&
+	       				 (state & (M_GOT_NM+M_IN_DCL+M_NO_BODY)) == (M_GOT_NM+M_IN_DCL))
+		      		{	state |= M_NEED_BODY;
+		      			state &= ~M_NEED_B2;
+	  	    		}	
+	    				state |= (save_a_cc & M_AFTER_CC);
 				      if (--paren_dpth == 0)
 	    			  { save_a_cc = 0;
 				        state &= ~(M_IN_W+M_AFTER_NM+M_AFTER_NM0+M_IN_P);
@@ -455,9 +491,9 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 	  			else if (ch == ';' || ch == '}'/* rbrace */)
 	  			{ if (state & M_GOT_NM)
 	    			{/*char buf[120];
-	      			sprintf(buf, "spnc %d state %x paren_nm %d", spnc, state, paren_nm);
+	      			sprintf(buf, "nest.nestclamped %d state %x paren_nm %d", nest.nestclamped, state, paren_nm);
 	      			mbwrite(buf);*/
-	      			if (spnc < 0 || !(state & (M_NEED_BODY+M_PRE_SCT)) && !paren_nm)
+	      			if (nest.nestclamped < 0 || !(state & (M_NEED_BODY+M_PRE_SCT)) && !paren_nm)
 	      			{ int res = word_ct > 1 ? F_SCT : F_NF;
 	        			return res;
 	      			}
@@ -532,13 +568,13 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 					        return -F_ENUM;
 					      if (word_ct > 1)
 					      { if (paren_dpth == 0)
-					          if (spnc < 0 || !((state & (M_NEED_BODY+M_PRE_SCT))||paren_nm))
+					          if (nest.nestclamped < 0 || !((state & (M_NEED_BODY+M_PRE_SCT))||paren_nm))
 					            return F_DCLINIT;
 				          if (from_w_good_cl || !(state & M_AFTER_CC))
 					        { if (state & M_IN_SCT)
 					            return F_FLD;
 					          if ((state & M_NEED_BODY) == 0 &&
-							          (paren_dpth == 0 || spnc < 0))
+							          (paren_dpth == 0 || nest.nestclamped < 0))
 									    return F_OMETH;
 						      }
 					      }
@@ -562,7 +598,7 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
   return 0;
 }}} /* doit_forward */
 
-#define SLEN 133
+#define SLEN 400
 #if SLEN < NFILEN + 35
 # undef SLEN
 # define SLEN NFILEN+35
@@ -576,8 +612,10 @@ int Sinc::doit_forward(const LINE* lp, const char * s,
 int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
   	
 { char lbuf[SLEN+2];
-  char mybuf[SLEN];
-
+  char mybuf[SLEN+2];
+#if _DEBUG
+	int sz = sizeof(Paren_t);
+#endif
 #if MEOPT_TYPEAH
   if (TTahead())
     return 0;
@@ -607,7 +645,7 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
 	  { const char * ids = pd_incldirs;
 	    int idlen = ids == NULL ? 0 : strlen(ids);
 	    if (idlen >= SLEN-6 || Sinc::ask_type != 0 ||
-					mlreply(concat(&lbuf[0], fname, TEXT224, null),
+					mlreply(concat(&mybuf[0], fname, TEXT224, null),
 									&lbuf[idlen+1], SLEN-3-idlen) <= FALSE)
 				return 0;
 	    if (idlen > 0)
@@ -618,14 +656,6 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
 
   if (bp->b_flag & MDSRCHC)
     return 0;
-
-{ Paren_t sparen = g_paren;
-//pd_discmd -= 2;
-//pd_discmd = 0;
-//swbuffer(bp);
-//pd_discmd += 2;
-  g_paren = sparen;
-}
 
   if (Sinc::ask_type == '1')
   { /*setcline();*/
@@ -748,7 +778,7 @@ int Sinc::srchdeffile(int depth, short from_wh, const char * fname)
 				    logstr(buff); */
 				  rest_l_offs(&save);
 
-			    loglog2("srchdeffile %d %s", g_paren.nest, fnb);
+			    loglog2("srchdeffile %d %s", g_paren.n.n.nest, fnb);
 				/*++srchdpth;*/
 				  rcc = srchdeffile(depth+1, from_wh, &fnb[0]);
 				  if (rcc > 0)
@@ -769,9 +799,7 @@ scan:
         scan_paren(ch);
       else        
       { switch (ch)
-        { case ' ':
-          case '\t':
-	  			when '=': ccont_need_eq = false;
+	  		{	case '=': ccont_need_eq = false;
 				  case ',': if (ccont_need_eq)
 				  						ccontext = 0;
 				  					word_ct = 0;
@@ -781,34 +809,24 @@ scan:
 				  when '*':
 				  case '&': word_ct -= 1;
 				  
-          when '}': if (g_paren.nest <= 0)
-										{ Lpos_t here = *(Lpos_t*)&wp->w_dotp;
-          					 	wp->w_dotp = lp;
+          when '}': if (g_paren.n.n.nest <= 0)
+          					{	wp->w_dotp = lp;
           					 	wp->w_doto = offs;
 									 
           					 	if (getfence(-1,1))
-          					  { // ext_c = *(Lpos_t*)&wp->w_dotp;
-          					   	int clamp = 100;
-          					   	while (--clamp >= 0 && (ch = nextch((Lpos_t*)&wp->w_dotp, -1)) >= 0)
-											  { if ((scan_paren((char)ch) & (Q_IN_CMT+Q_IN_CMT0)) != 0)
-											  		continue;
-          					   		if (ch > ' ' && ch != '/')
-          					   	 		break;
-    	      					  }
-    	      					  if (ch == ')' || ch == ';' || ch == '}' || ch == '{')
-          					 		{	offs = 0;
-          					 			if (lp == wp->w_dotp)
-          					 				offs = wp->w_doto;
-          					 			else
-												  	prev = wp->w_dotp;
-    	      					   	goto scan;
-    	      					  }							/* dont bother with if (x) // comment */
-          					  }								/*                  { int tgt }       */
-		          				rest_l_offs(&here);
+          						{	Lpos_t here = *(Lpos_t*)&wp->w_dotp;
+												int wh = scan_for_kw((Lpos_t*)&wp->w_dotp);
+
+												if (wh == 0)
+												{	offs = here.curoff+1;
+													lp = here.curline;
+	  											prev = lback(lp);
+	  										}
+											}
 //    	      				ext_c.curline = NULL;
           					}
 	
-          case '/': case '\\': 
+          when '/': case '\\': 
           case '"': case '\'': 
           					goto scan;
 
@@ -816,7 +834,7 @@ scan:
 				  					word_ct = 0;
 				  					got_prochead = 0;
 						  		/*if (Sinc::best_nest != NO_BEST)
-          					  loglog1("CBRACE %d", g_paren.nest);*/
+          					  loglog1("CBRACE %d", g_paren.nest.nest);*/
           when ']': sword_ct = word_ct;
           when '[': word_ct = sword_ct;
           when ')': word_ct = 0;
@@ -835,79 +853,60 @@ scan:
 				  when ':': if (ccontext == Q_NEED_RP)
 						  	    { if (offs > 0 && cp[-1]==':')
 	  	    					  { 
-						  	        if 		 (good_class == g_paren.nest)
-						  	          good_class = -g_paren.nest;
+						  	        if 		 (good_class == g_paren.n.n.nest)
+						  	          good_class = -g_paren.n.n.nest;
 						  	        else if ((good_class > 0 ?  good_class : -good_class)
-						  	        					 < g_paren.nest)
-	  	          					good_class = g_paren.nest;
+						  	        					 < g_paren.n.n.nest)
+	  	          					good_class = g_paren.n.n.nest;
 	  	    					  //mbwrite("[from class]");
 	  	      					}
 	  	    					}
           when '{': word_ct = 0;
           				/*if (Sinc::best_nest != NO_BEST) 
-                      loglog1("OBRACE %d", g_paren.nest);*/
+                      loglog1("OBRACE %d", g_paren.n.n.nest);*/
 #if 0
 										if (ext_c.curline != lp ||
 												ext_c.curoff  != offs)
 	            				scan_paren(ch);
 #endif
-      		  			/*if (g_paren.nest < 0)
-                      g_paren.nest = 0;*/
+      		  			/*if (g_paren.n.n.nest < 0)
+                      g_paren.n.n.nest = 0;*/
                				      /* structure definitions */
-							    	if (g_paren.nest <= min_paren_nest)
-			    					{ min_paren_nest = g_paren.nest;
+							    	if (g_paren.n.n.nest <= min_paren_nest)
+			    					{ min_paren_nest = g_paren.n.n.nest;
 								      ccontext = Q_NEED_RP;
 			    					}
 																	    					/* is the candidate good? */
-								    if (g_paren.nest < sparen_nest &&
-								      /*g_paren.nest >= 0          && */best_nest != NO_BEST) 
-		    						{ int ct;									/* look back for class or struct */
-								      wp->wLine = lp;
-								      wp->wOffset = offs;
+								    if (g_paren.n.n.nest < sparen.nest &&
+								      /*g_paren.n.n.nest >= 0          && */best_nest != NO_BEST) 
 
-								      for (ct = 40; --ct > 0 && backword(1, 1); )
-								      { int wh;
-								        char wd = wp->wLine->linetext[wp->wOffset];
-								      /*if      (wd == '(')
-												  rcc = -1;*/
-											      /*else if (wd == ':')
-												  rcc = 2;
-												else */ if (wd == ';' || wd == '}')
-											  { ct = 0;
-												  break;
-												}
-								        wh = strxct_mtch(1, wp->wOffset, wp->wLine);
-								        if (!in_range(wh, 0, 5))	// class to namespace
-												  continue;
-
-												ct = 0;			/* end of looping */
-								        if      (wh == 1)	/* "C" */
-												  ;
-												else if (wh == 2)	/* enum */
-												{ if (from_wh & 1)/* field */
-												    break;
-												} 
-												else if (from_wh || good_class)
-												{ //mbwrite("CSU");
-												  good_fld = true;
-												}
-											/*else if (wh == 2)
-												  break;*/
-												else
-												/* if (!from_class) */
-												    break;
-												best_nest -= 1;		/* "C", enum, class, unnest */
-							  	    }
-							  	    if (ct == 0)
+		    						{	Lpos_t here;
+		    							here.curline = lp;
+		    							here.curoff = offs;
+											int wh = scan_for_kw(&here);
+							  	    if (wh == 0)
 								      { // mbwrite("Lost Best");
-												best_nest = NO_BEST;
+//											best_nest = NO_BEST;
 												/*best_bp = NULL;*/
 												cand.curline = NULL;
 												rcc = 0;
 								      }
+								      else
+								      { if      (wh == 1)	/* "C" */
+													;
+												else if (wh == 2)	/* enum */
+													; 
+												else if (from_wh || good_class)
+												{ //mbwrite("CSU");
+											  	good_fld = true;
+												}
+												best_nest -= 1;		/* "C", enum, class, unnest */
+											}
 								    }
 
-				  otherwise if (ccontext == Q_NEED_RP &&
+				  otherwise if (ch <= ' ')
+				  						continue;
+				  					if (ccontext == Q_NEED_RP &&
 												strxct_mtch(1, offs, lp) > 5)
 											got_prochead = 0;
 
@@ -927,21 +926,20 @@ scan:
 												  rcc = 100;
 												}
 											}
-											else if (word_ct <= 1 /*&& line_ct > 3 */&& /*g_paren.nestclamped<=2 &&*/ 
+											else if (word_ct <= 1 /*&& line_ct > 3 */&& /*g_paren.n.n.nestclamped<=2 &&*/ 
 															(ccontext <= Q_NEED_RP || 
 															 got_prochead <= 0)
 															&& best_nest == NO_BEST)
 											{ 
-												int sparen_nc = g_paren.nestclamped;
-											  sparen_nest = g_paren.nest;
-//											sprintf(buf, "Try %d %d %50.50s", sparen_nest, sparen_nc, cp);
+												Nest_t sp = g_paren.n.n;
+//											sprintf(buf, "Try %d %d %50.50s", sparen.nest, sparen.nestclamped, cp);
 //											mbwrite(buf);
-											{ int wh = doit_forward(lp, cp, from_wh+good_class, sparen_nest, sparen_nc);
+											{ int wh = doit_forward(lp, cp, from_wh+good_class, sp);
 								        if (wh != F_NF &&
-								        		( sparen_nc <= 0 ||
-								        			sparen_nc == 1 && wh < 0))
+								        		( sparen.nestclamped <= 0 ||
+								        			sparen.nestclamped == 1 && wh < 0))
 											  {	rcc = wh;
-											  	mynest = sparen_nc;
+											  	mynest = sparen.nestclamped;
 													if (mynest == 0 && (from_wh & 3))
 												  {//mbwrite("Equal nest ff");
 												    ++mynest;
@@ -955,8 +953,7 @@ scan:
 												    good_fld = true;
 		        						}}
 		        						init_paren("}", 0);
-	      								g_paren.nest = sparen_nest;
-												g_paren.nestclamped = sparen_nc;
+	      								g_paren.n.n = sp;
 								      }}
 		    						}
 		    						if (mynest > -128)
@@ -1018,7 +1015,7 @@ int Pascal searchIncls(int f, int n)
 
 { char  tgt_[92];
 	char * tgt;
-  tgt_[0] = '?';
+  tgt_[0] = ',';
   tgt_[1] = 0;
 	tgt = tgt_;
 {
@@ -1052,8 +1049,8 @@ int Pascal searchIncls(int f, int n)
   Sinc::best_nest = NO_BEST;
 
   init_paren("}", -1);						// set nest and nestclamped to 0
-//g_paren.nest = 0;
-//g_paren.nestclamped = 0;				// <= 0 => visible
+//g_paren.n.n.nest = 0;
+//g_paren.n.n.nestclamped = 0;				// <= 0 => visible
 
   /* namelist = null;*/
   /* srchdpth = 0;*/
@@ -1061,6 +1058,8 @@ int Pascal searchIncls(int f, int n)
   setmark(-1,-1);		// set the highest mark
 
   int cc = Sinc::srchdeffile(0, from_wh, "");
+
+//mbwrite("Done srdf");
 
   if (f >= 0)		// Sinc::g_outbuffer == NULL)
   { if (cc > 0)
@@ -1070,7 +1069,10 @@ int Pascal searchIncls(int f, int n)
 #endif
     	mlwrite(TEXT64, cc);
 						/* "Found typ %d" */
-      swbuffer(Sinc::best_bp);
+			if (Sinc::best_bp == NULL)
+				; // mbwrite("Bull");
+			else
+        swbuffer(Sinc::best_bp);
     }
     else
     {
@@ -1096,20 +1098,17 @@ int Pascal searchIncls(int f, int n)
 int Pascal getIncls(int f, int n)
 
 { char bi_nm[20];
-  int at_end = curwp->w_dotp - &curbp->b_baseline;
-	if (at_end == 0)
-		curwp->w_dotp = curwp->w_dotp->l_bp;
-	
   BUFFER * bp = bfind(strcpy(bi_nm, "file incls"), TRUE);
   if (bp == NULL)
     return 0;
 
+  int at_end = curwp->w_dotp - &curbp->b_baseline;
+	if (at_end == 0)
+		curwp->w_dotp = curwp->w_dotp->l_bp;
+	
 	Sinc::g_outbuffer = bp;
 
-{	Cc cc = searchIncls(-1, n);
-
-  if (bp->b_baseline.l_fp == &bp->b_baseline)
-  	linstr(TEXT79);		/* "Not found" */
+  int cc = searchIncls(-1, n);
 
   bp->b_flag |= BFACTIVE;			/* code added */
 	bp->b_fname = strdup(bi_nm+5);	// allow the leakage
@@ -1118,9 +1117,12 @@ int Pascal getIncls(int f, int n)
   Sinc::g_outbuffer = NULL;
   gotobob_();
 
-  return cc;
-}}
+  if (bp->b_baseline.l_fp == &bp->b_baseline)
+  	linstr(TEXT79);		/* "Not found" */
 
+  return cc;
 }
 
+
 #endif
+}

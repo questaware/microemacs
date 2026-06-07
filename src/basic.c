@@ -68,9 +68,7 @@ int USE_FAST_CALL find_nch(int wh, int cix, const LINE * lp)
   return -1;
 }
 
-
-
-BUFFER * Pascal prevele(int wh, BUFFER * bp)
+BUFFER * USE_FAST_CALL prevele(int wh, BUFFER * bp)
 
 {	BUFFER * bl = g_heads[wh];
 
@@ -93,11 +91,10 @@ int Pascal gotoeol(int notused, int n)
 
 
 
-/* nextch -- retrieve the current/previous character in the buffer,
+/* nextch -- retrieve the current character in the buffer,
  *					 and advance/retreat the point.
- *      		 The asymmetry of forward and back is mysterious!!
  */
-int Pascal nextch(Lpos_t * lpos, int dir)
+int USE_FAST_CALL nextch(Lpos_t * lpos, int dir)
 
 {	int adj = 0;
 	LINE * lp = lpos->curline;
@@ -105,9 +102,7 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	unsigned char c = '\n';
 
   if (dir >= 0)
-	{	if (dir == 0)
-			dir = 1;
-  	while (--dir >= 0)
+  {	do
   	{ if (off < llength(lp)) 	    	/* if at EOL */
 	      c = lgetc(lp, off++);				/* get the char */
 	    else
@@ -117,25 +112,27 @@ int Pascal nextch(Lpos_t * lpos, int dir)
 	      if (l_is_hd(lp))
 	      	return -1;
 			}
-    }
+    } while (--dir > 0);
   }
   else		       								/* Reverse.*/
-  { dir = -dir;
-    while (--dir >= 0)
-  	{ if (off > 0)
-				c = lgetc(lp, --off);
-	    else
+  { if (l_is_hd(lp))
+	   	return -1;
+
+  	while (++dir <= 0)
+  	{ if (off < llength(lp))
+				c = lgetc(lp, off);
+	    if (--off < 0)
 			{	adj -= 1;
 				lp = lback(lp);
 	      off = llength(lp);
-	      if (l_is_hd(lp))
-	      	return -1;
 	    }
 		}
   }
-	lpos->curline = lp;
- 	lpos->curoff = off;
-	lpos->line_no += adj;
+  if (dir >= 0)
+	{	lpos->curline = lp;
+ 		lpos->curoff = off;
+		lpos->line_no += adj;
+	}
 
   return c;
 }
@@ -149,6 +146,7 @@ int Pascal forwchar(int notused, int n)
 //{	LINE * lp = wp->w_dotp;
 //if (n < 0 && wp->w_doto == 0)
 // 	lp = lback(lp);
+
   return /* (lp->l_props & L_IS_HD) ? FALSE : */
   			 n == 0 ? TRUE : nextch((Lpos_t*)wp, n) >= 0;
 //}

@@ -1243,6 +1243,7 @@ gotoline	./src/basic.c
 gotomark	./src/basic.c
 gs_term	./src/epredef.h
 gtenv	./src/eval.c
+gtenvfun	./src/eval.c
 gtfilename	./src/input.c
 gtfun	./src/eval.c
 gtusr	./src/eval.c
@@ -1580,7 +1581,6 @@ scan_for_sl	./src/random.c
 scan_for_sl	./src/sinc.cpp
 scan_par_line	./src/random.c
 scan_paren	./src/random.c
-scan_paren	./src/sinc.cpp
 scanner	./src/search.c
 scroll_vscr	./src/display.c
 scrollupdn	./src/display.c
@@ -1594,6 +1594,7 @@ seed	./src/epredef.h
 serialclose	./unix/unix.c
 serialopen	./unix/unix.c
 setMyConsoleIP	./wincon/oswin.c
+set_buf_tab	./src/buffer.c
 set_cand_lnno	./src/sinc.cpp
 set_var	./src/eval.c
 setccol	./src/eval.c

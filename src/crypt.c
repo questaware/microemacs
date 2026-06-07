@@ -211,7 +211,7 @@ void Pascal double_crypt(char * cptr, int len)
 {	char ch;
 	int fix;
 	
-	for (fix = -1; (ch = cptr[++fix]) != 0 && ch != 9; )
+	for (fix = -1; (ch = cptr[++fix]) != 0 && ch != '\t'; )
 		;
 		
 	if (ch != 0)
