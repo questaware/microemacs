@@ -297,6 +297,9 @@ int Pascal forwline(int notused, int n_)
   curwp->w_flag |= WFMOVE;
   curwp->w_line_no += n_ - n;
 
+	if (n_ > 0 && l_is_hd(lp))
+		forwbychar(-1);
+
   return TRUE;
 }}
 
